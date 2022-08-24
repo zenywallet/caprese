@@ -1,7 +1,6 @@
 # Copyright (c) 2020 zenywallet
 
 import sequtils, strutils, endians, algorithm
-import opcodes
 
 type
   VarInt* = distinct int
@@ -75,22 +74,6 @@ proc varInt*[T](val: T): seq[byte] =
 
 proc varStr*(s: string): seq[byte] {.inline.} = concat(varInt(s.len), cast[seq[byte]](s))
 
-proc pushData*(data: seq[byte]): seq[byte] =
-  if data.len <= 0:
-    raiseAssert("pushData: empty")
-  elif data.len < OP_PUSHDATA1.ord:
-    result = concat(@[byte data.len], data)
-  elif data.len <= 0xff:
-    result = concat(@[byte OP_PUSHDATA1], (data.len).uint8.toBytes, data)
-  elif data.len <= 0xffff:
-    result = concat(@[byte OP_PUSHDATA2], (data.len).uint16.toBytes, data)
-  elif data.len <= 0xffffffff:
-    result = concat(@[byte OP_PUSHDATA4], (data.len).uint32.toBytes, data)
-  else:
-    raiseAssert("pushData: overflow")
-
-proc pushData*(data: openarray[byte]): seq[byte] {.inline.} = pushData(data.toSeq)
-
 proc pad*(len: int): seq[byte] {.inline.} = newSeq[byte](len)
 
 proc pad*(len: int, val: byte): seq[byte] {.inline.} =
@@ -113,7 +96,6 @@ proc toBytes*(len: Pad): seq[byte] {.inline.} = pad(cast[int](len))
 proc toBytes*(fstr: FixedStr): seq[byte] {.inline.} = fixedStr(fstr.data, fstr.size)
 proc toBytes*(hash: Hash): seq[byte] {.inline.} = cast[seq[byte]](hash)
 proc toBytes*(hash: Hash160): seq[byte] {.inline.} = cast[seq[byte]](hash)
-proc toBytes*(p: PushData): seq[byte] {.inline.} = pushData(cast[seq[byte]](p))
 proc toBytes*(x: string): seq[byte] {.inline.} = cast[seq[byte]](x)
 
 proc toBytes*(obj: tuple | object): seq[byte] =
@@ -296,22 +278,6 @@ proc `$`*(data: Hash): string =
   bytes.toHex(b)
 
 proc `$`*(data: Hash160): string = data.toBytes.toHex
-
-proc `$`*(p: PushData): string =
-  var op: string
-  var b = cast[seq[byte]](p)
-  var len = b.len
-  if len < OP_PUSHDATA1.ord:
-    op = "PushData"
-  elif len <= 0xff:
-    op = "PushData1"
-  elif len <= 0xffff:
-    op = "PushData2"
-  elif len <= 0xffffffff:
-    op = "PushData4"
-  else:
-    raiseAssert("pushdata overflow")
-  result = op & "(" & $len & ", " & $b & ")"
 
 proc `$`*(o: ref tuple | ref object | ptr tuple | ptr object): string = $o[]
 
