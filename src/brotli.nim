@@ -14,6 +14,7 @@ const brotliPath = currentSourcePath().parentDir() / "../deps/brotli"
 {.compile: brotliPath / "c/enc/brotli_bit_stream.c".}
 {.compile: brotliPath / "c/enc/cluster.c".}
 {.compile: brotliPath / "c/enc/command.c".}
+{.compile: brotliPath / "c/enc/compound_dictionary.c".}
 {.compile: brotliPath / "c/enc/compress_fragment.c".}
 {.compile: brotliPath / "c/enc/compress_fragment_two_pass.c".}
 {.compile: brotliPath / "c/enc/dictionary_hash.c".}
@@ -32,6 +33,7 @@ const brotliPath = currentSourcePath().parentDir() / "../deps/brotli"
 {.compile: brotliPath / "c/common/context.c".}
 {.compile: brotliPath / "c/common/dictionary.c".}
 {.compile: brotliPath / "c/common/platform.c".}
+{.compile: brotliPath / "c/common/shared_dictionary.c".}
 {.compile: brotliPath / "c/common/transform.c".}
 
 {.compile: brotliPath / "c/dec/bit_reader.c".}
