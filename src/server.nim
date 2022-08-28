@@ -9,6 +9,7 @@ import std/sha1
 import base64
 import times
 import stats
+import statuscode
 
 const ULIMIT_SIZE* = 65536
 const CLIENT_MAX = 32000
@@ -62,61 +63,6 @@ type
     pStream*: pointer
 
   ClientArray = array[CLIENT_MAX, Client]
-
-  StatusCode* = enum
-    Status100 = "100 Continue"
-    Status101 = "101 Switching Protocols"
-    Status200 = "200 OK"
-    Status201 = "201 Created"
-    Status202 = "202 Accepted"
-    Status203 = "203 Non-Authoritative Information"
-    Status204 = "204 No Content"
-    Status205 = "205 Reset Content"
-    Status206 = "206 Partial Content"
-    Status300 = "300 Multiple Choices"
-    Status301 = "301 Moved Permanently"
-    Status302 = "302 Found"
-    Status303 = "303 See Other"
-    Status304 = "304 Not Modified"
-    Status305 = "305 Use Proxy"
-    Status306 = "306 (Unused)"
-    Status307 = "307 Temporary Redirect"
-    Status308 = "308 Permanent Redirect"
-    Status400 = "400 Bad Request"
-    Status401 = "401 Unauthorized"
-    Status402 = "402 Payment Required"
-    Status403 = "403 Forbidden"
-    Status404 = "404 Not Found"
-    Status405 = "405 Method Not Allowed"
-    Status406 = "406 Not Acceptable"
-    Status407 = "407 Proxy Authentication Required"
-    Status408 = "408 Request Timeout"
-    Status409 = "409 Conflict"
-    Status410 = "410 Gone"
-    Status411 = "411 Length Required"
-    Status412 = "412 Precondition Failed"
-    Status413 = "413 Payload Too Large"
-    Status414 = "414 URI Too Long"
-    Status415 = "415 Unsupported Media Type"
-    Status416 = "416 Range Not Satisfiable"
-    Status417 = "417 Expectation Failed"
-    Status418 = "418 I'm a teapot"
-    Status421 = "421 Misdirected Request"
-    Status425 = "425 Too Early"
-    Status426 = "426 Upgrade Required"
-    Status428 = "428 Precondition Required"
-    Status429 = "429 Too Many Requests"
-    Status431 = "431 Request Header Fields Too Large"
-    Status451 = "451 Unavailable For Legal Reasons"
-    Status500 = "500 Internal Server Error"
-    Status501 = "501 Not Implemented"
-    Status502 = "502 Bad Gateway"
-    Status503 = "503 Service Unavailable"
-    Status504 = "504 Gateway Timeout"
-    Status505 = "505 HTTP Version Not Supported"
-    Status506 = "506 Variant Also Negotiates"
-    Status510 = "510 Not Extended"
-    Status511 = "511 Network Authentication Required"
 
   ThreadArgType* {.pure.} = enum
     Void
