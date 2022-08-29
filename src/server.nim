@@ -11,7 +11,7 @@ import times
 import stats
 import statuscode
 
-const ULIMIT_SIZE* = 65536
+const RLIMIT_SIZE* = 65536
 const CLIENT_MAX = 32000
 const CLIENT_SEARCH_LIMIT = 30000
 const WORKER_THREAD_NUM = 16
@@ -193,7 +193,7 @@ var httpThread: Thread[WrapperThreadArg]
 var monitorThread: Thread[WrapperThreadArg]
 var mainThread: Thread[WrapperThreadArg]
 
-proc setUlimit*(rlim: int): bool {.discardable.} =
+proc setRlimit*(rlim: int): bool {.discardable.} =
   var rlp: RLimit
   var ret = getrlimit(RLIMIT_NOFILE, rlp)
   if ret != 0: return false
@@ -1342,5 +1342,5 @@ when isMainModule:
 
   signal(SIGPIPE, SIG_IGN)
 
-  setUlimit(ULIMIT_SIZE)
+  setRlimit(RLIMIT_SIZE)
   start()

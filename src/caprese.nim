@@ -11,5 +11,5 @@ when isMainModule:
 
   signal(SIGPIPE, SIG_IGN)
 
-  setUlimit(ULIMIT_SIZE)
+  setRlimit(RLIMIT_SIZE)
   start()
