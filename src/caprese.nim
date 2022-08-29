@@ -11,5 +11,5 @@ when isMainModule:
 
   signal(SIGPIPE, SIG_IGN)
 
-  setRlimit(RLIMIT_SIZE)
+  setRlimitOpenFiles(RLIMIT_SIZE)
   start()

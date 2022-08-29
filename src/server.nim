@@ -193,7 +193,7 @@ var httpThread: Thread[WrapperThreadArg]
 var monitorThread: Thread[WrapperThreadArg]
 var mainThread: Thread[WrapperThreadArg]
 
-proc setRlimit*(rlim: int): bool {.discardable.} =
+proc setRlimitOpenFiles*(rlim: int): bool {.discardable.} =
   var rlp: RLimit
   var ret = getrlimit(RLIMIT_NOFILE, rlp)
   if ret != 0: return false
@@ -1342,5 +1342,5 @@ when isMainModule:
 
   signal(SIGPIPE, SIG_IGN)
 
-  setRlimit(RLIMIT_SIZE)
+  setRlimitOpenFiles(RLIMIT_SIZE)
   start()
