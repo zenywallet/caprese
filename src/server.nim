@@ -11,7 +11,7 @@ import times
 import stats
 import statuscode
 
-const RLIMIT_SIZE* = 65536
+const RLIMIT_OPEN_FILES* = 65536
 const CLIENT_MAX = 32000
 const CLIENT_SEARCH_LIMIT = 30000
 const WORKER_THREAD_NUM = 16
@@ -1342,5 +1342,5 @@ when isMainModule:
 
   signal(SIGPIPE, SIG_IGN)
 
-  setRlimitOpenFiles(RLIMIT_SIZE)
+  setRlimitOpenFiles(RLIMIT_OPEN_FILES)
   start()
