@@ -10,6 +10,8 @@ import base64
 import times
 import stats
 import statuscode
+import rlimit
+export rlimit
 
 const RLIMIT_OPEN_FILES* = 65536
 const CLIENT_MAX = 32000
@@ -192,27 +194,6 @@ var acceptThread: Thread[WrapperThreadArg]
 var httpThread: Thread[WrapperThreadArg]
 var monitorThread: Thread[WrapperThreadArg]
 var mainThread: Thread[WrapperThreadArg]
-
-proc setRlimitOpenFiles*(rlim: int): bool {.discardable.} =
-  var rlp: RLimit
-  var ret = getrlimit(RLIMIT_NOFILE, rlp)
-  if ret != 0: return false
-  debug "RLIMIT_NOFILE prev=", rlp
-  if rlp.rlim_cur < rlim:
-    if rlp.rlim_max < rlim:
-      rlp.rlim_cur = rlp.rlim_max
-    else:
-      rlp.rlim_cur = rlim
-    ret = setrlimit(RLIMIT_NOFILE, rlp)
-    if ret != 0: return false
-  else:
-    debug "RLIMIT_NOFILE cur=", rlp
-    return true
-  ret = getrlimit(RLIMIT_NOFILE, rlp)
-  if ret != 0: return false
-  debug "RLIMIT_NOFILE new=", rlp
-  if rlp.rlim_cur < rlim: return false
-  return true
 
 proc invokeSendEvent*(client: ptr Client, retry: bool = false): bool =
   if retry:
