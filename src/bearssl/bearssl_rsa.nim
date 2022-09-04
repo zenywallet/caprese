@@ -154,10 +154,10 @@ type
 
 type
   br_rsa_public_key* {.bycopy.} = object
-    n*: ptr cuchar              ## * \brief Modulus.
+    n*: ptr uint8              ## * \brief Modulus.
     ## * \brief Modulus length (in bytes).
     nlen*: csize_t             ## * \brief Public exponent.
-    e*: ptr cuchar              ## * \brief Public exponent length (in bytes).
+    e*: ptr uint8              ## * \brief Public exponent length (in bytes).
     elen*: csize_t
 
 
@@ -175,15 +175,15 @@ type
   br_rsa_private_key* {.bycopy.} = object
     n_bitlen*: uint32_t        ## * \brief Modulus bit length (in bits, exact value).
     ## * \brief First prime factor.
-    p*: ptr cuchar              ## * \brief First prime factor length (in bytes).
+    p*: ptr uint8              ## * \brief First prime factor length (in bytes).
     plen*: csize_t             ## * \brief Second prime factor.
-    q*: ptr cuchar              ## * \brief Second prime factor length (in bytes).
+    q*: ptr uint8              ## * \brief Second prime factor length (in bytes).
     qlen*: csize_t             ## * \brief First reduced private exponent.
-    dp*: ptr cuchar             ## * \brief First reduced private exponent length (in bytes).
+    dp*: ptr uint8             ## * \brief First reduced private exponent length (in bytes).
     dplen*: csize_t            ## * \brief Second reduced private exponent.
-    dq*: ptr cuchar             ## * \brief Second reduced private exponent length (in bytes).
+    dq*: ptr uint8             ## * \brief Second reduced private exponent length (in bytes).
     dqlen*: csize_t            ## * \brief CRT coefficient.
-    iq*: ptr cuchar             ## * \brief CRT coefficient length (in bytes).
+    iq*: ptr uint8             ## * \brief CRT coefficient length (in bytes).
     iqlen*: csize_t
 
 
@@ -213,7 +213,7 @@ type
 ##
 
 type
-  br_rsa_public* = proc (x: ptr cuchar; xlen: csize_t; pk: ptr br_rsa_public_key): uint32_t
+  br_rsa_public* = proc (x: ptr uint8; xlen: csize_t; pk: ptr br_rsa_public_key): uint32_t
 
 ## *
 ##  \brief Type for a RSA signature verification engine (PKCS#1 v1.5).
@@ -262,9 +262,9 @@ type
 ##
 
 type
-  br_rsa_pkcs1_vrfy* = proc (x: ptr cuchar; xlen: csize_t; hash_oid: ptr cuchar;
+  br_rsa_pkcs1_vrfy* = proc (x: ptr uint8; xlen: csize_t; hash_oid: ptr uint8;
                           hash_len: csize_t; pk: ptr br_rsa_public_key;
-                          hash_out: ptr cuchar): uint32_t
+                          hash_out: ptr uint8): uint32_t
 
 ## *
 ##  \brief Type for a RSA signature verification engine (PSS).
@@ -313,7 +313,7 @@ type
 ##
 
 type
-  br_rsa_pss_vrfy* = proc (x: ptr cuchar; xlen: csize_t; hf_data: ptr br_hash_class;
+  br_rsa_pss_vrfy* = proc (x: ptr uint8; xlen: csize_t; hf_data: ptr br_hash_class;
                         hf_mgf1: ptr br_hash_class; hash: pointer; salt_len: csize_t;
                         pk: ptr br_rsa_public_key): uint32_t
 
@@ -383,7 +383,7 @@ type
 ##
 
 type
-  br_rsa_private* = proc (x: ptr cuchar; sk: ptr br_rsa_private_key): uint32_t
+  br_rsa_private* = proc (x: ptr uint8; sk: ptr br_rsa_private_key): uint32_t
 
 ## *
 ##  \brief Type for a RSA signature generation engine (PKCS#1 v1.5).
@@ -422,8 +422,8 @@ type
 ##
 
 type
-  br_rsa_pkcs1_sign* = proc (hash_oid: ptr cuchar; hash: ptr cuchar; hash_len: csize_t;
-                          sk: ptr br_rsa_private_key; x: ptr cuchar): uint32_t
+  br_rsa_pkcs1_sign* = proc (hash_oid: ptr uint8; hash: ptr uint8; hash_len: csize_t;
+                          sk: ptr br_rsa_private_key; x: ptr uint8): uint32_t
 
 ## *
 ##  \brief Type for a RSA signature generation engine (PSS).
@@ -470,43 +470,43 @@ type
 
 type
   br_rsa_pss_sign* = proc (rng: ptr ptr br_prng_class; hf_data: ptr br_hash_class;
-                        hf_mgf1: ptr br_hash_class; hash_value: ptr cuchar;
-                        salt_len: csize_t; sk: ptr br_rsa_private_key; x: ptr cuchar): uint32_t
+                        hf_mgf1: ptr br_hash_class; hash_value: ptr uint8;
+                        salt_len: csize_t; sk: ptr br_rsa_private_key; x: ptr uint8): uint32_t
 
 ## *
 ##  \brief Encoded OID for SHA-1 (in RSA PKCS#1 signatures).
 ##
 
 const
-  BR_HASH_OID_SHA1* = (cast[ptr cuchar]("\x05+\x0E\x03\x02\x1A"))
+  BR_HASH_OID_SHA1* = (cast[ptr uint8]("\x05+\x0E\x03\x02\x1A"))
 
 ## *
 ##  \brief Encoded OID for SHA-224 (in RSA PKCS#1 signatures).
 ##
 
 const
-  BR_HASH_OID_SHA224* = (cast[ptr cuchar]("\t`†H\x01e\x03\x04\x02\x04"))
+  BR_HASH_OID_SHA224* = (cast[ptr uint8]("\t`†H\x01e\x03\x04\x02\x04"))
 
 ## *
 ##  \brief Encoded OID for SHA-256 (in RSA PKCS#1 signatures).
 ##
 
 const
-  BR_HASH_OID_SHA256* = (cast[ptr cuchar]("\t`†H\x01e\x03\x04\x02\x01"))
+  BR_HASH_OID_SHA256* = (cast[ptr uint8]("\t`†H\x01e\x03\x04\x02\x01"))
 
 ## *
 ##  \brief Encoded OID for SHA-384 (in RSA PKCS#1 signatures).
 ##
 
 const
-  BR_HASH_OID_SHA384* = (cast[ptr cuchar]("\t`†H\x01e\x03\x04\x02\x02"))
+  BR_HASH_OID_SHA384* = (cast[ptr uint8]("\t`†H\x01e\x03\x04\x02\x02"))
 
 ## *
 ##  \brief Encoded OID for SHA-512 (in RSA PKCS#1 signatures).
 ##
 
 const
-  BR_HASH_OID_SHA512* = (cast[ptr cuchar]("\t`†H\x01e\x03\x04\x02\x03"))
+  BR_HASH_OID_SHA512* = (cast[ptr uint8]("\t`†H\x01e\x03\x04\x02\x03"))
 
 ## *
 ##  \brief Type for a RSA decryption engine (OAEP).
@@ -567,7 +567,7 @@ type
 ##  \return  1 on success, 0 on error.
 ##
 
-proc br_rsa_i32_public*(x: ptr cuchar; xlen: csize_t; pk: ptr br_rsa_public_key): uint32_t {.importc, discardable.}
+proc br_rsa_i32_public*(x: ptr uint8; xlen: csize_t; pk: ptr br_rsa_public_key): uint32_t {.importc, discardable.}
 ## *
 ##  \brief RSA signature verification engine "i32" (PKCS#1 v1.5 signatures).
 ##
@@ -582,9 +582,9 @@ proc br_rsa_i32_public*(x: ptr cuchar; xlen: csize_t; pk: ptr br_rsa_public_key)
 ##  \return  1 on success, 0 on error.
 ##
 
-proc br_rsa_i32_pkcs1_vrfy*(x: ptr cuchar; xlen: csize_t; hash_oid: ptr cuchar;
+proc br_rsa_i32_pkcs1_vrfy*(x: ptr uint8; xlen: csize_t; hash_oid: ptr uint8;
                            hash_len: csize_t; pk: ptr br_rsa_public_key;
-                           hash_out: ptr cuchar): uint32_t {.importc, discardable.}
+                           hash_out: ptr uint8): uint32_t {.importc, discardable.}
 ## *
 ##  \brief RSA signature verification engine "i32" (PSS signatures).
 ##
@@ -600,7 +600,7 @@ proc br_rsa_i32_pkcs1_vrfy*(x: ptr cuchar; xlen: csize_t; hash_oid: ptr cuchar;
 ##  \return  1 on success, 0 on error.
 ##
 
-proc br_rsa_i32_pss_vrfy*(x: ptr cuchar; xlen: csize_t; hf_data: ptr br_hash_class;
+proc br_rsa_i32_pss_vrfy*(x: ptr uint8; xlen: csize_t; hf_data: ptr br_hash_class;
                          hf_mgf1: ptr br_hash_class; hash: pointer;
                          salt_len: csize_t; pk: ptr br_rsa_public_key): uint32_t {.importc, discardable.}
 ## *
@@ -613,7 +613,7 @@ proc br_rsa_i32_pss_vrfy*(x: ptr cuchar; xlen: csize_t; hf_data: ptr br_hash_cla
 ##  \return  1 on success, 0 on error.
 ##
 
-proc br_rsa_i32_private*(x: ptr cuchar; sk: ptr br_rsa_private_key): uint32_t {.importc, discardable.}
+proc br_rsa_i32_private*(x: ptr uint8; sk: ptr br_rsa_private_key): uint32_t {.importc, discardable.}
 ## *
 ##  \brief RSA signature generation engine "i32" (PKCS#1 v1.5 signatures).
 ##
@@ -627,8 +627,8 @@ proc br_rsa_i32_private*(x: ptr cuchar; sk: ptr br_rsa_private_key): uint32_t {.
 ##  \return  1 on success, 0 on error.
 ##
 
-proc br_rsa_i32_pkcs1_sign*(hash_oid: ptr cuchar; hash: ptr cuchar; hash_len: csize_t;
-                           sk: ptr br_rsa_private_key; x: ptr cuchar): uint32_t {.importc, discardable.}
+proc br_rsa_i32_pkcs1_sign*(hash_oid: ptr uint8; hash: ptr uint8; hash_len: csize_t;
+                           sk: ptr br_rsa_private_key; x: ptr uint8): uint32_t {.importc, discardable.}
 ## *
 ##  \brief RSA signature generation engine "i32" (PSS signatures).
 ##
@@ -645,8 +645,8 @@ proc br_rsa_i32_pkcs1_sign*(hash_oid: ptr cuchar; hash: ptr cuchar; hash_len: cs
 ##
 
 proc br_rsa_i32_pss_sign*(rng: ptr ptr br_prng_class; hf_data: ptr br_hash_class;
-                         hf_mgf1: ptr br_hash_class; hash_value: ptr cuchar;
-                         salt_len: csize_t; sk: ptr br_rsa_private_key; x: ptr cuchar): uint32_t {.importc, discardable.}
+                         hf_mgf1: ptr br_hash_class; hash_value: ptr uint8;
+                         salt_len: csize_t; sk: ptr br_rsa_private_key; x: ptr uint8): uint32_t {.importc, discardable.}
 ##
 ##  RSA "i31" engine. Similar to i32, but only 31 bits are used per 32-bit
 ##  word. This uses slightly more stack space (about 4% more) and code
@@ -663,7 +663,7 @@ proc br_rsa_i32_pss_sign*(rng: ptr ptr br_prng_class; hf_data: ptr br_hash_class
 ##  \return  1 on success, 0 on error.
 ##
 
-proc br_rsa_i31_public*(x: ptr cuchar; xlen: csize_t; pk: ptr br_rsa_public_key): uint32_t {.importc, discardable.}
+proc br_rsa_i31_public*(x: ptr uint8; xlen: csize_t; pk: ptr br_rsa_public_key): uint32_t {.importc, discardable.}
 ## *
 ##  \brief RSA signature verification engine "i31" (PKCS#1 v1.5 signatures).
 ##
@@ -678,9 +678,9 @@ proc br_rsa_i31_public*(x: ptr cuchar; xlen: csize_t; pk: ptr br_rsa_public_key)
 ##  \return  1 on success, 0 on error.
 ##
 
-proc br_rsa_i31_pkcs1_vrfy*(x: ptr cuchar; xlen: csize_t; hash_oid: ptr cuchar;
+proc br_rsa_i31_pkcs1_vrfy*(x: ptr uint8; xlen: csize_t; hash_oid: ptr uint8;
                            hash_len: csize_t; pk: ptr br_rsa_public_key;
-                           hash_out: ptr cuchar): uint32_t {.importc, discardable.}
+                           hash_out: ptr uint8): uint32_t {.importc, discardable.}
 ## *
 ##  \brief RSA signature verification engine "i31" (PSS signatures).
 ##
@@ -696,7 +696,7 @@ proc br_rsa_i31_pkcs1_vrfy*(x: ptr cuchar; xlen: csize_t; hash_oid: ptr cuchar;
 ##  \return  1 on success, 0 on error.
 ##
 
-proc br_rsa_i31_pss_vrfy*(x: ptr cuchar; xlen: csize_t; hf_data: ptr br_hash_class;
+proc br_rsa_i31_pss_vrfy*(x: ptr uint8; xlen: csize_t; hf_data: ptr br_hash_class;
                          hf_mgf1: ptr br_hash_class; hash: pointer;
                          salt_len: csize_t; pk: ptr br_rsa_public_key): uint32_t {.importc, discardable.}
 ## *
@@ -709,7 +709,7 @@ proc br_rsa_i31_pss_vrfy*(x: ptr cuchar; xlen: csize_t; hf_data: ptr br_hash_cla
 ##  \return  1 on success, 0 on error.
 ##
 
-proc br_rsa_i31_private*(x: ptr cuchar; sk: ptr br_rsa_private_key): uint32_t {.importc, discardable.}
+proc br_rsa_i31_private*(x: ptr uint8; sk: ptr br_rsa_private_key): uint32_t {.importc, discardable.}
 ## *
 ##  \brief RSA signature generation engine "i31" (PKCS#1 v1.5 signatures).
 ##
@@ -723,8 +723,8 @@ proc br_rsa_i31_private*(x: ptr cuchar; sk: ptr br_rsa_private_key): uint32_t {.
 ##  \return  1 on success, 0 on error.
 ##
 
-proc br_rsa_i31_pkcs1_sign*(hash_oid: ptr cuchar; hash: ptr cuchar; hash_len: csize_t;
-                           sk: ptr br_rsa_private_key; x: ptr cuchar): uint32_t {.importc, discardable.}
+proc br_rsa_i31_pkcs1_sign*(hash_oid: ptr uint8; hash: ptr uint8; hash_len: csize_t;
+                           sk: ptr br_rsa_private_key; x: ptr uint8): uint32_t {.importc, discardable.}
 ## *
 ##  \brief RSA signature generation engine "i31" (PSS signatures).
 ##
@@ -741,8 +741,8 @@ proc br_rsa_i31_pkcs1_sign*(hash_oid: ptr cuchar; hash: ptr cuchar; hash_len: cs
 ##
 
 proc br_rsa_i31_pss_sign*(rng: ptr ptr br_prng_class; hf_data: ptr br_hash_class;
-                         hf_mgf1: ptr br_hash_class; hash_value: ptr cuchar;
-                         salt_len: csize_t; sk: ptr br_rsa_private_key; x: ptr cuchar): uint32_t {.importc, discardable.}
+                         hf_mgf1: ptr br_hash_class; hash_value: ptr uint8;
+                         salt_len: csize_t; sk: ptr br_rsa_private_key; x: ptr uint8): uint32_t {.importc, discardable.}
 ##
 ##  RSA "i62" engine. Similar to i31, but internal multiplication use
 ##  64x64->128 multiplications. This is available only on architecture
@@ -763,7 +763,7 @@ proc br_rsa_i31_pss_sign*(rng: ptr ptr br_prng_class; hf_data: ptr br_hash_class
 ##  \return  1 on success, 0 on error.
 ##
 
-proc br_rsa_i62_public*(x: ptr cuchar; xlen: csize_t; pk: ptr br_rsa_public_key): uint32_t {.importc, discardable.}
+proc br_rsa_i62_public*(x: ptr uint8; xlen: csize_t; pk: ptr br_rsa_public_key): uint32_t {.importc, discardable.}
 ## *
 ##  \brief RSA signature verification engine "i62" (PKCS#1 v1.5 signatures).
 ##
@@ -782,9 +782,9 @@ proc br_rsa_i62_public*(x: ptr cuchar; xlen: csize_t; pk: ptr br_rsa_public_key)
 ##  \return  1 on success, 0 on error.
 ##
 
-proc br_rsa_i62_pkcs1_vrfy*(x: ptr cuchar; xlen: csize_t; hash_oid: ptr cuchar;
+proc br_rsa_i62_pkcs1_vrfy*(x: ptr uint8; xlen: csize_t; hash_oid: ptr uint8;
                            hash_len: csize_t; pk: ptr br_rsa_public_key;
-                           hash_out: ptr cuchar): uint32_t {.importc, discardable.}
+                           hash_out: ptr uint8): uint32_t {.importc, discardable.}
 ## *
 ##  \brief RSA signature verification engine "i62" (PSS signatures).
 ##
@@ -804,7 +804,7 @@ proc br_rsa_i62_pkcs1_vrfy*(x: ptr cuchar; xlen: csize_t; hash_oid: ptr cuchar;
 ##  \return  1 on success, 0 on error.
 ##
 
-proc br_rsa_i62_pss_vrfy*(x: ptr cuchar; xlen: csize_t; hf_data: ptr br_hash_class;
+proc br_rsa_i62_pss_vrfy*(x: ptr uint8; xlen: csize_t; hf_data: ptr br_hash_class;
                          hf_mgf1: ptr br_hash_class; hash: pointer;
                          salt_len: csize_t; pk: ptr br_rsa_public_key): uint32_t {.importc, discardable.}
 ## *
@@ -821,7 +821,7 @@ proc br_rsa_i62_pss_vrfy*(x: ptr cuchar; xlen: csize_t; hf_data: ptr br_hash_cla
 ##  \return  1 on success, 0 on error.
 ##
 
-proc br_rsa_i62_private*(x: ptr cuchar; sk: ptr br_rsa_private_key): uint32_t {.importc, discardable.}
+proc br_rsa_i62_private*(x: ptr uint8; sk: ptr br_rsa_private_key): uint32_t {.importc, discardable.}
 ## *
 ##  \brief RSA signature generation engine "i62" (PKCS#1 v1.5 signatures).
 ##
@@ -839,8 +839,8 @@ proc br_rsa_i62_private*(x: ptr cuchar; sk: ptr br_rsa_private_key): uint32_t {.
 ##  \return  1 on success, 0 on error.
 ##
 
-proc br_rsa_i62_pkcs1_sign*(hash_oid: ptr cuchar; hash: ptr cuchar; hash_len: csize_t;
-                           sk: ptr br_rsa_private_key; x: ptr cuchar): uint32_t {.importc, discardable.}
+proc br_rsa_i62_pkcs1_sign*(hash_oid: ptr uint8; hash: ptr uint8; hash_len: csize_t;
+                           sk: ptr br_rsa_private_key; x: ptr uint8): uint32_t {.importc, discardable.}
 ## *
 ##  \brief RSA signature generation engine "i62" (PSS signatures).
 ##
@@ -861,8 +861,8 @@ proc br_rsa_i62_pkcs1_sign*(hash_oid: ptr cuchar; hash: ptr cuchar; hash_len: cs
 ##
 
 proc br_rsa_i62_pss_sign*(rng: ptr ptr br_prng_class; hf_data: ptr br_hash_class;
-                         hf_mgf1: ptr br_hash_class; hash_value: ptr cuchar;
-                         salt_len: csize_t; sk: ptr br_rsa_private_key; x: ptr cuchar): uint32_t {.importc, discardable.}
+                         hf_mgf1: ptr br_hash_class; hash_value: ptr uint8;
+                         salt_len: csize_t; sk: ptr br_rsa_private_key; x: ptr uint8): uint32_t {.importc, discardable.}
 ## *
 ##  \brief Get the RSA "i62" implementation (public key operations),
 ##  if available.
@@ -943,7 +943,7 @@ proc br_rsa_i62_oaep_decrypt_get*(): br_rsa_oaep_decrypt {.importc.}
 ##  \return  1 on success, 0 on error.
 ##
 
-proc br_rsa_i15_public*(x: ptr cuchar; xlen: csize_t; pk: ptr br_rsa_public_key): uint32_t {.importc, discardable.}
+proc br_rsa_i15_public*(x: ptr uint8; xlen: csize_t; pk: ptr br_rsa_public_key): uint32_t {.importc, discardable.}
 ## *
 ##  \brief RSA signature verification engine "i15" (PKCS#1 v1.5 signatures).
 ##
@@ -958,9 +958,9 @@ proc br_rsa_i15_public*(x: ptr cuchar; xlen: csize_t; pk: ptr br_rsa_public_key)
 ##  \return  1 on success, 0 on error.
 ##
 
-proc br_rsa_i15_pkcs1_vrfy*(x: ptr cuchar; xlen: csize_t; hash_oid: ptr cuchar;
+proc br_rsa_i15_pkcs1_vrfy*(x: ptr uint8; xlen: csize_t; hash_oid: ptr uint8;
                            hash_len: csize_t; pk: ptr br_rsa_public_key;
-                           hash_out: ptr cuchar): uint32_t {.importc, discardable.}
+                           hash_out: ptr uint8): uint32_t {.importc, discardable.}
 ## *
 ##  \brief RSA signature verification engine "i15" (PSS signatures).
 ##
@@ -976,7 +976,7 @@ proc br_rsa_i15_pkcs1_vrfy*(x: ptr cuchar; xlen: csize_t; hash_oid: ptr cuchar;
 ##  \return  1 on success, 0 on error.
 ##
 
-proc br_rsa_i15_pss_vrfy*(x: ptr cuchar; xlen: csize_t; hf_data: ptr br_hash_class;
+proc br_rsa_i15_pss_vrfy*(x: ptr uint8; xlen: csize_t; hf_data: ptr br_hash_class;
                          hf_mgf1: ptr br_hash_class; hash: pointer;
                          salt_len: csize_t; pk: ptr br_rsa_public_key): uint32_t {.importc, discardable.}
 ## *
@@ -989,7 +989,7 @@ proc br_rsa_i15_pss_vrfy*(x: ptr cuchar; xlen: csize_t; hf_data: ptr br_hash_cla
 ##  \return  1 on success, 0 on error.
 ##
 
-proc br_rsa_i15_private*(x: ptr cuchar; sk: ptr br_rsa_private_key): uint32_t {.importc, discardable.}
+proc br_rsa_i15_private*(x: ptr uint8; sk: ptr br_rsa_private_key): uint32_t {.importc, discardable.}
 ## *
 ##  \brief RSA signature generation engine "i15" (PKCS#1 v1.5 signatures).
 ##
@@ -1003,8 +1003,8 @@ proc br_rsa_i15_private*(x: ptr cuchar; sk: ptr br_rsa_private_key): uint32_t {.
 ##  \return  1 on success, 0 on error.
 ##
 
-proc br_rsa_i15_pkcs1_sign*(hash_oid: ptr cuchar; hash: ptr cuchar; hash_len: csize_t;
-                           sk: ptr br_rsa_private_key; x: ptr cuchar): uint32_t {.importc, discardable.}
+proc br_rsa_i15_pkcs1_sign*(hash_oid: ptr uint8; hash: ptr uint8; hash_len: csize_t;
+                           sk: ptr br_rsa_private_key; x: ptr uint8): uint32_t {.importc, discardable.}
 ## *
 ##  \brief RSA signature generation engine "i15" (PSS signatures).
 ##
@@ -1021,8 +1021,8 @@ proc br_rsa_i15_pkcs1_sign*(hash_oid: ptr cuchar; hash: ptr cuchar; hash_len: cs
 ##
 
 proc br_rsa_i15_pss_sign*(rng: ptr ptr br_prng_class; hf_data: ptr br_hash_class;
-                         hf_mgf1: ptr br_hash_class; hash_value: ptr cuchar;
-                         salt_len: csize_t; sk: ptr br_rsa_private_key; x: ptr cuchar): uint32_t {.importc, discardable.}
+                         hf_mgf1: ptr br_hash_class; hash_value: ptr uint8;
+                         salt_len: csize_t; sk: ptr br_rsa_private_key; x: ptr uint8): uint32_t {.importc, discardable.}
 ## *
 ##  \brief Get "default" RSA implementation (public-key operations).
 ##
@@ -1132,7 +1132,7 @@ proc br_rsa_oaep_decrypt_get_default*(): br_rsa_oaep_decrypt {.importc.}
 ##
 
 proc br_rsa_ssl_decrypt*(core: br_rsa_private; sk: ptr br_rsa_private_key;
-                        data: ptr cuchar; len: csize_t): uint32_t {.importc, discardable.}
+                        data: ptr uint8; len: csize_t): uint32_t {.importc, discardable.}
 ## *
 ##  \brief RSA encryption (OAEP) with the "i15" engine.
 ##

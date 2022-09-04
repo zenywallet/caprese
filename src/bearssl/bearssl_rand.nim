@@ -188,8 +188,8 @@ type
                             ##
                             ##  This field is set with the initialisation method/function.
                             ##
-    K*: array[64, cuchar]
-    V*: array[64, cuchar]
+    K*: array[64, uint8]
+    V*: array[64, uint8]
     digest_class*: ptr br_hash_class
 
 

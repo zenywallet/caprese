@@ -57,8 +57,8 @@ import
 type
   br_hmac_key_context* {.bycopy.} = object
     dig_vtable*: ptr br_hash_class
-    ksi*: array[64, cuchar]
-    kso*: array[64, cuchar]
+    ksi*: array[64, uint8]
+    kso*: array[64, uint8]
 
 
 ## *
@@ -101,7 +101,7 @@ proc br_hmac_key_get_digest*(kc: ptr br_hmac_key_context): ptr br_hash_class {.i
 type
   br_hmac_context* {.bycopy.} = object
     dig*: br_hash_compat_context
-    kso*: array[64, cuchar]
+    kso*: array[64, uint8]
     out_len*: csize_t
 
 

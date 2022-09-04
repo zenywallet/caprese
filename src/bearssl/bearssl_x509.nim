@@ -285,7 +285,7 @@ type
     ec*: br_ec_public_key
 
   br_x509_pkey* {.bycopy.} = object
-    key_type*: cuchar          ## * \brief Key type: `BR_KEYTYPE_RSA` or `BR_KEYTYPE_EC`
+    key_type*: uint8          ## * \brief Key type: `BR_KEYTYPE_RSA` or `BR_KEYTYPE_EC`
     ## * \brief Actual public key.
     key*: INNER_C_UNION_bearssl_x509_1
 
@@ -298,7 +298,7 @@ type
 
 type
   br_x500_name* {.bycopy.} = object
-    data*: ptr cuchar           ## * \brief Encoded DN data.
+    data*: ptr uint8           ## * \brief Encoded DN data.
     ## * \brief Encoded DN length (in bytes).
     len*: csize_t
 
@@ -473,7 +473,7 @@ type
                                                              ##  \param buf   certificate data chunk.
                                                              ##  \param len   certificate data chunk length (in bytes).
                                                              ##
-    append*: proc (ctx: ptr ptr br_x509_class; buf: ptr cuchar; len: csize_t) ## *
+    append*: proc (ctx: ptr ptr br_x509_class; buf: ptr uint8; len: csize_t) ## *
                                                                    ##  \brief Finish the current certificate.
                                                                    ##
                                                                    ##  This function is called when the end of the current certificate
@@ -622,7 +622,7 @@ const
 
 type
   br_name_element* {.bycopy.} = object
-    oid*: ptr cuchar ## *
+    oid*: ptr uint8 ## *
                   ##  \brief Element OID.
                   ##
                   ##  For X.500 name elements (to be extracted from the subject DN),
@@ -733,7 +733,7 @@ type
   INNER_C_STRUCT_bearssl_x509_3* {.bycopy.} = object
     dp*: ptr uint32_t
     rp*: ptr uint32_t
-    ip*: ptr cuchar
+    ip*: ptr uint8
 
   br_x509_minimal_context* {.bycopy.} = object
     vtable*: ptr br_x509_class  ##  Structure for returning the EE public key.
@@ -743,7 +743,7 @@ type
     rp_stack*: array[31, uint32_t]
     err*: cint                 ##  Server name to match with the SAN / CN of the EE certificate.
     server_name*: cstring      ##  Validated key usages.
-    key_usages*: cuchar        ##  Explicitly set date and time.
+    key_usages*: uint8        ##  Explicitly set date and time.
     days*: uint32_t
     seconds*: uint32_t ##  Current certificate length (in bytes). Set to 0 when the
                      ## 	   certificate has been fully processed.
@@ -751,34 +751,34 @@ type
                          ## 	   It is incremented at the end of the processing of a certificate,
                          ## 	   so it is 0 for the EE.
     num_certs*: uint32_t       ##  Certificate data chunk.
-    hbuf*: ptr cuchar
+    hbuf*: ptr uint8
     hlen*: csize_t             ##  The pad serves as destination for various operations.
-    pad*: array[256, cuchar]    ##  Buffer for EE public key data.
-    ee_pkey_data*: array[BR_X509_BUFSIZE_KEY, cuchar] ##  Buffer for currently decoded public key.
-    pkey_data*: array[BR_X509_BUFSIZE_KEY, cuchar] ##  Signature type: signer key type, offset to the hash
+    pad*: array[256, uint8]    ##  Buffer for EE public key data.
+    ee_pkey_data*: array[BR_X509_BUFSIZE_KEY, uint8] ##  Buffer for currently decoded public key.
+    pkey_data*: array[BR_X509_BUFSIZE_KEY, uint8] ##  Signature type: signer key type, offset to the hash
                                                 ## 	   function OID (in the T0 data block) and hash function
                                                 ## 	   output length (TBS hash length).
-    cert_signer_key_type*: cuchar
+    cert_signer_key_type*: uint8
     cert_sig_hash_oid*: uint16_t
-    cert_sig_hash_len*: cuchar ##  Current/last certificate signature.
-    cert_sig*: array[BR_X509_BUFSIZE_SIG, cuchar]
+    cert_sig_hash_len*: uint8 ##  Current/last certificate signature.
+    cert_sig*: array[BR_X509_BUFSIZE_SIG, uint8]
     cert_sig_len*: uint16_t    ##  Minimum RSA key length (difference in bytes from 128).
     min_rsa_size*: int16_t     ##  Configured trust anchors.
     trust_anchors*: ptr br_x509_trust_anchor
     trust_anchors_num*: csize_t ##
                               ##  Multi-hasher for the TBS.
                               ##
-    do_mhash*: cuchar
+    do_mhash*: uint8
     mhash*: br_multihash_context
-    tbs_hash*: array[64, cuchar] ##
+    tbs_hash*: array[64, uint8] ##
                               ##  Simple hasher for the subject/issuer DN.
                               ##
-    do_dn_hash*: cuchar
+    do_dn_hash*: uint8
     dn_hash_impl*: ptr br_hash_class
     dn_hash*: br_hash_compat_context
-    current_dn_hash*: array[64, cuchar]
-    next_dn_hash*: array[64, cuchar]
-    saved_dn_hash*: array[64, cuchar] ##
+    current_dn_hash*: array[64, uint8]
+    next_dn_hash*: array[64, uint8]
+    saved_dn_hash*: array[64, uint8] ##
                                    ##  Name elements to gather.
                                    ##
     name_elts*: ptr br_name_element
@@ -1005,7 +1005,7 @@ type
   INNER_C_STRUCT_bearssl_x509_5* {.bycopy.} = object
     dp*: ptr uint32_t
     rp*: ptr uint32_t
-    ip*: ptr cuchar
+    ip*: ptr uint8
 
   br_x509_decoder_context* {.bycopy.} = object
     pkey*: br_x509_pkey        ##  Structure for returning the public key.
@@ -1014,23 +1014,23 @@ type
     dp_stack*: array[32, uint32_t]
     rp_stack*: array[32, uint32_t]
     err*: cint                 ##  The pad serves as destination for various operations.
-    pad*: array[256, cuchar]    ##  Flag set when decoding succeeds.
-    decoded*: cuchar           ##  Validity dates.
+    pad*: array[256, uint8]    ##  Flag set when decoding succeeds.
+    decoded*: uint8           ##  Validity dates.
     notbefore_days*: uint32_t
     notbefore_seconds*: uint32_t
     notafter_days*: uint32_t
     notafter_seconds*: uint32_t ##  The "CA" flag. This is set to true if the certificate contains
                               ## 	   a Basic Constraints extension that asserts CA status.
-    isCA*: cuchar ##  DN processing: the subject DN is extracted and pushed to the
+    isCA*: uint8 ##  DN processing: the subject DN is extracted and pushed to the
                 ## 	   provided callback.
-    copy_dn*: cuchar
+    copy_dn*: uint8
     append_dn_ctx*: pointer
     append_dn*: proc (ctx: pointer; buf: pointer; len: csize_t) ##  Certificate data chunk.
-    hbuf*: ptr cuchar
+    hbuf*: ptr uint8
     hlen*: csize_t             ##  Buffer for decoded public key.
-    pkey_data*: array[BR_X509_BUFSIZE_KEY, cuchar] ##  Type of key and hash function used in the certificate signature.
-    signer_key_type*: cuchar
-    signer_hash_id*: cuchar
+    pkey_data*: array[BR_X509_BUFSIZE_KEY, uint8] ##  Type of key and hash function used in the certificate signature.
+    signer_key_type*: uint8
+    signer_hash_id*: uint8
 
 
 ## *
@@ -1149,7 +1149,7 @@ proc br_x509_decoder_get_signer_hash_id*(ctx: ptr br_x509_decoder_context): cint
 
 type
   br_x509_certificate* {.bycopy.} = object
-    data*: ptr cuchar           ## * \brief The DER-encoded certificate data.
+    data*: ptr uint8           ## * \brief The DER-encoded certificate data.
     ## * \brief The DER-encoded certificate length (in bytes).
     data_len*: csize_t
 
@@ -1172,7 +1172,7 @@ type
   INNER_C_STRUCT_bearssl_x509_9* {.bycopy.} = object
     dp*: ptr uint32_t
     rp*: ptr uint32_t
-    ip*: ptr cuchar
+    ip*: ptr uint8
 
   br_skey_decoder_context* {.bycopy.} = object
     key*: INNER_C_UNION_bearssl_x509_8 ##  Structure for returning the private key.
@@ -1181,13 +1181,13 @@ type
     dp_stack*: array[32, uint32_t]
     rp_stack*: array[32, uint32_t]
     err*: cint                 ##  Private key data chunk.
-    hbuf*: ptr cuchar
+    hbuf*: ptr uint8
     hlen*: csize_t             ##  The pad serves as destination for various operations.
-    pad*: array[256, cuchar]    ##  Decoded key type; 0 until decoding is complete.
-    key_type*: cuchar ##  Buffer for the private key elements. It shall be large enough
+    pad*: array[256, uint8]    ##  Decoded key type; 0 until decoding is complete.
+    key_type*: uint8 ##  Buffer for the private key elements. It shall be large enough
                     ## 	   to accommodate all elements for a RSA-4096 private key (roughly
                     ## 	   five 2048-bit integers, possibly a bit more).
-    key_data*: array[3 * BR_X509_BUFSIZE_SIG, cuchar]
+    key_data*: array[3 * BR_X509_BUFSIZE_SIG, uint8]
 
 
 ## *

@@ -387,7 +387,7 @@ type
     vtable*: ptr br_hash_class  ## *
                             ##  \brief Pointer to vtable for this context.
                             ##
-    buf*: array[64, cuchar]
+    buf*: array[64, uint8]
     count*: uint64_t
     val*: array[4, uint32_t]
 
@@ -486,7 +486,7 @@ type
     vtable*: ptr br_hash_class  ## *
                             ##  \brief Pointer to vtable for this context.
                             ##
-    buf*: array[64, cuchar]
+    buf*: array[64, uint8]
     count*: uint64_t
     val*: array[5, uint32_t]
 
@@ -585,7 +585,7 @@ type
     vtable*: ptr br_hash_class  ## *
                             ##  \brief Pointer to vtable for this context.
                             ##
-    buf*: array[64, cuchar]
+    buf*: array[64, uint8]
     count*: uint64_t
     val*: array[8, uint32_t]
 
@@ -738,7 +738,7 @@ type
     vtable*: ptr br_hash_class  ## *
                             ##  \brief Pointer to vtable for this context.
                             ##
-    buf*: array[128, cuchar]
+    buf*: array[128, uint8]
     count*: uint64_t
     val*: array[8, uint64_t]
 
@@ -900,7 +900,7 @@ type
     vtable*: ptr br_hash_class  ## *
                             ##  \brief Pointer to vtable for this context.
                             ##
-    buf*: array[64, cuchar]
+    buf*: array[64, uint8]
     count*: uint64_t
     val_md5*: array[4, uint32_t]
     val_sha1*: array[5, uint32_t]
@@ -1008,7 +1008,7 @@ type
 
 type
   br_multihash_context* {.bycopy.} = object
-    buf*: array[128, cuchar]
+    buf*: array[128, uint8]
     count*: uint64_t
     val_32*: array[25, uint32_t]
     val_64*: array[16, uint64_t]

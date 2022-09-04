@@ -1542,7 +1542,7 @@ const
 
 type
   INNER_C_UNION_bearssl_block_1* {.bycopy, union.} = object
-    skni*: array[16 * 15, cuchar]
+    skni*: array[16 * 15, uint8]
 
   br_aes_x86ni_cbcenc_keys* {.bycopy.} = object
     vtable*: ptr br_block_cbcenc_class ## * \brief Pointer to vtable for this context.
@@ -1559,7 +1559,7 @@ type
 
 type
   INNER_C_UNION_bearssl_block_3* {.bycopy, union.} = object
-    skni*: array[16 * 15, cuchar]
+    skni*: array[16 * 15, uint8]
 
   br_aes_x86ni_cbcdec_keys* {.bycopy.} = object
     vtable*: ptr br_block_cbcdec_class ## * \brief Pointer to vtable for this context.
@@ -1577,7 +1577,7 @@ type
 
 type
   INNER_C_UNION_bearssl_block_5* {.bycopy, union.} = object
-    skni*: array[16 * 15, cuchar]
+    skni*: array[16 * 15, uint8]
 
   br_aes_x86ni_ctr_keys* {.bycopy.} = object
     vtable*: ptr br_block_ctr_class ## * \brief Pointer to vtable for this context.
@@ -1595,7 +1595,7 @@ type
 
 type
   INNER_C_UNION_bearssl_block_7* {.bycopy, union.} = object
-    skni*: array[16 * 15, cuchar]
+    skni*: array[16 * 15, uint8]
 
   br_aes_x86ni_ctrcbc_keys* {.bycopy.} = object
     vtable*: ptr br_block_ctrcbc_class ## * \brief Pointer to vtable for this context.
@@ -1837,7 +1837,7 @@ const
 
 type
   INNER_C_UNION_bearssl_block_9* {.bycopy, union.} = object
-    skni*: array[16 * 15, cuchar]
+    skni*: array[16 * 15, uint8]
 
   br_aes_pwr8_cbcenc_keys* {.bycopy.} = object
     vtable*: ptr br_block_cbcenc_class ## * \brief Pointer to vtable for this context.
@@ -1854,7 +1854,7 @@ type
 
 type
   INNER_C_UNION_bearssl_block_11* {.bycopy, union.} = object
-    skni*: array[16 * 15, cuchar]
+    skni*: array[16 * 15, uint8]
 
   br_aes_pwr8_cbcdec_keys* {.bycopy.} = object
     vtable*: ptr br_block_cbcdec_class ## * \brief Pointer to vtable for this context.
@@ -1872,7 +1872,7 @@ type
 
 type
   INNER_C_UNION_bearssl_block_13* {.bycopy, union.} = object
-    skni*: array[16 * 15, cuchar]
+    skni*: array[16 * 15, uint8]
 
   br_aes_pwr8_ctr_keys* {.bycopy.} = object
     vtable*: ptr br_block_ctr_class ## * \brief Pointer to vtable for this context.
@@ -1890,7 +1890,7 @@ type
 
 type
   INNER_C_UNION_bearssl_block_15* {.bycopy, union.} = object
-    skni*: array[16 * 15, cuchar]
+    skni*: array[16 * 15, uint8]
 
   br_aes_pwr8_ctrcbc_keys* {.bycopy.} = object
     vtable*: ptr br_block_ctrcbc_class ## * \brief Pointer to vtable for this context.
