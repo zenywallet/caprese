@@ -1,12 +1,7 @@
 # Copyright (c) 2021 zenywallet
 
 import posix
-
-template debug(x: varargs[string, `$`]) =
-  when declared(DEBUG_LOG):
-    echo join(x)
-  else:
-    discard
+import logs
 
 proc setRlimitOpenFiles*(rlim: int): bool {.discardable.} =
   var rlp: RLimit
