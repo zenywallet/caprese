@@ -12,3 +12,8 @@ bin           = @["caprese"]
 
 requires "nim >= 1.6.4"
 requires "nimcrypto"
+
+
+task deps, "Build deps":
+    withDir "deps/bearssl":
+      exec "make -j$(nproc)"
