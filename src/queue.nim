@@ -1,6 +1,6 @@
 # Copyright (c) 2022 zenywallet
 
-const INITIAL_BUF_LEN = 128
+import locks
 
 type
   Queue*[T] = object
@@ -8,25 +8,25 @@ type
     bufLen*: int
     count*: int
     next*: int
+    lock: Lock
 
   QueueError* = object of CatchableError
+  QueueEmptyError* = object of CatchableError
+  QueueFullError* = object of CatchableError
 
+proc init*[T](queue: var Queue[T], limit: int) =
+  if not queue.buf.isNil:
+    raise newException(QueueError, "already initialized")
+  initLock(queue.lock)
+  queue.buf = cast[ptr UncheckedArray[T]](allocShared0(sizeof(T) * limit))
+  queue.bufLen = limit
 
 proc add*[T](queue: var Queue[T], data: T) =
+  acquire(queue.lock)
+  defer:
+    release(queue.lock)
   if queue.count >= queue.bufLen:
-    if queue.bufLen == 0:
-      queue.buf = cast[ptr UncheckedArray[T]](allocShared0(sizeof(T) * INITIAL_BUF_LEN))
-      queue.bufLen = INITIAL_BUF_LEN
-    else:
-      let prevLen = queue.bufLen
-      let nextLen = queue.bufLen * 2
-      queue.buf = cast[ptr UncheckedArray[T]](reallocShared(queue.buf, sizeof(T) * nextLen))
-      var pos = queue.next - queue.count
-      if pos < 0:
-        let copyLen = pos.abs
-        pos = pos + prevLen
-        copyMem(addr queue.buf[nextLen - copyLen], addr queue.buf[pos], sizeof(T) * copyLen)
-      queue.bufLen = nextLen
+    raise newException(QueueFullError, "queue is full")
   elif queue.next >= queue.bufLen:
     queue.next = 0
   queue.buf[queue.next] = data
@@ -34,6 +34,9 @@ proc add*[T](queue: var Queue[T], data: T) =
   inc(queue.next)
 
 proc pop*[T](queue: var Queue[T]): T =
+  acquire(queue.lock)
+  defer:
+    release(queue.lock)
   if queue.count > 0:
     var pos = queue.next - queue.count
     if pos < 0:
@@ -42,9 +45,12 @@ proc pop*[T](queue: var Queue[T]): T =
     result = queue.buf[pos]
   else:
     when not (T is ptr) and not (T is pointer):
-      raise newException(QueueError, "no data")
+      raise newException(QueueEmptyError, "no data")
 
 iterator pop*[T](queue: var Queue[T]): lent T =
+  acquire(queue.lock)
+  defer:
+    release(queue.lock)
   while queue.count > 0:
     var pos = queue.next - queue.count
     if pos < 0:
@@ -53,10 +59,9 @@ iterator pop*[T](queue: var Queue[T]): lent T =
     yield queue.buf[pos]
 
 proc clear*[T](queue: var Queue[T]) =
-  if not queue.buf.isNil:
-    queue.buf.deallocShared()
-    queue.buf = nil
-  queue.bufLen = 0
+  acquire(queue.lock)
+  defer:
+    release(queue.lock)
   queue.count = 0
   queue.next = 0
 
@@ -64,49 +69,50 @@ proc `=destroy`[T](queue: var Queue[T]) =
   if not queue.buf.isNil:
     queue.buf.deallocShared()
     queue.buf = nil
+    deinitLock(queue.lock)
 
 proc `=copy`*[T](a: var Queue[T]; b: Queue[T]) =
-  if a.buf == b.buf: return
-  `=destroy`(a)
-  wasMoved(a)
-  a.bufLen = b.bufLen
-  a.count = b.count
-  a.next = b.next
-  if b.buf != nil:
-    a.buf = cast[ptr UncheckedArray[T]](allocShared(sizeof(T) * a.bufLen))
-    copyMem(a.buf, b.buf, sizeof(T) * a.bufLen)
+  raise newException(QueueError, "=copy")
 
 proc `=sink`*[T](a: var Queue[T]; b: Queue[T]) =
-  `=destroy`(a)
-  wasMoved(a)
-  a.bufLen = b.bufLen
-  a.count = b.count
-  a.next = b.next
-  a.buf = b.buf
+  raise newException(QueueError, "=sink")
 
 
 when isMainModule:
   var queue: Queue[int]
+  queue.init(100)
 
-  var j = 0
-  var k = 0
+  proc setter(id: int) {.thread.} =
+    var i = 0
+    while true:
+      try:
+        queue.add(id * 10000 + i)
+        inc(i)
+        if i == 1000:
+          break
+      except:
+        discard
 
-  for i in 0..<5000:
-    queue.add(j); inc(j)
-    queue.add(j); inc(j)
-    queue.add(j); inc(j)
-    assert queue.pop() == k; inc(k)
+  proc getter() {.thread.} =
+    var i = 0
+    while true:
+      try:
+        discard queue.pop()
+        inc(i)
+        if i == 1000:
+          break
+      except:
+        discard
 
-  var queue2 = queue #=copy
-  var queue3: Queue[int]
-  queue2 = queue3 #=sink
+  var getterThreads: array[10, Thread[void]]
+  for i in 0..<getterThreads.len:
+    createThread(getterThreads[i], getter)
 
-  for i in 5000..<10000:
-    queue.add(j); inc(j)
-    assert queue.pop() == k; inc(k)
-    assert queue.pop() == k; inc(k)
+  var setterThreads: array[10, Thread[int]]
+  for i in 0..<setterThreads.len:
+    createThread(setterThreads[i], setter, i)
 
-  for p in queue.pop():
-    assert p == k; inc(k)
+  joinThreads(setterThreads)
+  joinThreads(getterThreads)
 
-  queue.clear(); k = j
+  echo queue.count
