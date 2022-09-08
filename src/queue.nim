@@ -10,6 +10,7 @@ type
     next*: int
     cond: Cond
     lock: Lock
+    waitCount: int
 
   QueueError* = object of CatchableError
   QueueEmptyError* = object of CatchableError
@@ -71,7 +72,8 @@ proc send*[T](queue: var Queue[T], data: T): bool {.discardable.} =
   queue.buf[queue.next] = data
   inc(queue.count)
   inc(queue.next)
-  signal(queue.cond)
+  if queue.waitCount > 0:
+    signal(queue.cond)
   return true
 
 proc recv*[T](queue: var Queue[T]): T =
@@ -79,7 +81,9 @@ proc recv*[T](queue: var Queue[T]): T =
   defer:
     release(queue.lock)
   while queue.count == 0:
+    inc(queue.waitCount)
     wait(queue.cond, queue.lock)
+    dec(queue.waitCount)
   var pos = queue.next - queue.count
   if pos < 0:
     pos = pos + queue.bufLen
