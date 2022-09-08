@@ -8,7 +8,10 @@ type
     bufLen*: int
     count*: int
     next*: int
+    cond: Cond
     lock: Lock
+    when not defined(Windows):
+      signal: bool
 
   QueueError* = object of CatchableError
   QueueEmptyError* = object of CatchableError
@@ -17,7 +20,10 @@ type
 proc init*[T](queue: var Queue[T], limit: int) =
   if not queue.buf.isNil:
     raise newException(QueueError, "already initialized")
+  initCond(queue.cond)
   initLock(queue.lock)
+  when not defined(Windows):
+    queue.signal = false
   queue.buf = cast[ptr UncheckedArray[T]](allocShared0(sizeof(T) * limit))
   queue.bufLen = limit
 
@@ -58,6 +64,39 @@ iterator pop*[T](queue: var Queue[T]): lent T =
     dec(queue.count)
     yield queue.buf[pos]
 
+proc send*[T](queue: var Queue[T], data: T): bool {.discardable.} =
+  acquire(queue.lock)
+  defer:
+    release(queue.lock)
+  if queue.count >= queue.bufLen:
+    return false
+  elif queue.next >= queue.bufLen:
+    queue.next = 0
+  queue.buf[queue.next] = data
+  inc(queue.count)
+  inc(queue.next)
+  when not defined(Windows):
+    queue.signal = true
+  signal(queue.cond)
+  return true
+
+proc recv*[T](queue: var Queue[T]): T =
+  acquire(queue.lock)
+  defer:
+    release(queue.lock)
+  while queue.count == 0:
+    when defined(Windows):
+      wait(queue.cond, queue.lock)
+    else:
+      if not queue.signal:
+        wait(queue.cond, queue.lock)
+      queue.signal = false
+  var pos = queue.next - queue.count
+  if pos < 0:
+    pos = pos + queue.bufLen
+  dec(queue.count)
+  result = queue.buf[pos]
+
 proc clear*[T](queue: var Queue[T]) =
   acquire(queue.lock)
   defer:
@@ -70,6 +109,7 @@ proc `=destroy`[T](queue: var Queue[T]) =
     queue.buf.deallocShared()
     queue.buf = nil
     deinitLock(queue.lock)
+    deinitCond(queue.cond)
 
 proc `=copy`*[T](a: var Queue[T]; b: Queue[T]) =
   raise newException(QueueError, "=copy")
@@ -79,14 +119,17 @@ proc `=sink`*[T](a: var Queue[T]; b: Queue[T]) =
 
 
 when isMainModule:
+  import os
+
   var queue: Queue[int]
   queue.init(100)
 
   proc setter(id: int) {.thread.} =
     var i = 0
     while true:
+      sleep(5)
       try:
-        queue.add(id * 10000 + i)
+        queue.send(id * 10000 + i)
         inc(i)
         if i == 1000:
           break
@@ -97,7 +140,7 @@ when isMainModule:
     var i = 0
     while true:
       try:
-        discard queue.pop()
+        echo queue.recv()
         inc(i)
         if i == 1000:
           break
