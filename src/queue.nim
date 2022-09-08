@@ -10,8 +10,6 @@ type
     next*: int
     cond: Cond
     lock: Lock
-    when not defined(Windows):
-      signal: bool
 
   QueueError* = object of CatchableError
   QueueEmptyError* = object of CatchableError
@@ -22,8 +20,6 @@ proc init*[T](queue: var Queue[T], limit: int) =
     raise newException(QueueError, "already initialized")
   initCond(queue.cond)
   initLock(queue.lock)
-  when not defined(Windows):
-    queue.signal = false
   queue.buf = cast[ptr UncheckedArray[T]](allocShared0(sizeof(T) * limit))
   queue.bufLen = limit
 
@@ -75,8 +71,6 @@ proc send*[T](queue: var Queue[T], data: T): bool {.discardable.} =
   queue.buf[queue.next] = data
   inc(queue.count)
   inc(queue.next)
-  when not defined(Windows):
-    queue.signal = true
   signal(queue.cond)
   return true
 
@@ -85,12 +79,7 @@ proc recv*[T](queue: var Queue[T]): T =
   defer:
     release(queue.lock)
   while queue.count == 0:
-    when defined(Windows):
-      wait(queue.cond, queue.lock)
-    else:
-      if not queue.signal:
-        wait(queue.cond, queue.lock)
-      queue.signal = false
+    wait(queue.cond, queue.lock)
   var pos = queue.next - queue.count
   if pos < 0:
     pos = pos + queue.bufLen
