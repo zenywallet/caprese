@@ -13,6 +13,7 @@ import statuscode
 import rlimit
 export rlimit
 import contents
+import queue
 
 const RLIMIT_OPEN_FILES* = 65536
 const CLIENT_MAX = 32000
@@ -183,8 +184,9 @@ var epfd: cint = -1
 
 type
   WorkerChannelParam = tuple[appId: int, idx: int, events: uint32, evData: uint64]
-var workerChannel: ptr Channel[WorkerChannelParam]
 var workerChannelWaitingCount: int = 0
+var workerQueue: Queue[WorkerChannelParam]
+workerQueue.init(WORKER_QUEUE_LIMIT)
 
 type
   WrapperThreadArg = tuple[threadFunc: proc(arg: ThreadArg) {.thread.}, arg: ThreadArg]
@@ -652,7 +654,7 @@ proc worker(arg: ThreadArg) {.thread.} =
 
   while true:
     block channelBlock:
-      var channelData = workerChannel[].recv()
+      var channelData = workerQueue.recv()
       if not active:
         when declared(freeWorker):
           freeWorker()
@@ -900,8 +902,8 @@ proc dispatcher(arg: ThreadArg) {.thread.} =
           if reqCount > REQ_LIMIT_DISPATCH_MAX:
             appId = 2
 
-        workerChannel[].send((appId, idx, events[i].events, evData))
-        workerChannelWaitingCount = workerChannel[].peek()
+        workerQueue.send((appId, idx, events[i].events, evData))
+        workerChannelWaitingCount = workerQueue.count
     elif nfd < 0:
         if errno == EINTR:
           continue
@@ -1235,8 +1237,6 @@ proc main(arg: ThreadArg) {.thread.} =
 
     initClient()
 
-    workerChannel = cast[ptr Channel[WorkerChannelParam]](allocShared0(sizeof(Channel[WorkerChannelParam])))
-    workerChannel[].open()
     for i in 0..<WORKER_THREAD_NUM:
       createThread(workerThreads[i], threadWrapper,
                   (worker, ThreadArg(type: ThreadArgType.WorkerParams, workerParams: (i, tcp_rmem))))
@@ -1249,11 +1249,9 @@ proc main(arg: ThreadArg) {.thread.} =
     joinThreads(monitorThread, httpThread, acceptThread, dispatcherThread)
 
     for i in 0..<WORKER_THREAD_NUM:
-      workerChannel[].send((0, 0, 0'u32, 0'u64))
+      workerQueue.send((0, 0, 0'u32, 0'u64))
     joinThreads(workerThreads)
 
-    workerChannel[].close()
-    workerChannel.deallocShared()
     var retEpfdClose = epfd.close()
     if retEpfdClose != 0:
       errorQuit "error: close epfd=", epfd, " ret=", retEpfdClose, " ", getErrnoStr()
