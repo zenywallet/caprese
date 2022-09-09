@@ -17,7 +17,7 @@ type
   QueueFullError* = object of CatchableError
 
 proc init*[T](queue: var Queue[T], limit: int) =
-  if not queue.buf.isNil:
+  if unlikely(not queue.buf.isNil):
     raise newException(QueueError, "already initialized")
   initCond(queue.cond)
   initLock(queue.lock)
@@ -28,9 +28,9 @@ proc add*[T](queue: var Queue[T], data: T) =
   acquire(queue.lock)
   defer:
     release(queue.lock)
-  if queue.count >= queue.bufLen:
+  if unlikely(queue.count >= queue.bufLen):
     raise newException(QueueFullError, "queue is full")
-  elif queue.next >= queue.bufLen:
+  elif unlikely(queue.next >= queue.bufLen):
     queue.next = 0
   queue.buf[queue.next] = data
   inc(queue.count)
@@ -40,9 +40,9 @@ proc pop*[T](queue: var Queue[T]): T =
   acquire(queue.lock)
   defer:
     release(queue.lock)
-  if queue.count > 0:
+  if likely(queue.count > 0):
     var pos = queue.next - queue.count
-    if pos < 0:
+    if unlikely(pos < 0):
       pos = pos + queue.bufLen
     dec(queue.count)
     result = queue.buf[pos]
@@ -54,9 +54,9 @@ iterator pop*[T](queue: var Queue[T]): lent T =
   acquire(queue.lock)
   defer:
     release(queue.lock)
-  while queue.count > 0:
+  while likely(queue.count > 0):
     var pos = queue.next - queue.count
-    if pos < 0:
+    if unlikely(pos < 0):
       pos = pos + queue.bufLen
     dec(queue.count)
     yield queue.buf[pos]
@@ -65,14 +65,14 @@ proc send*[T](queue: var Queue[T], data: T): bool {.discardable.} =
   acquire(queue.lock)
   defer:
     release(queue.lock)
-  if queue.count >= queue.bufLen:
+  if unlikely(queue.count >= queue.bufLen):
     return false
-  elif queue.next >= queue.bufLen:
+  elif unlikely(queue.next >= queue.bufLen):
     queue.next = 0
   queue.buf[queue.next] = data
   inc(queue.count)
   inc(queue.next)
-  if queue.waitCount > 0:
+  if unlikely(queue.waitCount > 0):
     signal(queue.cond)
   return true
 
@@ -80,12 +80,12 @@ proc recv*[T](queue: var Queue[T]): T =
   acquire(queue.lock)
   defer:
     release(queue.lock)
-  while queue.count == 0:
+  while unlikely(queue.count == 0):
     inc(queue.waitCount)
     wait(queue.cond, queue.lock)
     dec(queue.waitCount)
   var pos = queue.next - queue.count
-  if pos < 0:
+  if unlikely(pos < 0):
     pos = pos + queue.bufLen
   dec(queue.count)
   result = queue.buf[pos]
@@ -98,7 +98,7 @@ proc clear*[T](queue: var Queue[T]) =
   queue.next = 0
 
 proc `=destroy`[T](queue: var Queue[T]) =
-  if not queue.buf.isNil:
+  if likely(not queue.buf.isNil):
     queue.buf.deallocShared()
     queue.buf = nil
     deinitLock(queue.lock)
