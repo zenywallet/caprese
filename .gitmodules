@@ -10,3 +10,6 @@
 [submodule "deps/openssl"]
 	path = deps/openssl
 	url = https://github.com/openssl/openssl
+[submodule "deps/libressl"]
+	path = deps/libressl
+	url = https://github.com/libressl-portable/portable
