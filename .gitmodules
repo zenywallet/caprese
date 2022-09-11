@@ -7,3 +7,6 @@
 [submodule "deps/bearssl"]
 	path = deps/bearssl
 	url = https://www.bearssl.org/git/BearSSL
+[submodule "deps/openssl"]
+	path = deps/openssl
+	url = https://github.com/openssl/openssl
