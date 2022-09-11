@@ -15,5 +15,5 @@ requires "nimcrypto"
 
 
 task deps, "Build deps":
-    withDir "deps/bearssl":
-      exec "make -j$(nproc)"
+  withDir "deps/bearssl":
+    exec "make -j$(nproc)"
