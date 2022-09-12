@@ -17,3 +17,8 @@ requires "nimcrypto"
 task deps, "Build deps":
   withDir "deps/bearssl":
     exec "make -j$(nproc)"
+
+task openssl, "Build OpenSSL":
+  withDir "deps/openssl":
+    exec "./Configure"
+    exec "make -j$(nproc)"
