@@ -22,3 +22,12 @@ task openssl, "Build OpenSSL":
   withDir "deps/openssl":
     exec "./Configure"
     exec "make -j$(nproc)"
+
+task libressl, "Build LibreSSL":
+  withDir "deps/libressl":
+    if dirExists("openbsd"):
+      exec "rm -rf openbsd"
+    exec "git checkout master"
+    exec "./autogen.sh"
+    exec "./configure"
+    exec "make -j$(nproc)"
