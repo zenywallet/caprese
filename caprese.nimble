@@ -31,3 +31,10 @@ task libressl, "Build LibreSSL":
     exec "./autogen.sh"
     exec "./configure"
     exec "make -j$(nproc)"
+
+task boringssl, "Build BoringSSL":
+  withDir "deps/boringssl":
+    mkDir "build"
+    cd "build"
+    exec "cmake .."
+    exec "make -j$(nproc)"
