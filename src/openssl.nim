@@ -3,11 +3,16 @@
 import os
 
 const USE_LIBRESSL = defined(USE_LIBRESSL)
+const USE_BORINGSSL = defined(USE_BORINGSSL)
 
 when USE_LIBRESSL:
   const libresslPath = currentSourcePath.parentDir() / "../deps/libressl"
   {.passL: libresslPath / "ssl/.libs/libssl.a".}
   {.passL: libresslPath / "crypto/.libs/libcrypto.a".}
+elif USE_BORINGSSL:
+  const boringsslPath = currentSourcePath.parentDir() / "../deps/boringssl"
+  {.passL: boringsslPath / "build/ssl/libssl.a".}
+  {.passL: boringsslPath / "build/crypto/libcrypto.a".}
 else:
   const opensslPath = currentSourcePath.parentDir() / "../deps/openssl"
   {.passL: opensslPath / "libssl.a".}
@@ -101,7 +106,8 @@ proc SSL_write_ex*(s: SSL, buf: pointer, num: csize_t, written: csize_t): cint {
 proc SSL_write_early_data*(s: SSL, buf: pointer, num: csize_t, written: csize_t): cint {.importc.}
 
 proc SSL_ctrl*(ssl: SSL, cmd: cint, larg: clong, parg: pointer): clong {.importc, discardable.}
-proc SSL_CTX_ctrl*(ctx: SSL_CTX, cmd: cint, larg: clong, parg: pointer): clong {.importc, discardable.}
+when not USE_BORINGSSL:
+  proc SSL_CTX_ctrl*(ctx: SSL_CTX, cmd: cint, larg: clong, parg: pointer): clong {.importc, discardable.}
 
 when USE_LIBRESSL:
   const SSL_CTRL_OPTIONS* = 32
@@ -110,8 +116,11 @@ when USE_LIBRESSL:
 else:
   proc SSL_CTX_set_options*(ctx: SSL_CTX, op: clong): clong {.importc, discardable.}
 
-proc SSL_CTX_set_mode*(ctx: SSL_CTX, mode: clong): clong {.inline, discardable.} =
-  SSL_CTX_ctrl(ctx, SSL_CTRL_MODE, mode, nil)
+when USE_BORINGSSL:
+  proc SSL_CTX_set_mode*(ctx: SSL_CTX, mode: clong): clong {.importc, discardable.}
+else:
+  proc SSL_CTX_set_mode*(ctx: SSL_CTX, mode: clong): clong {.inline, discardable.} =
+    SSL_CTX_ctrl(ctx, SSL_CTRL_MODE, mode, nil)
 
 proc SSL_set_mode*(ssl: SSL, mode: clong): clong {.inline, discardable.} =
   SSL_ctrl(ssl, SSL_CTRL_MODE, mode, nil)
