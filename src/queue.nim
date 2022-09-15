@@ -80,10 +80,13 @@ proc recv*[T](queue: var Queue[T]): T =
   acquire(queue.lock)
   defer:
     release(queue.lock)
-  while unlikely(queue.count == 0):
+  if unlikely(queue.count == 0):
     inc(queue.waitCount)
-    wait(queue.cond, queue.lock)
-    dec(queue.waitCount)
+    while true:
+      wait(queue.cond, queue.lock)
+      if likely(queue.count != 0):
+        dec(queue.waitCount)
+        break
   var pos = queue.next - queue.count
   if unlikely(pos < 0):
     pos = pos + queue.bufLen
