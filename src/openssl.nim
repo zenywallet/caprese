@@ -1,19 +1,23 @@
 # Copyright (c) 2021 zenywallet
 
 import os
+import logs
 
 const USE_LIBRESSL = defined(USE_LIBRESSL)
 const USE_BORINGSSL = defined(USE_BORINGSSL)
 
 when USE_LIBRESSL:
+  debug "SSL: LibreSSL"
   const libresslPath = currentSourcePath.parentDir() / "../deps/libressl"
   {.passL: libresslPath / "ssl/.libs/libssl.a".}
   {.passL: libresslPath / "crypto/.libs/libcrypto.a".}
 elif USE_BORINGSSL:
+  debug "SSL: BoringSSL"
   const boringsslPath = currentSourcePath.parentDir() / "../deps/boringssl"
   {.passL: boringsslPath / "build/ssl/libssl.a".}
   {.passL: boringsslPath / "build/crypto/libcrypto.a".}
 else:
+  debug "SSL: OpenSSL"
   const opensslPath = currentSourcePath.parentDir() / "../deps/openssl"
   {.passL: opensslPath / "libssl.a".}
   {.passL: opensslPath / "libcrypto.a".}
