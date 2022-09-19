@@ -46,13 +46,15 @@ when not DYNAMIC_FILES:
       let deflate = readFile(srcDir / "deflate_tmp")
       discard staticExec("rm " & (srcDir / "deflate_tmp"))
 
-      discard staticExec((srcDir / "zopfli") & " " & f & " " & (srcDir / "zopfli_tmp"))
-      let zopfli = readFile(srcDir / "zopfli_tmp")
-      discard staticExec("rm " & (srcDir / "zopfli_tmp"))
+      var zopfli, brotliComp: string
+      if data.len > 0:
+        discard staticExec((srcDir / "zopfli") & " " & f & " " & (srcDir / "zopfli_tmp"))
+        zopfli = readFile(srcDir / "zopfli_tmp")
+        discard staticExec("rm " & (srcDir / "zopfli_tmp"))
 
-      discard staticExec((srcDir / "brotli") & " " & f & " " & (srcDir / "brotli_tmp"))
-      let brotliComp = readFile(srcDir / "brotli_tmp")
-      discard staticExec("rm " & (srcDir / "brotli_tmp"))
+        discard staticExec((srcDir / "brotli") & " " & f & " " & (srcDir / "brotli_tmp"))
+        brotliComp = readFile(srcDir / "brotli_tmp")
+        discard staticExec("rm " & (srcDir / "brotli_tmp"))
 
       echo "deflate : zopfli = ", deflate.len, " : ", zopfli.len
       if deflate.len > zopfli.len:
