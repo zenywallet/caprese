@@ -478,10 +478,11 @@ when not declared(webMain):
   proc webMainDefault(client: ptr Client, url: string, headers: Headers): SendResult =
     debug "web url=", url, " headers=", headers
     when DYNAMIC_FILES:
-      var file = getDynamicFile(url)
+      var retFile = getDynamicFile(url)
     else:
-      var file = getConstFile(url)
-    if file.content.len > 0:
+      var retFile = getConstFile(url)
+    if retFile.err == FileContentSuccess:
+      var file = retFile.data
       if headers.hasKey("If-None-Match") and headers["If-None-Match"] == file.md5:
         result = client.send(Empty.addHeader(Status304))
       else:

@@ -15,6 +15,25 @@ when DYNAMIC_COMPRESS:
   import zip/zlib
   import brotli
 
+type FileContent* = object
+  content*: string
+  deflate*: string
+  brotli*: string
+  mime*: string
+  sha256*: string
+  md5*: string
+
+type FileContentErr* = enum
+  FileContentSuccess
+  FileContentNotFound
+
+type FileContentResult* = object
+  case err*: FileContentErr
+  of FileContentSuccess:
+    data*: FileContent
+  of FileContentNotFound:
+    discard
+
 when not DYNAMIC_FILES:
   import macros, tables
 
@@ -22,10 +41,7 @@ when not DYNAMIC_FILES:
   const publicDir = srcDir / "../public"
 
   macro constFilesTable: untyped =
-    var filesTable: seq[tuple[key: string, val: tuple[content: string, deflate: string,
-                                                      brotli: string,
-                                                      mime: string,
-                                                      sha256: string, md5: string]]]
+    var filesTable: seq[tuple[key: string, val: FileContent]]
     let plen = publicDir.len
     let mimes = newMimetypes()
     echo staticExec("nim c -d:release " & (srcDir / "deflate.nim"))
@@ -58,9 +74,11 @@ when not DYNAMIC_FILES:
 
       echo "deflate : zopfli = ", deflate.len, " : ", zopfli.len
       if deflate.len > zopfli.len:
-        filesTable.add((filename, (data, zopfli, brotliComp, mime, hash, md5)))
+        filesTable.add((filename, FileContent(content: data, deflate: zopfli, brotli: brotliComp,
+                        mime: mime, sha256: hash, md5: md5)))
       else:
-        filesTable.add((filename, (data, deflate, brotliComp, mime, hash, md5)))
+        filesTable.add((filename, FileContent(content: data, deflate: deflate, brotli: brotliComp,
+                        mime: mime, sha256: hash, md5: md5)))
 
     newConstStmt(
       newIdentNode("filesTable"),
@@ -71,17 +89,14 @@ when not DYNAMIC_FILES:
 
   constFilesTable()
 
-  proc getConstFile*(file: string): tuple[content: string, deflate: string,
-                                          brotli: string,
-                                          mime: string,
-                                          sha256: string, md5: string] =
+  proc getConstFile*(file: string): FileContentResult =
     try:
       if file.endsWith("/"):
-        result = filesTable[file & "index.html"]
+        result = FileContentResult(err: FileContentSuccess, data: filesTable[file & "index.html"])
       else:
-        result = filesTable[file]
+        result = FileContentResult(err: FileContentSuccess, data: filesTable[file])
     except KeyError:
-      discard
+      result = FileContentResult(err: FileContentNotFound)
 
   proc getAcmeChallenge*(file: string): tuple[content: string, mime: string] =
     try:
@@ -104,10 +119,7 @@ else:
     currentPublicDir = getCurrentDir() / "public"
     mimes = newMimetypes()
 
-  proc getDynamicFile*(file: string): tuple[content: string, deflate: string,
-                                            brotli: string,
-                                            mime: string,
-                                            sha256: string, md5: string] =
+  proc getDynamicFile*(file: string): FileContentResult =
     var requestDir = currentPublicDir / file
     if requestDir.startsWith(currentPublicDir):
       var ext = ""
@@ -126,14 +138,17 @@ else:
           let md5 = base64.encode(data.toMD5())
           let deflate = compress(data, stream = RAW_DEFLATE)
           let brotliComp = brotli.comp(data).toString
-          result = (data, deflate, brotliComp, mime, hash, md5)
+          result = FileContentResult(err: FileContentSuccess, data: FileContent(content: data,
+            deflate: deflate, brotli: brotliComp, mime: mime, sha256: hash, md5: md5))
         else:
           let data = readFile(requestDir)
           let mime = mimes.getMimeType(ext)
           let md5 = base64.encode(data.toMD5())
-          result = (data, cast[string](nil), cast[string](nil), mime, cast[string](nil), md5)
+          result = FileContentResult(err: FileContentSuccess, data: FileContent(content: data,
+            deflate: cast[string](nil), brotli: cast[string](nil), mime: mime,
+            sha256: cast[string](nil), md5: md5))
       except:
-        discard
+        result = FileContentResult(err: FileContentNotFound)
 
 
 when isMainModule:
