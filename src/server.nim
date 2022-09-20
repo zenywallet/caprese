@@ -487,7 +487,7 @@ when not declared(webMain):
         result = client.send(Empty.addHeader(Status304))
       else:
         when not DYNAMIC_FILES or DYNAMIC_COMPRESS:
-          if headers.hasKey("Accept-Encoding"):
+          if file.content.len > 0 and headers.hasKey("Accept-Encoding"):
             var acceptEnc = headers["Accept-Encoding"].split(",")
             acceptEnc.apply(proc(x: string): string = x.strip)
             if acceptEnc.contains("br"):
