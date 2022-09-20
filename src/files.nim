@@ -40,6 +40,8 @@ when not DYNAMIC_FILES:
   const srcDir = currentSourcePath().parentDir()
   const publicDir = srcDir / "../public"
 
+  const COMPARE_DEFLATE_ZOPFLI = false
+
   macro constFilesTable: untyped =
     var filesTable: seq[tuple[key: string, val: FileContent]]
     let plen = publicDir.len
@@ -58,9 +60,10 @@ when not DYNAMIC_FILES:
       let mime = mimes.getMimeType(ext)
       let hash = base64.encode(sha256.digest(data).data)
       let md5 = base64.encode(data.getMD5().toBytesFromHex)
-      discard staticExec((srcDir / "deflate") & " " & f & " " & (srcDir / "deflate_tmp"))
-      let deflate = readFile(srcDir / "deflate_tmp")
-      discard staticExec("rm " & (srcDir / "deflate_tmp"))
+      when COMPARE_DEFLATE_ZOPFLI:
+        discard staticExec((srcDir / "deflate") & " " & f & " " & (srcDir / "deflate_tmp"))
+        let deflate = readFile(srcDir / "deflate_tmp")
+        discard staticExec("rm " & (srcDir / "deflate_tmp"))
 
       var zopfli, brotliComp: string
       if data.len > 0:
@@ -72,12 +75,16 @@ when not DYNAMIC_FILES:
         brotliComp = readFile(srcDir / "brotli_tmp")
         discard staticExec("rm " & (srcDir / "brotli_tmp"))
 
-      echo "deflate : zopfli = ", deflate.len, " : ", zopfli.len
-      if deflate.len > zopfli.len:
-        filesTable.add((filename, FileContent(content: data, deflate: zopfli, brotli: brotliComp,
-                        mime: mime, sha256: hash, md5: md5)))
+      when COMPARE_DEFLATE_ZOPFLI:
+        echo "deflate : zopfli = ", deflate.len, " : ", zopfli.len
+        if deflate.len > zopfli.len:
+          filesTable.add((filename, FileContent(content: data, deflate: zopfli, brotli: brotliComp,
+                          mime: mime, sha256: hash, md5: md5)))
+        else:
+          filesTable.add((filename, FileContent(content: data, deflate: deflate, brotli: brotliComp,
+                          mime: mime, sha256: hash, md5: md5)))
       else:
-        filesTable.add((filename, FileContent(content: data, deflate: deflate, brotli: brotliComp,
+        filesTable.add((filename, FileContent(content: data, deflate: zopfli, brotli: brotliComp,
                         mime: mime, sha256: hash, md5: md5)))
 
     newConstStmt(
