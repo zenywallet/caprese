@@ -46,7 +46,8 @@ when not DYNAMIC_FILES:
     var filesTable: seq[tuple[key: string, val: FileContent]]
     let plen = publicDir.len
     let mimes = newMimetypes()
-    echo staticExec("nim c -d:release " & (srcDir / "deflate.nim"))
+    when COMPARE_DEFLATE_ZOPFLI:
+      echo staticExec("nim c -d:release " & (srcDir / "deflate.nim"))
     echo staticExec("nim c -d:release " & (srcDir / "zopfli.nim"))
     echo staticExec("nim c -d:release " & (srcDir / "brotli.nim"))
     for f in walkDirRec(publicDir):
