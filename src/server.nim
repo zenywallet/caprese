@@ -68,17 +68,6 @@ type
 
   ClientArray = array[CLIENT_MAX, Client]
 
-  ThreadArgType* {.pure.} = enum
-    Void
-    WorkerParams
-
-  ThreadArg* = object
-    case type*: ThreadArgType
-    of ThreadArgType.Void:
-      discard
-    of ThreadArgType.WorkerParams:
-      workerParams*: tuple[threadId: int, bufLen: int]
-
   SendResult* {.pure.} = enum
     Error = -1
     None = 0
@@ -95,6 +84,17 @@ type
     Close = 0x8
     Ping = 0x9
     Pong = 0xa
+
+  ThreadArgType* {.pure.} = enum
+    Void
+    WorkerParams
+
+  ThreadArg* = object
+    case type*: ThreadArgType
+    of ThreadArgType.Void:
+      discard
+    of ThreadArgType.WorkerParams:
+      workerParams*: tuple[threadId: int, bufLen: int]
 
   ServerError* = object of CatchableError
   ServerNeedRestartError* = object of CatchableError
