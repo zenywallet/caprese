@@ -85,6 +85,11 @@ type
     Ping = 0x9
     Pong = 0xa
 
+  WebMainCallback* = proc (client: ptr Client, url: string, headers: Headers): SendResult {.thread.}
+
+  StreamMainCallback* = proc (client: ptr Client, opcode: WebSocketOpCode,
+                              data: ptr UncheckedArray[byte], size: int): SendResult {.thread.}
+
   ThreadArgType* {.pure.} = enum
     Void
     WorkerParams
@@ -521,6 +526,9 @@ when not declared(invokeSendMain):
   proc invokeSendMainDefault(client: ptr Client): SendResult =
     result = SendResult.None
 
+var webMain: WebMainCallback = webMainDefault
+var streamMain: StreamMainCallback = streamMainDefault
+
 proc workerMain(client: ptr Client, buf: ptr UncheckedArray[byte], size: int, appId: int): SendResult =
   var i = 0
   var cur = 0
@@ -604,10 +612,7 @@ proc workerMain(client: ptr Client, buf: ptr UncheckedArray[byte], size: int, ap
             error "error: websocket protocol headers=", headers
             raise newException(ServerError, "websocket protocol error")
 
-        when declared(webMain):
-          retMain = client.webMain(url, headers)
-        else:
-          retMain = client.webMainDefault(url, headers)
+        retMain = client.webMain(url, headers)
         if not keepAlive or (headers.hasKey("Connection") and
                                   headers["Connection"] == "close"):
           client.keepAlive = false
@@ -754,10 +759,7 @@ proc worker(arg: ThreadArg) {.thread.} =
                     next, size) = getFrame(cast[ptr UncheckedArray[byte]](addr recvBuf[0]), recvlen)
                 while find:
                   if fin:
-                    when declared(streamMain):
-                      var retStream = client.streamMain(WebSocketOpcode(opcode), payload, payloadSize)
-                    else:
-                      var retStream = client.streamMainDefault(WebSocketOpcode(opcode), payload, payloadSize)
+                    var retStream = client.streamMain(WebSocketOpcode(opcode), payload, payloadSize)
                     retStreamHandler(retStream)
                   else:
                     if not payload.isNil and payloadSize > 0:
@@ -822,14 +824,9 @@ proc worker(arg: ThreadArg) {.thread.} =
                   client.payloadSize = client.payloadSize + payloadSize
                   p = cast[ptr UncheckedArray[byte]](addr client.recvBuf[client.payloadSize])
                 if fin:
-                  when declared(streamMain):
-                    var retStream = client.streamMain(WebSocketOpcode(opcode),
-                                                      cast[ptr UncheckedArray[byte]](addr client.recvBuf[0]),
-                                                      client.payloadSize)
-                  else:
-                    var retStream = client.streamMainDefault(WebSocketOpcode(opcode),
-                                                      cast[ptr UncheckedArray[byte]](addr client.recvBuf[0]),
-                                                      client.payloadSize)
+                  var retStream = client.streamMain(WebSocketOpcode(opcode),
+                                                    cast[ptr UncheckedArray[byte]](addr client.recvBuf[0]),
+                                                    client.payloadSize)
                   retStreamHandler(retStream)
                   client.payloadSize = 0
                   client.recvCurSize = 0
