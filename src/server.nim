@@ -75,7 +75,7 @@ type
     Pending = 2
     Invalid = 3
 
-  Headers = Table[string, string]
+  Headers* = Table[string, string]
 
   WebSocketOpCode* = enum
     Continue = 0x0
