@@ -189,7 +189,7 @@ var workerQueue: Queue[WorkerChannelParam]
 workerQueue.init(WORKER_QUEUE_LIMIT)
 
 type
-  WrapperThreadArg = tuple[threadFunc: proc(arg: ThreadArg) {.thread.}, arg: ThreadArg]
+  WrapperThreadArg = tuple[threadFunc: proc (arg: ThreadArg) {.thread.}, arg: ThreadArg]
 var workerThreads: array[WORKER_THREAD_NUM, Thread[WrapperThreadArg]]
 
 var dispatcherThread: Thread[WrapperThreadArg]
@@ -489,7 +489,7 @@ when not declared(webMain):
         when not DYNAMIC_FILES or DYNAMIC_COMPRESS:
           if file.content.len > 0 and headers.hasKey("Accept-Encoding"):
             var acceptEnc = headers["Accept-Encoding"].split(",")
-            acceptEnc.apply(proc(x: string): string = x.strip)
+            acceptEnc.apply(proc (x: string): string = x.strip)
             if acceptEnc.contains("br"):
               return client.send(file.brotli.addHeaderBrotli(file.md5, Status200, file.mime))
             elif acceptEnc.contains("deflate"):
@@ -536,7 +536,7 @@ proc workerMain(client: ptr Client, buf: ptr UncheckedArray[byte], size: int, ap
       var reqdata = (cast[ptr UncheckedArray[byte]](addr buf[cur])).toString(i - cur)
       if first:
         first = false
-        var cmdparams = reqdata.split(" ").filter(proc(x: string): bool = x.len > 0)
+        var cmdparams = reqdata.split(" ").filter(proc (x: string): bool = x.len > 0)
         if cmdparams.len >= 2:
           cmd = cmdparams[0]
           if cmd != "GET":
