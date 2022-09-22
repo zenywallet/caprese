@@ -14,6 +14,7 @@ import rlimit
 export rlimit
 import contents
 import queue
+import logs
 
 const RLIMIT_OPEN_FILES* = 65536
 const CLIENT_MAX = 32000
@@ -105,18 +106,7 @@ type
   ServerNeedRestartError* = object of CatchableError
   ServerSslCertError* = object of CatchableError
 
-template debug(x: varargs[string, `$`]) =
-  when DEBUG_LOG:
-    echo join(x)
-  else:
-    discard
-
-template error(x: varargs[string, `$`]) = echo join(x)
-
-template errorQuit(x: varargs[string, `$`]) =
-  var msg = join(x)
-  echo msg
-  raise newException(ServerError, msg)
+template errorQuit(x: varargs[string, `$`]) = errorException(x, ServerError)
 
 proc reallocClientBuf(buf: ptr UncheckedArray[byte], size: int): ptr UncheckedArray[byte] =
   result = cast[ptr UncheckedArray[byte]](reallocShared(buf, size))
