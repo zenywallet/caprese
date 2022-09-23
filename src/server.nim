@@ -85,7 +85,6 @@ type
     Close = 0x8
     Ping = 0x9
     Pong = 0xa
-    Unassigned = 0xff
 
   WebMainCallback* = proc (client: ptr Client, url: string, headers: Headers): SendResult {.thread.}
 
@@ -109,27 +108,15 @@ type
 
 template errorQuit(x: varargs[string, `$`]) = errorException(x, ServerError)
 
-const WebSocketOpCodeMap = [
-  WebSocketOpcode.Continue,
-  WebSocketOpcode.Text,
-  WebSocketOpcode.Binary,
-  WebSocketOpcode.Unassigned,
-  WebSocketOpcode.Unassigned,
-  WebSocketOpcode.Unassigned,
-  WebSocketOpcode.Unassigned,
-  WebSocketOpcode.Unassigned,
-  WebSocketOpcode.Close,
-  WebSocketOpcode.Ping,
-  WebSocketOpcode.Pong,
-  WebSocketOpcode.Unassigned,
-  WebSocketOpcode.Unassigned,
-  WebSocketOpcode.Unassigned,
-  WebSocketOpcode.Unassigned,
-  WebSocketOpcode.Unassigned
-]
-
-proc toWebSocketOpCode(opcode: int8): WebSocketOpCode = WebSocketOpCodeMap[opcode]
-# RangeDefect: value out of range
+proc toWebSocketOpCode(opcode: int8): WebSocketOpCode =
+  case opcode
+  of 0x2: WebSocketOpcode.Binary
+  of 0x0: WebSocketOpcode.Continue
+  of 0x8: WebSocketOpcode.Close
+  of 0x1: WebSocketOpcode.Text
+  of 0x9: WebSocketOpcode.Ping
+  of 0xa: WebSocketOpcode.Pong
+  else: raise
 
 proc reallocClientBuf(buf: ptr UncheckedArray[byte], size: int): ptr UncheckedArray[byte] =
   result = cast[ptr UncheckedArray[byte]](reallocShared(buf, size))
