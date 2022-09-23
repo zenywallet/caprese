@@ -85,6 +85,7 @@ type
     Close = 0x8
     Ping = 0x9
     Pong = 0xa
+    Unassigned = 0xff
 
   WebMainCallback* = proc (client: ptr Client, url: string, headers: Headers): SendResult {.thread.}
 
@@ -107,6 +108,28 @@ type
   ServerSslCertError* = object of CatchableError
 
 template errorQuit(x: varargs[string, `$`]) = errorException(x, ServerError)
+
+const WebSocketOpCodeMap = [
+  WebSocketOpcode.Continue,
+  WebSocketOpcode.Text,
+  WebSocketOpcode.Binary,
+  WebSocketOpcode.Unassigned,
+  WebSocketOpcode.Unassigned,
+  WebSocketOpcode.Unassigned,
+  WebSocketOpcode.Unassigned,
+  WebSocketOpcode.Unassigned,
+  WebSocketOpcode.Close,
+  WebSocketOpcode.Ping,
+  WebSocketOpcode.Pong,
+  WebSocketOpcode.Unassigned,
+  WebSocketOpcode.Unassigned,
+  WebSocketOpcode.Unassigned,
+  WebSocketOpcode.Unassigned,
+  WebSocketOpcode.Unassigned
+]
+
+proc toWebSocketOpCode(opcode: int8): WebSocketOpCode = WebSocketOpCodeMap[opcode]
+# RangeDefect: value out of range
 
 proc reallocClientBuf(buf: ptr UncheckedArray[byte], size: int): ptr UncheckedArray[byte] =
   result = cast[ptr UncheckedArray[byte]](reallocShared(buf, size))
@@ -749,7 +772,7 @@ proc worker(arg: ThreadArg) {.thread.} =
                     next, size) = getFrame(cast[ptr UncheckedArray[byte]](addr recvBuf[0]), recvlen)
                 while find:
                   if fin:
-                    var retStream = client.streamMain(WebSocketOpcode(opcode), payload, payloadSize)
+                    var retStream = client.streamMain(opcode.toWebSocketOpCode, payload, payloadSize)
                     retStreamHandler(retStream)
                   else:
                     if not payload.isNil and payloadSize > 0:
@@ -814,7 +837,7 @@ proc worker(arg: ThreadArg) {.thread.} =
                   client.payloadSize = client.payloadSize + payloadSize
                   p = cast[ptr UncheckedArray[byte]](addr client.recvBuf[client.payloadSize])
                 if fin:
-                  var retStream = client.streamMain(WebSocketOpcode(opcode),
+                  var retStream = client.streamMain(opcode.toWebSocketOpCode,
                                                     cast[ptr UncheckedArray[byte]](addr client.recvBuf[0]),
                                                     client.payloadSize)
                   retStreamHandler(retStream)
