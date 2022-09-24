@@ -170,7 +170,7 @@ proc wsServerSend*(client: ptr Client, data: seq[byte] | string,
   var finOp = 0x80.byte or opcode.byte
   if dataLen < 126:
     frame = BytesBE(finOp, dataLen.byte, data)
-  elif dataLen >= 126 and dataLen <= 0xffff:
+  elif dataLen <= 0xffff:
     frame = BytesBE(finOp, 126.byte, dataLen.uint16, data)
   else:
     frame = BytesBE(finOp, 127.byte, dataLen.uint64, data)
