@@ -612,8 +612,7 @@ proc workerMain(client: ptr Client, buf: ptr UncheckedArray[byte], size: int, ap
             raise newException(ServerError, "websocket protocol error")
 
         retMain = client.webMain(url, headers)
-        if not keepAlive or (headers.hasKey("Connection") and
-                                  headers["Connection"] == "close"):
+        if not keepAlive or headers.getOrDefault("Connection") == "close":
           client.keepAlive = false
           return retMain
 
