@@ -487,7 +487,7 @@ when not declared(webMain):
       var retFile = getConstFile(url)
     if retFile.err == FileContentSuccess:
       var file = retFile.data
-      if headers.hasKey("If-None-Match") and headers["If-None-Match"] == file.md5:
+      if headers.getOrDefault("If-None-Match") == file.md5:
         result = client.send(Empty.addHeader(Status304))
       else:
         when not DYNAMIC_FILES or DYNAMIC_COMPRESS:
