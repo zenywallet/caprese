@@ -568,15 +568,16 @@ proc workerMain(client: ptr Client, buf: ptr UncheckedArray[byte], size: int, ap
 
       inc(i, 2)
       if buf[i] == byte('\c') and buf[i + 1] == byte('\L'):
-        if headers.hasKey("Host"):
+        let headersHost = headers.getOrDefault("Host")
+        if headersHost.len > 0:
           if appId == 1:
-            if headers["Host"] != HTTP_HOST_NAME:
-              error "invalid request host mismatch ", headers["Host"], " ", HTTP_HOST_NAME
+            if headersHost != HTTP_HOST_NAME:
+              error "invalid request host mismatch ", headersHost, " ", HTTP_HOST_NAME
               return SendResult.Invalid
             return client.send(redirect301(REDIRECT_URL & url))
           else:
-            if headers["Host"] != HTTPS_HOST_NAME:
-              error "invalid request host mismatch ", headers["Host"], " ", HTTPS_HOST_NAME
+            if headersHost != HTTPS_HOST_NAME:
+              error "invalid request host mismatch ", headersHost, " ", HTTPS_HOST_NAME
               return SendResult.Invalid
         else:
           error "invalid request no host headers=", headers
