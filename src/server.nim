@@ -583,11 +583,9 @@ proc workerMain(client: ptr Client, buf: ptr UncheckedArray[byte], size: int, ap
           return SendResult.Invalid
 
         if url == WEBSOCKET_ENTRY_POINT:
-          if headers.hasKey("Sec-WebSocket-Version") and
-            headers.hasKey("Sec-WebSocket-Key") and
-            headers.hasKey("Sec-WebSocket-Protocol") and
-            headers["Sec-WebSocket-Protocol"] == WEBSOCKET_PROTOCOL:
-            var key = headers["Sec-WebSocket-Key"]
+          let key = headers.getOrDefault("Sec-WebSocket-Key")
+          if headers.hasKey("Sec-WebSocket-Version") and key.len > 0 and
+            headers.getOrDefault("Sec-WebSocket-Protocol") == WEBSOCKET_PROTOCOL:
             var sh = secureHash(key & "258EAFA5-E914-47DA-95CA-C5AB0DC85B11")
             var acceptKey = base64.encode(sh.Sha1Digest)
             var res = "HTTP/1.1 " & $Status101 & "\c\L" &
