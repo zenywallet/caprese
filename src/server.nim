@@ -540,7 +540,7 @@ proc workerMain(client: ptr Client, buf: ptr UncheckedArray[byte], size: int, ap
   var headers = initTable[string, string]()
 
   while i  < size - 3:
-    if buf[i] == byte('\c') and buf[i + 1] == byte('\L'):
+    if equalMem(addr buf[i], "\c\L".cstring, 2):
       var reqdata = (cast[ptr UncheckedArray[byte]](addr buf[cur])).toString(i - cur)
       if first:
         first = false
@@ -568,7 +568,7 @@ proc workerMain(client: ptr Client, buf: ptr UncheckedArray[byte], size: int, ap
           return SendResult.Invalid
 
       inc(i, 2)
-      if buf[i] == byte('\c') and buf[i + 1] == byte('\L'):
+      if equalMem(addr buf[i], "\c\L".cstring, 2):
         let headersHost = headers.getOrDefault("Host")
         if headersHost.len > 0:
           if appId == 1:
