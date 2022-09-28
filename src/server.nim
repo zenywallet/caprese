@@ -491,8 +491,9 @@ when not declared(webMain):
         result = client.send(Empty.addHeader(Status304))
       else:
         when not DYNAMIC_FILES or DYNAMIC_COMPRESS:
-          if file.content.len > 0 and headers.hasKey("Accept-Encoding"):
-            var acceptEnc = headers["Accept-Encoding"].split(",")
+          let headersAcceptEncoding = headers.getOrDefault("Accept-Encoding")
+          if file.content.len > 0 and headersAcceptEncoding.len > 0:
+            var acceptEnc = headersAcceptEncoding.split(",")
             acceptEnc.apply(proc (x: string): string = x.strip)
             if acceptEnc.contains("br"):
               return client.send(file.brotli.addHeaderBrotli(file.md5, Status200, file.mime))
