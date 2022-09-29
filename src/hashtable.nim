@@ -246,7 +246,11 @@ template loadHashTableModules*() {.dirty.} =
 
 
 when isMainModule:
-  import utils, bytes
+  import bytes
+  import nimcrypto except toHex
+
+  proc sha256s*(data: openarray[byte]): array[32, byte] {.inline.} =
+    sha256.digest(data).data
 
   #const DISABLE_HASHTABLEDATA_DELETE = false
   proc empty*(pair: HashTableData): bool = pair.val == -1
