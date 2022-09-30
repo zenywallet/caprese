@@ -143,7 +143,10 @@ template loadHashTableModules*() {.dirty.} =
   proc setVal*(pair: HashTableData, val: HashTableData.Val) {.inline.} = pair.val = val
 
   proc set*(hashTable: var HashTable, key: HashTable.Key, val: HashTable.Val) =
-    var hash = (key.toUint64 mod hashTable.dataLen.uint64).int
+    when key is SomeOrdinal:
+      var hash = (key.uint64 mod hashTable.dataLen.uint64).int
+    else:
+      var hash = (key.toUint64 mod hashTable.dataLen.uint64).int
     let startHash = hash
     while true:
       let used = hashTable.getBitmap(hash)
@@ -170,7 +173,10 @@ template loadHashTableModules*() {.dirty.} =
 
   proc upsert*[Key, Val](hashTable: var HashTable[Key, Val], key: Key, val: Val,
                         cb: proc(hashData: HashTableData[Key, Val], val: Val)) =
-    var hash = (key.toUint64 mod hashTable.dataLen.uint64).int
+    when key is SomeOrdinal:
+      var hash = (key.uint64 mod hashTable.dataLen.uint64).int
+    else:
+      var hash = (key.toUint64 mod hashTable.dataLen.uint64).int
     let startHash = hash
     while true:
       let used = hashTable.getBitmap(hash)
@@ -196,7 +202,10 @@ template loadHashTableModules*() {.dirty.} =
             raise newException(HashTableError, "hashtable data full")
 
   proc get*[Key, Val](hashTable: var HashTable[Key, Val], key: Key): HashTableData[Key, Val] =
-    var hash = (key.toUint64 mod hashTable.dataLen.uint64).int
+    when key is SomeOrdinal:
+      var hash = (key.uint64 mod hashTable.dataLen.uint64).int
+    else:
+      var hash = (key.toUint64 mod hashTable.dataLen.uint64).int
     let startHash = hash
     while true:
       let used = hashTable.getBitmap(hash)
