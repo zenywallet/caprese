@@ -15,6 +15,8 @@ export rlimit
 import contents
 import queue
 import logs
+import hashtable
+import ptlock
 
 const RLIMIT_OPEN_FILES* = 65536
 const CLIENT_MAX = 32000
@@ -63,8 +65,11 @@ type
     ip: uint32
     invoke: bool
 
+  ClientId = int
+
   Client* = object of ClientBase
     pStream*: pointer
+    clientId*: ClientId
 
   ClientArray = array[CLIENT_MAX, Client]
 
@@ -202,6 +207,39 @@ var httpThread: Thread[WrapperThreadArg]
 var monitorThread: Thread[WrapperThreadArg]
 var mainThread: Thread[WrapperThreadArg]
 
+proc empty*(pair: HashTableData): bool = pair.val == nil
+proc setEmpty*(pair: HashTableData) = pair.val = nil
+loadHashTableModules()
+var pendingClients: HashTableMem[ClientId, ptr Client]
+var pendingClientsLock: RWLock
+var curClientId: ClientId = 0
+
+proc markPending*(client: ptr Client): ClientId {.discardable.} =
+  withWriteLock pendingClientsLock:
+    while true:
+      inc(curClientId)
+      if curClientId >= int.high:
+        curClientId = 1
+      let cur = pendingClients.get(curClientId)
+      if cur.isNil:
+        break
+    client.clientId = curClientId
+    pendingClients.set(curClientId, client)
+    result = curClientId
+
+proc unmarkPending*(clientId: ClientId) =
+  withWriteLock pendingClientsLock:
+    let pair = pendingClients.get(clientId)
+    if not pair.isNil:
+      let client = pair.val
+      pendingClients.del(pair)
+      client.clientId = -1
+
+proc unmarkPending*(client: ptr Client) =
+  withWriteLock pendingClientsLock:
+    pendingClients.del(client.clientId)
+    client.clientId = -1
+
 proc invokeSendEvent*(client: ptr Client, retry: bool = false): bool =
   if retry:
     if not client.invoke:
@@ -275,8 +313,12 @@ proc initClient() =
     when declared(initExClient):
       initExClient(addr p[i])
   clients = p
+  rwlockInit(pendingClientsLock)
+  pendingClients = newHashTable[ClientId, ptr Client](CLIENT_MAX * 3 div 2)
 
 proc freeClient() =
+  pendingClients.delete()
+  rwlockDestroy(pendingClientsLock)
   var p = clients
   clients = nil
   for i in 0..<CLIENT_MAX:
