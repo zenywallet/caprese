@@ -228,11 +228,14 @@ template loadHashTableModules*() {.dirty.} =
         return nil
 
   when not DISABLE_HASHTABLEDATA_DELETE and declared(setEmpty):
+    proc del*(hashTable: var HashTable, pair: HashTableData) =
+      pair.setEmpty()
+      dec(hashTable.dataCount)
+
     proc del*(hashTable: var HashTable, key: HashTable.Key) =
       let pair = hashTable.get(key)
       if pair != nil:
-        pair.setEmpty()
-        dec(hashTable.dataCount)
+        hashTable.del(pair)
   else:
     template del*(hashTable: var HashTable, key: HashTable.Key) = discard
 
