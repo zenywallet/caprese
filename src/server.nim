@@ -213,6 +213,7 @@ loadHashTableModules()
 var pendingClients: HashTableMem[ClientId, ptr Client]
 var pendingClientsLock: RWLock
 var curClientId: ClientId = 0
+const INVALID_CLIENT_ID = -1
 
 proc markPending*(client: ptr Client): ClientId {.discardable.} =
   withWriteLock pendingClientsLock:
@@ -233,12 +234,12 @@ proc unmarkPending*(clientId: ClientId) =
     if not pair.isNil:
       let client = pair.val
       pendingClients.del(pair)
-      client.clientId = -1
+      client.clientId = INVALID_CLIENT_ID
 
 proc unmarkPending*(client: ptr Client) =
   withWriteLock pendingClientsLock:
     pendingClients.del(client.clientId)
-    client.clientId = -1
+    client.clientId = INVALID_CLIENT_ID
 
 proc invokeSendEvent*(client: ptr Client, retry: bool = false): bool =
   if retry:
