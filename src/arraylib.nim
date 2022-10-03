@@ -236,6 +236,17 @@ else:
   proc empty*[T](x: var Array[T]) =
     `=destroy`(x)
 
+  proc del*[T](x: var Array[T]; i: Natural) =
+    let last = x.high
+    x[i] = x[last]
+    x.len = last
+
+  proc delete*[T](x: var Array[T]; i: Natural) =
+    let last = x.high
+    if i != last:
+      moveMem(addr x[i], addr x[i + 1], last - i)
+    x.len = last
+
   proc `==`*[T](x, y: Array[T]): bool =
     if x.len != y.len:
       return false
