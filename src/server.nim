@@ -211,12 +211,12 @@ proc empty*(pair: HashTableData): bool = pair.val == nil
 proc setEmpty*(pair: HashTableData) = pair.val = nil
 loadHashTableModules()
 var pendingClients: HashTableMem[ClientId, ptr Client]
-var pendingClientsLock: RWLock
+var clientsLock: RWLock
 var curClientId: ClientId = 0
 const INVALID_CLIENT_ID = -1
 
 proc markPending*(client: ptr Client): ClientId {.discardable.} =
-  withWriteLock pendingClientsLock:
+  withWriteLock clientsLock:
     while true:
       inc(curClientId)
       if curClientId >= int.high:
@@ -229,7 +229,7 @@ proc markPending*(client: ptr Client): ClientId {.discardable.} =
     result = curClientId
 
 proc unmarkPending*(clientId: ClientId) =
-  withWriteLock pendingClientsLock:
+  withWriteLock clientsLock:
     let pair = pendingClients.get(clientId)
     if not pair.isNil:
       let client = pair.val
@@ -237,7 +237,7 @@ proc unmarkPending*(clientId: ClientId) =
       client.clientId = INVALID_CLIENT_ID
 
 proc unmarkPending*(client: ptr Client) =
-  withWriteLock pendingClientsLock:
+  withWriteLock clientsLock:
     pendingClients.del(client.clientId)
     client.clientId = INVALID_CLIENT_ID
 
@@ -314,12 +314,12 @@ proc initClient() =
     when declared(initExClient):
       initExClient(addr p[i])
   clients = p
-  rwlockInit(pendingClientsLock)
+  rwlockInit(clientsLock)
   pendingClients = newHashTable[ClientId, ptr Client](CLIENT_MAX * 3 div 2)
 
 proc freeClient() =
   pendingClients.delete()
-  rwlockDestroy(pendingClientsLock)
+  rwlockDestroy(clientsLock)
   var p = clients
   clients = nil
   for i in 0..<CLIENT_MAX:
