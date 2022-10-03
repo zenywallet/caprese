@@ -142,7 +142,7 @@ template loadHashTableModules*() {.dirty.} =
   proc setKey*(pair: HashTableData, key: HashTableData.Key) {.inline.} = pair.key = key
   proc setVal*(pair: HashTableData, val: HashTableData.Val) {.inline.} = pair.val = val
 
-  proc set*(hashTable: var HashTable, key: HashTable.Key, val: HashTable.Val) =
+  proc set*[Key, Val](hashTable: var HashTable[Key, Val], key: Key, val: Val): HashTableData[Key, Val] {.discardable.} =
     when key is SomeOrdinal:
       var hash = (key.uint64 mod hashTable.dataLen.uint64).int
     else:
@@ -151,6 +151,7 @@ template loadHashTableModules*() {.dirty.} =
     while true:
       let used = hashTable.getBitmap(hash)
       let hashData = addr hashTable.table[hash]
+      result = hashData
       if used == 0:
         hashTable.setBitmap(hash)
         hashData.set(key, val)
