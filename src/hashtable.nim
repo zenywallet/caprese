@@ -155,6 +155,7 @@ template loadHashTableModules*() {.dirty.} =
         hashTable.setBitmap(hash)
         hashData.set(key, val)
         inc(hashTable.dataCount)
+        break
       else:
         when not DISABLE_HASHTABLEDATA_DELETE and declared(empty):
           if hashData.empty:
@@ -185,6 +186,7 @@ template loadHashTableModules*() {.dirty.} =
         hashTable.setBitmap(hash)
         hashData.set(key, val)
         inc(hashTable.dataCount)
+        break
       else:
         when not DISABLE_HASHTABLEDATA_DELETE and declared(empty):
           if hashData.empty:
