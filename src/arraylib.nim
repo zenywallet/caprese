@@ -96,15 +96,15 @@ else:
     x.len = newLen
 
   template `[]`*[T](x: Array[T]; i: Natural): T =
-    assert i < x.len
+    assert 0 <= i and i < x.len
     x.data[i]
 
   template `[]`*[T](x: ptr Array[T]; i: Natural): T =
-    assert i < x[].len
+    assert 0 <= i and i < x[].len
     x[].data[i]
 
   template `[]=`*[T](x: var Array[T]; i: Natural; y: sink T) =
-    assert i < x.len
+    assert 0 <= i and i < x.len
     x.data[i] = y
 
   proc len*[T](x: Array[T]): int {.inline.} = x.len
