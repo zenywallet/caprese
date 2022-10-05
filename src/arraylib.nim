@@ -216,6 +216,12 @@ else:
         result[i] = item
         inc(i)
 
+  proc `[]`*[T](a: Array[T]; i: BackwardsIndex): T {.inline.} =
+    a[a.len - int(i) + low(a)]
+
+  proc `[]`*[T](a: var Array[T]; i: BackwardsIndex): var T {.inline.} =
+    a[a.len - int(i) + low(a)]
+
   proc `[]`*[T; U, V: Ordinal](a: Array[T]; x: HSlice[U, V]): Array[T] =
     var xa, xb: int
     when x.a is BackwardsIndex:
