@@ -17,6 +17,7 @@ import queue
 import logs
 import hashtable
 import ptlock
+import arraylib
 
 const RLIMIT_OPEN_FILES* = 65536
 const CLIENT_MAX = 32000
@@ -207,13 +208,33 @@ var httpThread: Thread[WrapperThreadArg]
 var monitorThread: Thread[WrapperThreadArg]
 var mainThread: Thread[WrapperThreadArg]
 
-proc empty*(pair: HashTableData): bool = pair.val == nil
-proc setEmpty*(pair: HashTableData) = pair.val = nil
+type
+  Tag* = Array[byte]
+
+  TagRef = object
+    tag: ptr Tag
+    idx: int
+
+proc toUint64(tag: Tag): uint64 = tag.toSeq.toUint64
+
+proc empty*(pair: HashTableData): bool =
+  when pair.val is Array:
+    pair.val.len == 0
+  else:
+    pair.val == nil
+proc setEmpty*(pair: HashTableData) =
+  when pair.val is Array:
+    pair.val.empty()
+  else:
+    pair.val = nil
 loadHashTableModules()
 var pendingClients: HashTableMem[ClientId, ptr Client]
 var clientsLock: RWLock
 var curClientId: ClientId = 0
 const INVALID_CLIENT_ID = -1
+
+var tag2ClientIds: HashTableMem[Tag, Array[ClientId]]
+var clientId2Tags: HashTableMem[ClientId, Array[TagRef]]
 
 proc markPending*(client: ptr Client): ClientId {.discardable.} =
   withWriteLock clientsLock:
@@ -240,6 +261,59 @@ proc unmarkPending*(client: ptr Client) =
   withWriteLock clientsLock:
     pendingClients.del(client.clientId)
     client.clientId = INVALID_CLIENT_ID
+
+proc setTag*(clientId: ClientId, tag: Tag) =
+  withWriteLock clientsLock:
+    var tagRefsPair = clientId2Tags.get(clientId)
+    var clientIdsPair = tag2ClientIds.get(tag)
+
+    if tagRefsPair.isNil:
+      var emptyTagRef: Array[TagRef]
+      tagRefsPair = clientId2Tags.set(clientId, emptyTagRef)
+
+      if clientIdsPair.isNil:
+        clientIdsPair = tag2ClientIds.set(tag, @^[ClientId clientId])
+        tagRefsPair.val.add(TagRef(tag: clientIdsPair.key.addr, idx: 0))
+        return
+    else:
+      if clientIdsPair.isNil:
+        clientIdsPair = tag2ClientIds.set(tag, @^[ClientId clientId])
+        tagRefsPair.val.add(TagRef(tag: clientIdsPair.key.addr, idx: 0))
+        return
+      else:
+        for t in tagRefsPair.val:
+          if clientIdsPair.key.addr == t.tag:
+            return
+
+    clientIdsPair.val.add(clientId)
+    tagRefsPair.val.add(TagRef(tag: clientIdsPair.key.addr, idx: clientIdsPair.val.high))
+
+proc delTag*(clientId: ClientId, tag: Tag) =
+  withReadLock clientsLock:
+    let tagRefsPair = clientId2Tags.get(clientId)
+    if tagRefsPair.isNil: return
+    let clientIdsPair = tag2ClientIds.get(tag)
+    if clientIdsPair.isNil: return
+
+    for i, t in tagRefsPair.val:
+      if clientIdsPair.key.addr == t.tag:
+        if clientIdsPair.val.len <= 1:
+          tag2ClientIds.del(clientIdsPair)
+        else:
+          let lastIdx = clientIdsPair.val.high
+          if t.idx != lastIdx:
+            let lastClientIdTagsPair = clientId2Tags.get(clientIdsPair.val[lastIdx])
+            for j, last in lastClientIdTagsPair.val:
+              if clientIdsPair.key.addr == last.tag:
+                lastClientIdTagsPair.val[j].idx = t.idx
+                break
+          clientIdsPair.val.del(t.idx)
+
+        if tagRefsPair.val.len <= 1:
+          clientId2Tags.del(tagRefsPair)
+        else:
+          tagRefsPair.val.del(i)
+        return
 
 proc invokeSendEvent*(client: ptr Client, retry: bool = false): bool =
   if retry:
@@ -316,6 +390,8 @@ proc initClient() =
   clients = p
   rwlockInit(clientsLock)
   pendingClients = newHashTable[ClientId, ptr Client](CLIENT_MAX * 3 div 2)
+  tag2ClientIds = newHashTable[Tag, Array[ClientId]](CLIENT_MAX * 10 * 3 div 2)
+  clientId2Tags = newHashTable[ClientId, Array[TagRef]](CLIENT_MAX * 3 div 2)
 
 proc freeClient() =
   pendingClients.delete()
