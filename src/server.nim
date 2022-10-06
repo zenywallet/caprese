@@ -315,6 +315,33 @@ proc delTag*(clientId: ClientId, tag: Tag) =
           tagRefsPair.val.del(i)
         return
 
+proc getClientIds*(tag: Tag): Array[ClientId] =
+  withReadLock clientsLock:
+    let clientIds = tag2ClientIds.get(tag)
+    if not clientIds.isNil:
+      result = clientIds.val
+
+proc getTags*(clientId: ClientId): Array[Tag] =
+  withReadLock clientsLock:
+    let tagRefs = clientId2Tags.get(clientId)
+    if not tagRefs.isNil:
+      for t in tagRefs.val:
+        result.add(t.tag[])
+
+iterator getClientIds*(tag: Tag): ClientId =
+  withReadLock clientsLock:
+    let clientIds = tag2ClientIds.get(tag)
+    if not clientIds.isNil:
+      for c in clientIds.val:
+        yield c
+
+iterator getTags*(clientId: ClientId): Tag =
+  withReadLock clientsLock:
+    let tagRefs = clientId2Tags.get(clientId)
+    if not tagRefs.isNil:
+      for t in tagRefs.val:
+        yield t.tag[]
+
 proc invokeSendEvent*(client: ptr Client, retry: bool = false): bool =
   if retry:
     if not client.invoke:
