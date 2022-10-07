@@ -289,7 +289,7 @@ proc setTag*(clientId: ClientId, tag: Tag) =
     tagRefsPair.val.add(TagRef(tag: clientIdsPair.key.addr, idx: clientIdsPair.val.high))
 
 proc delTag*(clientId: ClientId, tag: Tag) =
-  withReadLock clientsLock:
+  withWriteLock clientsLock:
     let tagRefsPair = clientId2Tags.get(clientId)
     if tagRefsPair.isNil: return
     let clientIdsPair = tag2ClientIds.get(tag)
