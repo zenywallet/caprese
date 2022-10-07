@@ -334,6 +334,21 @@ proc delTag*(clientId: ClientId) =
         clientIdsPair.val.del(t.idx)
     clientId2Tags.del(tagRefsPair)
 
+proc delTag*(tag: Tag) =
+  withWriteLock clientsLock:
+    let clientIdsPair = tag2ClientIds.get(tag)
+    if clientIdsPair.isNil: return
+    for clientId in clientIdsPair.val:
+      let tagRefsPair = clientId2Tags.get(clientId)
+      for i, t in tagRefsPair.val:
+        if clientIdsPair.key.addr == t.tag:
+          if tagRefsPair.val.len <= 1:
+            clientId2Tags.del(tagRefsPair)
+          else:
+            tagRefsPair.val.del(i)
+          break
+    tag2ClientIds.del(clientIdsPair)
+
 proc getClientIds*(tag: Tag): Array[ClientId] =
   withReadLock clientsLock:
     let clientIds = tag2ClientIds.get(tag)
