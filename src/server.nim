@@ -709,6 +709,12 @@ when not declared(invokeSendMain):
 var webMain: WebMainCallback = webMainDefault
 var streamMain: StreamMainCallback = streamMainDefault
 
+proc setWebMain*(webMainCallback: WebMainCallback) =
+  webMain = webMainCallback
+
+proc setStreamMain*(streamMainCallback: StreamMainCallback) =
+  streamMain = streamMainCallback
+
 proc workerMain(client: ptr Client, buf: ptr UncheckedArray[byte], size: int, appId: int): SendResult =
   var i = 0
   var cur = 0
