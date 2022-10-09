@@ -267,25 +267,23 @@ proc setTag*(clientId: ClientId, tag: Tag) =
     var tagRefsPair = clientId2Tags.get(clientId)
     var clientIdsPair = tag2ClientIds.get(tag)
 
-    template addFirstTag() {.dirty.} =
-      clientIdsPair = tag2ClientIds.set(tag, @^[ClientId clientId])
-      tagRefsPair.val.add(TagRef(tag: clientIdsPair.key.addr, idx: 0))
+    template checkFirstTagAndReturn() {.dirty.} =
+      if clientIdsPair.isNil:
+        clientIdsPair = tag2ClientIds.set(tag, @^[ClientId clientId])
+        tagRefsPair.val.add(TagRef(tag: clientIdsPair.key.addr, idx: 0))
+        return
 
     if tagRefsPair.isNil:
       var emptyTagRef: Array[TagRef]
       tagRefsPair = clientId2Tags.set(clientId, emptyTagRef)
 
-      if clientIdsPair.isNil:
-        addFirstTag()
-        return
+      checkFirstTagAndReturn()
     else:
-      if clientIdsPair.isNil:
-        addFirstTag()
-        return
-      else:
-        for t in tagRefsPair.val:
-          if clientIdsPair.key.addr == t.tag:
-            return
+      checkFirstTagAndReturn()
+
+      for t in tagRefsPair.val:
+        if clientIdsPair.key.addr == t.tag:
+          return
 
     clientIdsPair.val.add(clientId)
     tagRefsPair.val.add(TagRef(tag: clientIdsPair.key.addr, idx: clientIdsPair.val.high))
