@@ -66,7 +66,7 @@ type
     ip: uint32
     invoke: bool
 
-  ClientId = int
+  ClientId* = int
 
   Client* = object of ClientBase
     pStream*: pointer
