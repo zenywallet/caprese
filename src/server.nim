@@ -315,7 +315,7 @@ proc delTag*(clientId: ClientId, tag: Tag) =
           tagRefsPair.val.del(i)
         return
 
-proc delTag*(clientId: ClientId) =
+proc delTags*(clientId: ClientId) =
   withWriteLock clientsLock:
     let tagRefsPair = clientId2Tags.get(clientId)
     if tagRefsPair.isNil: return
@@ -334,7 +334,7 @@ proc delTag*(clientId: ClientId) =
         clientIdsPair.val.del(t.idx)
     clientId2Tags.del(tagRefsPair)
 
-proc delTag*(tag: Tag) =
+proc delTags*(tag: Tag) =
   withWriteLock clientsLock:
     let clientIdsPair = tag2ClientIds.get(tag)
     if clientIdsPair.isNil: return
