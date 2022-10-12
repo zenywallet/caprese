@@ -215,6 +215,17 @@ type
     tag: ptr Tag
     idx: int
 
+  ClientTaskCmd* {.pure.} = enum
+    None
+    Data
+
+  ClientTask* = object
+    case cmd*: ClientTaskCmd
+    of ClientTaskCmd.None:
+      discard
+    of ClientTaskCmd.Data:
+      data*: Array[byte]
+
 proc toUint64(tag: Tag): uint64 = tag.toSeq.toUint64
 
 proc empty*(pair: HashTableData): bool =
@@ -235,6 +246,7 @@ const INVALID_CLIENT_ID* = -1.ClientId
 
 var tag2ClientIds: HashTableMem[Tag, Array[ClientId]]
 var clientId2Tags: HashTableMem[ClientId, Array[TagRef]]
+var clientId2Tasks: HashTableMem[ClientId, Array[ClientTask]]
 
 proc markPending*(client: ptr Client): ClientId {.discardable.} =
   withWriteLock clientsLock:
@@ -376,6 +388,29 @@ iterator getTags*(clientId: ClientId): Tag =
       for t in tagRefs.val:
         yield t.tag[]
 
+proc addTask*(clientId: ClientId, task: ClientTask) =
+  withWriteLock clientsLock:
+    let tasksPair = clientId2Tasks.get(clientId)
+    if tasksPair.isNil:
+      clientId2Tasks.set(clientId, @^[task])
+    else:
+      tasksPair.val.add(task)
+
+proc getTasks*(clientId: ClientId): Array[ClientTask] =
+  withReadLock clientsLock:
+    let tasksPair = clientId2Tasks.get(clientId)
+    if not tasksPair.isNil:
+      result = tasksPair.val
+
+proc delTasks*(clientId: ClientId) =
+  withWriteLock clientsLock:
+    let tasksPair = clientId2Tasks.get(clientId)
+    if tasksPair.isNil: return
+    for i, task in tasksPair.val:
+      if task.cmd == ClientTaskCmd.Data:
+        tasksPair.val[i].data.empty()
+    clientId2Tasks.del(tasksPair)
+
 proc invokeSendEvent*(client: ptr Client, retry: bool = false): bool =
   if retry:
     if not client.invoke:
@@ -453,6 +488,7 @@ proc initClient() =
   pendingClients = newHashTable[ClientId, ptr Client](CLIENT_MAX * 3 div 2)
   tag2ClientIds = newHashTable[Tag, Array[ClientId]](CLIENT_MAX * 10 * 3 div 2)
   clientId2Tags = newHashTable[ClientId, Array[TagRef]](CLIENT_MAX * 3 div 2)
+  clientId2Tasks = newHashTable[ClientId, Array[ClientTask]](CLIENT_MAX * 3 div 2)
 
 proc freeClient() =
   pendingClients.delete()
