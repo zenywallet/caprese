@@ -402,6 +402,20 @@ proc getTasks*(clientId: ClientId): Array[ClientTask] =
     if not tasksPair.isNil:
       result = tasksPair.val
 
+proc setTasks*(clientId: ClientId, tasks: Array[ClientTask]) =
+  withReadLock clientsLock:
+    let tasksPair = clientId2Tasks.get(clientId)
+    if tasksPair.isNil:
+      clientId2Tasks.set(clientId, tasks)
+    else:
+      tasksPair.val = tasks
+
+proc purgeTasks*(clientId: ClientId, idx: int) =
+  withReadLock clientsLock:
+    let tasksPair = clientId2Tasks.get(clientId)
+    if not tasksPair.isNil:
+      tasksPair.val = tasksPair.val[idx + 1..^1]
+
 proc delTasks*(clientId: ClientId) =
   withWriteLock clientsLock:
     let tasksPair = clientId2Tasks.get(clientId)
