@@ -416,6 +416,30 @@ proc purgeTasks*(clientId: ClientId, idx: int) =
     if not tasksPair.isNil:
       tasksPair.val = tasksPair.val[idx + 1..^1]
 
+proc getAndPurgeTasks*(clientId: ClientId, cb: proc(task: ClientTask): bool) =
+  var tasksPair: HashTableData[ClientId, Array[ClientTask]]
+  var tasks: Array[ClientTask]
+
+  withReadLock clientsLock:
+    tasksPair = clientId2Tasks.get(clientId)
+    if tasksPair.isNil: return
+    tasks = tasksPair.val
+
+  var idx: int = -1
+  for task in tasks:
+    if not cb(task): break
+    inc(idx)
+
+  if idx >= 0 and idx < tasksPair.val.len:
+    withWriteLock clientsLock:
+      for i in 0..idx:
+        if tasksPair.val[i].cmd == ClientTaskCmd.Data:
+          tasksPair.val[i].data.empty()
+      if idx == tasks.high:
+        clientId2Tasks.del(tasksPair)
+      else:
+        tasksPair.val = tasksPair.val[idx + 1..^1]
+
 proc delTasks*(clientId: ClientId) =
   withWriteLock clientsLock:
     let tasksPair = clientId2Tasks.get(clientId)
