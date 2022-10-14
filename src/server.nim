@@ -242,7 +242,7 @@ loadHashTableModules()
 var pendingClients: HashTableMem[ClientId, ptr Client]
 var clientsLock: RWLock
 var curClientId: ClientId = 0
-const INVALID_CLIENT_ID* = -1.ClientId
+const INVALID_CLIENT_ID* = 0.ClientId
 
 var tag2ClientIds: HashTableMem[Tag, Array[ClientId]]
 var clientId2Tags: HashTableMem[ClientId, Array[TagRef]]
