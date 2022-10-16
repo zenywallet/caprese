@@ -452,6 +452,9 @@ proc delTasks*(clientId: ClientId) =
     clientId2Tasks.del(tasksPair)
 
 proc invokeSendEvent*(client: ptr Client, retry: bool = false): bool =
+  acquire(client.lock)
+  defer:
+    release(client.lock)
   if retry:
     if not client.invoke:
       return true
@@ -695,6 +698,9 @@ proc getFrame(data: ptr UncheckedArray[byte],
     return (true, fin, opcode, payload, payloadLen, nil, 0)
 
 proc waitEventAgain(client: ptr Client, evData: uint64, fd: int | SocketHandle, exEvents: uint32 = 0) =
+  acquire(client.lock)
+  defer:
+    release(client.lock)
   var ev: EpollEvent
   if client.invoke:
     ev.events = EPOLLIN or EPOLLRDHUP or EPOLLOUT
@@ -714,6 +720,9 @@ proc waitEventAgain(client: ptr Client, evData: uint64, fd: int | SocketHandle, 
       abort()
 
 proc close(client: ptr Client) =
+  acquire(client.lock)
+  defer:
+    release(client.lock)
   debug "close ", client.fd
   when declared(freeExClient):
     freeExClient(client)
