@@ -18,6 +18,7 @@ import logs
 import hashtable
 import ptlock
 import arraylib
+import locks
 
 const RLIMIT_OPEN_FILES* = 65536
 const CLIENT_MAX = 32000
@@ -65,6 +66,7 @@ type
       ssl: SSL
     ip: uint32
     invoke: bool
+    lock: Lock
 
   ClientId* = int
 
@@ -519,6 +521,7 @@ proc initClient() =
       p[i].ssl = nil
     p[i].ip = 0
     p[i].invoke = false
+    initLock(p[i].lock)
     when declared(initExClient):
       initExClient(addr p[i])
   clients = p
@@ -543,6 +546,7 @@ proc freeClient() =
       deallocShared(cast[pointer](client.sendBuf))
     when declared(freeExClient):
       freeExClient(client)
+    deinitLock(client.lock)
   deallocShared(p)
 
 proc atomic_compare_exchange_n(p: ptr int, expected: ptr int, desired: int, weak: bool,
