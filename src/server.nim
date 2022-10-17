@@ -455,16 +455,15 @@ proc invokeSendEvent*(client: ptr Client): bool =
   acquire(client.lock)
   defer:
     release(client.lock)
-  client.invoke = true
+  if client.fd == osInvalidSocket.int:
+    return false
   var ev: EpollEvent
   ev.events = EPOLLIN or EPOLLRDHUP or EPOLLOUT
   ev.data.u64 = client.idx.uint or 0x300000000'u64
   var ret = epoll_ctl(epfd, EPOLL_CTL_MOD, client.fd.cint, addr ev)
   if ret < 0:
-    result = false
-  else:
-    client.invoke = false
-    result = true
+    client.invoke = true
+  result = true
 
 proc getErrnoStr(): string =
   case errno
