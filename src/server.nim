@@ -451,15 +451,11 @@ proc delTasks*(clientId: ClientId) =
         tasksPair.val[i].data.empty()
     clientId2Tasks.del(tasksPair)
 
-proc invokeSendEvent*(client: ptr Client, retry: bool = false): bool =
+proc invokeSendEvent*(client: ptr Client): bool =
   acquire(client.lock)
   defer:
     release(client.lock)
-  if retry:
-    if not client.invoke:
-      return true
-  else:
-    client.invoke = true
+  client.invoke = true
   var ev: EpollEvent
   ev.events = EPOLLIN or EPOLLRDHUP or EPOLLOUT
   ev.data.u64 = client.idx.uint or 0x300000000'u64
