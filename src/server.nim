@@ -468,6 +468,31 @@ proc invokeSendEvent*(client: ptr Client): bool =
     client.invoke = true
   result = true
 
+proc send*(clientId: ClientId, data: string): SendResult =
+  let pair = pendingClients.get(clientId)
+  if pair.isNil:
+    return SendResult.None
+
+  clientId.addTask(ClientTask(cmd: ClientTaskCmd.Data, data: data.toBytes.toArray))
+  if pair.val.invokeSendEvent():
+    result = SendResult.Pending
+  else:
+    clientId.delTasks()
+    result = SendResult.Error
+
+when not declared(invokeSendMain):
+  proc invokeSendMain(client: ptr Client): SendResult =
+    let clientId = client.clientId
+
+    proc taskCallback(task: ClientTask): bool =
+      let retSend = client.send(task.data.toSeq().toString())
+      result = (retSend != SendResult.Pending)
+
+    if clientId.getAndPurgeTasks(taskCallback):
+      result = SendResult.None
+    else:
+      result = SendResult.Pending
+
 proc getErrnoStr(): string =
   case errno
   of EADDRINUSE: "errno=EADDRINUSE(" & $errno & ")"
