@@ -418,7 +418,8 @@ proc purgeTasks*(clientId: ClientId, idx: int) =
     if not tasksPair.isNil:
       tasksPair.val = tasksPair.val[idx + 1..^1]
 
-proc getAndPurgeTasks*(clientId: ClientId, cb: proc(task: ClientTask): bool) =
+proc getAndPurgeTasks*(clientId: ClientId, cb: proc(task: ClientTask): bool): bool =
+  result = true
   var tasksPair: HashTableData[ClientId, Array[ClientTask]]
   var tasks: Array[ClientTask]
 
@@ -429,7 +430,9 @@ proc getAndPurgeTasks*(clientId: ClientId, cb: proc(task: ClientTask): bool) =
 
   var idx: int = -1
   for task in tasks:
-    if not cb(task): break
+    if not cb(task):
+      result = false
+      break
     inc(idx)
 
   if idx >= 0 and idx < tasksPair.val.len:
