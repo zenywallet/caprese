@@ -749,6 +749,12 @@ proc close(client: ptr Client) =
   debug "close ", client.fd
   when declared(freeExClient):
     freeExClient(client)
+  let clientId = client.clientId
+  if clientId != INVALID_CLIENT_ID:
+    clientId.delTags()
+    clientId.delTasks()
+    client.unmarkPending()
+  client.invoke = false
   client.ip = 0
   when ENABLE_SSL:
     if not client.ssl.isNil:
