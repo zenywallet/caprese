@@ -7,15 +7,20 @@ import queue
 
 
 when isMainModule:
+  type
+    PendingData = object
+      url: string
+
   var active = true
-  var reqs: Queue[tuple[cid: ClientId, url: string]]
+  var reqs: Queue[tuple[cid: ClientId, data: PendingData]]
   reqs.init(100)
 
   onSignal(SIGINT, SIGTERM):
     echo "bye from signal ", sig
     server.stop()
     active = false
-    reqs.send((INVALID_CLIENT_ID, cast[string](nil)))
+    var emptyData: PendingData
+    reqs.send((INVALID_CLIENT_ID, emptyData))
 
   signal(SIGPIPE, SIG_IGN)
 
@@ -27,7 +32,7 @@ when isMainModule:
     while true:
       var req = reqs.recv()
       if not active: break
-      var content = "<!DOCTYPE html><meta charset=\"utf-8\">[worker] " & req.url
+      var content = "<!DOCTYPE html><meta charset=\"utf-8\">[worker] " & req.data.url
       let clientId = req.cid
       discard clientId.send(content.addHeader())
 
@@ -36,7 +41,7 @@ when isMainModule:
   proc webMain(client: ptr Client, url: string, headers: Headers): SendResult =
     if url == "/test":
       var cid = client.markPending()
-      reqs.send((cid, url))
+      reqs.send((cid, PendingData(url: url)))
       return SendResult.Pending
 
     var content = "<!DOCTYPE html><meta charset=\"utf-8\">" & url
