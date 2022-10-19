@@ -5,13 +5,14 @@ import server
 import contents
 import queue
 
+var active* = true
+
 
 when isMainModule:
   type
     PendingData = object
       url: string
 
-  var active = true
   var reqs: Queue[tuple[cid: ClientId, data: PendingData]]
   reqs.init(100)
 
