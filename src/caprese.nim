@@ -7,14 +7,17 @@ import queue
 
 var active* = true
 
+template pendingLimit*(limit: int) {.dirty.} =
+  var reqs: Queue[tuple[cid: ClientId, data: PendingData]]
+  reqs.init(limit)
+
 
 when isMainModule:
   type
     PendingData = object
       url: string
 
-  var reqs: Queue[tuple[cid: ClientId, data: PendingData]]
-  reqs.init(100)
+  pendingLimit: 100
 
   onSignal(SIGINT, SIGTERM):
     echo "bye from signal ", sig
