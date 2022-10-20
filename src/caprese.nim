@@ -11,6 +11,15 @@ template pendingLimit*(limit: int) {.dirty.} =
   var reqs: Queue[tuple[cid: ClientId, data: PendingData]]
   reqs.init(limit)
 
+template sigTermQuit*(flag: bool) =
+  when flag:
+    onSignal(SIGINT, SIGTERM):
+      echo "bye from signal ", sig
+      server.stop()
+      active = false
+      var emptyData: PendingData
+      reqs.send((INVALID_CLIENT_ID, emptyData))
+
 
 when isMainModule:
   type
@@ -18,13 +27,7 @@ when isMainModule:
       url: string
 
   pendingLimit: 100
-
-  onSignal(SIGINT, SIGTERM):
-    echo "bye from signal ", sig
-    server.stop()
-    active = false
-    var emptyData: PendingData
-    reqs.send((INVALID_CLIENT_ID, emptyData))
+  sigTermQuit: true
 
   signal(SIGPIPE, SIG_IGN)
 
