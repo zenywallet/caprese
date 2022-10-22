@@ -31,6 +31,18 @@ macro get*(url: string, body: untyped): untyped =
     if url == `url`:
       `body`
 
+template serverStart(body: untyped) {.dirty.} =
+  proc webMain(client: ptr Client, url: string, headers: Headers): SendResult =
+    body
+  setWebMain(webMain)
+  start()
+
+macro server*(bindAddress: string, port: uint16, body: untyped): untyped =
+  quote do:
+    echo "bind address: ", `bindAddress`
+    echo "port: ", `port`
+    serverStart(`body`)
+
 
 when isMainModule:
   type
@@ -54,7 +66,7 @@ when isMainModule:
 
   createThread(workerThread, worker)
 
-  proc webMain(client: ptr Client, url: string, headers: Headers): SendResult =
+  server(bindAddress = "0.0.0.0", port = 8009):
     get "/test":
       var cid = client.markPending()
       reqs.send((cid, PendingData(url: url)))
@@ -62,7 +74,3 @@ when isMainModule:
 
     var content = "<!DOCTYPE html><meta charset=\"utf-8\">" & url
     return client.send(content.addHeader())
-
-  setWebMain(webMain)
-
-  start()
