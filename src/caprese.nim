@@ -23,6 +23,8 @@ template sigTermQuit*(flag: bool) =
 template sigPipeIgnore*(flag: bool) =
   when flag: signal(SIGPIPE, SIG_IGN)
 
+template limitOpenFiles*(num: int) = setRlimitOpenFiles(num)
+
 
 when isMainModule:
   type
@@ -32,8 +34,7 @@ when isMainModule:
   pendingLimit: 100
   sigTermQuit: true
   sigPipeIgnore: true
-
-  setRlimitOpenFiles(RLIMIT_OPEN_FILES)
+  limitOpenFiles: 65536
 
   var workerThread: Thread[void]
 
