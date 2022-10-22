@@ -60,7 +60,7 @@ when isMainModule:
     while true:
       var req = reqs.recv()
       if not active: break
-      var content = "<!DOCTYPE html><meta charset=\"utf-8\">[worker] " & req.data.url
+      var content = """<!DOCTYPE html><meta charset="utf-8">[worker] """ & req.data.url
       let clientId = req.cid
       discard clientId.send(content.addHeader())
 
@@ -72,5 +72,5 @@ when isMainModule:
       reqs.send((cid, PendingData(url: url)))
       return SendResult.Pending
 
-    var content = "<!DOCTYPE html><meta charset=\"utf-8\">" & url
+    var content = """<!DOCTYPE html><meta charset="utf-8">""" & url
     return client.send(content.addHeader())
