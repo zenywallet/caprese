@@ -20,6 +20,9 @@ template sigTermQuit*(flag: bool) =
       var emptyData: PendingData
       reqs.send((INVALID_CLIENT_ID, emptyData))
 
+template sigPipeIgnore*(flag: bool) =
+  when flag: signal(SIGPIPE, SIG_IGN)
+
 
 when isMainModule:
   type
@@ -28,8 +31,7 @@ when isMainModule:
 
   pendingLimit: 100
   sigTermQuit: true
-
-  signal(SIGPIPE, SIG_IGN)
+  sigPipeIgnore: true
 
   setRlimitOpenFiles(RLIMIT_OPEN_FILES)
 
