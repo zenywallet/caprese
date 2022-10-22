@@ -4,6 +4,7 @@ import posix
 import server
 import contents
 import queue
+import macros
 
 var active* = true
 
@@ -24,6 +25,11 @@ template sigPipeIgnore*(flag: bool) =
   when flag: signal(SIGPIPE, SIG_IGN)
 
 template limitOpenFiles*(num: int) = setRlimitOpenFiles(num)
+
+macro get*(url: string, body: untyped): untyped =
+  quote do:
+    if url == `url`:
+      `body`
 
 
 when isMainModule:
@@ -49,7 +55,7 @@ when isMainModule:
   createThread(workerThread, worker)
 
   proc webMain(client: ptr Client, url: string, headers: Headers): SendResult =
-    if url == "/test":
+    get "/test":
       var cid = client.markPending()
       reqs.send((cid, PendingData(url: url)))
       return SendResult.Pending
