@@ -7,6 +7,7 @@ import queue
 import macros
 
 var active* = true
+var workerNum = 0
 
 template pendingLimit*(limit: int) {.dirty.} =
   var reqs: Queue[tuple[cid: ClientId, data: PendingData]]
@@ -18,8 +19,9 @@ template sigTermQuit*(flag: bool) =
       echo "bye from signal ", sig
       server.stop()
       active = false
-      var emptyData: PendingData
-      reqs.send((INVALID_CLIENT_ID, emptyData))
+      for i in 0..<workerNum:
+        var emptyData: PendingData
+        reqs.send((INVALID_CLIENT_ID, emptyData))
 
 template sigPipeIgnore*(flag: bool) =
   when flag: signal(SIGPIPE, SIG_IGN)
@@ -43,6 +45,15 @@ macro server*(bindAddress: string, port: uint16, body: untyped): untyped =
     echo "port: ", `port`
     serverStart(`body`)
 
+macro worker*(num: int, body: untyped): untyped =
+  quote do:
+    atomicInc(workerNum, `num`)
+    var workerThreads: array[`num`, Thread[void]]
+    block:
+      proc workerProc() {.thread.} = `body`
+      for i in 0..<`num`:
+        createThread(workerThreads[i], workerProc)
+
 
 when isMainModule:
   type
@@ -54,17 +65,13 @@ when isMainModule:
   sigPipeIgnore: true
   limitOpenFiles: 65536
 
-  var workerThread: Thread[void]
-
-  proc worker() {.thread.} =
+  worker(num = 2):
     while true:
       var req = reqs.recv()
       if not active: break
       var content = """<!DOCTYPE html><meta charset="utf-8">[worker] """ & req.data.url
       let clientId = req.cid
       discard clientId.send(content.addHeader())
-
-  createThread(workerThread, worker)
 
   server(bindAddress = "0.0.0.0", port = 8009):
     get "/test":
