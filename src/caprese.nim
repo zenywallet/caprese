@@ -54,6 +54,20 @@ macro worker*(num: int, body: untyped): untyped =
       for i in 0..<`num`:
         createThread(workerThreads[i], workerProc)
 
+macro pendingBody(data: auto): untyped =
+  quote do:
+    proc pendingProc(): SendResult {.discardable.} =
+      let cid = client.markPending()
+      if reqs.send((cid, `data`)):
+        return SendResult.Pending
+      else:
+        return SendResult.Error
+
+template pending*(data: auto): SendResult =
+  block:
+    pendingBody(data)
+    pendingProc()
+
 
 when isMainModule:
   type
@@ -75,9 +89,7 @@ when isMainModule:
 
   server(bindAddress = "0.0.0.0", port = 8009):
     get "/test":
-      var cid = client.markPending()
-      reqs.send((cid, PendingData(url: url)))
-      return SendResult.Pending
+      return pending(PendingData(url: url))
 
     var content = """<!DOCTYPE html><meta charset="utf-8">""" & url
     return client.send(content.addHeader())
