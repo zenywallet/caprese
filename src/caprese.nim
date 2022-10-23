@@ -81,9 +81,9 @@ when isMainModule:
 
   worker(num = 2):
     while true:
-      var req = reqs.recv()
+      let req = reqs.recv()
       if not active: break
-      var content = """<!DOCTYPE html><meta charset="utf-8">[worker] """ & req.data.url
+      let content = """<!DOCTYPE html><meta charset="utf-8">[worker] """ & req.data.url
       let clientId = req.cid
       discard clientId.send(content.addHeader())
 
@@ -91,5 +91,5 @@ when isMainModule:
     get "/test":
       return pending(PendingData(url: url))
 
-    var content = """<!DOCTYPE html><meta charset="utf-8">""" & url
+    let content = """<!DOCTYPE html><meta charset="utf-8">""" & url
     return client.send(content.addHeader())
