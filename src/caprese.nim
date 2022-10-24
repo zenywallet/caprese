@@ -92,6 +92,9 @@ when isMainModule:
       discard clientId.send(content.addHeader())
 
   server(bindAddress = "0.0.0.0", port = 8009):
+    get "/":
+      return send("""<!DOCTYPE html><meta charset="utf-8">welcome""".addHeader())
+
     get "/test":
       return pending(PendingData(url: url))
 
