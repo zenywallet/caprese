@@ -68,6 +68,8 @@ template pending*(data: auto): SendResult =
     pendingBody(data)
     pendingProc()
 
+template getPending*(): auto = reqs.recv()
+
 
 when isMainModule:
   type
@@ -81,7 +83,7 @@ when isMainModule:
 
   worker(num = 2):
     while true:
-      let req = reqs.recv()
+      let req = getPending()
       if not active: break
       let content = """<!DOCTYPE html><meta charset="utf-8">[worker] """ & req.data.url
       let clientId = req.cid
