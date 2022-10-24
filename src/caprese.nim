@@ -70,6 +70,8 @@ template pending*(data: auto): SendResult =
 
 template getPending*(): auto = reqs.recv()
 
+template send*(data: string): SendResult = client.send(data)
+
 
 when isMainModule:
   type
