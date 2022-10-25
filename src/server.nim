@@ -468,7 +468,7 @@ proc invokeSendEvent*(client: ptr Client): bool =
     client.invoke = true
   result = true
 
-proc send*(clientId: ClientId, data: string): SendResult =
+proc send*(clientId: ClientId, data: string): SendResult {.discardable.} =
   let pair = pendingClients.get(clientId)
   if pair.isNil:
     return SendResult.None
