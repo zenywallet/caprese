@@ -90,7 +90,7 @@ when isMainModule:
       if not active: break
       let content = """<!DOCTYPE html><meta charset="utf-8">[worker] """ & req.data.url
       let clientId = req.cid
-      discard clientId.send(content.addHeader())
+      clientId.send(content.addHeader())
 
   server(bindAddress = "0.0.0.0", port = 8009):
     get "/":
