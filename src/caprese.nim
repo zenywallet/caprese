@@ -3,6 +3,7 @@
 import posix
 import server
 import contents
+import statuscode
 import queue
 import macros
 
@@ -98,5 +99,5 @@ when isMainModule:
     get "/test":
       return pending(PendingData(url: url))
 
-    let content = """<!DOCTYPE html><meta charset="utf-8">""" & url
-    return client.send(content.addHeader())
+    let notFound = """<!DOCTYPE html><meta charset="utf-8">Not found: """ & url
+    return send(notFound.addHeader(Status404))
