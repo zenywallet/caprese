@@ -12,6 +12,7 @@ bin           = @["caprese"]
 
 requires "nim >= 1.6.4"
 requires "nimcrypto"
+requires "karax"
 
 
 task deps, "Build deps":
