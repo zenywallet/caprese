@@ -45,3 +45,5 @@ const NotFound* = "<!DOCTYPE html><meta charset=\"utf-8\"><i>You just found empt
 const InternalError* = "<!DOCTYPE html><meta charset=\"utf-8\">the fire is dead.<br>the room is freezing."
 const TooMany* = "<!DOCTYPE html><meta charset=\"utf-8\"><i>Take your time.</i>"
 const Empty* = ""
+
+template addDocType*(body: string): string = "<!DOCTYPE html><meta charset=\"utf-8\">" & body
