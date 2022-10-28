@@ -57,24 +57,25 @@ const (srcFileDir, srcFieName, srcFileExt) = splitFile(srcFile)
 
 var tmpFileId {.compileTime.}: int = 0
 
+proc convertHtmlDocument(htmlBody: string): string {.compileTime.} =
+  let randomStr = staticExec("head -c 100 /dev/urandom | tr -dc A-Za-z0-9 | head -c13")
+  inc(tmpFileId)
+  let id = $tmpFileId & "_" & randomStr
+  let tmpExeFile = srcFileDir / srcFieName & "_tmp" & $id
+  let tmpSrcFile = tmpExeFile & srcFileExt
+  var code = "import re\n" &
+    "let content = \"\"\"" & htmlBody & "\"\"\"\n" &
+    """echo "<!DOCTYPE html>\n" & content.replacef(re"<([^>]*) />", "<$1>")""" & "\n"
+  writeFile(tmpSrcFile, code)
+  echo staticExec("nim c " & tmpSrcFile)
+  result = staticExec(tmpExeFile).unindent(2)
+  discard staticExec("rm " & tmpExeFile)
+  discard staticExec("rm " & tmpSrcFile)
+
 template staticHtmlDocument*(body: untyped): string =
-  mixin unindent
   block:
     macro staticHtmlDocumentMacro(): string =
-      let randomStr = staticExec("head -c 100 /dev/urandom | tr -dc A-Za-z0-9 | head -c13")
-      inc(tmpFileId)
-      let id = $tmpFileId & "_" & randomStr
-      let tmpExeFile = srcFileDir / srcFieName & "_tmp" & $id
-      let tmpSrcFile = tmpExeFile & srcFileExt
-      var code = "import re\n" &
-        "let content = \"\"\"" & $body & "\"\"\"\n" &
-        """echo "<!DOCTYPE html>\n" & content.replacef(re"<([^>]*) />", "<$1>")""" & "\n"
-      writeFile(tmpSrcFile, code)
-      echo staticExec("nim c " & tmpSrcFile)
-      let content = staticExec(tmpExeFile).unindent(2)
-      discard staticExec("rm " & tmpExeFile)
-      discard staticExec("rm " & tmpSrcFile)
       nnkStmtList.newTree(
-        newLit(content)
+        newLit(convertHtmlDocument($body))
       )
     staticHtmlDocumentMacro()
