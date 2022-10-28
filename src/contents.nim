@@ -59,7 +59,6 @@ var tmpFileId {.compileTime.}: int = 0
 
 template staticHtmlDocument*(body: untyped): string =
   mixin unindent
-  var ret: string
   block:
     macro staticHtmlDocumentMacro(): string =
       let randomStr = staticExec("head -c 100 /dev/urandom | tr -dc A-Za-z0-9 | head -c13")
@@ -78,5 +77,4 @@ template staticHtmlDocument*(body: untyped): string =
       nnkStmtList.newTree(
         newLit(content)
       )
-    ret = staticHtmlDocumentMacro()
-  ret
+    staticHtmlDocumentMacro()
