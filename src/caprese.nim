@@ -79,6 +79,8 @@ template send*(data: string): SendResult = client.send(data)
 
 
 when isMainModule:
+  import strformat
+
   type
     PendingData = object
       url: string
@@ -92,7 +94,7 @@ when isMainModule:
     while true:
       let req = getPending()
       if not active: break
-      let content = """<!DOCTYPE html><meta charset="utf-8">[worker] """ & req.data.url
+      let content = fmt"""<!DOCTYPE html><meta charset="utf-8">[worker] {req.data.url}"""
       let clientId = req.cid
       clientId.send(content.addHeader())
 
@@ -103,5 +105,5 @@ when isMainModule:
     get "/test":
       return pending(PendingData(url: url))
 
-    let notFound = """<!DOCTYPE html><meta charset="utf-8">Not found: """ & url
+    let notFound = fmt"""<!DOCTYPE html><meta charset="utf-8">Not found: {url}"""
     return send(notFound.addHeader(Status404))
