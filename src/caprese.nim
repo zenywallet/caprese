@@ -94,7 +94,8 @@ when isMainModule:
     while true:
       let req = getPending()
       if not active: break
-      let content = fmt"""<!DOCTYPE html><meta charset="utf-8">[worker] {req.data.url}"""
+      let urlText = sanitizeHtml(req.data.url)
+      let content = fmt"""<!DOCTYPE html><meta charset="utf-8">[worker] {urlText}"""
       let clientId = req.cid
       clientId.send(content.addHeader())
 
@@ -105,5 +106,6 @@ when isMainModule:
     get "/test":
       return pending(PendingData(url: url))
 
-    let notFound = fmt"""<!DOCTYPE html><meta charset="utf-8">Not found: {url}"""
+    let urlText = sanitizeHtml(url)
+    let notFound = fmt"""<!DOCTYPE html><meta charset="utf-8">Not found: {urlText}"""
     return send(notFound.addHeader(Status404))
