@@ -79,3 +79,15 @@ template staticHtmlDocument*(body: untyped): string =
         newLit(convertHtmlDocument($body))
       )
     staticHtmlDocumentMacro()
+
+proc sanitizeHtml*(s: string): string =
+  for c in s:
+    case c
+    of '&': result.add("&amp;")
+    of '\'': result.add("&#39;")
+    of '`': result.add("&#96;")
+    of '"': result.add("&quot;")
+    of '<': result.add("&lt;")
+    of '>': result.add("&gt;")
+    of '/': result.add("&#47;")
+    else: result.add(c)
