@@ -95,17 +95,16 @@ when isMainModule:
       let req = getPending()
       if not active: break
       let urlText = sanitizeHtml(req.data.url)
-      let content = fmt"""<!DOCTYPE html><meta charset="utf-8">[worker] {urlText}"""
+      let content = fmt"[worker] {urlText}".addDocType()
       let clientId = req.cid
       clientId.send(content.addHeader())
 
   server(bindAddress = "0.0.0.0", port = 8009):
     get "/":
-      return send("""<!DOCTYPE html><meta charset="utf-8">welcome""".addHeader())
+      return send("welcome".addDocType().addHeader())
 
     get "/test":
       return pending(PendingData(url: url))
 
     let urlText = sanitizeHtml(url)
-    let notFound = fmt"""<!DOCTYPE html><meta charset="utf-8">Not found: {urlText}"""
-    return send(notFound.addHeader(Status404))
+    return send(fmt"Not found: {urlText}".addDocType().addHeader(Status404))
