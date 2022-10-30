@@ -79,6 +79,7 @@ template send*(data: string): SendResult = client.send(data)
 
 
 when isMainModule:
+  import karax/[karaxdsl, vdom]
   import strformat
 
   type
@@ -90,18 +91,31 @@ when isMainModule:
   sigPipeIgnore: true
   limitOpenFiles: 65536
 
+  const indexHtml = staticHtmlDocument:
+    buildHtml(html):
+      head:
+        meta(harset="utf-8")
+      body:
+        text "welcome"
+
+  const testHtml = staticHtmlDocument:
+    buildHtml(html):
+      head:
+        meta(harset="utf-8")
+      body:
+        text "[worker] {urlText}"
+
   worker(num = 2):
     while true:
       let req = getPending()
       if not active: break
       let urlText = sanitizeHtml(req.data.url)
-      let content = fmt"[worker] {urlText}".addDocType()
       let clientId = req.cid
-      clientId.send(content.addHeader())
+      clientId.send(fmt(testHtml).addHeader())
 
   server(bindAddress = "0.0.0.0", port = 8009):
     get "/":
-      return send("welcome".addDocType().addHeader())
+      return send(indexHtml.addHeader())
 
     get "/test":
       return pending(PendingData(url: url))
