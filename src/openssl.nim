@@ -109,8 +109,8 @@ proc SSL_write*(ssl: SSL, buf: pointer, num: cint): cint {.importc.}
 proc SSL_write_ex*(s: SSL, buf: pointer, num: csize_t, written: csize_t): cint {.importc.}
 proc SSL_write_early_data*(s: SSL, buf: pointer, num: csize_t, written: csize_t): cint {.importc.}
 
-proc SSL_ctrl*(ssl: SSL, cmd: cint, larg: clong, parg: pointer): clong {.importc, discardable.}
 when not USE_BORINGSSL:
+  proc SSL_ctrl*(ssl: SSL, cmd: cint, larg: clong, parg: pointer): clong {.importc, discardable.}
   proc SSL_CTX_ctrl*(ctx: SSL_CTX, cmd: cint, larg: clong, parg: pointer): clong {.importc, discardable.}
 
 when USE_LIBRESSL:
@@ -122,12 +122,13 @@ else:
 
 when USE_BORINGSSL:
   proc SSL_CTX_set_mode*(ctx: SSL_CTX, mode: clong): clong {.importc, discardable.}
+  proc SSL_set_mode*(ssl: SSL, mode: clong): clong {.importc, discardable.}
 else:
   proc SSL_CTX_set_mode*(ctx: SSL_CTX, mode: clong): clong {.inline, discardable.} =
     SSL_CTX_ctrl(ctx, SSL_CTRL_MODE, mode, nil)
 
-proc SSL_set_mode*(ssl: SSL, mode: clong): clong {.inline, discardable.} =
-  SSL_ctrl(ssl, SSL_CTRL_MODE, mode, nil)
+  proc SSL_set_mode*(ssl: SSL, mode: clong): clong {.inline, discardable.} =
+    SSL_ctrl(ssl, SSL_CTRL_MODE, mode, nil)
 
 proc SSL_get_error*(s: SSL, ret_code: cint): cint {.importc.}
 proc SSL_get_version*(s: SSL): cstring {.importc.}
