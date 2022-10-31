@@ -268,10 +268,10 @@ when isMainModule:
 
   var ctx = SSL_CTX_new(TLS_server_method())
   echo repr ctx
-  var ssl = SSL_new(ctx)
-  echo repr ssl
   echo SSL_CTX_set_options(ctx, (SSL_OP_NO_SSLv2 or SSL_OP_NO_SSLv3 or
                       SSL_OP_NO_TLSv1 or SSL_OP_NO_TLSv1_1 or SSL_OP_NO_TLSv1_2).clong)
+  var ssl = SSL_new(ctx)
+  echo repr ssl
   echo SSL_get_version(ssl)
   for i in 0..9:
     echo OpenSSL_version(i.cint)
