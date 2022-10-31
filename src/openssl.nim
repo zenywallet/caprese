@@ -146,6 +146,34 @@ proc OpenSSL_add_all_algorithms*(): cint {.inline, discardable.} = OPENSSL_add_a
 proc ERR_get_error*(): culong {.importc.}
 
 
+# SNI
+# include/openssl/ssl.h
+when not USE_BORINGSSL:
+  const SSL_CTRL_SET_TLSEXT_SERVERNAME_CB* = 53
+  proc SSL_callback_ctrl*(a1: SSL; a2: cint; a3: proc () {.cdecl.}): clong {.importc, discardable.}
+  proc SSL_CTX_callback_ctrl*(a1: SSL_CTX; a2: cint; a3: proc () {.cdecl.}): clong {.importc, discardable.}
+
+proc SSL_set_SSL_CTX*(ssl: SSL; ctx: SSL_CTX): SSL_CTX {.importc.}
+
+# include/openssl/tls1.h
+const TLSEXT_NAMETYPE_host_name* = 0
+proc SSL_get_servername*(s: SSL; `type`: cint): cstring {.importc.}
+
+when USE_BORINGSSL:
+  proc SSL_CTX_set_tlsext_servername_callback*(ctx: SSL_CTX;
+    callback: proc (ssl: SSL; out_alert: ptr cint; arg: pointer): cint {.cdecl.}): cint {.importc, discardable.}
+else:
+  proc SSL_CTX_set_tlsext_servername_callback*(ctx: SSL_CTX;
+    cb: proc (ssl: SSL; out_alert: ptr cint; arg: pointer): cint {.cdecl.}): clong {.inline, discardable.} =
+    return SSL_CTX_callback_ctrl(ctx, SSL_CTRL_SET_TLSEXT_SERVERNAME_CB, cast[proc () {.cdecl.}](cb))
+
+const
+  SSL_TLSEXT_ERR_OK* = 0
+  SSL_TLSEXT_ERR_ALERT_WARNING* = 1
+  SSL_TLSEXT_ERR_ALERT_FATAL* = 2
+  SSL_TLSEXT_ERR_NOACK* = 3
+
+
 # self-signed certificate
 # include/openssl/type.h
 type
