@@ -1398,7 +1398,6 @@ proc acceptClient(arg: ThreadArg) {.thread.} =
 
     template busyErrorContinue() =
       when ENABLE_SSL:
-        ssl.sendInstant(BusyBody.addHeader(Status503))
         SSL_free(ssl)
       else:
         clientSock.sendInstant(BusyBody.addHeader(Status503))
@@ -1413,7 +1412,6 @@ proc acceptClient(arg: ThreadArg) {.thread.} =
     if reqCount > REQ_LIMIT_HTTPS_ACCEPT_MAX:
       error "error: too many ", $address
       when ENABLE_SSL:
-        ssl.sendInstant(TooMany.addHeader(Status429))
         SSL_free(ssl)
       else:
         clientSock.sendInstant(TooMany.addHeader(Status429))
