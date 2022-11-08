@@ -1412,7 +1412,11 @@ proc acceptClient(arg: ThreadArg) {.thread.} =
     var reqCount = reqStats.checkReq(ip)
     if reqCount > REQ_LIMIT_HTTPS_ACCEPT_MAX:
       error "error: too many ", $address
-      clientSock.sendInstant(TooMany.addHeader(Status429))
+      when ENABLE_SSL:
+        ssl.sendInstant(TooMany.addHeader(Status429))
+        SSL_free(ssl)
+      else:
+        clientSock.sendInstant(TooMany.addHeader(Status429))
       clientSock.close()
       continue
 
