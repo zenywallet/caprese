@@ -1372,7 +1372,25 @@ proc acceptClient(arg: ThreadArg) {.thread.} =
         SSL_free(ssl)
         clientSock.close()
         continue
-      if SSL_accept(ssl) <= 0:
+
+      clientSock.setBlocking(false)
+
+      var retSslAccept: cint
+      var retryCount: int
+      while true:
+        retSslAccept = SSL_accept(ssl)
+        if retSslAccept >= 0:
+          break
+        sleep(10)
+        inc(retryCount)
+        echo "retry count=", retryCount, " ", SSL_get_error(ssl, retSslAccept)
+        if retryCount > 300:
+          echo "giveup"
+          break
+
+      clientSock.setBlocking(true)
+
+      if retSslAccept <= 0:
         error "error: SSL_accept"
         SSL_free(ssl)
         clientSock.close()
