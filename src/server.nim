@@ -976,6 +976,35 @@ proc worker(arg: ThreadArg) {.thread.} =
       var clientSock = clientFd.SocketHandle
 
       try:
+        when ENABLE_SSL:
+          if appId == 4:
+            while true:
+              let retSslAccept = SSL_Accept(client.ssl)
+              if retSslAccept < 0:
+                var ev: EpollEvent
+                let sslErr = SSL_get_error(client.ssl, retSslAccept)
+                debug "SSL_accept err=", sslErr
+                if sslErr == SSL_ERROR_WANT_READ:
+                  ev.events = EPOLLIN or EPOLLRDHUP
+                elif sslErr == SSL_ERROR_WANT_WRITE:
+                  ev.events = EPOLLIN or EPOLLRDHUP or EPOLLOUT
+                else:
+                  if errno == EINTR:
+                    continue
+                  client.close()
+                  break channelBlock
+
+                ev.data.u64 = client.idx.uint or 0x400000000'u64
+                var ret = epoll_ctl(epfd, EPOLL_CTL_ADD, clientFd.cint, addr ev)
+                if ret < 0:
+                  error "error: epoll_ctl ret=", ret, " errno=", errno
+                  abort()
+              elif retSslAccept == 0:
+                client.close()
+              else:
+                client.waitEventAgain(client.idx.uint, clientFd)
+              break channelBlock
+
         if client.sendBuf != nil:
           if (events and EPOLLOUT) > 0:
             var retFlush = client.sendFlush()
@@ -1373,29 +1402,6 @@ proc acceptClient(arg: ThreadArg) {.thread.} =
         clientSock.close()
         continue
 
-      clientSock.setBlocking(false)
-
-      var retSslAccept: cint
-      var retryCount: int
-      while true:
-        retSslAccept = SSL_accept(ssl)
-        if retSslAccept >= 0:
-          break
-        sleep(10)
-        inc(retryCount)
-        echo "retry count=", retryCount, " ", SSL_get_error(ssl, retSslAccept)
-        if retryCount > 300:
-          echo "giveup"
-          break
-
-      clientSock.setBlocking(true)
-
-      if retSslAccept <= 0:
-        error "error: SSL_accept"
-        SSL_free(ssl)
-        clientSock.close()
-        continue
-
     template busyErrorContinue() =
       when ENABLE_SSL:
         SSL_free(ssl)
@@ -1430,8 +1436,12 @@ proc acceptClient(arg: ThreadArg) {.thread.} =
     clientSock.setBlocking(false)
 
     var ev: EpollEvent
-    ev.events = EPOLLIN or EPOLLRDHUP
-    ev.data.u64 = idx.uint
+    when ENABLE_SSL:
+      ev.events = EPOLLIN or EPOLLRDHUP or EPOLLOUT
+      ev.data.u64 = idx.uint or 0x400000000'u64
+    else:
+      ev.events = EPOLLIN or EPOLLRDHUP
+      ev.data.u64 = idx.uint
     var ret = epoll_ctl(epfd, EPOLL_CTL_ADD, clientFd.cint, addr ev)
     if ret < 0:
       error "error: epoll_ctl ret=", ret, " errno=", errno
