@@ -162,7 +162,7 @@ proc send*(client: ptr Client, data: string): SendResult =
       when ENABLE_SSL:
         if not client.ssl.isNil:
           let sslErr = SSL_get_error(client.ssl, sendRet.cint)
-          debug "SSL_send err=", sslErr
+          debug "SSL_send err=", sslErr, " errno=", errno
           if sslErr == SSL_ERROR_WANT_WRITE or sslErr == SSL_ERROR_WANT_READ:
             if pos > 0:
               client.addSendBuf(data[pos..^1])
@@ -678,7 +678,7 @@ proc sendFlush(client: ptr Client): SendResult =
       when ENABLE_SSL:
         if not client.ssl.isNil:
           let sslErr = SSL_get_error(client.ssl, sendRet.cint)
-          debug "SSL_send err=", sslErr
+          debug "SSL_send err=", sslErr, " errno=", errno
           if sslErr == SSL_ERROR_WANT_WRITE or sslErr == SSL_ERROR_WANT_READ:
             copyMem(addr client.sendBuf[0], d, size)
             client.sendBufSize = size
@@ -1011,7 +1011,7 @@ proc worker(arg: ThreadArg) {.thread.} =
               if retSslAccept < 0:
                 var ev: EpollEvent
                 let sslErr = SSL_get_error(client.ssl, retSslAccept)
-                debug "SSL_accept err=", sslErr
+                debug "SSL_accept err=", sslErr, " errno=", errno
                 if sslErr == SSL_ERROR_WANT_READ:
                   ev.events = EPOLLIN or EPOLLRDHUP
                 elif sslErr == SSL_ERROR_WANT_WRITE:
@@ -1154,7 +1154,7 @@ proc worker(arg: ThreadArg) {.thread.} =
               when ENABLE_SSL:
                 if not client.ssl.isNil:
                   let sslErr = SSL_get_error(client.ssl, recvlen.cint)
-                  debug "SSL_read err=", sslErr
+                  debug "SSL_read err=", sslErr, " errno=", errno
                   if sslErr == SSL_ERROR_WANT_READ:
                     client.waitEventAgain(evData, clientFd)
                     break channelBlock
@@ -1234,7 +1234,7 @@ proc worker(arg: ThreadArg) {.thread.} =
             when ENABLE_SSL:
               if not client.ssl.isNil:
                 let sslErr = SSL_get_error(client.ssl, recvlen.cint)
-                debug "SSL_read err=", sslErr
+                debug "SSL_read err=", sslErr, " errno=", errno
                 if sslErr == SSL_ERROR_WANT_READ:
                   client.waitEventAgain(evData, clientFd)
                   break channelBlock
