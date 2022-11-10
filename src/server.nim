@@ -159,6 +159,21 @@ proc send*(client: ptr Client, data: string): SendResult =
         continue
       return SendResult.Success
     elif sendRet < 0:
+      when ENABLE_SSL:
+        if not client.ssl.isNil:
+          let sslErr = SSL_get_error(client.ssl, sendRet.cint)
+          debug "SSL_send err=", sslErr
+          if sslErr == SSL_ERROR_WANT_WRITE or sslErr == SSL_ERROR_WANT_READ:
+            if pos > 0:
+              client.addSendBuf(data[pos..^1])
+            else:
+              client.addSendBuf(data)
+            return SendResult.Pending
+          else:
+            if errno == EINTR:
+              continue
+          return SendResult.Error
+
       if errno == EAGAIN or errno == EWOULDBLOCK:
         if pos > 0:
           client.addSendBuf(data[pos..^1])
@@ -660,6 +675,19 @@ proc sendFlush(client: ptr Client): SendResult =
       client.sendBuf = nil
       return SendResult.Success
     elif sendRet < 0:
+      when ENABLE_SSL:
+        if not client.ssl.isNil:
+          let sslErr = SSL_get_error(client.ssl, sendRet.cint)
+          debug "SSL_send err=", sslErr
+          if sslErr == SSL_ERROR_WANT_WRITE or sslErr == SSL_ERROR_WANT_READ:
+            copyMem(addr client.sendBuf[0], d, size)
+            client.sendBufSize = size
+            return SendResult.Pending
+          else:
+            if errno == EINTR:
+              continue
+          return SendResult.Error
+
       if errno == EAGAIN or errno == EWOULDBLOCK:
         copyMem(addr client.sendBuf[0], d, size)
         client.sendBufSize = size
