@@ -850,7 +850,7 @@ proc workerMain(client: ptr Client, buf: ptr UncheckedArray[byte], size: int, ap
         if cmdparams.len >= 2:
           cmd = cmdparams[0]
           if cmd != "GET":
-            error "invalid request cmd=", cmd
+            error "invalid request cmd=", cmd.toBytes
             return SendResult.Invalid
           var urlpath = cgi.decodeUrl(cmdparams[1])
           if urlpath.split("/").contains(".."):
@@ -1109,7 +1109,7 @@ proc worker(arg: ThreadArg) {.thread.} =
                 var retWorker = workerMain(client, cast[ptr UncheckedArray[byte]](addr recvBuf[0]), recvlen, appId)
                 retWorkerHandler(retWorker)
               elif recvlen >= 4 and recvBuf[0..3].toString != "GET ":
-                  error "invalid request cmd=", recvBuf[0..<recvlen].toString
+                  error "invalid request cmd=", recvBuf[0..<recvlen]
                   clientSock.sendInstant(Empty.addHeader(Status405))
                   client.close()
                   break channelBlock
