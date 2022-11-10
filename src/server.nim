@@ -1123,6 +1123,22 @@ proc worker(arg: ThreadArg) {.thread.} =
               client.close()
               break channelBlock
             else:
+              when ENABLE_SSL:
+                if not client.ssl.isNil:
+                  let sslErr = SSL_get_error(client.ssl, recvlen.cint)
+                  debug "SSL_read err=", sslErr
+                  if sslErr == SSL_ERROR_WANT_READ:
+                    client.waitEventAgain(evData, clientFd)
+                    break channelBlock
+                  elif sslErr == SSL_ERROR_WANT_WRITE:
+                    client.waitEventAgain(evData, clientFd, EPOLLOUT)
+                    break channelBlock
+                  else:
+                    if errno == EINTR:
+                      continue
+                  client.close()
+                  break channelBlock
+
               if errno == EAGAIN or errno == EWOULDBLOCK:
                 client.waitEventAgain(evData, clientFd)
                 break channelBlock
@@ -1187,6 +1203,22 @@ proc worker(arg: ThreadArg) {.thread.} =
             client.close()
             break channelBlock
           else:
+            when ENABLE_SSL:
+              if not client.ssl.isNil:
+                let sslErr = SSL_get_error(client.ssl, recvlen.cint)
+                debug "SSL_read err=", sslErr
+                if sslErr == SSL_ERROR_WANT_READ:
+                  client.waitEventAgain(evData, clientFd)
+                  break channelBlock
+                elif sslErr == SSL_ERROR_WANT_WRITE:
+                  client.waitEventAgain(evData, clientFd, EPOLLOUT)
+                  break channelBlock
+                else:
+                  if errno == EINTR:
+                    continue
+                client.close()
+                break channelBlock
+
             if errno == EAGAIN or errno == EWOULDBLOCK:
               client.waitEventAgain(evData, clientFd)
               break channelBlock
