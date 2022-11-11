@@ -64,6 +64,7 @@ type
     payloadSize: int
     when ENABLE_SSL:
       ssl: SSL
+      sslErr: int
     ip: uint32
     invoke: bool
     lock: Lock
@@ -788,6 +789,7 @@ proc close(client: ptr Client) =
     if not client.ssl.isNil:
       SSL_free(client.ssl)
       client.ssl = nil
+      client.sslErr = SSL_ERROR_NONE
   client.fd.SocketHandle.close()
   client.recvCurSize = 0
   client.recvBufSize = 0
