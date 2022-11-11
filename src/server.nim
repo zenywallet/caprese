@@ -162,9 +162,9 @@ proc send*(client: ptr Client, data: string): SendResult =
     elif sendRet < 0:
       when ENABLE_SSL:
         if not client.ssl.isNil:
-          let sslErr = SSL_get_error(client.ssl, sendRet.cint)
-          debug "SSL_send err=", sslErr, " errno=", errno
-          if sslErr == SSL_ERROR_WANT_WRITE or sslErr == SSL_ERROR_WANT_READ:
+          client.sslErr = SSL_get_error(client.ssl, sendRet.cint)
+          debug "SSL_send err=", client.sslErr, " errno=", errno
+          if client.sslErr == SSL_ERROR_WANT_WRITE or client.sslErr == SSL_ERROR_WANT_READ:
             if pos > 0:
               client.addSendBuf(data[pos..^1])
             else:
@@ -678,9 +678,9 @@ proc sendFlush(client: ptr Client): SendResult =
     elif sendRet < 0:
       when ENABLE_SSL:
         if not client.ssl.isNil:
-          let sslErr = SSL_get_error(client.ssl, sendRet.cint)
-          debug "SSL_send err=", sslErr, " errno=", errno
-          if sslErr == SSL_ERROR_WANT_WRITE or sslErr == SSL_ERROR_WANT_READ:
+          client.sslErr = SSL_get_error(client.ssl, sendRet.cint)
+          debug "SSL_send err=", client.sslErr, " errno=", errno
+          if client.sslErr == SSL_ERROR_WANT_WRITE or client.sslErr == SSL_ERROR_WANT_READ:
             copyMem(addr client.sendBuf[0], d, size)
             client.sendBufSize = size
             return SendResult.Pending
@@ -1012,11 +1012,11 @@ proc worker(arg: ThreadArg) {.thread.} =
               let retSslAccept = SSL_Accept(client.ssl)
               if retSslAccept < 0:
                 var ev: EpollEvent
-                let sslErr = SSL_get_error(client.ssl, retSslAccept)
-                debug "SSL_accept err=", sslErr, " errno=", errno
-                if sslErr == SSL_ERROR_WANT_READ:
+                client.sslErr = SSL_get_error(client.ssl, retSslAccept)
+                debug "SSL_accept err=", client.sslErr, " errno=", errno
+                if client.sslErr == SSL_ERROR_WANT_READ:
                   ev.events = EPOLLIN or EPOLLRDHUP
-                elif sslErr == SSL_ERROR_WANT_WRITE:
+                elif client.sslErr == SSL_ERROR_WANT_WRITE:
                   ev.events = EPOLLIN or EPOLLRDHUP or EPOLLOUT
                 else:
                   if errno == EINTR:
@@ -1155,12 +1155,12 @@ proc worker(arg: ThreadArg) {.thread.} =
             else:
               when ENABLE_SSL:
                 if not client.ssl.isNil:
-                  let sslErr = SSL_get_error(client.ssl, recvlen.cint)
-                  debug "SSL_read err=", sslErr, " errno=", errno
-                  if sslErr == SSL_ERROR_WANT_READ:
+                  client.sslErr = SSL_get_error(client.ssl, recvlen.cint)
+                  debug "SSL_read err=", client.sslErr, " errno=", errno
+                  if client.sslErr == SSL_ERROR_WANT_READ:
                     client.waitEventAgain(evData, clientFd)
                     break channelBlock
-                  elif sslErr == SSL_ERROR_WANT_WRITE:
+                  elif client.sslErr == SSL_ERROR_WANT_WRITE:
                     client.waitEventAgain(evData, clientFd, EPOLLOUT)
                     break channelBlock
                   else:
@@ -1235,12 +1235,12 @@ proc worker(arg: ThreadArg) {.thread.} =
           else:
             when ENABLE_SSL:
               if not client.ssl.isNil:
-                let sslErr = SSL_get_error(client.ssl, recvlen.cint)
-                debug "SSL_read err=", sslErr, " errno=", errno
-                if sslErr == SSL_ERROR_WANT_READ:
+                client.sslErr = SSL_get_error(client.ssl, recvlen.cint)
+                debug "SSL_read err=", client.sslErr, " errno=", errno
+                if client.sslErr == SSL_ERROR_WANT_READ:
                   client.waitEventAgain(evData, clientFd)
                   break channelBlock
-                elif sslErr == SSL_ERROR_WANT_WRITE:
+                elif client.sslErr == SSL_ERROR_WANT_WRITE:
                   client.waitEventAgain(evData, clientFd, EPOLLOUT)
                   break channelBlock
                 else:
