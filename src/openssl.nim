@@ -71,6 +71,7 @@ else:
   const SSL_MODE_SEND_SERVERHELLO_TIME* = 0x00000040'u64
   const SSL_MODE_SEND_FALLBACK_SCSV* = 0x00000080'u64
   const SSL_CTRL_MODE* = 33
+  const SSL_CTRL_CLEAR_MODE* = 78
 
 const SSL_ERROR_NONE* = 0
 const SSL_ERROR_SSL* = 1
@@ -144,13 +145,24 @@ else:
 
 when USE_BORINGSSL:
   proc SSL_CTX_set_mode*(ctx: SSL_CTX, mode: clong): clong {.importc, discardable.}
+  proc SSL_CTX_clear_mode*(ctx: SSL_CTX; mode: clong): clong {.importc, discardable.}
+  proc SSL_CTX_get_mode*(ctx: SSL_CTX): clong {.importc.}
   proc SSL_set_mode*(ssl: SSL, mode: clong): clong {.importc, discardable.}
+  proc SSL_clear_mode*(ssl: SSL; mode: clong): clong {.importc, discardable.}
+  proc SSL_get_mode*(ssl: SSL): clong {.importc.}
 else:
   proc SSL_CTX_set_mode*(ctx: SSL_CTX, mode: clong): clong {.inline, discardable.} =
     SSL_CTX_ctrl(ctx, SSL_CTRL_MODE, mode, nil)
-
+  proc SSL_CTX_clear_mode*(ctx: SSL_CTX, mode: clong): clong {.inline, discardable.} =
+    SSL_CTX_ctrl(ctx, SSL_CTRL_CLEAR_MODE, mode, nil)
+  proc SSL_CTX_get_mode*(ctx: SSL_CTX): clong {.inline.} =
+    SSL_CTX_ctrl(ctx, SSL_CTRL_MODE, 0, nil)
   proc SSL_set_mode*(ssl: SSL, mode: clong): clong {.inline, discardable.} =
     SSL_ctrl(ssl, SSL_CTRL_MODE, mode, nil)
+  proc SSL_clear_mode*(ssl: SSL, mode: clong): clong {.inline, discardable.} =
+    SSL_ctrl(ssl, SSL_CTRL_CLEAR_MODE, mode, nil)
+  proc SSL_get_mode*(ssl: SSL): clong {.inline.} =
+    SSL_ctrl(ssl, SSL_CTRL_MODE, 0, nil)
 
 proc SSL_get_error*(s: SSL, ret_code: cint): cint {.importc.}
 proc SSL_get_version*(s: SSL): cstring {.importc.}
