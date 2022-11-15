@@ -1437,15 +1437,15 @@ when ENABLE_SSL:
     var ctx = SSL_CTX_new(TLS_server_method())
     try:
       let certs = certsTable[site]
-      var retCert = SSL_CTX_use_certificate_file(ctx, certs.cert, SSL_FILETYPE_PEM)
+      var retCert = SSL_CTX_use_certificate_file(ctx, cstring(certs.cert), SSL_FILETYPE_PEM)
       if retCert != 1:
         error "error: certificate file"
         raise newException(ServerSslCertError, "certificate file")
-      var retPriv = SSL_CTX_use_PrivateKey_file(ctx, certs.privkey, SSL_FILETYPE_PEM)
+      var retPriv = SSL_CTX_use_PrivateKey_file(ctx, cstring(certs.privkey), SSL_FILETYPE_PEM)
       if retPriv != 1:
         error "error: private key file"
         raise newException(ServerSslCertError, "private key file")
-      var retChain = SSL_CTX_use_certificate_chain_file(ctx, certs.fullchain)
+      var retChain = SSL_CTX_use_certificate_chain_file(ctx, cstring(certs.fullchain))
       if retChain != 1:
         error "error: chain file"
         raise newException(ServerSslCertError, "chain file")
