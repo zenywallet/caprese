@@ -129,13 +129,13 @@ proc toWebSocketOpCode(opcode: int8): WebSocketOpCode =
 proc reallocClientBuf(buf: ptr UncheckedArray[byte], size: int): ptr UncheckedArray[byte] =
   result = cast[ptr UncheckedArray[byte]](reallocShared(buf, size))
 
-proc addSendBuf(client: ptr Client, data: string) =
+proc addSendBuf(client: ptr Client, data: seq[byte] | string) =
   var nextSize = client.sendBufSize + data.len
   client.sendBuf = reallocClientBuf(client.sendBuf, nextSize)
   copyMem(addr client.sendBuf[client.sendBufSize], unsafeAddr data[0], data.len)
   client.sendBufSize = nextSize
 
-proc send*(client: ptr Client, data: string): SendResult =
+proc send*(client: ptr Client, data: seq[byte] | string): SendResult =
   if not client.sendBuf.isNil:
     client.addSendBuf(data)
     return SendResult.Pending
@@ -198,7 +198,7 @@ proc wsServerSend*(client: ptr Client, data: seq[byte] | string,
     frame = BytesBE(finOp, 126.byte, dataLen.uint16, data)
   else:
     frame = BytesBE(finOp, 127.byte, dataLen.uint64, data)
-  result = client.send(frame.toString)
+  result = client.send(frame)
 
 var active = true
 var restartFlag = false
