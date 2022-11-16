@@ -1361,6 +1361,7 @@ when ENABLE_SSL:
         else:
           return
       try:
+        var changeFlag = false
         for i, site in CERT_SITES:
           let certs = certsTable[site]
           let cert = sha256.digest(readFile(certs.cert)).data
@@ -1370,11 +1371,13 @@ when ENABLE_SSL:
             if sslFileHash[i].cert != cert or
               sslFileHash[i].priv != priv or
               sslFileHash[i].chain != chain:
-              sslFileChanged = true
+              changeFlag = true
               debug "SSL file changed"
           copyMem(addr sslFileHash[i].cert[0], unsafeAddr cert[0], 32)
           copyMem(addr sslFileHash[i].priv[0], unsafeAddr priv[0], 32)
           copyMem(addr sslFileHash[i].chain[0], unsafeAddr chain[0], 32)
+        if changeFlag:
+          sslFileChanged = true
       except:
         let e = getCurrentException()
         error "setSslFileHash ", e.name, ": ", e.msg
