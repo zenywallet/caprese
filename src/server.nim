@@ -1344,6 +1344,8 @@ when ENABLE_SSL:
   certFilesTable()
 
   when SSL_AUTO_RELOAD:
+    import ptlock
+
     var sslFileChanged = false
 
     type
@@ -1352,11 +1354,13 @@ when ENABLE_SSL:
         priv: array[32, byte]
         chain: array[32, byte]
 
+    var sslFileUpdateLock: RWLock
     var sslFileHash: ptr UncheckedArray[SslFileHash]
 
     proc setSslFileHash(init: bool = false) =
       if sslFileHash.isNil:
         if init:
+          rwlockInit(sslFileUpdateLock)
           sslFileHash = cast[ptr UncheckedArray[SslFileHash]](allocShared0(sizeof(SslFileHash) * CERT_SITES.len))
         else:
           return
@@ -1377,7 +1381,8 @@ when ENABLE_SSL:
           copyMem(addr sslFileHash[i].priv[0], unsafeAddr priv[0], 32)
           copyMem(addr sslFileHash[i].chain[0], unsafeAddr chain[0], 32)
         if changeFlag:
-          sslFileChanged = true
+          withWriteLock sslFileUpdateLock:
+            sslFileChanged = true
       except:
         let e = getCurrentException()
         error "setSslFileHash ", e.name, ": ", e.msg
@@ -1389,6 +1394,7 @@ when ENABLE_SSL:
         var p = sslFileHash
         sslFileHash = nil
         deallocShared(p)
+      rwlockDestroy(sslFileUpdateLock)
 
     proc checkSslFileHash() {.inline.} = setSslFileHash()
 
@@ -1518,16 +1524,17 @@ proc acceptClient(arg: ThreadArg) {.thread.} =
 
     when ENABLE_SSL:
       when SSL_AUTO_RELOAD:
-        if sslFileChanged:
-          sslFileChanged = false
-          var oldCtx = ctx
-          ctx = newSslCtx()
-          oldCtx.SSL_CTX_free()
-          for i, site in CERT_SITES:
-            var oldCtx = siteCtxs[i]
-            siteCtxs[i] = newSslCtx(site, selfSignedCertFallback = true)
+        withWriteLock sslFileUpdateLock:
+          if sslFileChanged:
+            sslFileChanged = false
+            var oldCtx = ctx
+            ctx = newSslCtx()
             oldCtx.SSL_CTX_free()
-          debug "SSL ctx updated"
+            for i, site in CERT_SITES:
+              var oldCtx = siteCtxs[i]
+              siteCtxs[i] = newSslCtx(site, selfSignedCertFallback = true)
+              oldCtx.SSL_CTX_free()
+            debug "SSL ctx updated"
 
       var ssl = SSL_new(ctx)
       if SSL_set_fd(ssl, clientFd.cint) != 1:
