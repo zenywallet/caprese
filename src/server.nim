@@ -1352,14 +1352,13 @@ when ENABLE_SSL:
   when SSL_AUTO_RELOAD:
     import ptlock
 
-    var sslFileChanged = false
-
     type
       SslFileHash* = object
         cert: array[32, byte]
         priv: array[32, byte]
         chain: array[32, byte]
 
+    var sslFileChanged = false
     var sslFileUpdateLock: RWLock
     var sslFileHash: ptr UncheckedArray[SslFileHash]
 
