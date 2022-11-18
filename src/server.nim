@@ -1527,6 +1527,7 @@ proc acceptClient(arg: ThreadArg) {.thread.} =
     var ctx = newSslCtx(selfSignedCertFallback = true)
     for i, site in CERT_SITES:
       siteCtxs[i].ctx = newSslCtx(site, selfSignedCertFallback = true)
+      siteCtxs[i].updated = false
     SSL_CTX_set_tlsext_servername_callback(ctx, serverNameCallback)
 
   var reqStats = newCheckReqs(REQ_LIMIT_HTTPS_ACCEPT_PERIOD)
@@ -1563,6 +1564,7 @@ proc acceptClient(arg: ThreadArg) {.thread.} =
             for i, site in CERT_SITES:
               var oldCtx = siteCtxs[i].ctx
               siteCtxs[i].ctx = newSslCtx(site, selfSignedCertFallback = true)
+              siteCtxs[i].updated = false
               oldCtx.SSL_CTX_free()
             debug "SSL ctx updated"
 
