@@ -224,6 +224,7 @@ var dispatcherThread: Thread[WrapperThreadArg]
 var acceptThread: Thread[WrapperThreadArg]
 var httpThread: Thread[WrapperThreadArg]
 var monitorThread: Thread[WrapperThreadArg]
+var fileWatcherThread: Thread[WrapperThreadArg]
 var mainThread: Thread[WrapperThreadArg]
 
 type
@@ -1690,6 +1691,24 @@ proc serverMonitor(arg: ThreadArg) {.thread.} =
     when SSL_AUTO_RELOAD:
       freeSslFileHash()
 
+proc fileWatcher(arg: ThreadArg) {.thread.} =
+  var evs = newSeq[byte](sizeof(InotifyEvent) * 512)
+  while active:
+    let n = read(inoty, evs[0].addr, evs.len)
+    if n <= 0: break
+    var updated = false
+    withWriteLock sslFileUpdateLock:
+      for e in inotify_events(evs[0].addr, n):
+        if e[].len > 0:
+          debug "file updated name=", $cast[cstring](addr e[].name)
+          for i in 0..<CERT_SITES.len:
+            if siteCtxs[i].watchdog == e[].wd:
+              siteCtxs[i].updated = true
+              updated = true
+              break
+      if updated:
+        sslFileChanged = true
+
 proc createServer(port: Port): SocketHandle =
   var sock = createNativeSocket()
   var aiList = getAddrInfo("0.0.0.0", port, Domain.AF_INET)
@@ -1737,8 +1756,11 @@ proc main(arg: ThreadArg) {.thread.} =
     createThread(acceptThread, threadWrapper, (acceptClient, ThreadArg(type: ThreadArgType.Void)))
     createThread(httpThread, threadWrapper, (http, ThreadArg(type: ThreadArgType.Void)))
     createThread(monitorThread, threadWrapper, (serverMonitor, ThreadArg(type: ThreadArgType.Void)))
-
-    joinThreads(monitorThread, httpThread, acceptThread, dispatcherThread)
+    when SSL_AUTO_RELOAD:
+      createThread(fileWatcherThread, threadWrapper, (fileWatcher, ThreadArg(type: ThreadArgType.Void)))
+      joinThreads(fileWatcherThread, monitorThread, httpThread, acceptThread, dispatcherThread)
+    else:
+      joinThreads(monitorThread, httpThread, acceptThread, dispatcherThread)
 
     for i in 0..<WORKER_THREAD_NUM:
       workerQueue.send((0, 0, 0'u32, 0'u64))
