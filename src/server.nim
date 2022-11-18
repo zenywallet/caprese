@@ -1346,10 +1346,13 @@ when ENABLE_SSL:
   type
     SiteCtx = object
       ctx: SSL_CTX
+      updated: bool
+      watchdog: cint
 
   var siteCtxs: array[CERT_SITES.len, SiteCtx]
 
   when SSL_AUTO_RELOAD:
+    import std/inotify
     import ptlock
 
     type
@@ -1361,12 +1364,30 @@ when ENABLE_SSL:
     var sslFileChanged = false
     var sslFileUpdateLock: RWLock
     var sslFileHash: ptr UncheckedArray[SslFileHash]
+    var inoty: FileHandle
+
+    proc setSslFilesWatch() =
+      if inoty == -1:
+        inoty = inotify_init()
+      if inoty == -1:
+        error "error: inotify_init err=", errno
+        return
+      for i, site in CERT_SITES:
+        if siteCtxs[i].watchdog == -1:
+          let sitePath = CERT_PATH / site
+          siteCtxs[i].watchdog = inotify_add_watch(inoty, sitePath, IN_CLOSE_WRITE)
+          if siteCtxs[i].watchdog == -1:
+            error "error: inotify_add_watch err=", errno, " ", sitePath
 
     proc setSslFileHash(init: bool = false) =
       if sslFileHash.isNil:
         if init:
           rwlockInit(sslFileUpdateLock)
           sslFileHash = cast[ptr UncheckedArray[SslFileHash]](allocShared0(sizeof(SslFileHash) * CERT_SITES.len))
+          inoty = -1
+          for i in 0..<CERT_SITES.len:
+            siteCtxs[i].watchdog = -1
+          setSslFilesWatch()
         else:
           return
       try:
@@ -1395,6 +1416,11 @@ when ENABLE_SSL:
     proc initSslFileHash() {.inline.} = setSslFileHash(true)
 
     proc freeSslFileHash() =
+      if inoty != -1:
+        for i in 0..<CERT_SITES.len:
+          if siteCtxs[i].watchdog != -1:
+            discard inoty.inotify_rm_watch(siteCtxs[i].watchdog)
+        discard inoty.close()
       if not sslFileHash.isNil:
         var p = sslFileHash
         sslFileHash = nil
