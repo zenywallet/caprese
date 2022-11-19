@@ -1714,6 +1714,7 @@ proc fileWatcher(arg: ThreadArg) {.thread.} =
                 updated = true
               break
       if updated:
+        sleep(3000)
         sslFileChanged = true
 
 proc createServer(port: Port): SocketHandle =
