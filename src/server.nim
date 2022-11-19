@@ -1393,9 +1393,10 @@ when ENABLE_SSL:
           return
       else:
         setSslFilesWatch()
-      try:
-        var changeFlag = false
-        for i, site in CERT_SITES:
+
+      var changeFlag = false
+      for i, site in CERT_SITES:
+        try:
           let certs = certsTable[site]
           let cert = sha256.digest(readFile(certs.cert)).data
           let priv = sha256.digest(readFile(certs.privkey)).data
@@ -1409,12 +1410,12 @@ when ENABLE_SSL:
           copyMem(addr sslFileHash[i].cert[0], unsafeAddr cert[0], 32)
           copyMem(addr sslFileHash[i].priv[0], unsafeAddr priv[0], 32)
           copyMem(addr sslFileHash[i].chain[0], unsafeAddr chain[0], 32)
-        if changeFlag:
-          withWriteLock sslFileUpdateLock:
-            sslFileChanged = true
-      except:
-        let e = getCurrentException()
-        error "setSslFileHash ", e.name, ": ", e.msg
+        except:
+          let e = getCurrentException()
+          error "setSslFileHash ", e.name, ": ", e.msg
+      if changeFlag:
+        withWriteLock sslFileUpdateLock:
+          sslFileChanged = true
 
     proc initSslFileHash() {.inline.} = setSslFileHash(true)
 
