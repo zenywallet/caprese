@@ -1709,7 +1709,9 @@ proc fileWatcher(arg: ThreadArg) {.thread.} =
           for i in 0..<CERT_SITES.len:
             if siteCtxs[i].watchdog == e[].wd:
               siteCtxs[i].updated = true
-              updated = true
+              if $cast[cstring](addr e[].name) == CHAIN_FILE:
+                # certbot writes fullchain file last, your script must also copy fullchain file last
+                updated = true
               break
       if updated:
         sslFileChanged = true
