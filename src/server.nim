@@ -1380,7 +1380,7 @@ when ENABLE_SSL:
       for i, site in CERT_SITES:
         if siteCtxs[i].watchdog == -1:
           let sitePath = CERT_PATH / site
-          siteCtxs[i].watchdog = inotify_add_watch(inoty, sitePath, IN_CLOSE_WRITE)
+          siteCtxs[i].watchdog = inotify_add_watch(inoty, cstring(sitePath), IN_CLOSE_WRITE)
           if siteCtxs[i].watchdog == -1:
             error "error: inotify_add_watch err=", errno, " ", sitePath
 
