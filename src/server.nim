@@ -1582,8 +1582,25 @@ proc acceptClient(arg: ThreadArg) {.thread.} =
         clientSock.close()
         continue
 
+    template acceptInstant(body: untyped) =
+      clientSock.setBlocking(false)
+      var retryCount: int
+      while true:
+        let retSslAccept = SSL_accept(ssl)
+        if retSslAccept >= 0:
+          body
+          break
+        if retryCount >= 10:
+          debug "accept giveup"
+          break
+        sleep(10)
+        inc(retryCount)
+        debug "accept retry count=", retryCount, " ", SSL_get_error(ssl, retSslAccept)
+
     template busyErrorContinue() =
       when ENABLE_SSL:
+        acceptInstant:
+          ssl.sendInstant(BusyBody.addHeader(Status503))
         SSL_free(ssl)
       else:
         clientSock.sendInstant(BusyBody.addHeader(Status503))
@@ -1598,6 +1615,8 @@ proc acceptClient(arg: ThreadArg) {.thread.} =
     if reqCount > REQ_LIMIT_HTTPS_ACCEPT_MAX:
       error "error: too many ", $address
       when ENABLE_SSL:
+        acceptInstant:
+          ssl.sendInstant(TooMany.addHeader(Status429))
         SSL_free(ssl)
       else:
         clientSock.sendInstant(TooMany.addHeader(Status429))
