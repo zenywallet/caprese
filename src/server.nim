@@ -68,6 +68,7 @@ type
     ip: uint32
     invoke: bool
     lock: Lock
+    whackaMole: bool
 
   ClientId* = int
 
@@ -565,6 +566,7 @@ proc initClient() =
     p[i].ip = 0
     p[i].invoke = false
     initLock(p[i].lock)
+    p[i].whackaMole = false
     when declared(initExClient):
       initExClient(addr p[i])
   clients = p
@@ -784,6 +786,7 @@ proc close(client: ptr Client) =
     clientId.delTags()
     clientId.delTasks()
     client.unmarkPending()
+  client.whackaMole = false
   client.invoke = false
   client.ip = 0
   when ENABLE_SSL:
@@ -1005,6 +1008,7 @@ proc worker(arg: ThreadArg) {.thread.} =
       var client = addr clients[idx]
       var clientFd = client.fd
       var clientSock = clientFd.SocketHandle
+      client.whackaMole = false
 
       try:
         when ENABLE_SSL:
@@ -1689,6 +1693,18 @@ proc serverMonitor(arg: ThreadArg) {.thread.} =
             if dur >= initDuration(hours = 1):
               checkSslFileHash()
               prevTime = curTime
+
+      for i in 0..<CLIENT_MAX:
+        if clients[i].fd != osInvalidSocket.int and not clients[i].wsUpgrade:
+          if clients[i].whackaMole:
+            debug "Whack-A-Mole shutdown i=", i
+            let retShutdown = clients[i].fd.SocketHandle.shutdown(SHUT_RD)
+            if retShutdown != 0:
+              error "error: Whack-A-Mole shutdown ret=", retShutdown, " ", getErrnoStr()
+          else:
+            debug "Whack-A-Mole set i=", i
+            clients[i].whackaMole = true
+
     sleep(1000)
     inc(sec)
 
