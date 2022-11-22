@@ -754,6 +754,7 @@ proc close(client: ptr Client) =
     clientId.delTags()
     clientId.delTasks()
     client.unmarkPending()
+  client.invoke = false
   client.ip = 0
   when ENABLE_SSL:
     if not client.ssl.isNil:
