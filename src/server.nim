@@ -1322,6 +1322,27 @@ proc dispatcher(arg: ThreadArg) {.thread.} =
         abort()
 
 when ENABLE_SSL:
+  import macros except error
+  export tables
+
+  macro certFilesTable(): untyped =
+    var certsTable: seq[tuple[key: string, val: tuple[
+      idx: int, cert: string, privkey: string, fullchain: string]]]
+
+    for idx, site in CERT_SITES:
+      let certPath = CERT_PATH / site / CERT_FILE
+      let privkeyPath = CERT_PATH / site / PRIVKEY_FILE
+      let fullchainPath = CERT_PATH / site / CHAIN_FILE
+      certsTable.add((site, (idx, certPath, privkeyPath, fullchainPath)))
+
+    newConstStmt(
+      postfix(newIdentNode("certsTable"), "*"),
+      newCall("toTable",
+        newLit(certsTable)
+      )
+    )
+  certFilesTable()
+
   when SSL_AUTO_RELOAD:
     var sslFileChanged = false
 
@@ -1412,18 +1433,19 @@ when ENABLE_SSL:
       error "error: self private key"
       raise newException(ServerSslCertError, "self private key")
 
-  proc newSslCtx(selfSignedCertFallback: bool = false): SSL_CTX =
+  proc newSslCtx(site: string = "", selfSignedCertFallback: bool = false): SSL_CTX =
     var ctx = SSL_CTX_new(TLS_server_method())
     try:
-      var retCert = SSL_CTX_use_certificate_file(ctx, CERT_FILE, SSL_FILETYPE_PEM)
+      let certs = certsTable[site]
+      var retCert = SSL_CTX_use_certificate_file(ctx, certs.cert, SSL_FILETYPE_PEM)
       if retCert != 1:
         error "error: certificate file"
         raise newException(ServerSslCertError, "certificate file")
-      var retPriv = SSL_CTX_use_PrivateKey_file(ctx, PRIVKEY_FILE, SSL_FILETYPE_PEM)
+      var retPriv = SSL_CTX_use_PrivateKey_file(ctx, certs.privkey, SSL_FILETYPE_PEM)
       if retPriv != 1:
         error "error: private key file"
         raise newException(ServerSslCertError, "private key file")
-      var retChain = SSL_CTX_use_certificate_chain_file(ctx, CHAIN_FILE)
+      var retChain = SSL_CTX_use_certificate_chain_file(ctx, certs.fullchain)
       if retChain != 1:
         error "error: chain file"
         raise newException(ServerSslCertError, "chain file")
@@ -1438,6 +1460,21 @@ when ENABLE_SSL:
     SSL_CTX_set_mode(ctx, (SSL_MODE_ENABLE_PARTIAL_WRITE or SSL_MODE_ACCEPT_MOVING_WRITE_BUFFER).clong)
     result = ctx
 
+  var siteCtxs: array[CERT_SITES.len, SSL_CTX]
+
+  proc serverNameCallback(ssl: SSL; out_alert: ptr cint; arg: pointer): cint {.cdecl.} =
+    try:
+      let sitename = $SSL_get_servername(ssl, TLSEXT_NAMETYPE_host_name)
+      debug "sitename=", sitename
+      let certs = certsTable[sitename]
+      let ctx = siteCtxs[certs.idx]
+      if SSL_set_SSL_CTX(ssl, ctx).isNil:
+        error "error: SSL_set_SSL_CTX site=", sitename
+        return SSL_TLSEXT_ERR_NOACK
+      return SSL_TLSEXT_ERR_OK
+    except:
+      return SSL_TLSEXT_ERR_OK
+
   SSL_load_error_strings()
   SSL_library_init()
   OpenSSL_add_all_algorithms()
@@ -1446,7 +1483,11 @@ proc acceptClient(arg: ThreadArg) {.thread.} =
   when ENABLE_SSL:
     when SSL_AUTO_RELOAD:
       initSslFileHash()
-    var ctx = newSslCtx(true)
+    var ctx = newSslCtx(selfSignedCertFallback = true)
+    for i, site in CERT_SITES:
+      siteCtxs[i] = newSslCtx(site, selfSignedCertFallback = true)
+    SSL_CTX_set_tlsext_servername_callback(ctx, serverNameCallback)
+
   var reqStats = newCheckReqs(REQ_LIMIT_HTTPS_ACCEPT_PERIOD)
 
   while true:

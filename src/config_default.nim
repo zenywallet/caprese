@@ -6,7 +6,8 @@ const REDIRECT_URL = "http://" & HTTPS_HOST_NAME
 const DEBUG_LOG = true
 
 const CERT_PATH = "."
-const CERT_FILE = CERT_PATH / "cert.pem"
-const PRIVKEY_FILE = CERT_PATH / "privkey.pem"
-const CHAIN_FILE = CERT_PATH / "fullchain.pem"
-const SSL_AUTO_RELOAD = true
+const CERT_SITES = @["localhost"]
+const CERT_FILE = "cert.pem"
+const PRIVKEY_FILE = "privkey.pem"
+const CHAIN_FILE = "fullchain.pem"
+const SSL_AUTO_RELOAD = false
