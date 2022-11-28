@@ -1352,27 +1352,29 @@ when ENABLE_SSL:
         priv: array[32, byte]
         chain: array[32, byte]
 
-    var sslFileHash: ptr SslFileHash
+    var sslFileHash: ptr UncheckedArray[SslFileHash]
 
     proc setSslFileHash(init: bool = false) =
       if sslFileHash.isNil:
         if init:
-          sslFileHash = cast[ptr SslFileHash](allocShared0(sizeof(SslFileHash)))
+          sslFileHash = cast[ptr UncheckedArray[SslFileHash]](allocShared0(sizeof(SslFileHash) * CERT_SITES.len))
         else:
           return
       try:
-        let cert = sha256.digest(readFile(CERT_FILE)).data
-        let priv = sha256.digest(readFile(PRIVKEY_FILE)).data
-        let chain = sha256.digest(readFile(CHAIN_FILE)).data
-        if init == false:
-          if sslFileHash.cert != cert or
-            sslFileHash.priv != priv or
-            sslFileHash.chain != chain:
-            sslFileChanged = true
-            debug "SSL file changed"
-        copyMem(addr sslFileHash.cert[0], unsafeAddr cert[0], 32)
-        copyMem(addr sslFileHash.priv[0], unsafeAddr priv[0], 32)
-        copyMem(addr sslFileHash.chain[0], unsafeAddr chain[0], 32)
+        for i, site in CERT_SITES:
+          let certs = certsTable[site]
+          let cert = sha256.digest(readFile(certs.cert)).data
+          let priv = sha256.digest(readFile(certs.privkey)).data
+          let chain = sha256.digest(readFile(certs.fullchain)).data
+          if init == false:
+            if sslFileHash[i].cert != cert or
+              sslFileHash[i].priv != priv or
+              sslFileHash[i].chain != chain:
+              sslFileChanged = true
+              debug "SSL file changed"
+          copyMem(addr sslFileHash[i].cert[0], unsafeAddr cert[0], 32)
+          copyMem(addr sslFileHash[i].priv[0], unsafeAddr priv[0], 32)
+          copyMem(addr sslFileHash[i].chain[0], unsafeAddr chain[0], 32)
       except:
         let e = getCurrentException()
         error "setSslFileHash ", e.name, ": ", e.msg
@@ -1518,6 +1520,10 @@ proc acceptClient(arg: ThreadArg) {.thread.} =
           var oldCtx = ctx
           ctx = newSslCtx()
           oldCtx.SSL_CTX_free()
+          for i, site in CERT_SITES:
+            var oldCtx = siteCtxs[i]
+            siteCtxs[i] = newSslCtx(site, selfSignedCertFallback = true)
+            oldCtx.SSL_CTX_free()
           debug "SSL ctx updated"
 
       var ssl = SSL_new(ctx)

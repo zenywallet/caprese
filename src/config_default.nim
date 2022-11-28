@@ -10,4 +10,4 @@ const CERT_SITES = @["localhost"]
 const CERT_FILE = "cert.pem"
 const PRIVKEY_FILE = "privkey.pem"
 const CHAIN_FILE = "fullchain.pem"
-const SSL_AUTO_RELOAD = false
+const SSL_AUTO_RELOAD = true
