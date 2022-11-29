@@ -91,14 +91,14 @@ when isMainModule:
   sigPipeIgnore: true
   limitOpenFiles: 65536
 
-  const indexHtml = staticHtmlDocument:
+  const IndexHtml = staticHtmlDocument:
     buildHtml(html):
       head:
         meta(harset="utf-8")
       body:
         text "welcome"
 
-  const testHtml = staticHtmlDocument:
+  const TestHtml = staticHtmlDocument:
     buildHtml(html):
       head:
         meta(harset="utf-8")
@@ -111,11 +111,11 @@ when isMainModule:
       if not active: break
       let urlText = sanitizeHtml(req.data.url)
       let clientId = req.cid
-      clientId.send(fmt(testHtml).addHeader())
+      clientId.send(fmt(TestHtml).addHeader())
 
   server(bindAddress = "0.0.0.0", port = 8009):
     get "/":
-      return send(indexHtml.addHeader())
+      return send(IndexHtml.addHeader())
 
     get "/test":
       return pending(PendingData(url: url))
