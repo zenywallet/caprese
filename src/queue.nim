@@ -24,6 +24,8 @@ proc init*[T](queue: var Queue[T], limit: int) =
   queue.buf = cast[ptr UncheckedArray[T]](allocShared0(sizeof(T) * limit))
   queue.bufLen = limit
 
+proc newQueue*[T](limit: int): Queue[T] = result.init(limit)
+
 proc add*[T](queue: var Queue[T], data: T) =
   acquire(queue.lock)
   defer:
@@ -117,8 +119,7 @@ proc `=sink`*[T](a: var Queue[T]; b: Queue[T]) =
 when isMainModule:
   import os
 
-  var queue: Queue[int]
-  queue.init(100)
+  var queue = newQueue[int](100)
 
   proc setter(id: int) {.thread.} =
     var i = 0
