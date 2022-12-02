@@ -67,7 +67,7 @@ proc send*[T](queue: var Queue[T], data: T): bool {.discardable.} =
   acquire(queue.lock)
   defer:
     release(queue.lock)
-  if unlikely(queue.count >= queue.bufLen):
+  if unlikely(queue.count >= queue.bufLen or queue.count < 0):
     return false
   elif unlikely(queue.next >= queue.bufLen):
     queue.next = 0
@@ -86,14 +86,30 @@ proc recv*[T](queue: var Queue[T]): T =
     inc(queue.waitCount)
     while true:
       wait(queue.cond, queue.lock)
-      if likely(queue.count != 0):
+      if unlikely(queue.count == 0):
+        continue
+      else:
         dec(queue.waitCount)
-        break
+        if likely(queue.count > 0):
+          break
+        else:
+          return
+  elif unlikely(queue.count < 0):
+    return
   var pos = queue.next - queue.count
   if unlikely(pos < 0):
     pos = pos + queue.bufLen
   dec(queue.count)
   result = queue.buf[pos]
+
+proc drop*[T](queue: var Queue[T]) =
+  acquire(queue.lock)
+  defer:
+    release(queue.lock)
+  queue.count = -1
+  var waitCount = queue.waitCount
+  for _ in 0..<waitCount:
+    signal(queue.cond)
 
 proc clear*[T](queue: var Queue[T]) =
   acquire(queue.lock)
