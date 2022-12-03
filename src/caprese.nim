@@ -15,8 +15,7 @@ var active* = true
 var workerNum = 0
 
 template pendingLimit*(limit: int) {.dirty.} =
-  var reqs: Queue[tuple[cid: ClientId, data: PendingData]]
-  reqs.init(limit)
+  var reqs = newQueue[tuple[cid: ClientId, data: PendingData]](limit)
 
 template sigTermQuit*(flag: bool) =
   when flag:
