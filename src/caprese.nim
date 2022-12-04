@@ -23,9 +23,7 @@ template sigTermQuit*(flag: bool) =
       echo "bye from signal ", sig
       server.stop()
       active = false
-      for i in 0..<workerNum:
-        var emptyData: PendingData
-        reqs.send((INVALID_CLIENT_ID, emptyData))
+      reqs.drop()
 
 template sigPipeIgnore*(flag: bool) =
   when flag: signal(SIGPIPE, SIG_IGN)
