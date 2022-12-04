@@ -14,8 +14,9 @@ export queue
 var active* = true
 var workerNum = 0
 
-template pendingLimit*(limit: int) {.dirty.} =
-  var reqs = newQueue[tuple[cid: ClientId, data: PendingData]](limit)
+var configPendingLimit {.compileTime.}: NimNode
+macro pendingLimit*(limit: int) = configPendingLimit = limit
+macro pendingLimit*: int = configPendingLimit
 
 template sigTermQuit*(flag: bool) =
   when flag:
@@ -84,6 +85,8 @@ when isMainModule:
       url: string
 
   pendingLimit: 100
+  var reqs = newQueue[tuple[cid: ClientId, data: PendingData]](limit = pendingLimit)
+
   sigTermQuit: true
   sigPipeIgnore: true
   limitOpenFiles: 65536
