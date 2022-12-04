@@ -18,13 +18,23 @@ var configPendingLimit {.compileTime.}: NimNode
 macro pendingLimit*(limit: int) = configPendingLimit = limit
 macro pendingLimit*: int = configPendingLimit
 
-template sigTermQuit*(flag: bool) =
-  when flag:
-    onSignal(SIGINT, SIGTERM):
-      echo "bye from signal ", sig
-      server.stop()
-      active = false
-      reqs.drop()
+var configSigTermQuit {.compileTime.}: NimNode
+macro sigTermQuit*(flag: bool) = configSigTermQuit = flag
+macro sigTermQuit*: bool = configSigTermQuit
+
+var onSigTermQuitBody {.compileTime.} = newStmtList()
+var onSigTermQuitBodyFlag {.compileTime.}: bool
+macro onSigTermQuit*(body: untyped) = discard onSigTermQuitBody.add(body)
+macro sigTermQuitBody(): untyped =
+  if onSigTermQuitBodyFlag: return
+  onSigTermQuitBodyFlag = true
+  quote do:
+    when `configSigTermQuit`:
+      onSignal(SIGINT, SIGTERM):
+        echo "bye from signal ", sig
+        server.stop()
+        active = false
+        `onSigTermQuitBody`
 
 template sigPipeIgnore*(flag: bool) =
   when flag: signal(SIGPIPE, SIG_IGN)
@@ -44,6 +54,7 @@ template serverStart(body: untyped) {.dirty.} =
 
 macro server*(bindAddress: string, port: uint16, body: untyped): untyped =
   quote do:
+    sigTermQuitBody()
     echo "bind address: ", `bindAddress`
     echo "port: ", `port`
     serverStart(`body`)
@@ -88,6 +99,9 @@ when isMainModule:
   var reqs = newQueue[tuple[cid: ClientId, data: PendingData]](limit = pendingLimit)
 
   sigTermQuit: true
+  onSigTermQuit:
+    reqs.drop()
+
   sigPipeIgnore: true
   limitOpenFiles: 65536
 
