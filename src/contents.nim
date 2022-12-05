@@ -4,6 +4,7 @@ import statuscode
 import macros
 import os
 import strutils
+import exec
 export macros except error
 
 const HTTP_VERSION* = 1.1
@@ -57,26 +58,18 @@ const (srcFileDir, srcFieName, srcFileExt) = splitFile(srcFile)
 
 var tmpFileId {.compileTime.}: int = 0
 
-proc convertHtmlDocument(htmlBody: string): string {.compileTime.} =
-  let randomStr = staticExec("head -c 100 /dev/urandom | tr -dc A-Za-z0-9 | head -c13")
-  inc(tmpFileId)
-  let id = $tmpFileId & "_" & randomStr
-  let tmpExeFile = srcFileDir / srcFieName & "_tmp" & $id
-  let tmpSrcFile = tmpExeFile & srcFileExt
-  var code = "import re\n" &
-    "let content = \"\"\"" & htmlBody & "\"\"\"\n" &
-    """echo "<!DOCTYPE html>\n" & content.replacef(re"<([^>]*) />", "<$1>")""" & "\n"
-  writeFile(tmpSrcFile, code)
-  echo staticExec("nim c " & tmpSrcFile)
-  result = staticExec(tmpExeFile).unindent(2)
-  discard staticExec("rm " & tmpExeFile)
-  discard staticExec("rm " & tmpSrcFile)
+template convertHtmlDocument*(code: string): string =
+  mixin unindent
+  execCode(code).unindent(2)
 
 template staticHtmlDocument*(body: untyped): string =
   block:
     macro staticHtmlDocumentMacro(): string =
+      var code = "import re\n" &
+        "let content = \"\"\"" & $body & "\"\"\"\n" &
+        """echo "<!DOCTYPE html>\n" & content.replacef(re"<([^>]*) />", "<$1>")""" & "\n"
       nnkStmtList.newTree(
-        newLit(convertHtmlDocument($body))
+        newLit(convertHtmlDocument(code))
       )
     staticHtmlDocumentMacro()
 
