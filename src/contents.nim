@@ -63,6 +63,7 @@ template convertHtmlDocument*(code: string): string =
   execCode(code).unindent(2)
 
 template staticHtmlDocument*(body: untyped): string =
+  import karax/[karaxdsl, vdom]
   block:
     macro staticHtmlDocumentMacro(): string =
       var code = "import re\n" &

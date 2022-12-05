@@ -88,7 +88,6 @@ template send*(data: string): SendResult = client.send(data)
 
 
 when isMainModule:
-  import karax/[karaxdsl, vdom]
   import strformat
 
   type
