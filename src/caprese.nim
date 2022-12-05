@@ -55,6 +55,16 @@ macro routes*(body: untyped): untyped =
   quote do:
     serverStart(`body`)
 
+template setStream(body: untyped) {.dirty.} =
+  proc streamMain(client: ptr Client, opcode: WebSocketOpCode,
+                  data: ptr UncheckedArray[byte], size: int): SendResult =
+    body
+  setStreamMain(streamMain)
+
+macro stream*(body: untyped): untyped =
+  quote do:
+    setStream(`body`)
+
 macro server*(bindAddress: string, port: uint16, body: untyped): untyped =
   quote do:
     sigTermQuitBody()
@@ -147,3 +157,11 @@ when isMainModule:
 
       let urlText = sanitizeHtml(url)
       return send(fmt"Not found: {urlText}".addDocType().addHeader(Status404))
+
+    stream:
+      # client: ptr Client
+      # opcode: WebSocketOpCode
+      # data: ptr UncheckedArray[byte]
+      # size: int
+
+      echo "opcode=", opcode
