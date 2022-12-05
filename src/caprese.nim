@@ -68,6 +68,9 @@ macro worker*(num: int, body: untyped): untyped =
       for i in 0..<`num`:
         createThread(workerThreads[i], workerProc)
 
+proc newPending*[T](limit: int): Queue[tuple[cid: ClientId, data: T]] {.inline.} =
+  newQueue[tuple[cid: ClientId, data: T]](limit)
+
 macro pendingBody(data: auto): untyped =
   quote do:
     proc pendingProc(): SendResult {.discardable.} =
@@ -95,7 +98,7 @@ when isMainModule:
       url: string
 
   pendingLimit: 100
-  var reqs = newQueue[tuple[cid: ClientId, data: PendingData]](limit = pendingLimit)
+  var reqs = newPending[PendingData](limit = pendingLimit)
 
   sigTermQuit: true
   onSigTermQuit:
