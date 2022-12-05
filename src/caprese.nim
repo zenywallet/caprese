@@ -50,14 +50,18 @@ template serverStart(body: untyped) {.dirty.} =
   proc webMain(client: ptr Client, url: string, headers: Headers): SendResult =
     body
   setWebMain(webMain)
-  start()
+
+macro routes*(body: untyped): untyped =
+  quote do:
+    serverStart(`body`)
 
 macro server*(bindAddress: string, port: uint16, body: untyped): untyped =
   quote do:
     sigTermQuitBody()
     echo "bind address: ", `bindAddress`
     echo "port: ", `port`
-    serverStart(`body`)
+    `body`
+    start()
 
 macro worker*(num: int, body: untyped): untyped =
   quote do:
@@ -130,11 +134,16 @@ when isMainModule:
       clientId.send(fmt(TestHtml).addHeader())
 
   server(bindAddress = "0.0.0.0", port = 8009):
-    get "/":
-      return send(IndexHtml.addHeader())
+    routes:
+      # client: ptr Client
+      # url: string
+      # headers: Headers
 
-    get "/test":
-      return pending(PendingData(url: url))
+      get "/":
+        return send(IndexHtml.addHeader())
 
-    let urlText = sanitizeHtml(url)
-    return send(fmt"Not found: {urlText}".addDocType().addHeader(Status404))
+      get "/test":
+        return pending(PendingData(url: url))
+
+      let urlText = sanitizeHtml(url)
+      return send(fmt"Not found: {urlText}".addDocType().addHeader(Status404))
