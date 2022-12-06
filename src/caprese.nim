@@ -36,10 +36,18 @@ macro sigTermQuitBody(): untyped =
         active = false
         `onSigTermQuitBody`
 
-template sigPipeIgnore*(flag: bool) =
-  when flag: signal(SIGPIPE, SIG_IGN)
+var configSigPipeIgnore {.compileTime.}: NimNode
+macro sigPipeIgnore*(flag: bool) = configSigPipeIgnore = flag
+macro sigPipeIgnore*: bool = configSigPipeIgnore
 
 template limitOpenFiles*(num: int) = setRlimitOpenFiles(num)
+
+var initFlag {.compileTime.}: bool
+macro init(): untyped =
+  if initFlag: return
+  initFlag = true
+  quote do:
+    when `configSigPipeIgnore`: signal(SIGPIPE, SIG_IGN)
 
 macro get*(url: string, body: untyped): untyped =
   quote do:
@@ -67,6 +75,7 @@ macro stream*(body: untyped): untyped =
 
 macro server*(bindAddress: string, port: uint16, body: untyped): untyped =
   quote do:
+    init()
     sigTermQuitBody()
     echo "bind address: ", `bindAddress`
     echo "port: ", `port`
