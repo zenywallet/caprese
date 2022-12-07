@@ -97,9 +97,18 @@ macro pendingBody(data: auto): untyped =
       else:
         return SendResult.Error
 
-template pending*(data: auto): SendResult =
+macro pendingBody[T](reqs: var Queue[tuple[cid: ClientId, data: T]], data: T): untyped =
+  quote do:
+    proc pendingProc(): SendResult {.discardable.} =
+      let cid = client.markPending()
+      if `reqs`.send((cid, `data`)):
+        return SendResult.Pending
+      else:
+        return SendResult.Error
+
+template pending*[T](reqs: var Queue[tuple[cid: ClientId, data: T]], data: T): SendResult =
   block:
-    pendingBody(data)
+    pendingBody(reqs, data)
     pendingProc()
 
 template getPending*(): auto = reqs.recv()
@@ -156,7 +165,7 @@ when isMainModule:
         return send(IndexHtml.addHeader())
 
       get "/test":
-        return pending(PendingData(url: url))
+        return reqs.pending(PendingData(url: url))
 
       let urlText = sanitizeHtml(url)
       return send(fmt"Not found: {urlText}".addDocType().addHeader(Status404))
