@@ -111,7 +111,7 @@ template pending*[T](reqs: var Queue[tuple[cid: ClientId, data: T]], data: T): S
     pendingBody(reqs, data)
     pendingProc()
 
-template getPending*(): auto = reqs.recv()
+template getPending*(reqs: auto): auto = reqs.recv()
 
 template send*(data: string): SendResult = client.send(data)
 
@@ -149,7 +149,7 @@ when isMainModule:
 
   worker(num = 2):
     while true:
-      let req = getPending()
+      let req = reqs.getPending()
       if not active: break
       let urlText = sanitizeHtml(req.data.url)
       let clientId = req.cid
