@@ -225,7 +225,8 @@ var dispatcherThread: Thread[WrapperThreadArg]
 var acceptThread: Thread[WrapperThreadArg]
 var httpThread: Thread[WrapperThreadArg]
 var monitorThread: Thread[WrapperThreadArg]
-var fileWatcherThread: Thread[WrapperThreadArg]
+when ENABLE_SSL and SSL_AUTO_RELOAD:
+  var fileWatcherThread: Thread[WrapperThreadArg]
 var mainThread: Thread[WrapperThreadArg]
 
 type
@@ -1734,29 +1735,30 @@ proc serverMonitor(arg: ThreadArg) {.thread.} =
     when SSL_AUTO_RELOAD:
       freeSslFileHash()
 
-proc fileWatcher(arg: ThreadArg) {.thread.} =
-  var evs = newSeq[byte](sizeof(InotifyEvent) * 512)
-  while active:
-    if not inotyWatchFlag:
-      sleep(1000)
-      continue
-    let n = read(inoty, evs[0].addr, evs.len)
-    if n <= 0: break
-    var updated = false
-    withWriteLock sslFileUpdateLock:
-      for e in inotify_events(evs[0].addr, n):
-        if e[].len > 0:
-          debug "file updated name=", $cast[cstring](addr e[].name)
-          for i in 0..<CERT_SITES.len:
-            if siteCtxs[i].watchdog == e[].wd:
-              siteCtxs[i].updated = true
-              if $cast[cstring](addr e[].name) == CHAIN_FILE:
-                # certbot writes fullchain file last, your script must also copy fullchain file last
-                updated = true
-              break
-      if updated:
-        sleep(3000)
-        sslFileChanged = true
+when ENABLE_SSL and SSL_AUTO_RELOAD:
+  proc fileWatcher(arg: ThreadArg) {.thread.} =
+    var evs = newSeq[byte](sizeof(InotifyEvent) * 512)
+    while active:
+      if not inotyWatchFlag:
+        sleep(1000)
+        continue
+      let n = read(inoty, evs[0].addr, evs.len)
+      if n <= 0: break
+      var updated = false
+      withWriteLock sslFileUpdateLock:
+        for e in inotify_events(evs[0].addr, n):
+          if e[].len > 0:
+            debug "file updated name=", $cast[cstring](addr e[].name)
+            for i in 0..<CERT_SITES.len:
+              if siteCtxs[i].watchdog == e[].wd:
+                siteCtxs[i].updated = true
+                if $cast[cstring](addr e[].name) == CHAIN_FILE:
+                  # certbot writes fullchain file last, your script must also copy fullchain file last
+                  updated = true
+                break
+        if updated:
+          sleep(3000)
+          sslFileChanged = true
 
 proc createServer(port: Port): SocketHandle =
   var sock = createNativeSocket()
@@ -1805,7 +1807,7 @@ proc main(arg: ThreadArg) {.thread.} =
     createThread(acceptThread, threadWrapper, (acceptClient, ThreadArg(type: ThreadArgType.Void)))
     createThread(httpThread, threadWrapper, (http, ThreadArg(type: ThreadArgType.Void)))
     createThread(monitorThread, threadWrapper, (serverMonitor, ThreadArg(type: ThreadArgType.Void)))
-    when SSL_AUTO_RELOAD:
+    when ENABLE_SSL and SSL_AUTO_RELOAD:
       createThread(fileWatcherThread, threadWrapper, (fileWatcher, ThreadArg(type: ThreadArgType.Void)))
       joinThreads(fileWatcherThread, monitorThread, httpThread, acceptThread, dispatcherThread)
     else:
