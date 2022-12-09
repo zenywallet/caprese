@@ -100,6 +100,8 @@ macro pendingBody(data: auto): untyped =
 macro pendingBody[T](reqs: var Queue[tuple[cid: ClientId, data: T]], data: T): untyped =
   quote do:
     proc pendingProc(): SendResult {.discardable.} =
+      when not declared(client):
+        {.error: "ClientId of pending can be ommitted only in server blocks.".}
       let cid = client.markPending()
       if `reqs`.send((cid, `data`)):
         return SendResult.Pending
