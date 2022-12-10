@@ -1376,9 +1376,9 @@ when ENABLE_SSL:
     proc setSslFilesWatch() =
       if inoty == -1:
         inoty = inotify_init()
-      if inoty == -1:
-        error "error: inotify_init err=", errno
-        return
+        if inoty == -1:
+          error "error: inotify_init err=", errno
+          return
       for i, site in CERT_SITES:
         if siteCtxs[i].watchdog == -1:
           let sitePath = CERT_PATH / site
