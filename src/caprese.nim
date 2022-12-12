@@ -1,5 +1,8 @@
 # Copyright (c) 2022 zenywallet
 
+when not compileOption("threads"):
+  {.error: "requires --threads:on option.".}
+
 import posix
 import server
 import contents
