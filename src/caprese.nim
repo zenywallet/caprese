@@ -32,13 +32,21 @@ var configSigPipeIgnore {.compileTime.}: NimNode = newIdentNode("true")
 macro sigPipeIgnore*(flag: bool) = configSigPipeIgnore = flag
 macro sigPipeIgnore*: bool = configSigPipeIgnore
 
-template limitOpenFiles*(num: int) = setRlimitOpenFiles(num)
+var configMaxOpenFiles {.compileTime.}: NimNode = newIdentNode("true")
+var configLimitOpenFiles {.compileTime.}: NimNode = newIdentNode("65536")
+macro limitOpenFiles*(num: int) =
+  configMaxOpenFiles = newIdentNode("false")
+  configLimitOpenFiles = num
 
 var initFlag {.compileTime.}: bool
 macro init(): untyped =
   if initFlag: return
   initFlag = true
   quote do:
+    when `configMaxOpenFiles`:
+      setMaxRlimitOpenFiles()
+    else:
+      setRlimitOpenFiles(`configLimitOpenFiles`)
     when `configSigPipeIgnore`: signal(SIGPIPE, SIG_IGN)
     when `configSigTermQuit`:
       onSignal(SIGINT, SIGTERM):
@@ -136,7 +144,6 @@ when isMainModule:
     reqs.drop()
 
   sigPipeIgnore: true
-  limitOpenFiles: 65536
 
   const IndexHtml = staticHtmlDocument:
     buildHtml(html):
