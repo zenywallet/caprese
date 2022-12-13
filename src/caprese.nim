@@ -21,14 +21,14 @@ var configPendingLimit {.compileTime.}: NimNode
 macro pendingLimit*(limit: int) = configPendingLimit = limit
 macro pendingLimit*: int = configPendingLimit
 
-var configSigTermQuit {.compileTime.}: NimNode
+var configSigTermQuit {.compileTime.}: NimNode = newIdentNode("true")
 macro sigTermQuit*(flag: bool) = configSigTermQuit = flag
 macro sigTermQuit*: bool = configSigTermQuit
 
 var onSigTermQuitBody {.compileTime.} = newStmtList()
 macro onSigTermQuit*(body: untyped) = discard onSigTermQuitBody.add(body)
 
-var configSigPipeIgnore {.compileTime.}: NimNode
+var configSigPipeIgnore {.compileTime.}: NimNode = newIdentNode("true")
 macro sigPipeIgnore*(flag: bool) = configSigPipeIgnore = flag
 macro sigPipeIgnore*: bool = configSigPipeIgnore
 
