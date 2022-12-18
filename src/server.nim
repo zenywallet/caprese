@@ -1013,6 +1013,8 @@ proc worker(arg: ThreadArg) {.thread.} =
 
       try:
         when ENABLE_SSL:
+          ERR_clear_error()
+
           if appId == 4:
             while true:
               let retSslAccept = SSL_Accept(client.ssl)
