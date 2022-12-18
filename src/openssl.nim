@@ -179,6 +179,7 @@ proc OpenSSL_add_all_algorithms*(): cint {.inline, discardable.} = OPENSSL_add_a
 
 # include/openssl/err.h
 proc ERR_get_error*(): culong {.importc.}
+proc ERR_peek_error*(): culong {.importc.}
 proc ERR_clear_error*() {.importc.}
 
 
