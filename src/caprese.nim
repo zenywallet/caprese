@@ -136,12 +136,18 @@ macro server*(bindAddress: string, port: uint16, body: untyped): untyped =
     start()
 
 macro worker*(num: int, body: untyped): untyped =
+  var workerRootBlockBody = nnkStmtList.newTree(
+    nnkBlockStmt.newTree(
+      newIdentNode("workerRoot"),
+      body
+    )
+  )
   quote do:
     init()
     atomicInc(workerNum, `num`)
     var workerThreads: array[`num`, Thread[void]]
     block:
-      proc workerProc() {.thread.} = `body`
+      proc workerProc() {.thread.} = `workerRootBlockBody`
       for i in 0..<`num`:
         createThread(workerThreads[i], workerProc)
 
@@ -173,7 +179,12 @@ template pending*[T](reqs: var Queue[tuple[cid: ClientId, data: T]], data: T): S
     pendingBody(reqs, data)
     pendingProc()
 
-template getPending*(reqs: auto): auto = reqs.recv()
+template exitWorker*() = break workerRoot
+
+template getPending*(reqs: auto): auto =
+  let ret = reqs.recv()
+  if not active: exitWorker()
+  ret
 
 template send*(data: string): SendResult = client.send(data)
 
@@ -216,7 +227,6 @@ when isMainModule:
   worker(num = 2):
     while true:
       let req = reqs.getPending()
-      if not active: break
       let urlText = sanitizeHtml(req.data.url)
       let clientId = req.cid
       clientId.send(fmt(TestHtml).addHeader())
