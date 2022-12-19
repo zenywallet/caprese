@@ -48,10 +48,12 @@ type
   Config* = object
     ssl*: bool
     sslLib*: SslLib
+    debugLog*: bool
 
 proc defaultConfig*(): Config {.compileTime.} =
   result.ssl = true
   result.sslLib = BearSSL
+  result.debugLog = false
 
 var cfg* {.compileTime.}: Config = defaultConfig()
 
@@ -74,6 +76,7 @@ macro init(): untyped =
   if initFlag: return
   initFlag = true
   quote do:
+    when cfg.debugLog: {.define: DEBUG_LOG.}
     when cfg.ssl:
       {.define: ENABLE_SSL.}
       when cfg.sslLib == BearSSL:
@@ -185,6 +188,7 @@ when isMainModule:
   config:
     ssl = true
     sslLib = OpenSSL
+    debugLog = true
 
   pendingLimit: 100
   var reqs = newPending[PendingData](limit = pendingLimit)
