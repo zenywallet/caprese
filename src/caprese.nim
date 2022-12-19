@@ -38,11 +38,53 @@ macro limitOpenFiles*(num: int) =
   configMaxOpenFiles = newIdentNode("false")
   configLimitOpenFiles = num
 
+type
+  SslLib* = enum
+    BearSSL
+    OpenSSL
+    LibreSSL
+    BoringSSL
+
+  Config* = object
+    ssl*: bool
+    sslLib*: SslLib
+
+proc defaultConfig*(): Config {.compileTime.} =
+  result.ssl = true
+  result.sslLib = BearSSL
+
+var cfg* {.compileTime.}: Config = defaultConfig()
+
+macro addCfgDotExpr(body: untyped): untyped =
+  var bdy = body
+  for i in 0..<bdy.len:
+    bdy[i][0] = nnkDotExpr.newTree(
+      newIdentNode("cfg"),
+      bdy[i][0]
+    )
+  return bdy
+
+template config*(body: untyped): untyped =
+  macro addCfg() =
+    addCfgDotExpr(body)
+  addCfg()
+
 var initFlag {.compileTime.}: bool
 macro init(): untyped =
   if initFlag: return
   initFlag = true
   quote do:
+    when cfg.ssl:
+      {.define: ENABLE_SSL.}
+      when cfg.sslLib == BearSSL:
+        {.define: USE_BEARSSL.}
+      elif cfg.sslLib == OpenSSL:
+        {.define: USE_OPENSSL.}
+      elif cfg.sslLib == LibreSSL:
+        {.define: USE_LIBRESSL.}
+      elif cfg.sslLib == BoringSSL:
+        {.define: USE_BORINGSSL.}
+
     import server as serverlib
     export serverlib
 
@@ -133,7 +175,6 @@ template getPending*(reqs: auto): auto = reqs.recv()
 template send*(data: string): SendResult = client.send(data)
 
 
-
 when isMainModule:
   import strformat
 
@@ -141,6 +182,9 @@ when isMainModule:
     PendingData = object
       url: string
 
+  config:
+    ssl = true
+    sslLib = OpenSSL
 
   pendingLimit: 100
   var reqs = newPending[PendingData](limit = pendingLimit)
