@@ -17,10 +17,6 @@ export queue
 var active* = true
 var workerNum = 0
 
-var configPendingLimit {.compileTime.}: NimNode
-macro pendingLimit*(limit: int) = configPendingLimit = limit
-macro pendingLimit*: int = configPendingLimit
-
 var configSigTermQuit {.compileTime.}: NimNode = newIdentNode("true")
 macro sigTermQuit*(flag: bool) = configSigTermQuit = flag
 macro sigTermQuit*: bool = configSigTermQuit
@@ -201,8 +197,7 @@ when isMainModule:
     sslLib = OpenSSL
     debugLog = true
 
-  pendingLimit: 100
-  var reqs = newPending[PendingData](limit = pendingLimit)
+  var reqs = newPending[PendingData](limit = 100)
 
   sigTermQuit: true
   onSigTermQuit:
