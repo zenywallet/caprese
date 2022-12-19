@@ -19,6 +19,7 @@ import hashtable
 import ptlock
 import arraylib
 import locks
+import serverdef
 
 const RLIMIT_OPEN_FILES* = 65536
 const CLIENT_MAX = 32000
@@ -70,20 +71,11 @@ type
     lock: Lock
     whackaMole: bool
 
-  ClientId* = int
-
   Client* = object of ClientBase
     pStream*: pointer
     clientId*: ClientId
 
   ClientArray = array[CLIENT_MAX, Client]
-
-  SendResult* {.pure.} = enum
-    Error = -1
-    None = 0
-    Success = 1
-    Pending = 2
-    Invalid = 3
 
   Headers* = Table[string, string]
 

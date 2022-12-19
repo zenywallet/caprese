@@ -4,12 +4,12 @@ when not compileOption("threads"):
   {.error: "requires --threads:on option.".}
 
 import posix
-import server
+import serverdef
 import contents
 import statuscode
 import queue
 import macros
-export server
+export serverdef
 export contents
 export statuscode
 export queue
@@ -43,6 +43,9 @@ macro init(): untyped =
   if initFlag: return
   initFlag = true
   quote do:
+    import server as serverlib
+    export serverlib
+
     when `configMaxOpenFiles`:
       setMaxRlimitOpenFiles()
     else:
@@ -51,7 +54,7 @@ macro init(): untyped =
     when `configSigTermQuit`:
       onSignal(SIGINT, SIGTERM):
         echo "bye from signal ", sig
-        server.stop()
+        serverlib.stop()
         active = false
         `onSigTermQuitBody`
 
@@ -89,6 +92,7 @@ macro server*(bindAddress: string, port: uint16, body: untyped): untyped =
 
 macro worker*(num: int, body: untyped): untyped =
   quote do:
+    init()
     atomicInc(workerNum, `num`)
     var workerThreads: array[`num`, Thread[void]]
     block:
@@ -129,12 +133,14 @@ template getPending*(reqs: auto): auto = reqs.recv()
 template send*(data: string): SendResult = client.send(data)
 
 
+
 when isMainModule:
   import strformat
 
   type
     PendingData = object
       url: string
+
 
   pendingLimit: 100
   var reqs = newPending[PendingData](limit = pendingLimit)
