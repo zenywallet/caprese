@@ -17,10 +17,6 @@ export queue
 var active* = true
 var workerNum = 0
 
-var configSigTermQuit {.compileTime.}: NimNode = newIdentNode("true")
-macro sigTermQuit*(flag: bool) = configSigTermQuit = flag
-macro sigTermQuit*: bool = configSigTermQuit
-
 var onSigTermQuitBody {.compileTime.} = newStmtList()
 macro onSigTermQuit*(body: untyped) = discard onSigTermQuitBody.add(body)
 
@@ -45,11 +41,13 @@ type
     ssl*: bool
     sslLib*: SslLib
     debugLog*: bool
+    sigTermQuit*: bool
 
 proc defaultConfig*(): Config {.compileTime.} =
   result.ssl = true
   result.sslLib = BearSSL
   result.debugLog = false
+  result.sigTermQuit = true
 
 var cfg* {.compileTime.}: Config = defaultConfig()
 
@@ -92,7 +90,7 @@ macro init(): untyped =
     else:
       setRlimitOpenFiles(`configLimitOpenFiles`)
     when `configSigPipeIgnore`: signal(SIGPIPE, SIG_IGN)
-    when `configSigTermQuit`:
+    when cfg.sigTermQuit:
       onSignal(SIGINT, SIGTERM):
         echo "bye from signal ", sig
         serverlib.stop()
@@ -199,7 +197,6 @@ when isMainModule:
 
   var reqs = newPending[PendingData](limit = 100)
 
-  sigTermQuit: true
   onSigTermQuit:
     reqs.drop()
 
