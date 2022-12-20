@@ -20,10 +20,6 @@ var workerNum = 0
 var onSigTermQuitBody {.compileTime.} = newStmtList()
 macro onSigTermQuit*(body: untyped) = discard onSigTermQuitBody.add(body)
 
-var configSigPipeIgnore {.compileTime.}: NimNode = newIdentNode("true")
-macro sigPipeIgnore*(flag: bool) = configSigPipeIgnore = flag
-macro sigPipeIgnore*: bool = configSigPipeIgnore
-
 var configMaxOpenFiles {.compileTime.}: NimNode = newIdentNode("true")
 var configLimitOpenFiles {.compileTime.}: NimNode = newIdentNode("65536")
 macro limitOpenFiles*(num: int) =
@@ -42,12 +38,14 @@ type
     sslLib*: SslLib
     debugLog*: bool
     sigTermQuit*: bool
+    sigPipeIgnore*: bool
 
 proc defaultConfig*(): Config {.compileTime.} =
   result.ssl = true
   result.sslLib = BearSSL
   result.debugLog = false
   result.sigTermQuit = true
+  result.sigPipeIgnore = true
 
 var cfg* {.compileTime.}: Config = defaultConfig()
 
@@ -89,7 +87,7 @@ macro init(): untyped =
       setMaxRlimitOpenFiles()
     else:
       setRlimitOpenFiles(`configLimitOpenFiles`)
-    when `configSigPipeIgnore`: signal(SIGPIPE, SIG_IGN)
+    when cfg.sigPipeIgnore: signal(SIGPIPE, SIG_IGN)
     when cfg.sigTermQuit:
       onSignal(SIGINT, SIGTERM):
         echo "bye from signal ", sig
@@ -199,8 +197,6 @@ when isMainModule:
 
   onSigTermQuit:
     reqs.drop()
-
-  sigPipeIgnore: true
 
   const IndexHtml = staticHtmlDocument:
     buildHtml(html):
