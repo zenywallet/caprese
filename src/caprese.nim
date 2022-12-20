@@ -201,14 +201,14 @@ when isMainModule:
   const IndexHtml = staticHtmlDocument:
     buildHtml(html):
       head:
-        meta(harset="utf-8")
+        meta(charset="utf-8")
       body:
         text "welcome"
 
   const TestHtml = staticHtmlDocument:
     buildHtml(html):
       head:
-        meta(harset="utf-8")
+        meta(charset="utf-8")
       body:
         text "[worker] {urlText}"
 
