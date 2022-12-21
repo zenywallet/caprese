@@ -20,12 +20,6 @@ var workerNum = 0
 var onSigTermQuitBody {.compileTime.} = newStmtList()
 macro onSigTermQuit*(body: untyped) = discard onSigTermQuitBody.add(body)
 
-var configMaxOpenFiles {.compileTime.}: NimNode = newIdentNode("true")
-var configLimitOpenFiles {.compileTime.}: NimNode = newIdentNode("65536")
-macro limitOpenFiles*(num: int) =
-  configMaxOpenFiles = newIdentNode("false")
-  configLimitOpenFiles = num
-
 type
   SslLib* = enum
     BearSSL
@@ -39,6 +33,8 @@ type
     debugLog*: bool
     sigTermQuit*: bool
     sigPipeIgnore*: bool
+    maxOpenFiles*: bool
+    limitOpenFiles*: int
 
 proc defaultConfig*(): Config {.compileTime.} =
   result.ssl = true
@@ -46,6 +42,8 @@ proc defaultConfig*(): Config {.compileTime.} =
   result.debugLog = false
   result.sigTermQuit = true
   result.sigPipeIgnore = true
+  result.maxOpenFiles = true
+  result.limitOpenFiles = 65536
 
 var cfg* {.compileTime.}: Config = defaultConfig()
 
@@ -83,10 +81,10 @@ macro init(): untyped =
     import server as serverlib
     export serverlib
 
-    when `configMaxOpenFiles`:
+    when cfg.maxOpenFiles:
       setMaxRlimitOpenFiles()
     else:
-      setRlimitOpenFiles(`configLimitOpenFiles`)
+      setRlimitOpenFiles(cfg.limitOpenFiles)
     when cfg.sigPipeIgnore: signal(SIGPIPE, SIG_IGN)
     when cfg.sigTermQuit:
       onSignal(SIGINT, SIGTERM):
