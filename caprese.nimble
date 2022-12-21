@@ -16,7 +16,7 @@ requires "nimcrypto"
 requires "karax"
 
 
-task deps, "Build deps":
+task bearssl, "Build BearSSL":
   withDir "deps/bearssl":
     exec "make -j$(nproc)"
 
@@ -40,3 +40,9 @@ task boringssl, "Build BoringSSL":
     cd "build"
     exec "cmake .."
     exec "make -j$(nproc)"
+
+task deps, "Build deps":
+  bearsslTask()
+  opensslTask()
+  libresslTask()
+  boringsslTask()
