@@ -160,6 +160,18 @@ template pending*[T](reqs: var Queue[tuple[cid: ClientId, data: T]], data: T): S
     pendingBody(reqs, data)
     pendingProc()
 
+proc pending*[T](reqs: var Queue[tuple[cid: ClientId, data: T]], req: tuple[cid: ClientId, data: T]): SendResult {.inline, discardable.} =
+  if reqs.send(req):
+    SendResult.Pending
+  else:
+    SendResult.Error
+
+proc pending*[T](reqs: var Queue[tuple[cid: ClientId, data: T]], cid: ClientId, data: T): SendResult {.inline, discardable.} =
+  if reqs.send((cid, data)):
+    SendResult.Pending
+  else:
+    SendResult.Error
+
 template exitWorker*() = break workerRoot
 
 template getPending*(reqs: auto): auto =
