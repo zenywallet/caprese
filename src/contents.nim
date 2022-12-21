@@ -60,7 +60,9 @@ var tmpFileId {.compileTime.}: int = 0
 
 template convertHtmlDocument*(code: string): string =
   mixin unindent
-  execCode(code).unindent(4)
+  let ret = execCode(code).unindent(4)
+  echo ret
+  ret
 
 template staticHtmlDocument*(body: untyped): string =
   import karax/[karaxdsl, vdom]
