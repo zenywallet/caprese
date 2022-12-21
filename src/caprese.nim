@@ -144,15 +144,6 @@ macro worker*(num: int, body: untyped): untyped =
 proc newPending*[T](limit: int): Queue[tuple[cid: ClientId, data: T]] {.inline.} =
   newQueue[tuple[cid: ClientId, data: T]](limit)
 
-macro pendingBody(data: auto): untyped =
-  quote do:
-    proc pendingProc(): SendResult {.discardable.} =
-      let cid = client.markPending()
-      if reqs.send((cid, `data`)):
-        return SendResult.Pending
-      else:
-        return SendResult.Error
-
 macro pendingBody[T](reqs: var Queue[tuple[cid: ClientId, data: T]], data: T): untyped =
   quote do:
     proc pendingProc(): SendResult {.discardable.} =
