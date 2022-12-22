@@ -54,12 +54,14 @@ task boringssl, "Build BoringSSL":
     exec "cp build/crypto/libcrypto.a ../../src/lib/boringssl/"
 
 task deps, "Build deps":
+  exec "git submodule update --init"
   bearsslTask()
   opensslTask()
   libresslTask()
   boringsslTask()
 
 before build:
+  exec "git submodule update --init"
   if not fileExists("src/lib/bearssl/libbearssl.a"):
     bearsslTask()
   if not fileExists("src/lib/openssl/libssl.a") or not fileExists("src/lib/openssl/libcrypto.a"):
