@@ -8,17 +8,17 @@ const USE_BORINGSSL = defined(USE_BORINGSSL)
 
 when USE_LIBRESSL:
   debug "SSL: LibreSSL"
-  const libresslPath = currentSourcePath.parentDir() / "../deps/libressl"
-  {.passL: libresslPath / "ssl/.libs/libssl.a".}
-  {.passL: libresslPath / "crypto/.libs/libcrypto.a".}
+  const libresslPath = currentSourcePath.parentDir() / "lib/libressl"
+  {.passL: libresslPath / "libssl.a".}
+  {.passL: libresslPath / "libcrypto.a".}
 elif USE_BORINGSSL:
   debug "SSL: BoringSSL"
-  const boringsslPath = currentSourcePath.parentDir() / "../deps/boringssl"
-  {.passL: boringsslPath / "build/ssl/libssl.a".}
-  {.passL: boringsslPath / "build/crypto/libcrypto.a".}
+  const boringsslPath = currentSourcePath.parentDir() / "lib/boringssl"
+  {.passL: boringsslPath / "libssl.a".}
+  {.passL: boringsslPath / "libcrypto.a".}
 else:
   debug "SSL: OpenSSL"
-  const opensslPath = currentSourcePath.parentDir() / "../deps/openssl"
+  const opensslPath = currentSourcePath.parentDir() / "lib/openssl"
   {.passL: opensslPath / "libssl.a".}
   {.passL: opensslPath / "libcrypto.a".}
 
