@@ -78,6 +78,17 @@ template staticHtmlDocument*(body: untyped): string =
       )
     staticHtmlDocumentMacro()
 
+template staticScript*(body: untyped): string =
+  block:
+    const srcFile = instantiationInfo(-1, true).filename
+    const (srcFileDir, srcFieName, srcFileExt) = splitFile(srcFile)
+
+    macro staticScriptMacro(bodyMacro: untyped): string =
+      return nnkStmtList.newTree(
+        newLit(compileJsCode(srcFileDir, $bodyMacro.toStrLit))
+      )
+    staticScriptMacro: body
+
 proc sanitizeHtml*(s: string): string =
   for c in s:
     case c
