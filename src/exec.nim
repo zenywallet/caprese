@@ -39,11 +39,28 @@ template staticExecCode*(code: string): string =
       )
     execCodeResult()
 
+proc compileJsCode*(srcFileDir: string, code: string, rstr: string): string {.compileTime.} =
+  inc(tmpFileId)
+  let tmpNameFile = srcFileDir / srcFieName & "_tmp" & $tmpFileId & rstr
+  let tmpSrcFile = tmpNameFile & srcFileExt
+  let tmpJsFile = tmpNameFile & ".js"
+  writeFile(tmpSrcFile, code)
+  echo staticExec("nim js -d:release --mm:orc -o:" & tmpJsFile & " " & tmpSrcFile)
+  result = readFile(tmpJsFile)
+  rmFile(tmpJsFile)
+  rmFile(tmpSrcFile)
+
+template compileJsCode*(baseDir, code: string): string =
+  compileJsCode(baseDir, code, randomStr())
+
 
 when isMainModule:
   echo staticExecCode("""
 echo "hello"
 """)
   echo staticExecCode("""
+echo "hello!"
+""")
+  echo compileJsCode(srcFileDir, """
 echo "hello!"
 """)
