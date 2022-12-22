@@ -58,3 +58,13 @@ task deps, "Build deps":
   opensslTask()
   libresslTask()
   boringsslTask()
+
+before build:
+  if not fileExists("src/lib/bearssl/libbearssl.a"):
+    bearsslTask()
+  if not fileExists("src/lib/openssl/libssl.a") or not fileExists("src/lib/openssl/libcrypto.a"):
+    opensslTask()
+  if not fileExists("src/lib/libressl/libssl.a") or not fileExists("src/lib/libressl/libcrypto.a"):
+    libresslTask()
+  if not fileExists("src/lib/boringssl/libssl.a") or not fileExists("src/lib/boringssl/libcrypto.a"):
+    boringsslTask()
