@@ -2,6 +2,8 @@
 
 import strutils
 
+{.used.}
+
 template debug*(x: varargs[string, `$`]) =
   when defined(DEBUG_LOG):
     echo join(x)
