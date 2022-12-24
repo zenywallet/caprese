@@ -5,6 +5,7 @@ import macros
 import os
 import strutils
 import exec
+import mimetypes
 export macros except error
 
 const HTTP_VERSION* = 1.1
@@ -100,3 +101,14 @@ proc sanitizeHtml*(s: string): string =
     of '>': result.add("&gt;")
     of '/': result.add("&#47;")
     else: result.add(c)
+
+template mimeType*(mime: string): string =
+  mixin newMimetypes, getMimetype
+  block:
+    macro mimeTypeMacro(): string =
+      var m = newMimetypes()
+      var mstr = m.getMimetype(mime)
+      return nnkStmtList.newTree(
+        newLit(mstr)
+      )
+    mimeTypeMacro()
