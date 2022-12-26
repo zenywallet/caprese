@@ -35,6 +35,8 @@ task libressl, "Build LibreSSL":
     if dirExists("openbsd"):
       exec "rm -rf openbsd"
     exec "git checkout master"
+    exec "git reset --hard"
+    exec "git pull"
     exec "./autogen.sh"
     exec "./configure"
     exec "make -j$(nproc)"
