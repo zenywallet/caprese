@@ -1754,9 +1754,9 @@ when ENABLE_SSL and SSL_AUTO_RELOAD:
           sleep(3000)
           sslFileChanged = true
 
-proc createServer(port: Port): SocketHandle =
+proc createServer(bindAddress: string, port: uint16): SocketHandle =
   var sock = createNativeSocket()
-  var aiList = getAddrInfo("0.0.0.0", port, Domain.AF_INET)
+  var aiList = getAddrInfo("0.0.0.0", port.Port, Domain.AF_INET)
   sock.setSockOptInt(SOL_SOCKET, SO_REUSEADDR, 1)
   var retBind = sock.bindAddr(aiList.ai_addr, aiList.ai_addrlen.SockLen)
   if retBind < 0:
@@ -1778,8 +1778,8 @@ proc threadWrapper(wrapperArg: WrapperThreadArg) {.thread.} =
 
 proc main(arg: ThreadArg) {.thread.} =
   while true:
-    serverSock = createServer(Port(HTTPS_PORT))
-    httpSock = createServer(Port(HTTP_PORT))
+    serverSock = createServer("0.0.0.0", HTTPS_PORT)
+    httpSock = createServer("0.0.0.0", HTTP_PORT)
 
     var tcp_rmem = serverSock.getSockOptInt(SOL_SOCKET, SO_RCVBUF)
     debug "RECVBUF=", tcp_rmem
