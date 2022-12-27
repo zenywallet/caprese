@@ -1754,10 +1754,12 @@ when ENABLE_SSL and SSL_AUTO_RELOAD:
           sleep(3000)
           sslFileChanged = true
 
-proc createServer(bindAddress: string, port: uint16): SocketHandle =
+proc createServer(bindAddress: string, port: uint16, reusePort: bool = false): SocketHandle =
   var sock = createNativeSocket()
   var aiList = getAddrInfo("0.0.0.0", port.Port, Domain.AF_INET)
   sock.setSockOptInt(SOL_SOCKET, SO_REUSEADDR, 1)
+  if reusePort:
+    sock.setSockOptInt(SOL_SOCKET, SO_REUSEPORT, 1)
   var retBind = sock.bindAddr(aiList.ai_addr, aiList.ai_addrlen.SockLen)
   if retBind < 0:
     errorQuit "error: bind ret=", retBind, " ", getErrnoStr()
