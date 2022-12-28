@@ -1833,6 +1833,30 @@ proc stop*() {.inline.} =
   if not abortFlag:
     quitServer()
 
+var curAppId = 0
+var workerRecvBufSize: int = 0
+
+proc addServer*(bindAddress: string, port: uint16) =
+  var appId = atomicInc(curAppId, 1)
+  var serverSock = createServer(bindAddress, port)
+  serverSock.setBlocking(false)
+
+  var tcp_rmem = serverSock.getSockOptInt(SOL_SOCKET, SO_RCVBUF)
+  if workerRecvBufSize < tcp_rmem:
+    workerRecvBufSize = tcp_rmem
+
+  if epfd < 0:
+    epfd = epoll_create1(O_CLOEXEC)
+    if epfd < 0:
+      errorQuit "error: epfd=", epfd, " errno=", errno
+
+  var ev: EpollEvent
+  ev.events = EPOLLIN or EPOLLEXCLUSIVE
+  ev.data.u64 = 0x0100000000000000'u64 or (appId.uint64 shl 32) or serverSock.uint64
+  var retCtl = epoll_ctl(epfd, EPOLL_CTL_ADD, serverSock, addr ev)
+  if retCtl != 0:
+    errorQuit "error: quit epoll_ctl ret=", retCtl, " ", getErrnoStr()
+
 
 when isMainModule:
   onSignal(SIGINT, SIGTERM):
