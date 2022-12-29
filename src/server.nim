@@ -1857,11 +1857,11 @@ proc addServer*(bindAddress: string, port: uint16) =
   if retCtl != 0:
     errorQuit "error: quit epoll_ctl ret=", retCtl, " ", getErrnoStr()
 
-proc serverWorker() {.thread.} =
+proc serverWorker(arg: ThreadArg) {.thread.} =
   var events: array[EPOLL_EVENTS_SIZE, EpollEvent]
   var sockAddress: Sockaddr_in
   var addrLen = sizeof(sockAddress).SockLen
-  var recvBuf = newArray[byte](workerRecvBufSize)
+  var recvBuf = newArray[byte](arg.workerParams.bufLen)
   var d = "abcdefghijklmnopqrstuvwxyz".addHeader()
 
   while true:
@@ -1908,7 +1908,9 @@ when isMainModule:
   #start()
 
   addServer("0.0.0.0", 8009)
-  var threads: array[WORKER_THREAD_NUM, Thread[void]]
+  var threads: array[WORKER_THREAD_NUM, Thread[WrapperThreadArg]]
   for i in 0..<WORKER_THREAD_NUM:
-    createThread(threads[i], serverWorker)
+    createThread(threads[i], threadWrapper, (serverWorker,
+      ThreadArg(type: ThreadArgType.WorkerParams, workerParams: (i, workerRecvBufSize))))
+
   joinThreads(threads)
