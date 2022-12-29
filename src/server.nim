@@ -1875,11 +1875,10 @@ proc serverWorker(arg: ThreadArg) {.thread.} =
     for i in 0..<nfd:
       let evData = events[i].data.u64
       let flag = evData shr 56
-      let listenFlag = (flag and 0x01) > 0
-      var sock: SocketHandle
-      sock = (evData and 0xffffffff'u64).SocketHandle
       let indexFlag = (flag and IndexFlag) > 0
       if not indexFlag:
+        let sock = (evData and 0xffffffff'u64).SocketHandle
+        let listenFlag = (flag and 0x01) > 0
         if listenFlag:
           var clientFd = sock.accept(cast[ptr SockAddr](addr sockAddress), addr addrLen).int
           if clientFd > 0:
