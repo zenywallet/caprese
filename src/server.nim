@@ -1870,7 +1870,6 @@ proc serverWorker(arg: ThreadArg) {.thread.} =
     if not active: break
     for i in 0..<nfd:
       let evData = events[i].data.u64
-      let appId = (0x00ffffff'u64 and (evData shr 32)).int
       let flag = evData shr 56
       let listenFlag = (flag and 0x01) > 0
       var sock: SocketHandle
@@ -1879,6 +1878,7 @@ proc serverWorker(arg: ThreadArg) {.thread.} =
       if listenFlag:
         var clientFd = sock.accept(cast[ptr SockAddr](addr sockAddress), addr addrLen).int
         if clientFd > 0:
+          let appId = (0x00ffffff'u64 and (evData shr 32)).int
           var ev: EpollEvent
           ev.events = EPOLLIN or EPOLLRDHUP
           ev.data.u64 = (appId.uint64 shl 32) or clientFd.uint64
