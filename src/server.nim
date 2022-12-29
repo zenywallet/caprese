@@ -1878,27 +1878,28 @@ proc serverWorker(arg: ThreadArg) {.thread.} =
       let indexFlag = (flag and IndexFlag) > 0
       if not indexFlag:
         let sock = (evData and 0xffffffff'u64).SocketHandle
-        let listenFlag = (flag and 0x01) > 0
-        if listenFlag:
-          var clientFd = sock.accept(cast[ptr SockAddr](addr sockAddress), addr addrLen).int
-          if clientFd > 0:
-            let appId = (0x00ffffff'u64 and (evData shr 32)).int
-            var ev: EpollEvent
-            ev.events = EPOLLIN or EPOLLRDHUP
-            ev.data.u64 = (appId.uint64 shl 32) or clientFd.uint64
-            var retCtl = epoll_ctl(epfd, EPOLL_CTL_ADD, clientFd.cint, addr ev)
-          elif errno != EAGAIN and errno != EWOULDBLOCK and errno != EINTR:
-            errorQuit "error: accept=", clientFd, " errno=", errno
-        else:
-          var recvlen = sock.recv(addr recvBuf[0], recvBuf.len.cint, 0.cint)
-          if recvlen > 0:
-            var sendRet = sock.send(cast[cstring](addr d[0]), d.len.cint, 0'i32)
-            if sendRet < 0:
-              echo "error send ", errno
-          elif recvlen == 0:
-            sock.close()
-          elif recvlen < 0:
-            echo "error recv ", errno
+        if true:
+          let listenFlag = (flag and 0x01) > 0
+          if listenFlag:
+            var clientFd = sock.accept(cast[ptr SockAddr](addr sockAddress), addr addrLen).int
+            if clientFd > 0:
+              let appId = (0x00ffffff'u64 and (evData shr 32)).int
+              var ev: EpollEvent
+              ev.events = EPOLLIN or EPOLLRDHUP
+              ev.data.u64 = (appId.uint64 shl 32) or clientFd.uint64
+              var retCtl = epoll_ctl(epfd, EPOLL_CTL_ADD, clientFd.cint, addr ev)
+            elif errno != EAGAIN and errno != EWOULDBLOCK and errno != EINTR:
+              errorQuit "error: accept=", clientFd, " errno=", errno
+          else:
+            var recvlen = sock.recv(addr recvBuf[0], recvBuf.len.cint, 0.cint)
+            if recvlen > 0:
+              var sendRet = sock.send(cast[cstring](addr d[0]), d.len.cint, 0'i32)
+              if sendRet < 0:
+                echo "error send ", errno
+            elif recvlen == 0:
+              sock.close()
+            elif recvlen < 0:
+              echo "error recv ", errno
 
 
 when isMainModule:
