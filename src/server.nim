@@ -1861,6 +1861,24 @@ proc addServer*(bindAddress: string, port: uint16) =
   if retCtl != 0:
     errorQuit "error: quit epoll_ctl ret=", retCtl, " ", getErrnoStr()
 
+var clientSocketLocks: array[WORKER_THREAD_NUM, cint]
+for i in 0..<WORKER_THREAD_NUM:
+  clientSocketLocks[i] = osInvalidSocket.cint
+
+var clientSockLock: SpinLock
+spinLockInit(clientSockLock)
+
+proc setClientSocketLock(sock: cint, threadId: int): bool {.inline.} =
+  withSpinLock clientSockLock:
+    for s in clientSocketLocks:
+      if s == sock:
+        return false
+    clientSocketLocks[threadId] = sock
+    return true
+
+proc resetClientSocketLock(threadId: int) {.inline.} =
+  clientSocketLocks[threadId] = osInvalidSocket.cint
+
 proc serverWorker(arg: ThreadArg) {.thread.} =
   var events: array[EPOLL_EVENTS_SIZE, EpollEvent]
   var sockAddress: Sockaddr_in
@@ -1878,7 +1896,8 @@ proc serverWorker(arg: ThreadArg) {.thread.} =
       let indexFlag = (flag and IndexFlag) > 0
       if not indexFlag:
         let sock = (evData and 0xffffffff'u64).SocketHandle
-        if true:
+        let threadId = arg.workerParams.threadId
+        if setClientSocketLock(sock.cint, threadId):
           let listenFlag = (flag and 0x01) > 0
           if listenFlag:
             var clientFd = sock.accept(cast[ptr SockAddr](addr sockAddress), addr addrLen).int
@@ -1889,6 +1908,7 @@ proc serverWorker(arg: ThreadArg) {.thread.} =
               ev.data.u64 = (appId.uint64 shl 32) or clientFd.uint64
               var retCtl = epoll_ctl(epfd, EPOLL_CTL_ADD, clientFd.cint, addr ev)
             elif errno != EAGAIN and errno != EWOULDBLOCK and errno != EINTR:
+              resetClientSocketLock(threadId)
               errorQuit "error: accept=", clientFd, " errno=", errno
           else:
             var recvlen = sock.recv(addr recvBuf[0], recvBuf.len.cint, 0.cint)
@@ -1900,6 +1920,7 @@ proc serverWorker(arg: ThreadArg) {.thread.} =
               sock.close()
             elif recvlen < 0:
               echo "error recv ", errno
+          resetClientSocketLock(threadId)
 
 
 when isMainModule:
