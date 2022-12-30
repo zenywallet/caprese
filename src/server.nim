@@ -1907,6 +1907,8 @@ proc serverWorker(arg: ThreadArg) {.thread.} =
               ev.events = EPOLLIN or EPOLLRDHUP
               ev.data.u64 = (appId.uint64 shl 32) or clientFd.uint64
               var retCtl = epoll_ctl(epfd, EPOLL_CTL_ADD, clientFd.cint, addr ev)
+              if retCtl < 0:
+                errorQuit "error: epoll_ctl ret=", retCtl, " errno=", errno
             elif errno != EAGAIN and errno != EWOULDBLOCK and errno != EINTR:
               resetClientSocketLock(threadId)
               errorQuit "error: accept=", clientFd, " errno=", errno
