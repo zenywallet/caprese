@@ -1900,7 +1900,7 @@ proc serverWorker(arg: ThreadArg) {.thread.} =
         if setClientSocketLock(sock.cint, threadId):
           let listenFlag = (flag and 0x01) > 0
           if listenFlag:
-            var clientFd = sock.accept(cast[ptr SockAddr](addr sockAddress), addr addrLen).int
+            let clientFd = sock.accept(cast[ptr SockAddr](addr sockAddress), addr addrLen).int
             if clientFd > 0:
               let appId = (0x00ffffff'u64 and (evData shr 32)).int
               var ev: EpollEvent
@@ -1913,9 +1913,9 @@ proc serverWorker(arg: ThreadArg) {.thread.} =
               resetClientSocketLock(threadId)
               errorQuit "error: accept=", clientFd, " errno=", errno
           else:
-            var recvlen = sock.recv(addr recvBuf[0], recvBuf.len.cint, 0.cint)
+            let recvlen = sock.recv(addr recvBuf[0], recvBuf.len.cint, 0.cint)
             if recvlen > 0:
-              var sendRet = sock.send(cast[cstring](addr d[0]), d.len.cint, 0'i32)
+              let sendRet = sock.send(cast[cstring](addr d[0]), d.len.cint, 0'i32)
               if sendRet < 0:
                 echo "error send ", errno
             elif recvlen == 0:
