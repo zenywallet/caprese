@@ -1900,8 +1900,10 @@ proc serverWorker(arg: ThreadArg) {.thread.} =
         if setClientSocketLock(sock.cint, threadId):
           let listenFlag = (flag and 0x01) > 0
           if listenFlag:
-            let clientFd = sock.accept(cast[ptr SockAddr](addr sockAddress), addr addrLen).int
+            let clientSock = sock.accept(cast[ptr SockAddr](addr sockAddress), addr addrLen)
+            let clientFd = clientSock.int
             if clientFd > 0:
+              clientSock.setBlocking(false)
               let appId = (0x00ffffff'u64 and (evData shr 32)).int
               var ev: EpollEvent
               ev.events = EPOLLIN or EPOLLRDHUP
