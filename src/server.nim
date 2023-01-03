@@ -1901,6 +1901,7 @@ proc serverWorker(arg: ThreadArg) {.thread.} =
           let listenFlag = (flag and 0x01) > 0
           if listenFlag:
             let clientSock = sock.accept4(cast[ptr SockAddr](addr sockAddress), addr addrLen, O_NONBLOCK)
+            resetClientSocketLock(threadId)
             let clientFd = clientSock.int
             if clientFd > 0:
               let appId = (0x00ffffff'u64 and (evData shr 32)).int
@@ -1911,7 +1912,6 @@ proc serverWorker(arg: ThreadArg) {.thread.} =
               if retCtl < 0:
                 errorQuit "error: epoll_ctl ret=", retCtl, " errno=", errno
             elif errno != EAGAIN and errno != EWOULDBLOCK and errno != EINTR:
-              resetClientSocketLock(threadId)
               errorQuit "error: accept=", clientFd, " errno=", errno
           else:
             let recvlen = sock.recv(addr recvBuf[0], recvBuf.len.cint, 0.cint)
@@ -1923,7 +1923,7 @@ proc serverWorker(arg: ThreadArg) {.thread.} =
               sock.close()
             elif recvlen < 0:
               echo "error recv ", errno
-          resetClientSocketLock(threadId)
+            resetClientSocketLock(threadId)
 
 
 when isMainModule:
