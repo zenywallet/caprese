@@ -1916,6 +1916,7 @@ proc serverWorker(arg: ThreadArg) {.thread.} =
           else:
             let recvlen = sock.recv(addr recvBuf[0], recvBuf.len.cint, 0.cint)
             if recvlen > 0:
+              sock.setSockOptInt(Protocol.IPPROTO_TCP.int, TCP_NODELAY, 1)
               let sendRet = sock.send(cast[cstring](addr d[0]), d.len.cint, 0'i32)
               if sendRet < 0:
                 echo "error send ", errno
