@@ -1879,12 +1879,93 @@ proc setClientSocketLock(sock: cint, threadId: int): bool {.inline.} =
 proc resetClientSocketLock(threadId: int) {.inline.} =
   clientSocketLocks[threadId] = osInvalidSocket.cint
 
+type
+  ReqHeaders = object
+    url: string
+    host: string
+    userAgent: string
+    acceptEncoding: string
+    connection: string
+
+proc parseHeader(buf: ptr UncheckedArray[byte], size: int): tuple[err: int, headers: ReqHeaders] =
+  var reqHeaders: ReqHeaders
+  if size >= 17 and equalMem(addr buf[size - 4], "\c\L\c\L".cstring, 4):
+    if equalMem(addr buf[0], "GET /".cstring, 4):
+      var cur = 4
+      var pos = 5
+      while true:
+        if buf[pos].char == ' ':
+          reqHeaders.url = cast[ptr UncheckedArray[byte]](addr buf[cur]).toString(pos - cur)
+          inc(pos)
+          while not equalMem(addr buf[pos], "\c\L".cstring, 2):
+            inc(pos)
+          inc(pos, 2)
+          if equalMem(addr buf[pos], "\c\L".cstring, 2):
+            return (err: 0, headers: reqHeaders)
+
+          while true:
+            if equalMem(addr buf[pos], "Host: ".cstring, 6):
+              inc(pos, 6)
+              cur = pos
+              while not equalMem(addr buf[pos], "\c\L".cstring, 2):
+                inc(pos)
+              reqHeaders.host = cast[ptr UncheckedArray[byte]](addr buf[cur]).toString(pos - cur)
+              inc(pos, 2)
+              if equalMem(addr buf[pos], "\c\L".cstring, 2):
+                return (err: 0, headers: reqHeaders)
+
+            elif equalMem(addr buf[pos], "User-Agent: ".cstring, 12):
+              inc(pos, 12)
+              cur = pos
+              while not equalMem(addr buf[pos], "\c\L".cstring, 2):
+                inc(pos)
+              reqHeaders.userAgent = cast[ptr UncheckedArray[byte]](addr buf[cur]).toString(pos - cur)
+              inc(pos, 2)
+              if equalMem(addr buf[pos], "\c\L".cstring, 2):
+                return (err: 0, headers: reqHeaders)
+
+            elif equalMem(addr buf[pos], "Accept-Encoding: ".cstring, 17):
+              inc(pos, 17)
+              cur = pos
+              while not equalMem(addr buf[pos], "\c\L".cstring, 2):
+                inc(pos)
+              reqHeaders.acceptEncoding = cast[ptr UncheckedArray[byte]](addr buf[cur]).toString(pos - cur)
+              inc(pos, 2)
+              if equalMem(addr buf[pos], "\c\L".cstring, 2):
+                return (err: 0, headers: reqHeaders)
+
+            elif equalMem(addr buf[pos], "Connection: ".cstring, 12):
+              inc(pos, 12)
+              cur = pos
+              while not equalMem(addr buf[pos], "\c\L".cstring, 2):
+                inc(pos)
+              reqHeaders.connection = cast[ptr UncheckedArray[byte]](addr buf[cur]).toString(pos - cur)
+              inc(pos, 2)
+              if equalMem(addr buf[pos], "\c\L".cstring, 2):
+                return (err: 0, headers: reqHeaders)
+
+            else:
+              while not equalMem(addr buf[pos], "\c\L".cstring, 2):
+                inc(pos)
+              inc(pos, 2)
+              if equalMem(addr buf[pos], "\c\L".cstring, 2):
+                return (err: 0, headers: reqHeaders)
+
+        elif equalMem(addr buf[pos], "\c\L".cstring, 2):
+          return (err: 3, headers: reqHeaders)
+        inc(pos)
+    else:
+      return (err: 2, headers: reqHeaders)
+  else:
+    return (err: 1, headers: reqHeaders)
+
 proc serverWorker(arg: ThreadArg) {.thread.} =
   var events: array[EPOLL_EVENTS_SIZE, EpollEvent]
   var sockAddress: Sockaddr_in
   var addrLen = sizeof(sockAddress).SockLen
   var recvBuf = newArray[byte](arg.workerParams.bufLen)
   var d = "abcdefghijklmnopqrstuvwxyz".addHeader()
+  var notFound = "Not found".addDocType().addHeader(Status404)
 
   while true:
     var nfd = epoll_wait(epfd, cast[ptr EpollEvent](addr events),
@@ -1916,10 +1997,15 @@ proc serverWorker(arg: ThreadArg) {.thread.} =
           else:
             let recvlen = sock.recv(addr recvBuf[0], recvBuf.len.cint, 0.cint)
             if recvlen > 0:
-              sock.setSockOptInt(Protocol.IPPROTO_TCP.int, TCP_NODELAY, 1)
-              let sendRet = sock.send(cast[cstring](addr d[0]), d.len.cint, 0'i32)
-              if sendRet < 0:
-                echo "error send ", errno
+              let retHeader = parseHeader(cast[ptr UncheckedArray[byte]](addr recvBuf[0]), recvlen)
+              if retHeader.headers.url == "/":
+                sock.setSockOptInt(Protocol.IPPROTO_TCP.int, TCP_NODELAY, 1)
+                let sendRet = sock.send(cast[cstring](addr d[0]), d.len.cint, 0'i32)
+                if sendRet < 0:
+                  echo "error send ", errno
+              else:
+                sock.setSockOptInt(Protocol.IPPROTO_TCP.int, TCP_NODELAY, 1)
+                discard sock.send(cast[cstring](addr notFound[0]), notFound.len.cint, 0'i32)
             elif recvlen == 0:
               sock.close()
             elif recvlen < 0:
