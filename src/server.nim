@@ -1880,28 +1880,28 @@ proc resetClientSocketLock(threadId: int) {.inline.} =
   clientSocketLocks[threadId] = osInvalidSocket.cint
 
 type
-  ReqHeaders = object
+  ReqHeader = object
     url: string
     host: string
     userAgent: string
     acceptEncoding: string
     connection: string
 
-proc parseHeader(buf: ptr UncheckedArray[byte], size: int): tuple[err: int, headers: ReqHeaders] =
-  var reqHeaders: ReqHeaders
+proc parseHeader(buf: ptr UncheckedArray[byte], size: int): tuple[err: int, header: ReqHeader] =
+  var reqHeader: ReqHeader
   if size >= 17 and equalMem(addr buf[size - 4], "\c\L\c\L".cstring, 4):
     if equalMem(addr buf[0], "GET /".cstring, 4):
       var cur = 4
       var pos = 5
       while true:
         if buf[pos].char == ' ':
-          reqHeaders.url = cast[ptr UncheckedArray[byte]](addr buf[cur]).toString(pos - cur)
+          reqHeader.url = cast[ptr UncheckedArray[byte]](addr buf[cur]).toString(pos - cur)
           inc(pos)
           while not equalMem(addr buf[pos], "\c\L".cstring, 2):
             inc(pos)
           inc(pos, 2)
           if equalMem(addr buf[pos], "\c\L".cstring, 2):
-            return (err: 0, headers: reqHeaders)
+            return (err: 0, header: reqHeader)
 
           while true:
             if equalMem(addr buf[pos], "Host: ".cstring, 6):
@@ -1909,55 +1909,55 @@ proc parseHeader(buf: ptr UncheckedArray[byte], size: int): tuple[err: int, head
               cur = pos
               while not equalMem(addr buf[pos], "\c\L".cstring, 2):
                 inc(pos)
-              reqHeaders.host = cast[ptr UncheckedArray[byte]](addr buf[cur]).toString(pos - cur)
+              reqHeader.host = cast[ptr UncheckedArray[byte]](addr buf[cur]).toString(pos - cur)
               inc(pos, 2)
               if equalMem(addr buf[pos], "\c\L".cstring, 2):
-                return (err: 0, headers: reqHeaders)
+                return (err: 0, header: reqHeader)
 
             elif equalMem(addr buf[pos], "User-Agent: ".cstring, 12):
               inc(pos, 12)
               cur = pos
               while not equalMem(addr buf[pos], "\c\L".cstring, 2):
                 inc(pos)
-              reqHeaders.userAgent = cast[ptr UncheckedArray[byte]](addr buf[cur]).toString(pos - cur)
+              reqHeader.userAgent = cast[ptr UncheckedArray[byte]](addr buf[cur]).toString(pos - cur)
               inc(pos, 2)
               if equalMem(addr buf[pos], "\c\L".cstring, 2):
-                return (err: 0, headers: reqHeaders)
+                return (err: 0, header: reqHeader)
 
             elif equalMem(addr buf[pos], "Accept-Encoding: ".cstring, 17):
               inc(pos, 17)
               cur = pos
               while not equalMem(addr buf[pos], "\c\L".cstring, 2):
                 inc(pos)
-              reqHeaders.acceptEncoding = cast[ptr UncheckedArray[byte]](addr buf[cur]).toString(pos - cur)
+              reqHeader.acceptEncoding = cast[ptr UncheckedArray[byte]](addr buf[cur]).toString(pos - cur)
               inc(pos, 2)
               if equalMem(addr buf[pos], "\c\L".cstring, 2):
-                return (err: 0, headers: reqHeaders)
+                return (err: 0, header: reqHeader)
 
             elif equalMem(addr buf[pos], "Connection: ".cstring, 12):
               inc(pos, 12)
               cur = pos
               while not equalMem(addr buf[pos], "\c\L".cstring, 2):
                 inc(pos)
-              reqHeaders.connection = cast[ptr UncheckedArray[byte]](addr buf[cur]).toString(pos - cur)
+              reqHeader.connection = cast[ptr UncheckedArray[byte]](addr buf[cur]).toString(pos - cur)
               inc(pos, 2)
               if equalMem(addr buf[pos], "\c\L".cstring, 2):
-                return (err: 0, headers: reqHeaders)
+                return (err: 0, header: reqHeader)
 
             else:
               while not equalMem(addr buf[pos], "\c\L".cstring, 2):
                 inc(pos)
               inc(pos, 2)
               if equalMem(addr buf[pos], "\c\L".cstring, 2):
-                return (err: 0, headers: reqHeaders)
+                return (err: 0, header: reqHeader)
 
         elif equalMem(addr buf[pos], "\c\L".cstring, 2):
-          return (err: 3, headers: reqHeaders)
+          return (err: 3, header: reqHeader)
         inc(pos)
     else:
-      return (err: 2, headers: reqHeaders)
+      return (err: 2, header: reqHeader)
   else:
-    return (err: 1, headers: reqHeaders)
+    return (err: 1, header: reqHeader)
 
 proc serverWorker(arg: ThreadArg) {.thread.} =
   var events: array[EPOLL_EVENTS_SIZE, EpollEvent]
@@ -1998,7 +1998,7 @@ proc serverWorker(arg: ThreadArg) {.thread.} =
             let recvlen = sock.recv(addr recvBuf[0], recvBuf.len.cint, 0.cint)
             if recvlen > 0:
               let retHeader = parseHeader(cast[ptr UncheckedArray[byte]](addr recvBuf[0]), recvlen)
-              if retHeader.headers.url == "/":
+              if retHeader.header.url == "/":
                 sock.setSockOptInt(Protocol.IPPROTO_TCP.int, TCP_NODELAY, 1)
                 let sendRet = sock.send(cast[cstring](addr d[0]), d.len.cint, 0'i32)
                 if sendRet < 0:
