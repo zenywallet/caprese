@@ -1879,13 +1879,17 @@ proc setClientSocketLock(sock: cint, threadId: int): bool {.inline.} =
 proc resetClientSocketLock(threadId: int) {.inline.} =
   clientSocketLocks[threadId] = osInvalidSocket.cint
 
+const TargetHeaderParams = ["Host: ".cstring, "User-Agent: ".cstring, "Accept-Encoding: ".cstring, "Connection: ".cstring]
+
 type
   ReqHeader = object
     url: string
-    host: string
-    userAgent: string
-    acceptEncoding: string
-    connection: string
+    params: array[TargetHeaderParams.len, tuple[cur: int, size: int]]
+
+proc echoHeader(buf: ptr UncheckedArray[byte], size: int, header: ReqHeader) =
+  echo "url: ", header.url
+  for i, param in header.params:
+    echo TargetHeaderParams[i], cast[ptr UncheckedArray[byte]](addr buf[param.cur]).toString(param.size)
 
 proc parseHeader(buf: ptr UncheckedArray[byte], size: int): tuple[err: int, header: ReqHeader] =
   var reqHeader: ReqHeader
@@ -1904,47 +1908,18 @@ proc parseHeader(buf: ptr UncheckedArray[byte], size: int): tuple[err: int, head
             return (err: 0, header: reqHeader)
 
           while true:
-            if equalMem(addr buf[pos], "Host: ".cstring, 6):
-              inc(pos, 6)
-              cur = pos
-              while not equalMem(addr buf[pos], "\c\L".cstring, 2):
-                inc(pos)
-              reqHeader.host = cast[ptr UncheckedArray[byte]](addr buf[cur]).toString(pos - cur)
-              inc(pos, 2)
-              if equalMem(addr buf[pos], "\c\L".cstring, 2):
-                return (err: 0, header: reqHeader)
-
-            elif equalMem(addr buf[pos], "User-Agent: ".cstring, 12):
-              inc(pos, 12)
-              cur = pos
-              while not equalMem(addr buf[pos], "\c\L".cstring, 2):
-                inc(pos)
-              reqHeader.userAgent = cast[ptr UncheckedArray[byte]](addr buf[cur]).toString(pos - cur)
-              inc(pos, 2)
-              if equalMem(addr buf[pos], "\c\L".cstring, 2):
-                return (err: 0, header: reqHeader)
-
-            elif equalMem(addr buf[pos], "Accept-Encoding: ".cstring, 17):
-              inc(pos, 17)
-              cur = pos
-              while not equalMem(addr buf[pos], "\c\L".cstring, 2):
-                inc(pos)
-              reqHeader.acceptEncoding = cast[ptr UncheckedArray[byte]](addr buf[cur]).toString(pos - cur)
-              inc(pos, 2)
-              if equalMem(addr buf[pos], "\c\L".cstring, 2):
-                return (err: 0, header: reqHeader)
-
-            elif equalMem(addr buf[pos], "Connection: ".cstring, 12):
-              inc(pos, 12)
-              cur = pos
-              while not equalMem(addr buf[pos], "\c\L".cstring, 2):
-                inc(pos)
-              reqHeader.connection = cast[ptr UncheckedArray[byte]](addr buf[cur]).toString(pos - cur)
-              inc(pos, 2)
-              if equalMem(addr buf[pos], "\c\L".cstring, 2):
-                return (err: 0, header: reqHeader)
-
-            else:
+            block paramsLoop:
+              for i, targetParam in TargetHeaderParams:
+                if equalMem(addr buf[pos], targetParam, targetParam.len):
+                  inc(pos, targetParam.len)
+                  cur = pos
+                  while not equalMem(addr buf[pos], "\c\L".cstring, 2):
+                    inc(pos)
+                  reqHeader.params[i] = (cur, pos - cur)
+                  inc(pos, 2)
+                  if equalMem(addr buf[pos], "\c\L".cstring, 2):
+                    return (err: 0, header: reqHeader)
+                  break paramsLoop
               while not equalMem(addr buf[pos], "\c\L".cstring, 2):
                 inc(pos)
               inc(pos, 2)
@@ -1998,6 +1973,7 @@ proc serverWorker(arg: ThreadArg) {.thread.} =
             let recvlen = sock.recv(addr recvBuf[0], recvBuf.len.cint, 0.cint)
             if recvlen > 0:
               let retHeader = parseHeader(cast[ptr UncheckedArray[byte]](addr recvBuf[0]), recvlen)
+              echoHeader(cast[ptr UncheckedArray[byte]](addr recvBuf[0]), recvlen, retHeader.header)
               if retHeader.header.url == "/":
                 sock.setSockOptInt(Protocol.IPPROTO_TCP.int, TCP_NODELAY, 1)
                 let sendRet = sock.send(cast[cstring](addr d[0]), d.len.cint, 0'i32)
