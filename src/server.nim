@@ -1879,7 +1879,7 @@ proc setClientSocketLock(sock: cint, threadId: int): bool {.inline.} =
 proc resetClientSocketLock(threadId: int) {.inline.} =
   clientSocketLocks[threadId] = osInvalidSocket.cint
 
-const TargetHeaderParams = ["Host: ".cstring, "User-Agent: ".cstring, "Accept-Encoding: ".cstring, "Connection: ".cstring]
+const TargetHeaderParams = ["Host: ", "User-Agent: ", "Accept-Encoding: ", "Connection: "]
 
 type
   ReqHeader = object
@@ -1910,7 +1910,7 @@ proc parseHeader(buf: ptr UncheckedArray[byte], size: int): tuple[err: int, head
           while true:
             block paramsLoop:
               for i, targetParam in TargetHeaderParams:
-                if equalMem(addr buf[pos], targetParam, targetParam.len):
+                if equalMem(addr buf[pos], targetParam.cstring, targetParam.len):
                   inc(pos, targetParam.len)
                   cur = pos
                   while not equalMem(addr buf[pos], "\c\L".cstring, 2):
