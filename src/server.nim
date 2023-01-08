@@ -1879,7 +1879,39 @@ proc setClientSocketLock(sock: cint, threadId: int): bool {.inline.} =
 proc resetClientSocketLock(threadId: int) {.inline.} =
   clientSocketLocks[threadId] = osInvalidSocket.cint
 
-const TargetHeaderParams = ["Host: ", "User-Agent: ", "Accept-Encoding: ", "Connection: "]
+macro HttpTargetHeader(idEnumName, valListName, body: untyped): untyped =
+  var enumParams = nnkEnumTy.newTree(newEmptyNode())
+  var targetParams = nnkBracket.newTree()
+  for a in body:
+    enumParams.add(a[0])
+    targetParams.add(newLit($a[1][0] & ": "))
+
+  nnkStmtList.newTree(
+    nnkTypeSection.newTree(
+      nnkTypeDef.newTree(
+        idEnumName,
+        newEmptyNode(),
+        enumParams
+      )
+    ),
+    nnkConstSection.newTree(
+      nnkConstDef.newTree(
+        valListName,
+        newEmptyNode(),
+        targetParams
+      )
+    )
+  )
+
+macro HttpTargetHeader(body: untyped): untyped =
+  quote do:
+    HttpTargetHeader(HeaderParams, TargetHeaderParams, `body`)
+
+HttpTargetHeader:
+  HeaderHost: "Host"
+  HeaderUserAgent: "User-Agent"
+  HeaderAcceptEncoding: "Accept-Encoding"
+  HeaderConnection: "Connection"
 
 type
   ReqHeader = object
@@ -1889,7 +1921,7 @@ type
 proc echoHeader(buf: ptr UncheckedArray[byte], size: int, header: ReqHeader) =
   echo "url: ", header.url
   for i, param in header.params:
-    echo TargetHeaderParams[i], cast[ptr UncheckedArray[byte]](addr buf[param.cur]).toString(param.size)
+    echo i.HeaderParams, " ", TargetHeaderParams[i], cast[ptr UncheckedArray[byte]](addr buf[param.cur]).toString(param.size)
 
 proc parseHeader(buf: ptr UncheckedArray[byte], size: int): tuple[err: int, header: ReqHeader] =
   var reqHeader: ReqHeader
