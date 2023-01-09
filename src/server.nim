@@ -1885,7 +1885,8 @@ macro HttpTargetHeader(idEnumName, valListName, body: untyped): untyped =
   var headers = nnkBracket.newTree()
   for a in body:
     enumParams.add(a[0])
-    targetParams.add(newLit($a[1][0] & ": "))
+    var paramLit = newLit($a[1][0] & ": ")
+    targetParams.add(paramLit)
     headers.add(nnkTupleConstr.newTree(
       nnkExprColonExpr.newTree(
         newIdentNode("id"),
@@ -1893,7 +1894,7 @@ macro HttpTargetHeader(idEnumName, valListName, body: untyped): untyped =
       ),
       nnkExprColonExpr.newTree(
         newIdentNode("val"),
-        newLit($a[1][0] & ": ")
+        paramLit
       )
     ))
 
