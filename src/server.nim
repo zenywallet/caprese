@@ -1929,12 +1929,6 @@ macro HttpTargetHeader(body: untyped): untyped =
   quote do:
     HttpTargetHeader(HeaderParams, TargetHeaderParams, TargetHeaders, `body`)
 
-HttpTargetHeader:
-  HeaderHost: "Host"
-  HeaderUserAgent: "User-Agent"
-  HeaderAcceptEncoding: "Accept-Encoding"
-  HeaderConnection: "Connection"
-
 template serverType() {.dirty.} =
   type
     ReqHeader = object
@@ -2064,6 +2058,12 @@ when isMainModule:
 
   setRlimitOpenFiles(RLIMIT_OPEN_FILES)
   #start()
+
+  HttpTargetHeader:
+    HeaderHost: "Host"
+    HeaderUserAgent: "User-Agent"
+    HeaderAcceptEncoding: "Accept-Encoding"
+    HeaderConnection: "Connection"
 
   serverType()
   serverLib()
