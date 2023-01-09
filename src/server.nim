@@ -1879,7 +1879,7 @@ proc setClientSocketLock(sock: cint, threadId: int): bool {.inline.} =
 proc resetClientSocketLock(threadId: int) {.inline.} =
   clientSocketLocks[threadId] = osInvalidSocket.cint
 
-macro HttpTargetHeader(idEnumName, valListName, body: untyped): untyped =
+macro HttpTargetHeader(idEnumName, valListName, targetHeaders, body: untyped): untyped =
   var enumParams = nnkEnumTy.newTree(newEmptyNode())
   var targetParams = nnkBracket.newTree()
   var headers = nnkBracket.newTree()
@@ -1915,7 +1915,7 @@ macro HttpTargetHeader(idEnumName, valListName, body: untyped): untyped =
     ),
     nnkVarSection.newTree(
       nnkIdentDefs.newTree(
-        newIdentNode("TargetHeaders"),
+        targetHeaders,
         newEmptyNode(),
         nnkPrefix.newTree(
           newIdentNode("@^"),
@@ -1927,7 +1927,7 @@ macro HttpTargetHeader(idEnumName, valListName, body: untyped): untyped =
 
 macro HttpTargetHeader(body: untyped): untyped =
   quote do:
-    HttpTargetHeader(HeaderParams, TargetHeaderParams, `body`)
+    HttpTargetHeader(HeaderParams, TargetHeaderParams, TargetHeaders, `body`)
 
 HttpTargetHeader:
   HeaderHost: "Host"
