@@ -1882,9 +1882,20 @@ proc resetClientSocketLock(threadId: int) {.inline.} =
 macro HttpTargetHeader(idEnumName, valListName, body: untyped): untyped =
   var enumParams = nnkEnumTy.newTree(newEmptyNode())
   var targetParams = nnkBracket.newTree()
+  var headers = nnkBracket.newTree()
   for a in body:
     enumParams.add(a[0])
     targetParams.add(newLit($a[1][0] & ": "))
+    headers.add(nnkTupleConstr.newTree(
+      nnkExprColonExpr.newTree(
+        newIdentNode("id"),
+        a[0]
+      ),
+      nnkExprColonExpr.newTree(
+        newIdentNode("val"),
+        newLit($a[1][0] & ": ")
+      )
+    ))
 
   nnkStmtList.newTree(
     nnkTypeSection.newTree(
@@ -1899,6 +1910,16 @@ macro HttpTargetHeader(idEnumName, valListName, body: untyped): untyped =
         valListName,
         newEmptyNode(),
         targetParams
+      )
+    ),
+    nnkVarSection.newTree(
+      nnkIdentDefs.newTree(
+        newIdentNode("TargetHeaders"),
+        newEmptyNode(),
+        nnkPrefix.newTree(
+          newIdentNode("@^"),
+          headers
+        )
       )
     )
   )
@@ -1923,7 +1944,7 @@ proc echoHeader(buf: ptr UncheckedArray[byte], size: int, header: ReqHeader) =
   for i, param in header.params:
     echo i.HeaderParams, " ", TargetHeaderParams[i], cast[ptr UncheckedArray[byte]](addr buf[param.cur]).toString(param.size)
 
-proc parseHeader(buf: ptr UncheckedArray[byte], size: int): tuple[err: int, header: ReqHeader] =
+proc parseHeader(buf: ptr UncheckedArray[byte], size: int, targetHeaders: var Array[ptr tuple[id: HeaderParams, val: string]]): tuple[err: int, header: ReqHeader] =
   var reqHeader: ReqHeader
   if size >= 17 and equalMem(addr buf[size - 4], "\c\L\c\L".cstring, 4):
     if equalMem(addr buf[0], "GET /".cstring, 4):
@@ -1939,17 +1960,24 @@ proc parseHeader(buf: ptr UncheckedArray[byte], size: int): tuple[err: int, head
           if equalMem(addr buf[pos], "\c\L".cstring, 2):
             return (err: 0, header: reqHeader)
 
+          var incompleteIdx = 0
           while true:
             block paramsLoop:
-              for i, targetParam in TargetHeaderParams:
+              for i in incompleteIdx..<targetHeaders.len:
+                let (headerId, targetParam) = targetHeaders[i][]
                 if equalMem(addr buf[pos], targetParam.cstring, targetParam.len):
                   inc(pos, targetParam.len)
                   cur = pos
                   while not equalMem(addr buf[pos], "\c\L".cstring, 2):
                     inc(pos)
-                  reqHeader.params[i] = (cur, pos - cur)
+                  reqHeader.params[headerId.int] = (cur, pos - cur)
                   inc(pos, 2)
                   if equalMem(addr buf[pos], "\c\L".cstring, 2):
+                    return (err: 0, header: reqHeader)
+                  if i != incompleteIdx:
+                    swap(targetHeaders[incompleteIdx], targetHeaders[i])
+                  inc(incompleteIdx)
+                  if incompleteIdx >= targetHeaders.len:
                     return (err: 0, header: reqHeader)
                   break paramsLoop
               while not equalMem(addr buf[pos], "\c\L".cstring, 2):
@@ -1973,6 +2001,9 @@ proc serverWorker(arg: ThreadArg) {.thread.} =
   var recvBuf = newArray[byte](arg.workerParams.bufLen)
   var d = "abcdefghijklmnopqrstuvwxyz".addHeader()
   var notFound = "Not found".addDocType().addHeader(Status404)
+  var targetHeaders: Array[ptr tuple[id: HeaderParams, val: string]]
+  for i in 0..<TargetHeaders.len:
+    targetHeaders.add(addr TargetHeaders[i])
 
   while true:
     var nfd = epoll_wait(epfd, cast[ptr EpollEvent](addr events),
@@ -2004,7 +2035,7 @@ proc serverWorker(arg: ThreadArg) {.thread.} =
           else:
             let recvlen = sock.recv(addr recvBuf[0], recvBuf.len.cint, 0.cint)
             if recvlen > 0:
-              let retHeader = parseHeader(cast[ptr UncheckedArray[byte]](addr recvBuf[0]), recvlen)
+              let retHeader = parseHeader(cast[ptr UncheckedArray[byte]](addr recvBuf[0]), recvlen, targetHeaders)
               echoHeader(cast[ptr UncheckedArray[byte]](addr recvBuf[0]), recvlen, retHeader.header)
               if retHeader.header.url == "/":
                 sock.setSockOptInt(Protocol.IPPROTO_TCP.int, TCP_NODELAY, 1)
