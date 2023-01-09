@@ -1935,12 +1935,13 @@ HttpTargetHeader:
   HeaderAcceptEncoding: "Accept-Encoding"
   HeaderConnection: "Connection"
 
-when true:
+template serverType() {.dirty.} =
   type
     ReqHeader = object
       url: string
       params: array[TargetHeaderParams.len, tuple[cur: int, size: int]]
 
+template serverLib() =
   proc echoHeader(buf: ptr UncheckedArray[byte], size: int, header: ReqHeader) =
     echo "url: ", header.url
     for i, param in header.params:
@@ -2063,6 +2064,9 @@ when isMainModule:
 
   setRlimitOpenFiles(RLIMIT_OPEN_FILES)
   #start()
+
+  serverType()
+  serverLib()
 
   addServer("0.0.0.0", 8009)
   var threads: array[WORKER_THREAD_NUM, Thread[WrapperThreadArg]]
