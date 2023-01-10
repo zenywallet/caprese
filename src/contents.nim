@@ -65,7 +65,7 @@ template convertHtmlDocument*(code: string): string =
   echo ret
   ret
 
-proc keepIndent*(code: string): string = code.indent(4)
+proc keepIndent*(code: string): string = ("\n" & code).indent(4)
 
 template staticHtmlDocument*(body: untyped): string =
   import karax/[karaxdsl, vdom]
