@@ -58,10 +58,17 @@ macro addCfgDotExpr(body: untyped): untyped =
       )
       result.add(a)
 
+macro configCalls(body: untyped): untyped =
+  result = nnkStmtList.newTree()
+  for i in 0..<body.len:
+    if body[i].kind == nnkCall:
+      result.add(body[i])
+
 template config*(body: untyped): untyped =
   macro addCfg() =
     addCfgDotExpr(body)
   addCfg()
+  configCalls(body)
 
 var initFlag {.compileTime.}: bool
 macro init(): untyped =
