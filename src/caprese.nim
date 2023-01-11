@@ -48,13 +48,15 @@ proc defaultConfig*(): Config {.compileTime.} =
 var cfg* {.compileTime.}: Config = defaultConfig()
 
 macro addCfgDotExpr(body: untyped): untyped =
-  var bdy = body
-  for i in 0..<bdy.len:
-    bdy[i][0] = nnkDotExpr.newTree(
-      newIdentNode("cfg"),
-      bdy[i][0]
-    )
-  return bdy
+  result = nnkStmtList.newTree()
+  for i in 0..<body.len:
+    if body[i].kind == nnkAsgn:
+      var a = body[i]
+      a[0] = nnkDotExpr.newTree(
+        newIdentNode("cfg"),
+        a[0]
+      )
+      result.add(a)
 
 template config*(body: untyped): untyped =
   macro addCfg() =
