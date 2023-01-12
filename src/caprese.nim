@@ -64,7 +64,7 @@ macro configCalls(body: untyped): untyped =
     if body[i].kind == nnkCall:
       result.add(body[i])
 
-template config*(body: untyped): untyped =
+template config*(body: untyped) =
   macro addCfg() =
     addCfgDotExpr(body)
   addCfg()
