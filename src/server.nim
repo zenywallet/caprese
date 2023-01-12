@@ -1925,7 +1925,7 @@ macro HttpTargetHeader(idEnumName, valListName, targetHeaders, body: untyped): u
     )
   )
 
-macro HttpTargetHeader(body: untyped): untyped =
+macro HttpTargetHeader*(body: untyped): untyped =
   quote do:
     HttpTargetHeader(HeaderParams, TargetHeaderParams, TargetHeaders, `body`)
 
