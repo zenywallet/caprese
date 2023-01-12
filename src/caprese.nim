@@ -62,9 +62,12 @@ macro configCalls(body: untyped): untyped =
   result = nnkStmtList.newTree()
   for i in 0..<body.len:
     if body[i].kind == nnkCall:
+      if $body[i][0] == "httpHeader":
+        body[i][0] = newIdentNode("HttpTargetHeader")
       result.add(body[i])
 
 template config*(body: untyped) =
+  from arraylib import `@^`
   macro addCfg() =
     addCfgDotExpr(body)
   addCfg()
@@ -202,6 +205,11 @@ when isMainModule:
     ssl = true
     sslLib = OpenSSL
     debugLog = true
+
+    httpHeader:
+      HeaderHost: "Host"
+      HeaderAcceptEncoding: "Accept-Encoding"
+      HeaderConnection: "Connection"
 
   var reqs = newPending[PendingData](limit = 100)
 
