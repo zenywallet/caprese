@@ -90,6 +90,17 @@ template staticScript*(body: untyped): string =
       )
     staticScriptMacro: body
 
+template scriptMinifier*(code, extern: string): string =
+  block:
+    const srcFile = instantiationInfo(-1, true).filename
+    const (srcFileDir, srcFieName, srcFileExt) = splitFile(srcFile)
+
+    macro scriptMinifierMacro(): string =
+      return nnkStmtList.newTree(
+        newLit(minifyJsCode(srcFileDir, code, extern))
+      )
+    scriptMinifierMacro()
+
 proc sanitizeHtml*(s: string): string =
   for c in s:
     case c
