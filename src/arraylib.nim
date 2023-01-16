@@ -27,6 +27,9 @@ when defined(ARRAY_USE_SEQ):
   template `@^`*[T](a: sink seq[T]): Array[T] = @a
 
 else:
+  when not defined(gcArc) and not defined(gcOrc):
+    {.error: "requires --mm:arc or --mm:orc option.".}
+
   type
     Array*[T] = object
       len*, cap*: int
