@@ -1891,6 +1891,10 @@ template serverLib() =
     for i, param in header.params:
       echo i.HeaderParams, " ", TargetHeaderParams[i], cast[ptr UncheckedArray[byte]](addr buf[param.cur]).toString(param.size)
 
+  proc getHeaderValue(buf: ptr UncheckedArray[byte], reqHeader: ReqHeader, paramId: HeaderParams): string =
+    let param = reqHeader.params[paramId.int]
+    result = cast[ptr UncheckedArray[byte]](addr buf[param.cur]).toString(param.size)
+
   proc parseHeader(buf: ptr UncheckedArray[byte], size: int, targetHeaders: var Array[ptr tuple[id: HeaderParams, val: string]]): tuple[err: int, header: ReqHeader] =
     var reqHeader: ReqHeader
     if size >= 17 and equalMem(addr buf[size - 4], "\c\L\c\L".cstring, 4):
