@@ -1961,46 +1961,51 @@ template serverLib() =
                           EPOLL_EVENTS_SIZE.cint, 3000.cint)
       if not active: break
       for i in 0..<nfd:
-        let evData = events[i].data.u64
-        let flag = evData shr 56
-        let indexFlag = (flag and IndexFlag) > 0
-        if not indexFlag:
-          let sock = (evData and 0xffffffff'u64).SocketHandle
-          let threadId = arg.workerParams.threadId
-          if setClientSocketLock(sock.cint, threadId):
-            let listenFlag = (flag and 0x01) > 0
-            if listenFlag:
-              let clientSock = sock.accept4(cast[ptr SockAddr](addr sockAddress), addr addrLen, O_NONBLOCK)
-              resetClientSocketLock(threadId)
-              let clientFd = clientSock.int
-              if clientFd > 0:
-                let appId = (0x00ffffff'u64 and (evData shr 32)).int
-                var ev: EpollEvent
-                ev.events = EPOLLIN or EPOLLRDHUP
-                ev.data.u64 = (appId.uint64 shl 32) or clientFd.uint64
-                let retCtl = epoll_ctl(epfd, EPOLL_CTL_ADD, clientFd.cint, addr ev)
-                if retCtl < 0:
-                  errorQuit "error: epoll_ctl ret=", retCtl, " errno=", errno
-              elif errno != EAGAIN and errno != EWOULDBLOCK and errno != EINTR:
-                errorQuit "error: accept=", clientFd, " errno=", errno
-            else:
-              let recvlen = sock.recv(addr recvBuf[0], recvBuf.len.cint, 0.cint)
-              if recvlen > 0:
-                let retHeader = parseHeader(cast[ptr UncheckedArray[byte]](addr recvBuf[0]), recvlen, targetHeaders)
-                echoHeader(cast[ptr UncheckedArray[byte]](addr recvBuf[0]), recvlen, retHeader.header)
-                if retHeader.header.url == "/":
-                  sock.setSockOptInt(Protocol.IPPROTO_TCP.int, TCP_NODELAY, 1)
-                  let sendRet = sock.send(cast[cstring](addr d[0]), d.len.cint, 0'i32)
-                  if sendRet < 0:
-                    echo "error send ", errno
-                else:
-                  sock.setSockOptInt(Protocol.IPPROTO_TCP.int, TCP_NODELAY, 1)
-                  discard sock.send(cast[cstring](addr notFound[0]), notFound.len.cint, 0'i32)
-              elif recvlen == 0:
-                sock.close()
-              elif recvlen < 0:
-                echo "error recv ", errno
-              resetClientSocketLock(threadId)
+        try:
+          let evData = events[i].data.u64
+          let flag = evData shr 56
+          let indexFlag = (flag and IndexFlag) > 0
+          if not indexFlag:
+            let sock = (evData and 0xffffffff'u64).SocketHandle
+            let threadId = arg.workerParams.threadId
+            if setClientSocketLock(sock.cint, threadId):
+              let listenFlag = (flag and 0x01) > 0
+              if listenFlag:
+                let clientSock = sock.accept4(cast[ptr SockAddr](addr sockAddress), addr addrLen, O_NONBLOCK)
+                resetClientSocketLock(threadId)
+                let clientFd = clientSock.int
+                if clientFd > 0:
+                  let appId = (0x00ffffff'u64 and (evData shr 32)).int
+                  var ev: EpollEvent
+                  ev.events = EPOLLIN or EPOLLRDHUP
+                  ev.data.u64 = (appId.uint64 shl 32) or clientFd.uint64
+                  let retCtl = epoll_ctl(epfd, EPOLL_CTL_ADD, clientFd.cint, addr ev)
+                  if retCtl < 0:
+                    errorQuit "error: epoll_ctl ret=", retCtl, " errno=", errno
+                elif errno != EAGAIN and errno != EWOULDBLOCK and errno != EINTR:
+                  errorQuit "error: accept=", clientFd, " errno=", errno
+              else:
+                let recvlen = sock.recv(addr recvBuf[0], recvBuf.len.cint, 0.cint)
+                if recvlen > 0:
+                  let retHeader = parseHeader(cast[ptr UncheckedArray[byte]](addr recvBuf[0]), recvlen, targetHeaders)
+                  echoHeader(cast[ptr UncheckedArray[byte]](addr recvBuf[0]), recvlen, retHeader.header)
+                  if retHeader.header.url == "/":
+                    sock.setSockOptInt(Protocol.IPPROTO_TCP.int, TCP_NODELAY, 1)
+                    let sendRet = sock.send(cast[cstring](addr d[0]), d.len.cint, 0'i32)
+                    if sendRet < 0:
+                      echo "error send ", errno
+                  else:
+                    sock.setSockOptInt(Protocol.IPPROTO_TCP.int, TCP_NODELAY, 1)
+                    discard sock.send(cast[cstring](addr notFound[0]), notFound.len.cint, 0'i32)
+                elif recvlen == 0:
+                  sock.close()
+                elif recvlen < 0:
+                  echo "error recv ", errno
+                resetClientSocketLock(threadId)
+
+        except:
+          let e = getCurrentException()
+          error e.name, ": ", e.msg
 
 
 when isMainModule:
