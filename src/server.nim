@@ -1956,6 +1956,23 @@ template serverLib() =
     for i in 0..<TargetHeaders.len:
       targetHeaders.add(addr TargetHeaders[i])
 
+    proc reserveRecvBuf(client: ptr Client, size: int) =
+      if client.recvBuf.isNil:
+        client.recvBuf = cast[ptr UncheckedArray[byte]](allocShared0(sizeof(byte) * (size + arg.workerParams.bufLen)))
+        client.recvBufSize = size + arg.workerParams.bufLen
+      var left = client.recvBufSize - client.recvCurSize
+      if size > left:
+        var nextSize = client.recvCurSize + size + arg.workerParams.bufLen
+        if nextSize > RECVBUF_EXPAND_BREAK_SIZE:
+          raise newException(ServerError, "client request too large")
+        client.recvBuf = reallocClientBuf(client.recvBuf, nextSize)
+        client.recvBufSize = nextSize
+
+    proc addRecvBuf(client: ptr Client, data: ptr UncheckedArray[byte], size: int) =
+      client.reserveRecvBuf(size)
+      copyMem(addr client.recvBuf[client.recvCurSize], addr data[0], size)
+      client.recvCurSize = client.recvCurSize + size
+
     while true:
       var nfd = epoll_wait(epfd, cast[ptr EpollEvent](addr events),
                           EPOLL_EVENTS_SIZE.cint, 3000.cint)
