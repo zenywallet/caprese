@@ -2009,16 +2009,31 @@ template serverLib() =
               else:
                 let recvlen = sock.recv(addr recvBuf[0], recvBuf.len.cint, 0.cint)
                 if recvlen > 0:
-                  let retHeader = parseHeader(cast[ptr UncheckedArray[byte]](addr recvBuf[0]), recvlen, targetHeaders)
-                  echoHeader(cast[ptr UncheckedArray[byte]](addr recvBuf[0]), recvlen, retHeader.header)
-                  if retHeader.header.url == "/":
-                    sock.setSockOptInt(Protocol.IPPROTO_TCP.int, TCP_NODELAY, 1)
-                    let sendRet = sock.send(cast[cstring](addr d[0]), d.len.cint, 0'i32)
-                    if sendRet < 0:
-                      echo "error send ", errno
-                  else:
-                    sock.setSockOptInt(Protocol.IPPROTO_TCP.int, TCP_NODELAY, 1)
-                    discard sock.send(cast[cstring](addr notFound[0]), notFound.len.cint, 0'i32)
+                  var nextPos = 0
+                  var parseSize = recvlen
+                  while true:
+                    let retHeader = parseHeader(cast[ptr UncheckedArray[byte]](addr recvBuf[nextPos]), parseSize, targetHeaders)
+                    echoHeader(cast[ptr UncheckedArray[byte]](addr recvBuf[nextPos]), parseSize, retHeader.header)
+                    if retHeader.err == 0:
+                      if retHeader.header.url == "/":
+                        sock.setSockOptInt(Protocol.IPPROTO_TCP.int, TCP_NODELAY, 1)
+                        let sendRet = sock.send(cast[cstring](addr d[0]), d.len.cint, 0'i32)
+                        if sendRet < 0:
+                          echo "error send ", errno
+                      else:
+                        sock.setSockOptInt(Protocol.IPPROTO_TCP.int, TCP_NODELAY, 1)
+                        discard sock.send(cast[cstring](addr notFound[0]), notFound.len.cint, 0'i32)
+                      if retHeader.next < recvlen:
+                        nextPos = retHeader.next
+                        parseSize = recvlen - nextPos
+                      else:
+                        break
+                    elif retHeader.err == 1:
+                      discard
+                    else:
+                      echo "retHeader err=", retHeader.err
+                      sock.close()
+                      break
                 elif recvlen == 0:
                   sock.close()
                 elif recvlen < 0:
