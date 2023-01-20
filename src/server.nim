@@ -1895,7 +1895,9 @@ template serverLib() =
     let param = reqHeader.params[paramId.int]
     result = cast[ptr UncheckedArray[byte]](addr buf[param.cur]).toString(param.size)
 
-  proc parseHeader(buf: ptr UncheckedArray[byte], size: int, targetHeaders: var Array[ptr tuple[id: HeaderParams, val: string]]): tuple[err: int, header: ReqHeader] =
+  proc parseHeader(buf: ptr UncheckedArray[byte], size: int,
+                  targetHeaders: var Array[ptr tuple[id: HeaderParams, val: string]]
+                  ): tuple[err: int, header: ReqHeader, next: int] =
     var reqHeader: ReqHeader
     if size >= 17 and equalMem(addr buf[size - 4], "\c\L\c\L".cstring, 4):
       if equalMem(addr buf[0], "GET /".cstring, 4):
@@ -1909,7 +1911,7 @@ template serverLib() =
               inc(pos)
             inc(pos, 2)
             if equalMem(addr buf[pos], "\c\L".cstring, 2):
-              return (err: 0, header: reqHeader)
+              return (err: 0, header: reqHeader, next: pos + 2)
 
             var incompleteIdx = 0
             while true:
@@ -1924,26 +1926,29 @@ template serverLib() =
                     reqHeader.params[headerId.int] = (cur, pos - cur)
                     inc(pos, 2)
                     if equalMem(addr buf[pos], "\c\L".cstring, 2):
-                      return (err: 0, header: reqHeader)
+                      return (err: 0, header: reqHeader, next: pos + 2)
                     if i != incompleteIdx:
                       swap(targetHeaders[incompleteIdx], targetHeaders[i])
                     inc(incompleteIdx)
                     if incompleteIdx >= targetHeaders.len:
-                      return (err: 0, header: reqHeader)
+                      inc(pos)
+                      while(not equalMem(addr buf[pos], "\c\L\c\L".cstring, 4)):
+                        inc(pos)
+                      return (err: 0, header: reqHeader, next: pos + 4)
                     break paramsLoop
                 while not equalMem(addr buf[pos], "\c\L".cstring, 2):
                   inc(pos)
                 inc(pos, 2)
                 if equalMem(addr buf[pos], "\c\L".cstring, 2):
-                  return (err: 0, header: reqHeader)
+                  return (err: 0, header: reqHeader, next: pos + 2)
 
           elif equalMem(addr buf[pos], "\c\L".cstring, 2):
-            return (err: 3, header: reqHeader)
+            return (err: 3, header: reqHeader, next: -1)
           inc(pos)
       else:
-        return (err: 2, header: reqHeader)
+        return (err: 2, header: reqHeader, next: -1)
     else:
-      return (err: 1, header: reqHeader)
+      return (err: 1, header: reqHeader, next: 0)
 
   proc serverWorker(arg: ThreadArg) {.thread.} =
     var events: array[EPOLL_EVENTS_SIZE, EpollEvent]
