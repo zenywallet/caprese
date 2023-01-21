@@ -2029,7 +2029,19 @@ template serverLib() =
                       else:
                         break
                     elif retHeader.err == 1:
-                      discard
+                      let idx = setClient(sock.int)
+                      if idx < 0:
+                        echo "full"
+                        sock.close()
+                      else:
+                        let client = addr clients[idx]
+                        client.addRecvBuf(cast[ptr UncheckedArray[byte]](addr recvBuf[0]), recvlen)
+                        let appId = (0x00ffffff'u64 and (evData shr 32)).int
+                        var ev: EpollEvent
+                        ev.events = EPOLLIN or EPOLLRDHUP
+                        ev.data.u64 = (IndexFlag shl 56) or (appId.uint64 shl 32) or idx.uint64
+                        var ret = epoll_ctl(epfd, EPOLL_CTL_MOD, sock.cint, addr ev)
+                      break
                     else:
                       echo "retHeader err=", retHeader.err
                       sock.close()
@@ -2039,6 +2051,46 @@ template serverLib() =
                 elif recvlen < 0:
                   echo "error recv ", errno
                 resetClientSocketLock(threadId)
+          else:
+            let idx = (evData and 0xffffffff'u64).int
+            let client = addr clients[idx]
+            let sock = client.fd.SocketHandle
+            let threadId = arg.workerParams.threadId
+            if setClientSocketLock(sock.cint, threadId):
+              client.reserveRecvBuf(arg.workerParams.bufLen)
+              let recvlen = sock.recv(addr client.recvBuf[client.recvCurSize], arg.workerParams.bufLen.cint, 0.cint)
+              if recvlen > 0:
+                client.recvCurSize = client.recvCurSize + recvlen
+                var nextPos = 0
+                var parseSize = client.recvCurSize
+                while true:
+                  let retHeader = parseHeader(cast[ptr UncheckedArray[byte]](addr client.recvBuf[nextPos]), parseSize, targetHeaders)
+                  if retHeader.err == 0:
+                    if retHeader.header.url == "/":
+                      sock.setSockOptInt(Protocol.IPPROTO_TCP.int, TCP_NODELAY, 1)
+                      let sendRet = sock.send(cast[cstring](addr d[0]), d.len.cint, 0'i32)
+                      if sendRet < 0:
+                        echo "error send ", errno
+                    else:
+                      sock.setSockOptInt(Protocol.IPPROTO_TCP.int, TCP_NODELAY, 1)
+                      discard sock.send(cast[cstring](addr notFound[0]), notFound.len.cint, 0'i32)
+                    if retHeader.next < client.recvCurSize:
+                      nextPos = retHeader.next
+                      parseSize = client.recvCurSize - nextPos
+                    else:
+                      client.recvCurSize = 0
+                      break
+                  elif retHeader.err == 1:
+                    break
+                  else:
+                    echo "retHeader err=", retHeader.err
+                    sock.close()
+                    break
+              elif recvlen == 0:
+                sock.close()
+              elif recvlen < 0:
+                echo "error recv ", errno
+              resetClientSocketLock(threadId)
 
         except:
           let e = getCurrentException()
@@ -2063,6 +2115,7 @@ when isMainModule:
 
   serverType()
   serverLib()
+  initClient()
 
   addServer("0.0.0.0", 8009)
   var threads: array[WORKER_THREAD_NUM, Thread[WrapperThreadArg]]
