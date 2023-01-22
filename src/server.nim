@@ -2015,13 +2015,12 @@ template serverLib() =
                     let retHeader = parseHeader(cast[ptr UncheckedArray[byte]](addr recvBuf[nextPos]), parseSize, targetHeaders)
                     echoHeader(cast[ptr UncheckedArray[byte]](addr recvBuf[nextPos]), parseSize, retHeader.header)
                     if retHeader.err == 0:
+                      sock.setSockOptInt(Protocol.IPPROTO_TCP.int, TCP_NODELAY, 1)
                       if retHeader.header.url == "/":
-                        sock.setSockOptInt(Protocol.IPPROTO_TCP.int, TCP_NODELAY, 1)
                         let sendRet = sock.send(cast[cstring](addr d[0]), d.len.cint, 0'i32)
                         if sendRet < 0:
                           echo "error send ", errno
                       else:
-                        sock.setSockOptInt(Protocol.IPPROTO_TCP.int, TCP_NODELAY, 1)
                         discard sock.send(cast[cstring](addr notFound[0]), notFound.len.cint, 0'i32)
                       if retHeader.next < recvlen:
                         nextPos = retHeader.next
@@ -2029,6 +2028,7 @@ template serverLib() =
                       else:
                         break
                     elif retHeader.err == 1:
+                      sock.setSockOptInt(Protocol.IPPROTO_TCP.int, TCP_NODELAY, 1)
                       let idx = setClient(sock.int)
                       if idx < 0:
                         echo "full"
@@ -2067,12 +2067,10 @@ template serverLib() =
                   let retHeader = parseHeader(cast[ptr UncheckedArray[byte]](addr client.recvBuf[nextPos]), parseSize, targetHeaders)
                   if retHeader.err == 0:
                     if retHeader.header.url == "/":
-                      sock.setSockOptInt(Protocol.IPPROTO_TCP.int, TCP_NODELAY, 1)
                       let sendRet = sock.send(cast[cstring](addr d[0]), d.len.cint, 0'i32)
                       if sendRet < 0:
                         echo "error send ", errno
                     else:
-                      sock.setSockOptInt(Protocol.IPPROTO_TCP.int, TCP_NODELAY, 1)
                       discard sock.send(cast[cstring](addr notFound[0]), notFound.len.cint, 0'i32)
                     if retHeader.next < client.recvCurSize:
                       nextPos = retHeader.next
