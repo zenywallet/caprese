@@ -2053,7 +2053,7 @@ template serverLib() =
                       break
                 elif recvlen == 0:
                   sock.close()
-                elif recvlen < 0:
+                else:
                   echo "error recv ", errno
                 resetClientSocketLock(threadId)
           else:
@@ -2091,7 +2091,7 @@ template serverLib() =
                     break
               elif recvlen == 0:
                 sock.close()
-              elif recvlen < 0:
+              else:
                 echo "error recv ", errno
               resetClientSocketLock(threadId)
 
