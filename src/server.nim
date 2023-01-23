@@ -1884,6 +1884,7 @@ template serverType() {.dirty.} =
     ReqHeader = object
       url: string
       params: array[TargetHeaderParams.len, tuple[cur: int, size: int]]
+      minorVer: int
 
 template serverLib() =
   proc echoHeader(buf: ptr UncheckedArray[byte], size: int, header: ReqHeader) =
@@ -1904,12 +1905,17 @@ template serverLib() =
         var cur = 4
         var pos = 5
         while true:
-          if buf[pos].char == ' ':
+          if equalMem(addr buf[pos], " HTTP/1.".cstring, 8):
             reqHeader.url = cast[ptr UncheckedArray[byte]](addr buf[cur]).toString(pos - cur)
+            inc(pos, 8)
+            let minorVer = int(buf[pos]) - int('0')
+            if minorVer < 0 or minorVer > 9:
+              return (err: 4, header: reqHeader, next: -1)
             inc(pos)
-            while not equalMem(addr buf[pos], "\c\L".cstring, 2):
-              inc(pos)
+            if not equalMem(addr buf[pos], "\c\L".cstring, 2):
+              return (err: 5, header: reqHeader, next: -1)
             inc(pos, 2)
+            reqHeader.minorVer = minorVer
             if equalMem(addr buf[pos], "\c\L".cstring, 2):
               return (err: 0, header: reqHeader, next: pos + 2)
 
