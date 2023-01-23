@@ -1900,7 +1900,7 @@ template serverLib() =
                   ): tuple[err: int, header: ReqHeader, next: int] =
     var reqHeader: ReqHeader
     if size >= 17 and equalMem(addr buf[size - 4], "\c\L\c\L".cstring, 4):
-      if equalMem(addr buf[0], "GET /".cstring, 4):
+      if equalMem(addr buf[0], "GET /".cstring, 5):
         var cur = 4
         var pos = 5
         while true:
