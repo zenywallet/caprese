@@ -2019,7 +2019,6 @@ template serverLib() =
                   var parseSize = recvlen
                   while true:
                     let retHeader = parseHeader(cast[ptr UncheckedArray[byte]](addr recvBuf[nextPos]), parseSize, targetHeaders)
-                    echoHeader(cast[ptr UncheckedArray[byte]](addr recvBuf[nextPos]), parseSize, retHeader.header)
                     if retHeader.err == 0:
                       sock.setSockOptInt(Protocol.IPPROTO_TCP.int, TCP_NODELAY, 1)
                       if retHeader.header.url == "/":
