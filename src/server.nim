@@ -2054,7 +2054,7 @@ template serverLib() =
                 elif recvlen == 0:
                   sock.close()
                 else:
-                  echo "error recv ", errno
+                  discard
                 resetClientSocketLock(threadId)
           else:
             let idx = (evData and 0xffffffff'u64).int
@@ -2092,7 +2092,7 @@ template serverLib() =
               elif recvlen == 0:
                 sock.close()
               else:
-                echo "error recv ", errno
+                discard
               resetClientSocketLock(threadId)
 
         except:
