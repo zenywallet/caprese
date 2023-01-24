@@ -1991,6 +1991,14 @@ template serverLib() =
       copyMem(addr client.recvBuf[client.recvCurSize], addr data[0], size)
       client.recvCurSize = client.recvCurSize + size
 
+    template mainServerHandler(sock: SocketHandle, header: ReqHeader) =
+      if header.url == "/":
+        let sendRet = sock.send(cast[cstring](addr d[0]), d.len.cint, 0'i32)
+        if sendRet < 0:
+          echo "error send ", errno
+      else:
+        discard sock.send(cast[cstring](addr notFound[0]), notFound.len.cint, 0'i32)
+
     while true:
       var nfd = epoll_wait(epfd, cast[ptr EpollEvent](addr events),
                           EPOLL_EVENTS_SIZE.cint, 3000.cint)
@@ -2028,12 +2036,7 @@ template serverLib() =
                     let retHeader = parseHeader(cast[ptr UncheckedArray[byte]](addr recvBuf[nextPos]), parseSize, targetHeaders)
                     if retHeader.err == 0:
                       sock.setSockOptInt(Protocol.IPPROTO_TCP.int, TCP_NODELAY, 1)
-                      if retHeader.header.url == "/":
-                        let sendRet = sock.send(cast[cstring](addr d[0]), d.len.cint, 0'i32)
-                        if sendRet < 0:
-                          echo "error send ", errno
-                      else:
-                        discard sock.send(cast[cstring](addr notFound[0]), notFound.len.cint, 0'i32)
+                      mainServerHandler(sock, retHeader.header)
                       if retHeader.next < recvlen:
                         nextPos = retHeader.next
                         parseSize = recvlen - nextPos
@@ -2078,12 +2081,7 @@ template serverLib() =
                 while true:
                   let retHeader = parseHeader(cast[ptr UncheckedArray[byte]](addr client.recvBuf[nextPos]), parseSize, targetHeaders)
                   if retHeader.err == 0:
-                    if retHeader.header.url == "/":
-                      let sendRet = sock.send(cast[cstring](addr d[0]), d.len.cint, 0'i32)
-                      if sendRet < 0:
-                        echo "error send ", errno
-                    else:
-                      discard sock.send(cast[cstring](addr notFound[0]), notFound.len.cint, 0'i32)
+                    mainServerHandler(sock, retHeader.header)
                     if retHeader.next < client.recvCurSize:
                       nextPos = retHeader.next
                       parseSize = client.recvCurSize - nextPos
