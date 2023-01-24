@@ -1908,14 +1908,21 @@ template serverLib() =
           if equalMem(addr buf[pos], " HTTP/1.".cstring, 8):
             reqHeader.url = cast[ptr UncheckedArray[byte]](addr buf[cur]).toString(pos - cur)
             inc(pos, 8)
-            let minorVer = int(buf[pos]) - int('0')
-            if minorVer < 0 or minorVer > 9:
-              return (err: 4, header: reqHeader, next: -1)
-            inc(pos)
-            if not equalMem(addr buf[pos], "\c\L".cstring, 2):
-              return (err: 5, header: reqHeader, next: -1)
-            inc(pos, 2)
-            reqHeader.minorVer = minorVer
+            if equalMem(addr buf[pos], "1\c\L".cstring, 3):
+              reqHeader.minorVer = 1
+              inc(pos, 3)
+            elif equalMem(addr buf[pos], "0\c\L".cstring, 3):
+              reqHeader.minorVer = 0
+              inc(pos, 3)
+            else:
+              let minorVer = int(buf[pos]) - int('0')
+              if minorVer < 0 or minorVer > 9:
+                return (err: 4, header: reqHeader, next: -1)
+              inc(pos)
+              if not equalMem(addr buf[pos], "\c\L".cstring, 2):
+                return (err: 5, header: reqHeader, next: -1)
+              inc(pos, 2)
+              reqHeader.minorVer = minorVer
             if equalMem(addr buf[pos], "\c\L".cstring, 2):
               return (err: 0, header: reqHeader, next: pos + 2)
 
