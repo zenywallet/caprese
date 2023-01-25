@@ -11,6 +11,7 @@ import times
 import arraylib
 
 const HTTP_VERSION* = 1.1
+const ServerName* = "Caprese"
 
 var timeStrArray: Array[byte]
 var timeStampThread*: Thread[void]
@@ -41,6 +42,7 @@ proc addHeader*(body: string, code: StatusCode = Status200, mimetype: string = "
   result = "HTTP/" & $HTTP_VERSION & " " & $code & "\c\L" &
           "Content-Type: " & mimetype & "\c\L" &
           "Date: " & getCurTimeStr() & "\c\L" &
+          "Server: " & ServerName & "\c\L" &
           "Content-Length: " & $body.len & "\c\L\c\L" &
           body
 
@@ -49,6 +51,7 @@ proc addHeader*(body: string, etag: string, code: StatusCode = Status200, mimety
           "Content-Type: " & mimetype & "\c\L" &
           "ETag: " & etag & "\c\L" &
           "Date: " & getCurTimeStr() & "\c\L" &
+          "Server: " & ServerName & "\c\L" &
           "Content-Length: " & $body.len & "\c\L\c\L" &
           body
 
@@ -58,6 +61,7 @@ proc addHeaderDeflate*(body: string, etag: string, code: StatusCode = Status200,
           "ETag: " & etag & "\c\L" &
           "Content-Encoding: deflate\c\L" &
           "Date: " & getCurTimeStr() & "\c\L" &
+          "Server: " & ServerName & "\c\L" &
           "Content-Length: " & $body.len & "\c\L\c\L" &
           body
 
@@ -67,6 +71,7 @@ proc addHeaderBrotli*(body: string, etag: string, code: StatusCode = Status200, 
           "ETag: " & etag & "\c\L" &
           "Content-Encoding: br\c\L" &
           "Date: " & getCurTimeStr() & "\c\L" &
+          "Server: " & ServerName & "\c\L" &
           "Content-Length: " & $body.len & "\c\L\c\L" &
           body
 
@@ -74,6 +79,7 @@ proc redirect301*(location: string): string =
   result = "HTTP/" & $HTTP_VERSION & " " & $Status301 & "\c\L" &
           "Content-Type: text/html\c\L" &
           "Date: " & getCurTimeStr() & "\c\L" &
+          "Server: " & ServerName & "\c\L" &
           "Content-Length: 0\c\L" &
           "Location: " & location & "\c\L\c\L"
 
