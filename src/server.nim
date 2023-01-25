@@ -1795,6 +1795,7 @@ proc main(arg: ThreadArg) {.thread.} =
 
     initClient()
 
+    startTimeStampUpdater()
     for i in 0..<WORKER_THREAD_NUM:
       createThread(workerThreads[i], threadWrapper,
                   (worker, ThreadArg(type: ThreadArgType.WorkerParams, workerParams: (i, tcp_rmem))))
@@ -1821,6 +1822,8 @@ proc main(arg: ThreadArg) {.thread.} =
 
     when declared(freeStream):
       freeStream()
+
+    joinThread(contents.timeStampThread)
 
     if restartFlag:
       active = true
@@ -2109,6 +2112,7 @@ when isMainModule:
   onSignal(SIGINT, SIGTERM):
     debug "bye from signal ", sig
     quitServer()
+    stopTimeStampUpdater()
 
   signal(SIGPIPE, SIG_IGN)
 
@@ -2124,6 +2128,7 @@ when isMainModule:
   serverType()
   serverLib()
   initClient()
+  startTimeStampUpdater()
 
   addServer("0.0.0.0", 8009)
   var threads: array[WORKER_THREAD_NUM, Thread[WrapperThreadArg]]
@@ -2132,3 +2137,4 @@ when isMainModule:
       ThreadArg(type: ThreadArgType.WorkerParams, workerParams: (i, workerRecvBufSize))))
 
   joinThreads(threads)
+  joinThread(contents.timeStampThread)

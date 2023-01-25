@@ -7,12 +7,40 @@ import strutils
 import exec
 import mimetypes
 export macros except error
+import times
+import arraylib
 
 const HTTP_VERSION* = 1.1
+
+var timeStrArray: Array[byte]
+var timeStampThread*: Thread[void]
+var active = false
+
+proc updateTimeStamp() {.inline.} =
+  timeStrArray = cast[Array[byte]](now().utc().format("ddd, dd MMM yyyy HH:mm:ss 'GMT'").toArray)
+
+updateTimeStamp()
+
+proc getCurTimeStr*(): string {.inline.} = timeStrArray.toString()
+
+proc timeStampUpdater() {.thread.} =
+  while active:
+    updateTimeStamp()
+    sleep(1000)
+
+proc startTimeStampUpdater*() =
+  active = true
+  createThread(timeStampThread, timeStampUpdater)
+
+proc stopTimeStampUpdater*(waitStop: bool = false) =
+  active = false
+  if waitStop:
+    joinThread(timeStampThread)
 
 proc addHeader*(body: string, code: StatusCode = Status200, mimetype: string = "text/html"): string =
   result = "HTTP/" & $HTTP_VERSION & " " & $code & "\c\L" &
           "Content-Type: " & mimetype & "\c\L" &
+          "Date: " & getCurTimeStr() & "\c\L" &
           "Content-Length: " & $body.len & "\c\L\c\L" &
           body
 
@@ -20,6 +48,7 @@ proc addHeader*(body: string, etag: string, code: StatusCode = Status200, mimety
   result = "HTTP/" & $HTTP_VERSION & " " & $code & "\c\L" &
           "Content-Type: " & mimetype & "\c\L" &
           "ETag: " & etag & "\c\L" &
+          "Date: " & getCurTimeStr() & "\c\L" &
           "Content-Length: " & $body.len & "\c\L\c\L" &
           body
 
@@ -28,6 +57,7 @@ proc addHeaderDeflate*(body: string, etag: string, code: StatusCode = Status200,
           "Content-Type: " & mimetype & "\c\L" &
           "ETag: " & etag & "\c\L" &
           "Content-Encoding: deflate\c\L" &
+          "Date: " & getCurTimeStr() & "\c\L" &
           "Content-Length: " & $body.len & "\c\L\c\L" &
           body
 
@@ -36,12 +66,14 @@ proc addHeaderBrotli*(body: string, etag: string, code: StatusCode = Status200, 
           "Content-Type: " & mimetype & "\c\L" &
           "ETag: " & etag & "\c\L" &
           "Content-Encoding: br\c\L" &
+          "Date: " & getCurTimeStr() & "\c\L" &
           "Content-Length: " & $body.len & "\c\L\c\L" &
           body
 
 proc redirect301*(location: string): string =
   result = "HTTP/" & $HTTP_VERSION & " " & $Status301 & "\c\L" &
           "Content-Type: text/html\c\L" &
+          "Date: " & getCurTimeStr() & "\c\L" &
           "Content-Length: 0\c\L" &
           "Location: " & location & "\c\L\c\L"
 
