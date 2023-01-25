@@ -1971,8 +1971,8 @@ template serverLib() =
     var sockAddress: Sockaddr_in
     var addrLen = sizeof(sockAddress).SockLen
     var recvBuf = newArray[byte](arg.workerParams.bufLen)
-    var d = "abcdefghijklmnopqrstuvwxyz".addHeader()
-    var notFound = "Not found".addDocType().addHeader(Status404)
+    var d0 = "abcdefghijklmnopqrstuvwxyz"
+    var notFound0 = "Not found".addDocType()
     var targetHeaders: Array[ptr tuple[id: HeaderParams, val: string]]
     for i in 0..<TargetHeaders.len:
       targetHeaders.add(addr TargetHeaders[i])
@@ -1995,11 +1995,13 @@ template serverLib() =
       client.recvCurSize = client.recvCurSize + size
 
     template mainServerHandler(sock: SocketHandle, header: ReqHeader) =
+      var d = d0.addHeader()
       if header.url == "/":
         let sendRet = sock.send(cast[cstring](addr d[0]), d.len.cint, 0'i32)
         if sendRet < 0:
           echo "error send ", errno
       else:
+        var notFound = notFound0.addHeader(Status404)
         discard sock.send(cast[cstring](addr notFound[0]), notFound.len.cint, 0'i32)
 
     while true:
