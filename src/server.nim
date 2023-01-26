@@ -1869,6 +1869,8 @@ macro addServer*(bindAddress: string, port: uint16, body: untyped = newEmptyNode
     if retCtl != 0:
       errorQuit "error: quit epoll_ctl ret=", retCtl, " ", getErrnoStr()
 
+macro mainServerHandler(): untyped = serverWorkerMainStmt
+
 var clientSocketLocks: array[WORKER_THREAD_NUM, cint]
 for i in 0..<WORKER_THREAD_NUM:
   clientSocketLocks[i] = osInvalidSocket.cint
@@ -1976,8 +1978,10 @@ template serverLib() =
     var sockAddress: Sockaddr_in
     var addrLen = sizeof(sockAddress).SockLen
     var recvBuf = newArray[byte](arg.workerParams.bufLen)
-    var d0 = "abcdefghijklmnopqrstuvwxyz"
-    var notFound0 = "Not found".addDocType()
+    var sock {.inject.}: SocketHandle = osInvalidSocket
+    var header {.inject.}: ReqHeader
+    var d0 {.inject.} = "abcdefghijklmnopqrstuvwxyz"
+    var notFound0 {.inject.} = "Not found".addDocType()
     var targetHeaders: Array[ptr tuple[id: HeaderParams, val: string]]
     for i in 0..<TargetHeaders.len:
       targetHeaders.add(addr TargetHeaders[i])
@@ -1999,16 +2003,6 @@ template serverLib() =
       copyMem(addr client.recvBuf[client.recvCurSize], addr data[0], size)
       client.recvCurSize = client.recvCurSize + size
 
-    template mainServerHandler(sock: SocketHandle, header: ReqHeader) =
-      var d = d0.addHeader(Status200, "text/plain")
-      if header.url == "/":
-        let sendRet = sock.send(cast[cstring](addr d[0]), d.len.cint, 0'i32)
-        if sendRet < 0:
-          echo "error send ", errno
-      else:
-        var notFound = notFound0.addHeader(Status404)
-        discard sock.send(cast[cstring](addr notFound[0]), notFound.len.cint, 0'i32)
-
     while true:
       var nfd = epoll_wait(epfd, cast[ptr EpollEvent](addr events),
                           EPOLL_EVENTS_SIZE.cint, 3000.cint)
@@ -2019,7 +2013,7 @@ template serverLib() =
           let flag = evData shr 56
           let indexFlag = (flag and IndexFlag) > 0
           if not indexFlag:
-            let sock = (evData and 0xffffffff'u64).SocketHandle
+            sock = (evData and 0xffffffff'u64).SocketHandle
             let threadId = arg.workerParams.threadId
             if setClientSocketLock(sock.cint, threadId):
               let listenFlag = (flag and 0x01) > 0
@@ -2046,7 +2040,8 @@ template serverLib() =
                     let retHeader = parseHeader(cast[ptr UncheckedArray[byte]](addr recvBuf[nextPos]), parseSize, targetHeaders)
                     if retHeader.err == 0:
                       sock.setSockOptInt(Protocol.IPPROTO_TCP.int, TCP_NODELAY, 1)
-                      mainServerHandler(sock, retHeader.header)
+                      header = retHeader.header
+                      mainServerHandler()
                       if retHeader.next < recvlen:
                         nextPos = retHeader.next
                         parseSize = recvlen - nextPos
@@ -2091,7 +2086,8 @@ template serverLib() =
                 while true:
                   let retHeader = parseHeader(cast[ptr UncheckedArray[byte]](addr client.recvBuf[nextPos]), parseSize, targetHeaders)
                   if retHeader.err == 0:
-                    mainServerHandler(sock, retHeader.header)
+                    header = retHeader.header
+                    mainServerHandler()
                     if retHeader.next < client.recvCurSize:
                       nextPos = retHeader.next
                       parseSize = client.recvCurSize - nextPos
@@ -2132,7 +2128,15 @@ when isMainModule:
     HeaderAcceptEncoding: "Accept-Encoding"
     HeaderConnection: "Connection"
 
-  addServer("0.0.0.0", 8009)
+  addServer("0.0.0.0", 8009):
+    var d = d0.addHeader(Status200, "text/plain")
+    if header.url == "/":
+      let sendRet = sock.send(cast[cstring](addr d[0]), d.len.cint, 0'i32)
+      if sendRet < 0:
+        echo "error send ", errno
+    else:
+      var notFound = notFound0.addHeader(Status404)
+      discard sock.send(cast[cstring](addr notFound[0]), notFound.len.cint, 0'i32)
 
   serverType()
   serverLib()
