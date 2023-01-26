@@ -1840,29 +1840,34 @@ const ListenFlag = 0x01
 const IndexFlag = 0x02
 const UpgradeFlag = 0x04
 
-var curAppId = 0
+var curAppId {.compileTime.} = 0
+var serverWorkerMainStmt {.compileTime.} = nnkStmtList.newTree(newEmptyNode())
 var workerRecvBufSize: int = 0
 
-proc addServer*(bindAddress: string, port: uint16) =
-  var appId = atomicInc(curAppId, 1)
-  var serverSock = createServer(bindAddress, port)
-  serverSock.setBlocking(false)
+macro addServer*(bindAddress: string, port: uint16, body: untyped = newEmptyNode()): untyped =
+  inc(curAppId)
+  var appId = curAppId
+  serverWorkerMainStmt.add(body)
 
-  var tcp_rmem = serverSock.getSockOptInt(SOL_SOCKET, SO_RCVBUF)
-  if workerRecvBufSize < tcp_rmem:
-    workerRecvBufSize = tcp_rmem
+  quote do:
+    var serverSock = createServer(`bindAddress`, `port`)
+    serverSock.setBlocking(false)
 
-  if epfd < 0:
-    epfd = epoll_create1(O_CLOEXEC)
+    var tcp_rmem = serverSock.getSockOptInt(SOL_SOCKET, SO_RCVBUF)
+    if workerRecvBufSize < tcp_rmem:
+      workerRecvBufSize = tcp_rmem
+
     if epfd < 0:
-      errorQuit "error: epfd=", epfd, " errno=", errno
+      epfd = epoll_create1(O_CLOEXEC)
+      if epfd < 0:
+        errorQuit "error: epfd=", epfd, " errno=", errno
 
-  var ev: EpollEvent
-  ev.events = EPOLLIN or EPOLLEXCLUSIVE
-  ev.data.u64 = (ListenFlag shl 56) or (appId.uint64 shl 32) or serverSock.uint64
-  var retCtl = epoll_ctl(epfd, EPOLL_CTL_ADD, serverSock, addr ev)
-  if retCtl != 0:
-    errorQuit "error: quit epoll_ctl ret=", retCtl, " ", getErrnoStr()
+    var ev: EpollEvent
+    ev.events = EPOLLIN or EPOLLEXCLUSIVE
+    ev.data.u64 = (ListenFlag shl 56) or (`appId`.uint64 shl 32) or serverSock.uint64
+    var retCtl = epoll_ctl(epfd, EPOLL_CTL_ADD, serverSock, addr ev)
+    if retCtl != 0:
+      errorQuit "error: quit epoll_ctl ret=", retCtl, " ", getErrnoStr()
 
 var clientSocketLocks: array[WORKER_THREAD_NUM, cint]
 for i in 0..<WORKER_THREAD_NUM:
