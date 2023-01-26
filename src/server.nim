@@ -2000,7 +2000,7 @@ template serverLib() =
       client.recvCurSize = client.recvCurSize + size
 
     template mainServerHandler(sock: SocketHandle, header: ReqHeader) =
-      var d = d0.addHeader()
+      var d = d0.addHeader(Status200, "text/plain")
       if header.url == "/":
         let sendRet = sock.send(cast[cstring](addr d[0]), d.len.cint, 0'i32)
         if sendRet < 0:
