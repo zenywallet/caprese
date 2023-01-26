@@ -2132,12 +2132,13 @@ when isMainModule:
     HeaderAcceptEncoding: "Accept-Encoding"
     HeaderConnection: "Connection"
 
+  addServer("0.0.0.0", 8009)
+
   serverType()
   serverLib()
   initClient()
   startTimeStampUpdater()
 
-  addServer("0.0.0.0", 8009)
   var threads: array[WORKER_THREAD_NUM, Thread[WrapperThreadArg]]
   for i in 0..<WORKER_THREAD_NUM:
     createThread(threads[i], threadWrapper, (serverWorker,
