@@ -1980,8 +1980,6 @@ template serverLib() =
     var recvBuf = newArray[byte](arg.workerParams.bufLen)
     var sock {.inject.}: SocketHandle = osInvalidSocket
     var header {.inject.}: ReqHeader
-    var d0 {.inject.} = "abcdefghijklmnopqrstuvwxyz"
-    var notFound0 {.inject.} = "Not found".addDocType()
     var targetHeaders: Array[ptr tuple[id: HeaderParams, val: string]]
     for i in 0..<TargetHeaders.len:
       targetHeaders.add(addr TargetHeaders[i])
@@ -2127,6 +2125,9 @@ when isMainModule:
     HeaderUserAgent: "User-Agent"
     HeaderAcceptEncoding: "Accept-Encoding"
     HeaderConnection: "Connection"
+
+  const d0 = "abcdefghijklmnopqrstuvwxyz"
+  const notFound0 = "Not found".addDocType()
 
   addServer("0.0.0.0", 8009):
     var d = d0.addHeader(Status200, "text/plain")
