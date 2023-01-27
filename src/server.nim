@@ -1869,7 +1869,9 @@ macro addServer*(bindAddress: string, port: uint16, body: untyped = newEmptyNode
     if retCtl != 0:
       errorQuit "error: quit epoll_ctl ret=", retCtl, " ", getErrnoStr()
 
-macro mainServerHandler(): untyped = serverWorkerMainStmt
+macro mainServerHandler(): untyped =
+  quote do:
+    (proc(): SendResult = `serverWorkerMainStmt`)()
 
 var clientSocketLocks: array[WORKER_THREAD_NUM, cint]
 for i in 0..<WORKER_THREAD_NUM:
@@ -2039,7 +2041,7 @@ template serverLib() =
                     if retHeader.err == 0:
                       sock.setSockOptInt(Protocol.IPPROTO_TCP.int, TCP_NODELAY, 1)
                       header = retHeader.header
-                      mainServerHandler()
+                      discard mainServerHandler()
                       if retHeader.next < recvlen:
                         nextPos = retHeader.next
                         parseSize = recvlen - nextPos
@@ -2085,7 +2087,7 @@ template serverLib() =
                   let retHeader = parseHeader(cast[ptr UncheckedArray[byte]](addr client.recvBuf[nextPos]), parseSize, targetHeaders)
                   if retHeader.err == 0:
                     header = retHeader.header
-                    mainServerHandler()
+                    discard mainServerHandler()
                     if retHeader.next < client.recvCurSize:
                       nextPos = retHeader.next
                       parseSize = client.recvCurSize - nextPos
