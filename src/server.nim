@@ -1981,7 +1981,7 @@ template serverLib() =
     var addrLen = sizeof(sockAddress).SockLen
     var recvBuf = newArray[byte](arg.workerParams.bufLen)
     var sock: SocketHandle = osInvalidSocket
-    var header {.inject.}: ReqHeader
+    var header: ReqHeader
     var targetHeaders: Array[ptr tuple[id: HeaderParams, val: string]]
     for i in 0..<TargetHeaders.len:
       targetHeaders.add(addr TargetHeaders[i])
@@ -2014,6 +2014,10 @@ template serverLib() =
         return SendResult.None
 
     template send(data: seq[byte] | string | Array[byte]): SendResult = sock.send(data)
+
+    template get(urlPath: string, body: untyped) =
+      if header.url == urlPath:
+        body
 
     while true:
       var nfd = epoll_wait(epfd, cast[ptr EpollEvent](addr events),
@@ -2145,11 +2149,11 @@ when isMainModule:
 
   addServer("0.0.0.0", 8009):
     var d = d0.addHeader(Status200, "text/plain")
-    if header.url == "/":
+    get "/":
       return send(d)
-    else:
-      var notFound = notFound0.addHeader(Status404)
-      return send(notFound)
+
+    var notFound = notFound0.addHeader(Status404)
+    return send(notFound)
 
   serverType()
   serverLib()
