@@ -1980,7 +1980,7 @@ template serverLib() =
     var sockAddress: Sockaddr_in
     var addrLen = sizeof(sockAddress).SockLen
     var recvBuf = newArray[byte](arg.workerParams.bufLen)
-    var sock {.inject.}: SocketHandle = osInvalidSocket
+    var sock: SocketHandle = osInvalidSocket
     var header {.inject.}: ReqHeader
     var targetHeaders: Array[ptr tuple[id: HeaderParams, val: string]]
     for i in 0..<TargetHeaders.len:
@@ -2002,6 +2002,18 @@ template serverLib() =
       client.reserveRecvBuf(size)
       copyMem(addr client.recvBuf[client.recvCurSize], addr data[0], size)
       client.recvCurSize = client.recvCurSize + size
+
+    proc send(sock: SocketHandle, data: seq[byte] | string | Array[byte]): SendResult =
+      let sendRet = sock.send(cast[cstring](unsafeAddr data[0]), data.len.cint, 0'i32)
+      if sendRet > 0:
+        return SendResult.Success
+      if sendRet < 0:
+        echo "error send ", errno
+        return SendResult.Error
+      else:
+        return SendResult.None
+
+    template send(data: seq[byte] | string | Array[byte]): SendResult = sock.send(data)
 
     while true:
       var nfd = epoll_wait(epfd, cast[ptr EpollEvent](addr events),
@@ -2134,12 +2146,10 @@ when isMainModule:
   addServer("0.0.0.0", 8009):
     var d = d0.addHeader(Status200, "text/plain")
     if header.url == "/":
-      let sendRet = sock.send(cast[cstring](addr d[0]), d.len.cint, 0'i32)
-      if sendRet < 0:
-        echo "error send ", errno
+      return send(d)
     else:
       var notFound = notFound0.addHeader(Status404)
-      discard sock.send(cast[cstring](addr notFound[0]), notFound.len.cint, 0'i32)
+      return send(notFound)
 
   serverType()
   serverLib()
