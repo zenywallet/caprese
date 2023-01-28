@@ -2005,14 +2005,40 @@ template serverLib() =
       client.recvCurSize = client.recvCurSize + size
 
     proc send(sock: SocketHandle, data: seq[byte] | string | Array[byte]): SendResult =
-      let sendRet = sock.send(cast[cstring](unsafeAddr data[0]), data.len.cint, 0'i32)
-      if sendRet > 0:
-        return SendResult.Success
-      if sendRet < 0:
-        echo "error send ", errno
-        return SendResult.Error
-      else:
-        return SendResult.None
+      var sendRet: int
+      var pos = 0
+      var size = data.len
+      while true:
+        var d = cast[cstring](unsafeAddr data[pos])
+        sendRet = sock.send(d, size.cint, 0'i32)
+        if sendRet > 0:
+          size = size - sendRet
+          if size > 0:
+            pos = pos + sendRet
+            continue
+          return SendResult.Success
+        elif sendRet < 0:
+          if errno == EAGAIN or errno == EWOULDBLOCK:
+            let idx = setClient(sock.int)
+            if idx < 0:
+              echo "full"
+              return SendResult.Error
+            else:
+              let client = addr clients[idx]
+              if pos > 0:
+                client.addSendBuf(data[pos..^1])
+              else:
+                client.addSendBuf(data)
+              let appId = (0x00ffffff'u64 and (evData shr 32)).int
+              var ev: EpollEvent
+              ev.events = EPOLLIN or EPOLLRDHUP or EPOLLOUT
+              ev.data.u64 = (IndexFlag shl 56) or (appId.uint64 shl 32) or idx.uint64
+              var ret = epoll_ctl(epfd, EPOLL_CTL_MOD, sock.cint, addr ev)
+          elif errno == EINTR:
+            continue
+          return SendResult.Error
+        else:
+          return SendResult.None
 
     template send(data: seq[byte] | string | Array[byte]): SendResult = sock.send(data)
 
