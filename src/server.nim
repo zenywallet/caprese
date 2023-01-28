@@ -2053,7 +2053,8 @@ template serverLib() =
                   var nextPos = 0
                   var parseSize = recvlen
                   while true:
-                    let retHeader = parseHeader(cast[ptr UncheckedArray[byte]](addr recvBuf[nextPos]), parseSize, targetHeaders)
+                    let pRecvBuf = cast[ptr UncheckedArray[byte]](addr recvBuf[nextPos])
+                    let retHeader = parseHeader(pRecvBuf, parseSize, targetHeaders)
                     if retHeader.err == 0:
                       sock.setSockOptInt(Protocol.IPPROTO_TCP.int, TCP_NODELAY, 1)
                       header = retHeader.header
@@ -2071,7 +2072,7 @@ template serverLib() =
                         sock.close()
                       else:
                         let client = addr clients[idx]
-                        client.addRecvBuf(cast[ptr UncheckedArray[byte]](addr recvBuf[nextPos]), parseSize)
+                        client.addRecvBuf(pRecvBuf, parseSize)
                         let appId = (0x00ffffff'u64 and (evData shr 32)).int
                         var ev: EpollEvent
                         ev.events = EPOLLIN or EPOLLRDHUP
