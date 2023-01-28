@@ -2052,11 +2052,11 @@ template serverLib() =
                 if recvlen > 0:
                   var nextPos = 0
                   var parseSize = recvlen
+                  sock.setSockOptInt(Protocol.IPPROTO_TCP.int, TCP_NODELAY, 1)
                   while true:
                     let pRecvBuf = cast[ptr UncheckedArray[byte]](addr recvBuf[nextPos])
                     let retHeader = parseHeader(pRecvBuf, parseSize, targetHeaders)
                     if retHeader.err == 0:
-                      sock.setSockOptInt(Protocol.IPPROTO_TCP.int, TCP_NODELAY, 1)
                       header = retHeader.header
                       discard mainServerHandler()
                       if retHeader.next < recvlen:
@@ -2065,7 +2065,6 @@ template serverLib() =
                       else:
                         break
                     elif retHeader.err == 1:
-                      sock.setSockOptInt(Protocol.IPPROTO_TCP.int, TCP_NODELAY, 1)
                       let idx = setClient(sock.int)
                       if idx < 0:
                         echo "full"
