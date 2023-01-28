@@ -2071,7 +2071,7 @@ template serverLib() =
                         sock.close()
                       else:
                         let client = addr clients[idx]
-                        client.addRecvBuf(cast[ptr UncheckedArray[byte]](addr recvBuf[0]), recvlen)
+                        client.addRecvBuf(cast[ptr UncheckedArray[byte]](addr recvBuf[nextPos]), parseSize)
                         let appId = (0x00ffffff'u64 and (evData shr 32)).int
                         var ev: EpollEvent
                         ev.events = EPOLLIN or EPOLLRDHUP
