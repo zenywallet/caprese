@@ -1977,6 +1977,7 @@ template serverLib() =
 
   proc serverWorker(arg: ThreadArg) {.thread.} =
     var events: array[EPOLL_EVENTS_SIZE, EpollEvent]
+    var evData: uint64
     var sockAddress: Sockaddr_in
     var addrLen = sizeof(sockAddress).SockLen
     var recvBuf = newArray[byte](arg.workerParams.bufLen)
@@ -2025,7 +2026,7 @@ template serverLib() =
       if not active: break
       for i in 0..<nfd:
         try:
-          let evData = events[i].data.u64
+          evData = events[i].data.u64
           let flag = evData shr 56
           let indexFlag = (flag and IndexFlag) > 0
           if not indexFlag:
