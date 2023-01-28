@@ -2085,11 +2085,15 @@ template serverLib() =
                     let retHeader = parseHeader(pRecvBuf, parseSize, targetHeaders)
                     if retHeader.err == 0:
                       header = retHeader.header
-                      discard mainServerHandler()
-                      if retHeader.next < recvlen:
-                        nextPos = retHeader.next
-                        parseSize = recvlen - nextPos
+                      let retMain = mainServerHandler()
+                      if retMain == SendResult.Success or retMain == SendResult.Pending:
+                        if retHeader.next < recvlen:
+                          nextPos = retHeader.next
+                          parseSize = recvlen - nextPos
+                        else:
+                          break
                       else:
+                        sock.close()
                         break
                     elif retHeader.err == 1:
                       let idx = setClient(sock.int)
