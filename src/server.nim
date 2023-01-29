@@ -2019,6 +2019,7 @@ template serverLib() =
           return SendResult.Success
         elif sendRet < 0:
           if errno == EAGAIN or errno == EWOULDBLOCK:
+            echo "set!!"
             let idx = setClient(sock.int)
             if idx < 0:
               echo "full"
@@ -2086,7 +2087,17 @@ template serverLib() =
                     if retHeader.err == 0:
                       header = retHeader.header
                       let retMain = mainServerHandler()
-                      if retMain == SendResult.Success or retMain == SendResult.Pending:
+                      if retMain == SendResult.Success:
+                        if header.minorVer == 0 or getHeaderValue(pRecvBuf, header,
+                          InternalEssentialHeaderConnection) == "close":
+                          sock.close()
+                          break
+                        elif retHeader.next < recvlen:
+                          nextPos = retHeader.next
+                          parseSize = recvlen - nextPos
+                        else:
+                          break
+                      elif retMain == SendResult.Pending:
                         if retHeader.next < recvlen:
                           nextPos = retHeader.next
                           parseSize = recvlen - nextPos
@@ -2103,6 +2114,10 @@ template serverLib() =
                       else:
                         let client = addr clients[idx]
                         client.addRecvBuf(pRecvBuf, parseSize)
+                        header = retHeader.header
+                        if header.minorVer == 0 or getHeaderValue(pRecvBuf, header,
+                          InternalEssentialHeaderConnection) == "close":
+                          client.keepAlive = false
                         let appId = (0x00ffffff'u64 and (evData shr 32)).int
                         var ev: EpollEvent
                         ev.events = EPOLLIN or EPOLLRDHUP
