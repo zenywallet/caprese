@@ -2047,6 +2047,10 @@ template serverLib() =
       if header.url == urlPath:
         body
 
+    template routes(body: untyped) = body
+
+    template stream(body: untyped) = body
+
     while true:
       var nfd = epoll_wait(epfd, cast[ptr EpollEvent](addr events),
                           EPOLL_EVENTS_SIZE.cint, 3000.cint)
@@ -2194,12 +2198,16 @@ when isMainModule:
   const notFound0 = "Not found".addDocType()
 
   addServer("0.0.0.0", 8009):
-    var d = d0.addHeader(Status200, "text/plain")
-    get "/":
-      return send(d)
+    routes:
+      var d = d0.addHeader(Status200, "text/plain")
+      get "/":
+        return send(d)
 
-    var notFound = notFound0.addHeader(Status404)
-    return send(notFound)
+      var notFound = notFound0.addHeader(Status404)
+      return send(notFound)
+
+    stream:
+      discard
 
   serverType()
   serverLib()
