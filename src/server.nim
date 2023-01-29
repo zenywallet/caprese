@@ -129,7 +129,7 @@ proc addSendBuf(client: ptr Client, data: seq[byte] | string) =
   client.sendCurSize = nextSize
 
 proc send*(client: ptr Client, data: seq[byte] | string): SendResult =
-  if not client.sendBuf.isNil:
+  if client.sendCurSize > 0:
     client.addSendBuf(data)
     return SendResult.Pending
 
@@ -646,7 +646,7 @@ proc sendInstant*(client: ptr Client, data: string) {.inline.} =
 
 
 proc sendFlush(client: ptr Client): SendResult =
-  if client.sendBuf.isNil:
+  if client.sendCurSize == 0:
     return SendResult.None
 
   var sendRet: int
