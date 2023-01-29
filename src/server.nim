@@ -59,7 +59,7 @@ type
     recvBufSize: int
     recvCurSize: int
     sendBuf: ptr UncheckedArray[byte]
-    sendBufSize: int
+    sendCurSize: int
     keepAlive: bool
     wsUpgrade: bool
     payloadSize: int
@@ -123,10 +123,10 @@ proc reallocClientBuf(buf: ptr UncheckedArray[byte], size: int): ptr UncheckedAr
   result = cast[ptr UncheckedArray[byte]](reallocShared(buf, size))
 
 proc addSendBuf(client: ptr Client, data: seq[byte] | string) =
-  var nextSize = client.sendBufSize + data.len
+  var nextSize = client.sendCurSize + data.len
   client.sendBuf = reallocClientBuf(client.sendBuf, nextSize)
-  copyMem(addr client.sendBuf[client.sendBufSize], unsafeAddr data[0], data.len)
-  client.sendBufSize = nextSize
+  copyMem(addr client.sendBuf[client.sendCurSize], unsafeAddr data[0], data.len)
+  client.sendCurSize = nextSize
 
 proc send*(client: ptr Client, data: seq[byte] | string): SendResult =
   if not client.sendBuf.isNil:
@@ -550,7 +550,7 @@ proc initClient() =
     p[i].recvBufSize = 0
     p[i].recvCurSize = 0
     p[i].sendBuf = nil
-    p[i].sendBufSize = 0
+    p[i].sendCurSize = 0
     p[i].keepAlive = true
     p[i].wsUpgrade = false
     p[i].payloadSize = 0
@@ -651,7 +651,7 @@ proc sendFlush(client: ptr Client): SendResult =
 
   var sendRet: int
   var pos = 0
-  var size = client.sendBufSize
+  var size = client.sendCurSize
   while true:
     var d = cast[cstring](addr client.sendBuf[pos])
     when ENABLE_SSL:
@@ -667,7 +667,7 @@ proc sendFlush(client: ptr Client): SendResult =
       if size > 0:
         pos = pos + sendRet
         continue
-      client.sendBufSize = 0
+      client.sendCurSize = 0
       deallocShared(cast[pointer](client.sendBuf))
       client.sendBuf = nil
       return SendResult.Success
@@ -678,7 +678,7 @@ proc sendFlush(client: ptr Client): SendResult =
           debug "SSL_send err=", client.sslErr, " errno=", errno
           if client.sslErr == SSL_ERROR_WANT_WRITE or client.sslErr == SSL_ERROR_WANT_READ:
             copyMem(addr client.sendBuf[0], d, size)
-            client.sendBufSize = size
+            client.sendCurSize = size
             return SendResult.Pending
           else:
             if errno == EINTR:
@@ -687,7 +687,7 @@ proc sendFlush(client: ptr Client): SendResult =
 
       if errno == EAGAIN or errno == EWOULDBLOCK:
         copyMem(addr client.sendBuf[0], d, size)
-        client.sendBufSize = size
+        client.sendCurSize = size
         return SendResult.Pending
       if errno == EINTR:
         continue
