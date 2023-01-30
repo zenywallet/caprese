@@ -2047,9 +2047,11 @@ template serverLib() =
       if header.url == urlPath:
         body
 
-    template routes(body: untyped) = body
+    template routes(body: untyped) =
+      block: body
 
-    template stream(body: untyped) = body
+    template stream(body: untyped) =
+      block: body
 
     while true:
       var nfd = epoll_wait(epfd, cast[ptr EpollEvent](addr events),
