@@ -1850,6 +1850,8 @@ macro addServer*(bindAddress: string, port: uint16, body: untyped = newEmptyNode
   serverWorkerMainStmt.add(body)
 
   quote do:
+    from nativesockets import setBlocking, getSockOptInt, setSockOptInt
+
     var serverSock = createServer(`bindAddress`, `port`)
     serverSock.setBlocking(false)
 
