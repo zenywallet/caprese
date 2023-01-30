@@ -13,16 +13,23 @@ import arraylib
 const HTTP_VERSION* = 1.1
 const ServerName* = "Caprese"
 
-var timeStrArray: Array[byte]
+var timeStrArrays: array[2, Array[byte]]
+var shiftTimeStrArray: int = 0
+var pTimeStrArray: ptr Array[byte]
 var timeStampThread*: Thread[void]
 var active = false
 
 proc updateTimeStamp() {.inline.} =
-  timeStrArray = cast[Array[byte]](now().utc().format("ddd, dd MMM yyyy HH:mm:ss 'GMT'").toArray)
+  timeStrArrays[shiftTimeStrArray] = cast[Array[byte]](now().utc().format("ddd, dd MMM yyyy HH:mm:ss 'GMT'").toArray)
+  pTimeStrArray = addr timeStrArrays[shiftTimeStrArray]
+  if shiftTimeStrArray == 0:
+    shiftTimeStrArray = 1
+  else:
+    shiftTimeStrArray = 0
 
 updateTimeStamp()
 
-proc getCurTimeStr*(): string {.inline.} = timeStrArray.toString()
+proc getCurTimeStr*(): string {.inline.} = pTimeStrArray[].toString()
 
 proc timeStampUpdater() {.thread.} =
   while active:
