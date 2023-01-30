@@ -2179,6 +2179,24 @@ template serverLib() =
           let e = getCurrentException()
           error e.name, ": ", e.msg
 
+template serverStart*() =
+  serverType()
+  serverLib()
+  initClient()
+  startTimeStampUpdater()
+
+  var threads: array[WORKER_THREAD_NUM, Thread[WrapperThreadArg]]
+  for i in 0..<WORKER_THREAD_NUM:
+    createThread(threads[i], threadWrapper, (serverWorker,
+      ThreadArg(type: ThreadArgType.WorkerParams, workerParams: (i, workerRecvBufSize))))
+
+  joinThreads(threads)
+  joinThread(contents.timeStampThread)
+
+template serverStop*() =
+  stop()
+  stopTimeStampUpdater()
+
 
 when isMainModule:
   onSignal(SIGINT, SIGTERM):
