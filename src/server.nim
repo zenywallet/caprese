@@ -2152,7 +2152,8 @@ template serverLib() =
                 var nextPos = 0
                 var parseSize = client.recvCurSize
                 while true:
-                  let retHeader = parseHeader(cast[ptr UncheckedArray[byte]](addr client.recvBuf[nextPos]), parseSize, targetHeaders)
+                  let pRecvBuf = cast[ptr UncheckedArray[byte]](addr client.recvBuf[nextPos])
+                  let retHeader = parseHeader(pRecvBuf, parseSize, targetHeaders)
                   if retHeader.err == 0:
                     header = retHeader.header
                     discard mainServerHandler()
