@@ -17,7 +17,8 @@ macro HttpTargetHeader(idEnumName, valListName, targetHeaders, body: untyped): u
   var enumParams = nnkEnumTy.newTree(newEmptyNode())
   var targetParams = nnkBracket.newTree()
   var headers = nnkBracket.newTree()
-  var internalEssentialHeaders = @[("InternalEssentialHeaderConnection", "Connection")]
+  var internalEssentialHeaders = @[("InternalEssentialHeaderHost", "Host"),
+                                  ("InternalEssentialHeaderConnection", "Connection")]
   var internalEssentialConst = nnkStmtList.newTree()
 
   for a in body:
