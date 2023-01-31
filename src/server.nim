@@ -1564,7 +1564,7 @@ proc acceptClient(arg: ThreadArg) {.thread.} =
           if sslFileChanged:
             sslFileChanged = false
             var oldCtx = ctx
-            ctx = newSslCtx()
+            ctx = newSslCtx(selfSignedCertFallback = true)
             oldCtx.SSL_CTX_free()
             for i, site in CERT_SITES:
               if siteCtxs[i].updated:
@@ -1572,6 +1572,7 @@ proc acceptClient(arg: ThreadArg) {.thread.} =
                 siteCtxs[i].ctx = newSslCtx(site, selfSignedCertFallback = true)
                 siteCtxs[i].updated = false
                 oldCtx.SSL_CTX_free()
+            SSL_CTX_set_tlsext_servername_callback(ctx, serverNameCallback)
             debug "SSL ctx updated"
 
       var ssl = SSL_new(ctx)
