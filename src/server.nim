@@ -1903,6 +1903,8 @@ template serverType() {.dirty.} =
       minorVer: int
 
 template serverLib() =
+  mixin addSendBuf
+
   proc echoHeader(buf: ptr UncheckedArray[byte], size: int, header: ReqHeader) =
     echo "url: ", header.url
     for i, param in header.params:
