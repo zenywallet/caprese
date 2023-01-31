@@ -2059,6 +2059,8 @@ template serverLib() =
     template stream(body: untyped) =
       block: body
 
+    template reqUrl: string = header.url
+
     while true:
       var nfd = epoll_wait(epfd, cast[ptr EpollEvent](addr events),
                           EPOLL_EVENTS_SIZE.cint, 3000.cint)
