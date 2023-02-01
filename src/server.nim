@@ -1877,6 +1877,10 @@ macro mainServerHandler(): untyped =
   quote do:
     (proc(): SendResult = `serverWorkerMainStmt`)()
 
+template site*(hostname: string, body: untyped) =
+  if reqHost() == hostname:
+    body
+
 template routes*(body: untyped) =
   block: body
 
