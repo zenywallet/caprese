@@ -1881,6 +1881,14 @@ template site*(hostname: string, body: untyped) =
   if reqHost() == hostname:
     body
 
+template routes*(hostname: string, body: untyped) =
+  if reqHost() == hostname:
+    block: body
+
+template stream*(hostname: string, body: untyped) =
+  if reqHost() == hostname:
+    block: body
+
 template routes*(body: untyped) =
   block: body
 
