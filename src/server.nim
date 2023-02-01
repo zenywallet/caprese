@@ -1877,6 +1877,12 @@ macro mainServerHandler(): untyped =
   quote do:
     (proc(): SendResult = `serverWorkerMainStmt`)()
 
+template routes(body: untyped) =
+  block: body
+
+template stream(body: untyped) =
+  block: body
+
 var clientSocketLocks: array[WORKER_THREAD_NUM, cint]
 for i in 0..<WORKER_THREAD_NUM:
   clientSocketLocks[i] = osInvalidSocket.cint
@@ -2052,12 +2058,6 @@ template serverLib() =
     template get(urlPath: string, body: untyped) =
       if header.url == urlPath:
         body
-
-    template routes(body: untyped) =
-      block: body
-
-    template stream(body: untyped) =
-      block: body
 
     template reqUrl: string = header.url
 
