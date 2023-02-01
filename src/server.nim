@@ -2061,6 +2061,10 @@ template serverLib() =
 
     template reqUrl: string = header.url
 
+    template mainServerHandlerProcs(pRecvBuf: ptr UncheckedArray[byte]) =
+      template reqHost: string =
+        getHeaderValue(pRecvBuf, header, InternalEssentialHeaderHost)
+
     while true:
       var nfd = epoll_wait(epfd, cast[ptr EpollEvent](addr events),
                           EPOLL_EVENTS_SIZE.cint, 3000.cint)
@@ -2100,6 +2104,7 @@ template serverLib() =
                     let retHeader = parseHeader(pRecvBuf, parseSize, targetHeaders)
                     if retHeader.err == 0:
                       header = retHeader.header
+                      mainServerHandlerProcs(pRecvBuf)
                       let retMain = mainServerHandler()
                       if retMain == SendResult.Success:
                         if header.minorVer == 0 or getHeaderValue(pRecvBuf, header,
@@ -2164,6 +2169,7 @@ template serverLib() =
                   let retHeader = parseHeader(pRecvBuf, parseSize, targetHeaders)
                   if retHeader.err == 0:
                     header = retHeader.header
+                    mainServerHandlerProcs(pRecvBuf)
                     discard mainServerHandler()
                     if retHeader.next < client.recvCurSize:
                       nextPos = retHeader.next
