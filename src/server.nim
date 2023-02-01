@@ -1877,10 +1877,10 @@ macro mainServerHandler(): untyped =
   quote do:
     (proc(): SendResult = `serverWorkerMainStmt`)()
 
-template routes(body: untyped) =
+template routes*(body: untyped) =
   block: body
 
-template stream(body: untyped) =
+template stream*(body: untyped) =
   block: body
 
 var clientSocketLocks: array[WORKER_THREAD_NUM, cint]
