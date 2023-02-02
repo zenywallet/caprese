@@ -78,7 +78,6 @@ else:
     if x.cap < newLen:
       x.cap = nextCap(newLen)
       x.data = cast[ptr UncheckedArray[T]](reallocShared(x.data, sizeof(T) * x.cap))
-    zeroMem(addr x.data[x.len], sizeof(T))
     x.data[x.len] = y
     x.len = newLen
 
