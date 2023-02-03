@@ -122,7 +122,7 @@ proc toWebSocketOpCode(opcode: int8): WebSocketOpCode =
 proc reallocClientBuf(buf: ptr UncheckedArray[byte], size: int): ptr UncheckedArray[byte] =
   result = cast[ptr UncheckedArray[byte]](reallocShared(buf, size))
 
-proc addSendBuf(client: ptr Client, data: seq[byte] | string) =
+proc addSendBuf(client: ptr Client, data: seq[byte] | string | Array[byte]) =
   let nextSize = client.sendCurSize + data.len
   client.sendBuf = reallocClientBuf(client.sendBuf, nextSize)
   copyMem(addr client.sendBuf[client.sendCurSize], unsafeAddr data[0], data.len)
