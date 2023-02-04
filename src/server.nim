@@ -2244,9 +2244,18 @@ when isMainModule:
   const d0 = "abcdefghijklmnopqrstuvwxyz"
   const notFound0 = "Not found".addDocType()
 
+  var d = cast[Array[byte]]("Hello, world!".addHeader(Status200, "text/plain").toArray)
+
+  proc updateTimeStamp() {.thread.} =
+    while active:
+      writeTimeStamp(cast[ptr UncheckedArray[byte]](addr d[49]))
+      sleep(1000)
+
+  var updateTimeStampThread: Thread[void]
+  createThread(updateTimeStampThread, updateTimeStamp)
+
   addServer("0.0.0.0", 8009):
     routes:
-      var d = d0.addHeader(Status200, "text/plain")
       get "/":
         return send(d)
 
@@ -2268,3 +2277,4 @@ when isMainModule:
 
   joinThreads(threads)
   joinThread(contents.timeStampThread)
+  joinThread(updateTimeStampThread)
