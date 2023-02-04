@@ -31,6 +31,9 @@ updateTimeStamp()
 
 proc getCurTimeStr*(): string {.inline.} = pTimeStrArray[].toString()
 
+proc writeTimeStamp*(buf: ptr UncheckedArray[byte]) {.inline.} =
+  copyMem(buf, addr pTimeStrArray[].data[0], 25)
+
 proc timeStampUpdater() {.thread.} =
   while active:
     updateTimeStamp()
