@@ -198,7 +198,7 @@ var restartFlag = false
 var abortFlag = false
 var serverSock: SocketHandle = osInvalidSocket
 var httpSock: SocketHandle = osInvalidSocket
-var clients: ptr ClientArray = nil
+var clients: ptr UncheckedArray[Client] = nil
 var clIdx = 0
 var events: array[EPOLL_EVENTS_SIZE, EpollEvent]
 var epfd: cint = -1
@@ -542,7 +542,7 @@ proc abort() =
 #  include stream
 
 proc initClient() =
-  var p = cast[ptr ClientArray](allocShared0(sizeof(ClientArray)))
+  var p = cast[ptr UncheckedArray[Client]](allocShared0(sizeof(ClientArray)))
   for i in 0..<CLIENT_MAX:
     p[i].idx = i
     p[i].fd = osInvalidSocket.int
