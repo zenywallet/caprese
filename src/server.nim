@@ -2079,6 +2079,8 @@ template serverLib() =
         getHeaderValue(pRecvBuf, header, InternalEssentialHeaderHost)
 
     let threadId = arg.workerParams.threadId
+    var ev: EpollEvent
+    ev.events = EPOLLIN or EPOLLRDHUP
 
     while true:
       var nfd = epoll_wait(epfd, cast[ptr EpollEvent](addr events),
@@ -2100,8 +2102,6 @@ template serverLib() =
                 if cast[int](clientSock) > 0:
                   sock.setSockOptInt(Protocol.IPPROTO_TCP.int, TCP_NODELAY, 1)
                   let appId = (0x00ffffff'u64 and (evData shr 32)).int
-                  var ev: EpollEvent
-                  ev.events = EPOLLIN or EPOLLRDHUP
                   ev.data.u64 = (appId.uint64 shl 32) or clientFd.uint64
                   let retCtl = epoll_ctl(epfd, EPOLL_CTL_ADD, cast[cint](clientSock), addr ev)
                   if retCtl < 0:
