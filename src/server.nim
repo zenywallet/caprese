@@ -74,6 +74,7 @@ type
   Client* = object of ClientBase
     pStream*: pointer
     clientId*: ClientId
+    sock*: SocketHandle
 
   ClientArray = array[CLIENT_MAX, Client]
 
@@ -2222,12 +2223,14 @@ template serverStart*() =
 template serverStop*() =
   stop()
   stopTimeStampUpdater()
+  freeClient()
 
 when isMainModule:
   onSignal(SIGINT, SIGTERM):
     debug "bye from signal ", sig
     quitServer()
     stopTimeStampUpdater()
+    freeClient()
 
   signal(SIGPIPE, SIG_IGN)
 
@@ -2253,6 +2256,12 @@ when isMainModule:
   var updateTimeStampThread: Thread[void]
   createThread(updateTimeStampThread, updateTimeStamp)
 
+  initClient()
+  var clientFreePool = newQueue[ptr Client](CLIENT_MAX)
+  for i in 0..<ClientMax:
+    clients[i].sock = osInvalidSocket
+    clientFreePool.add(addr clients[i])
+
   addServer("0.0.0.0", 8009):
     routes:
       get "/":
@@ -2266,7 +2275,6 @@ when isMainModule:
 
   serverType()
   serverLib()
-  initClient()
   startTimeStampUpdater()
 
   var threads: array[WORKER_THREAD_NUM, Thread[WrapperThreadArg]]
