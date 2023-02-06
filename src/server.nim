@@ -1907,11 +1907,11 @@ proc setClientSocketLock(sock: cint, threadId: int): bool {.inline.} =
     for s in clientSocketLocks:
       if s == sock:
         return false
-    clientSocketLocks[threadId] = sock
+    clientSocketLocks[threadId - 1] = sock
     return true
 
 proc resetClientSocketLock(threadId: int) {.inline.} =
-  clientSocketLocks[threadId] = osInvalidSocket.cint
+  clientSocketLocks[threadId - 1] = osInvalidSocket.cint
 
 template serverType() {.dirty.} =
   type
