@@ -2096,12 +2096,12 @@ template serverLib() =
                 let clientSock = sock.accept4(cast[ptr SockAddr](addr sockAddress), addr addrLen, O_NONBLOCK)
                 resetClientSocketLock(threadId)
                 let clientFd = clientSock.int
-                if clientFd > 0:
+                if cast[int](clientSock) > 0:
                   let appId = (0x00ffffff'u64 and (evData shr 32)).int
                   var ev: EpollEvent
                   ev.events = EPOLLIN or EPOLLRDHUP
                   ev.data.u64 = (appId.uint64 shl 32) or clientFd.uint64
-                  let retCtl = epoll_ctl(epfd, EPOLL_CTL_ADD, clientFd.cint, addr ev)
+                  let retCtl = epoll_ctl(epfd, EPOLL_CTL_ADD, cast[cint](clientSock), addr ev)
                   if retCtl < 0:
                     errorQuit "error: epoll_ctl ret=", retCtl, " errno=", errno
                 elif errno != EAGAIN and errno != EWOULDBLOCK and errno != EINTR:
