@@ -2078,6 +2078,8 @@ template serverLib() =
       template reqHost: string =
         getHeaderValue(pRecvBuf, header, InternalEssentialHeaderHost)
 
+    let threadId = arg.workerParams.threadId
+
     while true:
       var nfd = epoll_wait(epfd, cast[ptr EpollEvent](addr events),
                           EPOLL_EVENTS_SIZE.cint, 3000.cint)
@@ -2089,7 +2091,6 @@ template serverLib() =
           let indexFlag = (flag and IndexFlag) > 0
           if not indexFlag:
             sock = (evData and 0xffffffff'u64).SocketHandle
-            let threadId = arg.workerParams.threadId
             if setClientSocketLock(sock.cint, threadId):
               let listenFlag = (flag and 0x01) > 0
               if listenFlag:
@@ -2169,7 +2170,6 @@ template serverLib() =
             let idx = (evData and 0xffffffff'u64).int
             let client = addr clients[idx]
             let sock = client.fd.SocketHandle
-            let threadId = arg.workerParams.threadId
             if setClientSocketLock(sock.cint, threadId):
               client.reserveRecvBuf(arg.workerParams.bufLen)
               let recvlen = sock.recv(addr client.recvBuf[client.recvCurSize], arg.workerParams.bufLen.cint, 0.cint)
