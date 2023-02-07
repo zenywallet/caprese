@@ -2119,62 +2119,66 @@ template serverLib() =
                 pClient[].listenFlag = false
                 clientFreePool.add(pClient)
 
-            let recvlen = sock.recv(addr recvBuf[0], recvBuf.len.cint, 0.cint)
-            if recvlen > 0:
-              var nextPos = 0
-              var parseSize = recvlen
-              while true:
-                let pRecvBuf = cast[ptr UncheckedArray[byte]](addr recvBuf[nextPos])
-                let retHeader = parseHeader(pRecvBuf, parseSize, targetHeaders)
-                if retHeader.err == 0:
-                  header = retHeader.header
-                  mainServerHandlerProcs(pRecvBuf)
-                  let retMain = mainServerHandler()
-                  if retMain == SendResult.Success:
-                    if header.minorVer == 0 or getHeaderValue(pRecvBuf, header,
-                      InternalEssentialHeaderConnection) == "close":
+            var chk = 0
+            if atomic_compare_exchange_n(addr pClient[].threadId, addr chk, threadId, false, 0, 0):
+              let recvlen = sock.recv(addr recvBuf[0], recvBuf.len.cint, 0.cint)
+              if recvlen > 0:
+                var nextPos = 0
+                var parseSize = recvlen
+                while true:
+                  let pRecvBuf = cast[ptr UncheckedArray[byte]](addr recvBuf[nextPos])
+                  let retHeader = parseHeader(pRecvBuf, parseSize, targetHeaders)
+                  if retHeader.err == 0:
+                    header = retHeader.header
+                    mainServerHandlerProcs(pRecvBuf)
+                    let retMain = mainServerHandler()
+                    if retMain == SendResult.Success:
+                      if header.minorVer == 0 or getHeaderValue(pRecvBuf, header,
+                        InternalEssentialHeaderConnection) == "close":
+                        closeAndFreeClient()
+                        break
+                      elif retHeader.next < recvlen:
+                        nextPos = retHeader.next
+                        parseSize = recvlen - nextPos
+                      else:
+                        break
+                    elif retMain == SendResult.Pending:
+                      if retHeader.next < recvlen:
+                        nextPos = retHeader.next
+                        parseSize = recvlen - nextPos
+                      else:
+                        break
+                    else:
                       closeAndFreeClient()
                       break
-                    elif retHeader.next < recvlen:
-                      nextPos = retHeader.next
-                      parseSize = recvlen - nextPos
+                  elif retHeader.err == 1:
+                    let idx = setClient(sock.int)
+                    if idx < 0:
+                      echo "full"
+                      sock.close()
                     else:
-                      break
-                  elif retMain == SendResult.Pending:
-                    if retHeader.next < recvlen:
-                      nextPos = retHeader.next
-                      parseSize = recvlen - nextPos
-                    else:
-                      break
+                      let client = addr clients[idx]
+                      client.addRecvBuf(pRecvBuf, parseSize)
+                      header = retHeader.header
+                      if header.minorVer == 0 or getHeaderValue(pRecvBuf, header,
+                        InternalEssentialHeaderConnection) == "close":
+                        client.keepAlive = false
+                      let appId = (0x00ffffff'u64 and (evData shr 32)).int
+                      var ev: EpollEvent
+                      ev.events = EPOLLIN or EPOLLRDHUP
+                      ev.data.u64 = (IndexFlag shl 56) or (appId.uint64 shl 32) or idx.uint64
+                      var ret = epoll_ctl(epfd, EPOLL_CTL_MOD, sock.cint, addr ev)
+                    break
                   else:
+                    echo "retHeader err=", retHeader.err
                     closeAndFreeClient()
                     break
-                elif retHeader.err == 1:
-                  let idx = setClient(sock.int)
-                  if idx < 0:
-                    echo "full"
-                    sock.close()
-                  else:
-                    let client = addr clients[idx]
-                    client.addRecvBuf(pRecvBuf, parseSize)
-                    header = retHeader.header
-                    if header.minorVer == 0 or getHeaderValue(pRecvBuf, header,
-                      InternalEssentialHeaderConnection) == "close":
-                      client.keepAlive = false
-                    let appId = (0x00ffffff'u64 and (evData shr 32)).int
-                    var ev: EpollEvent
-                    ev.events = EPOLLIN or EPOLLRDHUP
-                    ev.data.u64 = (IndexFlag shl 56) or (appId.uint64 shl 32) or idx.uint64
-                    var ret = epoll_ctl(epfd, EPOLL_CTL_MOD, sock.cint, addr ev)
-                  break
-                else:
-                  echo "retHeader err=", retHeader.err
-                  closeAndFreeClient()
-                  break
-            elif recvlen == 0:
-              closeAndFreeClient()
-            else:
-              discard
+              elif recvlen == 0:
+                closeAndFreeClient()
+              else:
+                discard
+
+              pClient[].threadId = 0
 
           #[
           let idx = (evData and 0xffffffff'u64).int
