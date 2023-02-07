@@ -2111,6 +2111,14 @@ template serverLib() =
             elif errno != EAGAIN and errno != EWOULDBLOCK and errno != EINTR:
               errorQuit "error: accept=", clientSock.int, " errno=", errno
           else:
+            template closeAndFreeClient() =
+              var chk = cast[int](sock)
+              if atomic_compare_exchange_n(cast[ptr int](addr pClient[].sock), addr chk,
+                                          cast[int](osInvalidSocket), false, 0, 0):
+                sock.close()
+                pClient[].listenFlag = false
+                clientFreePool.add(pClient)
+
             let recvlen = sock.recv(addr recvBuf[0], recvBuf.len.cint, 0.cint)
             if recvlen > 0:
               var nextPos = 0
@@ -2125,7 +2133,7 @@ template serverLib() =
                   if retMain == SendResult.Success:
                     if header.minorVer == 0 or getHeaderValue(pRecvBuf, header,
                       InternalEssentialHeaderConnection) == "close":
-                      sock.close()
+                      closeAndFreeClient()
                       break
                     elif retHeader.next < recvlen:
                       nextPos = retHeader.next
@@ -2139,7 +2147,7 @@ template serverLib() =
                     else:
                       break
                   else:
-                    sock.close()
+                    closeAndFreeClient()
                     break
                 elif retHeader.err == 1:
                   let idx = setClient(sock.int)
@@ -2161,12 +2169,13 @@ template serverLib() =
                   break
                 else:
                   echo "retHeader err=", retHeader.err
-                  sock.close()
+                  closeAndFreeClient()
                   break
             elif recvlen == 0:
-              sock.close()
+              closeAndFreeClient()
             else:
               discard
+
           #[
           let idx = (evData and 0xffffffff'u64).int
           let client = addr clients[idx]
