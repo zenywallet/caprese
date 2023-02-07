@@ -75,6 +75,9 @@ type
     pStream*: pointer
     clientId*: ClientId
     sock*: SocketHandle
+    threadId*: int
+    appId*: int
+    listenFlag*: bool
 
   ClientArray = array[CLIENT_MAX, Client]
 
@@ -1870,6 +1873,11 @@ macro addServer*(bindAddress: string, port: uint16, body: untyped = newEmptyNode
     var ev: EpollEvent
     ev.events = EPOLLIN or EPOLLEXCLUSIVE
     ev.data.u64 = (ListenFlag shl 56) or (`appId`.uint64 shl 32) or serverSock.uint64
+    let newClient = clientFreePool.pop()
+    newClient.sock = serverSock
+    newClient.listenFlag = true
+    newClient.appId = `appId`
+    ev.data = cast[EpollData](newClient)
     var retCtl = epoll_ctl(epfd, EPOLL_CTL_ADD, serverSock, addr ev)
     if retCtl != 0:
       errorQuit "error: quit epoll_ctl ret=", retCtl, " ", getErrnoStr()
@@ -2088,23 +2096,20 @@ template serverLib() =
       if not active: break
       for i in 0..<nfd:
         try:
-          evData = events[i].data.u64
-          let flag = evData shr 56
-          let indexFlag = (flag and IndexFlag) > 0
-          sock = (evData and 0xffffffff'u64).SocketHandle
-          let listenFlag = (flag and 0x01) > 0
-          if listenFlag:
+          let pClient = cast[ptr Client](events[i].data)
+          sock = pClient[].sock
+          if pCLient[].listenFlag:
             let clientSock = sock.accept4(cast[ptr SockAddr](addr sockAddress), addr addrLen, O_NONBLOCK)
-            let clientFd = clientSock.int
             if cast[int](clientSock) > 0:
               clientSock.setSockOptInt(Protocol.IPPROTO_TCP.int, TCP_NODELAY, 1)
-              let appId = (0x00ffffff'u64 and (evData shr 32)).int
-              ev.data.u64 = (appId.uint64 shl 32) or clientFd.uint64
+              let newClient = clientFreePool.pop()
+              newClient.sock = clientSock
+              ev.data = cast[EpollData](newClient)
               let retCtl = epoll_ctl(epfd, EPOLL_CTL_ADD, cast[cint](clientSock), addr ev)
               if retCtl < 0:
                 errorQuit "error: epoll_ctl ret=", retCtl, " errno=", errno
             elif errno != EAGAIN and errno != EWOULDBLOCK and errno != EINTR:
-              errorQuit "error: accept=", clientFd, " errno=", errno
+              errorQuit "error: accept=", clientSock.int, " errno=", errno
           else:
             let recvlen = sock.recv(addr recvBuf[0], recvBuf.len.cint, 0.cint)
             if recvlen > 0:
