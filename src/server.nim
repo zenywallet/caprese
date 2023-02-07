@@ -2097,7 +2097,7 @@ template serverLib() =
             let clientSock = sock.accept4(cast[ptr SockAddr](addr sockAddress), addr addrLen, O_NONBLOCK)
             let clientFd = clientSock.int
             if cast[int](clientSock) > 0:
-              sock.setSockOptInt(Protocol.IPPROTO_TCP.int, TCP_NODELAY, 1)
+              clientSock.setSockOptInt(Protocol.IPPROTO_TCP.int, TCP_NODELAY, 1)
               let appId = (0x00ffffff'u64 and (evData shr 32)).int
               ev.data.u64 = (appId.uint64 shl 32) or clientFd.uint64
               let retCtl = epoll_ctl(epfd, EPOLL_CTL_ADD, cast[cint](clientSock), addr ev)
