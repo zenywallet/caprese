@@ -2013,6 +2013,7 @@ template serverLib() =
     var sockAddress: Sockaddr_in
     var addrLen = sizeof(sockAddress).SockLen
     var recvBuf = newArray[byte](arg.workerParams.bufLen)
+    var pClient: ptr Client
     var sock: SocketHandle = osInvalidSocket
     var header: ReqHeader
     var targetHeaders: Array[ptr tuple[id: HeaderParams, val: string]]
@@ -2036,13 +2037,13 @@ template serverLib() =
       copyMem(addr client.recvBuf[client.recvCurSize], addr data[0], size)
       client.recvCurSize = client.recvCurSize + size
 
-    proc send(sock: SocketHandle, data: seq[byte] | string | Array[byte]): SendResult =
+    proc send(client: ptr Client, data: seq[byte] | string | Array[byte]): SendResult =
       var sendRet: int
       var pos = 0
       var size = data.len
       while true:
         var d = cast[cstring](unsafeAddr data[pos])
-        sendRet = sock.send(d, size.cint, 0'i32)
+        sendRet = client.sock.send(d, size.cint, 0'i32)
         if sendRet > 0:
           size = size - sendRet
           if size > 0:
@@ -2051,29 +2052,23 @@ template serverLib() =
           return SendResult.Success
         elif sendRet < 0:
           if errno == EAGAIN or errno == EWOULDBLOCK:
-            echo "set!!"
-            let idx = setClient(sock.int)
-            if idx < 0:
-              echo "full"
-              return SendResult.Error
+            if pos > 0:
+              client.addSendBuf(data[pos..^1])
             else:
-              let client = addr clients[idx]
-              if pos > 0:
-                client.addSendBuf(data[pos..^1])
-              else:
-                client.addSendBuf(data)
-              let appId = (0x00ffffff'u64 and (evData shr 32)).int
-              var ev: EpollEvent
-              ev.events = EPOLLIN or EPOLLRDHUP or EPOLLOUT
-              ev.data.u64 = (IndexFlag shl 56) or (appId.uint64 shl 32) or idx.uint64
-              var ret = epoll_ctl(epfd, EPOLL_CTL_MOD, sock.cint, addr ev)
+              client.addSendBuf(data)
+            var ev: EpollEvent
+            ev.events = EPOLLIN or EPOLLRDHUP or EPOLLOUT
+            ev.data = cast[EpollData](client)
+            var retCtl = epoll_ctl(epfd, EPOLL_CTL_MOD, cast[cint](client.sock), addr ev)
+            if retCtl != 0:
+              errorQuit "error: send epoll_ctl ret=", retCtl, " ", getErrnoStr()
           elif errno == EINTR:
             continue
           return SendResult.Error
         else:
           return SendResult.None
 
-    template send(data: seq[byte] | string | Array[byte]): SendResult = sock.send(data)
+    template send(data: seq[byte] | string | Array[byte]): SendResult = pClient.send(data)
 
     template get(urlPath: string, body: untyped) =
       if header.url == urlPath:
@@ -2095,7 +2090,7 @@ template serverLib() =
       if not active: break
       for i in 0..<nfd:
         try:
-          let pClient = cast[ptr Client](events[i].data)
+          pClient = cast[ptr Client](events[i].data)
           sock = pClient[].sock
           if pCLient[].listenFlag:
             let clientSock = sock.accept4(cast[ptr SockAddr](addr sockAddress), addr addrLen, O_NONBLOCK)
