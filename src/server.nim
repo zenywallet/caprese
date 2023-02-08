@@ -2144,22 +2144,11 @@ template serverLib() =
                       closeAndFreeClient()
                       break
                   elif retHeader.err == 1:
-                    let idx = setClient(sock.int)
-                    if idx < 0:
-                      echo "full"
-                      sock.close()
-                    else:
-                      let client = addr clients[idx]
-                      client.addRecvBuf(pRecvBuf, parseSize)
-                      header = retHeader.header
-                      if header.minorVer == 0 or getHeaderValue(pRecvBuf, header,
-                        InternalEssentialHeaderConnection) == "close":
-                        client.keepAlive = false
-                      let appId = (0x00ffffff'u64 and (evData shr 32)).int
-                      var ev: EpollEvent
-                      ev.events = EPOLLIN or EPOLLRDHUP
-                      ev.data.u64 = (IndexFlag shl 56) or (appId.uint64 shl 32) or idx.uint64
-                      var ret = epoll_ctl(epfd, EPOLL_CTL_MOD, sock.cint, addr ev)
+                    pClient.addRecvBuf(pRecvBuf, parseSize)
+                    header = retHeader.header
+                    if header.minorVer == 0 or getHeaderValue(pRecvBuf, header,
+                      InternalEssentialHeaderConnection) == "close":
+                      pClient[].keepAlive = false
                     break
                   else:
                     echo "retHeader err=", retHeader.err
