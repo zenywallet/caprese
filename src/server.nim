@@ -2108,8 +2108,6 @@ template serverLib() =
               let retCtl = epoll_ctl(epfd, EPOLL_CTL_ADD, cast[cint](clientSock), addr ev)
               if retCtl < 0:
                 errorQuit "error: epoll_ctl ret=", retCtl, " errno=", errno
-            elif errno != EAGAIN and errno != EWOULDBLOCK and errno != EINTR:
-              errorQuit "error: accept=", clientSock.int, " errno=", errno
           else:
             template closeAndFreeClient() =
               var chk = cast[int](sock)
