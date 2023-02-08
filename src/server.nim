@@ -1879,7 +1879,7 @@ macro addServer*(bindAddress: string, port: uint16, body: untyped = newEmptyNode
     ev.data = cast[EpollData](newClient)
     var retCtl = epoll_ctl(epfd, EPOLL_CTL_ADD, serverSock, addr ev)
     if retCtl != 0:
-      errorQuit "error: quit epoll_ctl ret=", retCtl, " ", getErrnoStr()
+      errorQuit "error: addServer epoll_ctl ret=", retCtl, " ", getErrnoStr()
 
 macro mainServerHandler(): untyped =
   quote do:
