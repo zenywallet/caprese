@@ -2044,12 +2044,12 @@ template serverLib() =
       while true:
         var d = cast[cstring](unsafeAddr data[pos])
         sendRet = client.sock.send(d, size.cint, 0'i32)
-        if sendRet > 0:
-          size = size - sendRet
-          if size > 0:
-            pos = pos + sendRet
-            continue
+        if sendRet == size:
           return SendResult.Success
+        elif sendRet > 0:
+          size = size - sendRet
+          pos = pos + sendRet
+          continue
         elif sendRet < 0:
           if errno == EAGAIN or errno == EWOULDBLOCK:
             if pos > 0:
