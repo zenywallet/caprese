@@ -1872,7 +1872,6 @@ macro addServer*(bindAddress: string, port: uint16, body: untyped = newEmptyNode
 
     var ev: EpollEvent
     ev.events = EPOLLIN or EPOLLEXCLUSIVE
-    ev.data.u64 = (ListenFlag shl 56) or (`appId`.uint64 shl 32) or serverSock.uint64
     let newClient = clientFreePool.pop()
     newClient.sock = serverSock
     newClient.listenFlag = true
