@@ -1853,11 +1853,18 @@ const ListenFlag = 0x01
 const IndexFlag = 0x02
 const UpgradeFlag = 0x04
 
+var initServerFlag {.compileTime.} = false
 var curAppId {.compileTime.} = 0
 var serverWorkerMainStmt {.compileTime.} = nnkStmtList.newTree(newEmptyNode())
 var workerRecvBufSize: int = 0
 
-macro addServer*(bindAddress: string, port: uint16, body: untyped = newEmptyNode()): untyped =
+macro initServer*(): untyped =
+  when not initServerFlag:
+    initServerFlag = true
+    quote do:
+      initClient()
+
+macro addServerMacro*(bindAddress: string, port: uint16, body: untyped = newEmptyNode()): untyped =
   inc(curAppId)
   var appId = curAppId
   serverWorkerMainStmt.add(body)
@@ -1887,6 +1894,10 @@ macro addServer*(bindAddress: string, port: uint16, body: untyped = newEmptyNode
     var retCtl = epoll_ctl(epfd, EPOLL_CTL_ADD, serverSock, addr ev)
     if retCtl != 0:
       errorQuit "error: addServer epoll_ctl ret=", retCtl, " ", getErrnoStr()
+
+template addServer*(bindAddress: string, port: uint16, body: untyped = newEmptyNode()) {.dirty.} =
+  initServer()
+  addServerMacro(bindAddress, port, body)
 
 macro mainServerHandler(): untyped =
   quote do:
@@ -2212,7 +2223,6 @@ template serverLib() =
 template serverStart*() =
   serverType()
   serverLib()
-  initClient()
   startTimeStampUpdater()
 
   var threads: array[WORKER_THREAD_NUM, Thread[WrapperThreadArg]]
