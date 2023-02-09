@@ -2083,6 +2083,8 @@ template serverLib() =
 
     template reqUrl: string = header.url
 
+    template reqClient: ptr Client = pClient
+
     template mainServerHandlerProcs(pRecvBuf: ptr UncheckedArray[byte]) =
       template reqHost: string =
         getHeaderValue(pRecvBuf, header, InternalEssentialHeaderHost)
