@@ -211,7 +211,7 @@ when isMainModule:
       url: string
 
   config:
-    ssl = true
+    ssl = false
     sslLib = OpenSSL
     debugLog = true
 
