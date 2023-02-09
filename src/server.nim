@@ -545,6 +545,8 @@ proc abort() =
 
 #  include stream
 
+var clientFreePool*: Queue[ptr Client]
+
 proc initClient() =
   var p = cast[ptr UncheckedArray[Client]](allocShared0(sizeof(ClientArray)))
   for i in 0..<CLIENT_MAX:
@@ -572,6 +574,11 @@ proc initClient() =
   tag2ClientIds = newHashTable[Tag, Array[ClientId]](CLIENT_MAX * 10 * 3 div 2)
   clientId2Tags = newHashTable[ClientId, Array[TagRef]](CLIENT_MAX * 3 div 2)
   clientId2Tasks = newHashTable[ClientId, Array[ClientTask]](CLIENT_MAX * 3 div 2)
+
+  clientFreePool.init(CLIENT_MAX)
+  for i in 0..<CLIENT_MAX:
+    clients[i].sock = osInvalidSocket
+    clientFreePool.add(addr clients[i])
 
 proc freeClient() =
   pendingClients.delete()
@@ -2251,10 +2258,6 @@ when isMainModule:
   createThread(updateTimeStampThread, updateTimeStamp)
 
   initClient()
-  var clientFreePool = newQueue[ptr Client](CLIENT_MAX)
-  for i in 0..<ClientMax:
-    clients[i].sock = osInvalidSocket
-    clientFreePool.add(addr clients[i])
 
   addServer("0.0.0.0", 8009):
     routes:
