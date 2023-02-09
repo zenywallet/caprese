@@ -110,7 +110,7 @@ macro init(): untyped =
     when cfg.sigTermQuit:
       onSignal(SIGINT, SIGTERM):
         echo "bye from signal ", sig
-        serverlib.stop()
+        serverlib.serverStop()
         active = false
         `onSigTermQuitBody`
 
@@ -118,15 +118,6 @@ macro get*(url: string, body: untyped): untyped =
   quote do:
     if url == `url`:
       `body`
-
-template serverStart(body: untyped) {.dirty.} =
-  proc webMain(client: ptr Client, url: string, headers: Headers): SendResult =
-    body
-  setWebMain(webMain)
-
-macro routes*(body: untyped): untyped =
-  quote do:
-    serverStart(`body`)
 
 template setStream(body: untyped) {.dirty.} =
   proc streamMain(client: ptr Client, opcode: WebSocketOpCode,
@@ -143,8 +134,7 @@ macro server*(bindAddress: string, port: uint16, body: untyped): untyped =
     init()
     echo "bind address: ", `bindAddress`
     echo "port: ", `port`
-    `body`
-    start()
+    addServer(`bindAddress`, `port`, `body`)
 
 macro worker*(num: int, body: untyped): untyped =
   var workerRootBlockBody = nnkStmtList.newTree(
@@ -176,8 +166,9 @@ macro pendingBody[T](reqs: var Queue[tuple[cid: ClientId, data: T]], data: T): u
       else:
         return SendResult.Error
 
-template pending*[T](reqs: var Queue[tuple[cid: ClientId, data: T]], data: T): SendResult =
+template pending*[T](reqs: var Queue[tuple[cid: ClientId, data: T]], data: T): SendResult {.dirty.} =
   block:
+    var client = reqClient()
     pendingBody(reqs, data)
     pendingProc()
 
@@ -199,8 +190,6 @@ template getPending*(reqs: auto): auto =
   let ret = reqs.recv()
   if not active: exitWorker()
   ret
-
-template send*(data: string): SendResult = client.send(data)
 
 
 when isMainModule:
@@ -256,9 +245,9 @@ when isMainModule:
         return send(IndexHtml.addHeader())
 
       get "/test":
-        return reqs.pending(PendingData(url: url))
+        return reqs.pending(PendingData(url: reqUrl))
 
-      let urlText = sanitizeHtml(url)
+      let urlText = sanitizeHtml(reqUrl)
       return send(fmt"Not found: {urlText}".addDocType().addHeader(Status404))
 
     stream:
@@ -267,4 +256,7 @@ when isMainModule:
       # data: ptr UncheckedArray[byte]
       # size: int
 
-      echo "opcode=", opcode
+      #echo "opcode=", opcode
+      discard
+
+  serverStart()
