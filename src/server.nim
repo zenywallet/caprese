@@ -146,9 +146,9 @@ proc send*(client: ptr Client, data: seq[byte] | string): SendResult =
       if not client.ssl.isNil:
         sendRet = client.ssl.SSL_write(d, size.cint)
       else:
-        sendRet = client.fd.SocketHandle.send(d, size.cint, 0'i32)
+        sendRet = client.sock.send(d, size.cint, 0'i32)
     else:
-      sendRet = client.fd.SocketHandle.send(d, size.cint, 0'i32)
+      sendRet = client.sock.send(d, size.cint, 0'i32)
     if sendRet > 0:
       debug "send sendRet=", sendRet, " size=", size
       size = size - sendRet
