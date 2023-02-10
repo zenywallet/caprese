@@ -1855,6 +1855,7 @@ const UpgradeFlag = 0x04
 
 var initServerFlag {.compileTime.} = false
 var curAppId {.compileTime.} = 0
+var serverWorkerInitStmt {.compileTime.} = nnkStmtList.newTree(newEmptyNode())
 var serverWorkerMainStmt {.compileTime.} =
   nnkStmtList.newTree(
     nnkCaseStmt.newTree(
@@ -1879,10 +1880,16 @@ macro initServer*(): untyped =
 macro addServerMacro*(bindAddress: string, port: uint16, body: untyped = newEmptyNode()): untyped =
   inc(curAppId)
   var appId = curAppId
+  var mainStmt = nnkStmtList.newTree(newEmptyNode())
+  for s in body:
+    if s[0] == newIdentNode("routes") or s[0] == newIdentNode("stream"):
+      mainStmt.add(s)
+    else:
+      serverWorkerInitStmt.add(s)
   var ofBody =
     nnkOfBranch.newTree(
       newLit(appId),
-      body
+      mainStmt
     )
   serverWorkerMainStmt[0].insert(appId, ofBody)
 
@@ -1915,6 +1922,8 @@ macro addServerMacro*(bindAddress: string, port: uint16, body: untyped = newEmpt
 template addServer*(bindAddress: string, port: uint16, body: untyped = newEmptyNode()) {.dirty.} =
   initServer()
   addServerMacro(bindAddress, port, body)
+
+macro serverWorkerInit(): untyped = serverWorkerInitStmt
 
 macro mainServerHandlerMacro*(appId: typed): untyped =
   serverWorkerMainStmt[0][0] = newIdentNode($appId)
@@ -2124,6 +2133,8 @@ template serverLib() =
     let threadId = arg.workerParams.threadId
     var ev: EpollEvent
     ev.events = EPOLLIN or EPOLLRDHUP
+
+    serverWorkerInit()
 
     while true:
       var nfd = epoll_wait(epfd, cast[ptr EpollEvent](addr events),
