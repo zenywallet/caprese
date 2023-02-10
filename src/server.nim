@@ -2269,8 +2269,6 @@ when isMainModule:
   var updateTimeStampThread: Thread[void]
   createThread(updateTimeStampThread, updateTimeStamp)
 
-  initClient()
-
   addServer("0.0.0.0", 8009):
     routes:
       get "/":
