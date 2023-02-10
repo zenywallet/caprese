@@ -2264,9 +2264,7 @@ template serverStop*() =
 when isMainModule:
   onSignal(SIGINT, SIGTERM):
     debug "bye from signal ", sig
-    quitServer()
-    stopTimeStampUpdater()
-    freeClient()
+    serverStop()
 
   signal(SIGPIPE, SIG_IGN)
 
@@ -2303,15 +2301,5 @@ when isMainModule:
     stream:
       discard
 
-  serverType()
-  serverLib()
-  startTimeStampUpdater()
-
-  var threads: array[WORKER_THREAD_NUM, Thread[WrapperThreadArg]]
-  for i in 0..<WORKER_THREAD_NUM:
-    createThread(threads[i], threadWrapper, (serverWorker,
-      ThreadArg(type: ThreadArgType.WorkerParams, workerParams: (i + 1, workerRecvBufSize))))
-
-  joinThreads(threads)
-  joinThread(contents.timeStampThread)
+  serverStart()
   joinThread(updateTimeStampThread)
