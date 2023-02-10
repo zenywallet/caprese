@@ -132,7 +132,7 @@ proc addSendBuf(client: ptr Client, data: seq[byte] | string | Array[byte]) =
   copyMem(addr client.sendBuf[client.sendCurSize], unsafeAddr data[0], data.len)
   client.sendCurSize = nextSize
 
-proc send*(client: ptr Client, data: seq[byte] | string): SendResult =
+proc send*(client: ptr Client, data: seq[byte] | string | Array[byte]): SendResult =
   if client.sendCurSize > 0:
     client.addSendBuf(data)
     return SendResult.Pending
