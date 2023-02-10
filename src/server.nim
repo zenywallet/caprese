@@ -1855,7 +1855,19 @@ const UpgradeFlag = 0x04
 
 var initServerFlag {.compileTime.} = false
 var curAppId {.compileTime.} = 0
-var serverWorkerMainStmt {.compileTime.} = nnkStmtList.newTree(newEmptyNode())
+var serverWorkerMainStmt {.compileTime.} =
+  nnkStmtList.newTree(
+    nnkCaseStmt.newTree(
+      newIdentNode(""),
+      nnkElse.newTree(
+        nnkStmtList.newTree(
+          nnkDiscardStmt.newTree(
+            newEmptyNode()
+          )
+        )
+      )
+    )
+  )
 var workerRecvBufSize: int = 0
 
 macro initServer*(): untyped =
@@ -1867,7 +1879,12 @@ macro initServer*(): untyped =
 macro addServerMacro*(bindAddress: string, port: uint16, body: untyped = newEmptyNode()): untyped =
   inc(curAppId)
   var appId = curAppId
-  serverWorkerMainStmt.add(body)
+  var ofBody =
+    nnkOfBranch.newTree(
+      newLit(appId),
+      body
+    )
+  serverWorkerMainStmt[0].insert(appId, ofBody)
 
   quote do:
     from nativesockets import setBlocking, getSockOptInt, setSockOptInt
@@ -1899,9 +1916,9 @@ template addServer*(bindAddress: string, port: uint16, body: untyped = newEmptyN
   initServer()
   addServerMacro(bindAddress, port, body)
 
-macro mainServerHandler(): untyped =
-  quote do:
-    (proc(): SendResult = `serverWorkerMainStmt`)()
+macro mainServerHandlerMacro*(appId: typed): untyped =
+  serverWorkerMainStmt[0][0] = newIdentNode($appId)
+  serverWorkerMainStmt
 
 template site*(hostname: string, body: untyped) =
   if reqHost() == hostname:
@@ -2033,6 +2050,7 @@ template serverLib() =
     var recvBuf = newArray[byte](arg.workerParams.bufLen)
     var pClient: ptr Client
     var sock: SocketHandle = osInvalidSocket
+    var appId: int
     var header: ReqHeader
     var targetHeaders: Array[ptr tuple[id: HeaderParams, val: string]]
     for i in 0..<TargetHeaders.len:
@@ -2100,6 +2118,9 @@ template serverLib() =
       template reqHost: string =
         getHeaderValue(pRecvBuf, header, InternalEssentialHeaderHost)
 
+    template mainServerHandler(): SendResult {.dirty.} =
+      (proc(): SendResult = mainServerHandlerMacro(appId))()
+
     let threadId = arg.workerParams.threadId
     var ev: EpollEvent
     ev.events = EPOLLIN or EPOLLRDHUP
@@ -2118,6 +2139,7 @@ template serverLib() =
               clientSock.setSockOptInt(Protocol.IPPROTO_TCP.int, TCP_NODELAY, 1)
               let newClient = clientFreePool.pop()
               newClient.sock = clientSock
+              newClient.appId = pCLient[].appId
               ev.data = cast[EpollData](newClient)
               let retCtl = epoll_ctl(epfd, EPOLL_CTL_ADD, cast[cint](clientSock), addr ev)
               if retCtl < 0:
@@ -2141,6 +2163,7 @@ template serverLib() =
                   let pRecvBuf = cast[ptr UncheckedArray[byte]](addr recvBuf[nextPos])
                   let retHeader = parseHeader(pRecvBuf, parseSize, targetHeaders)
                   if retHeader.err == 0:
+                    appId = pClient[].appId
                     header = retHeader.header
                     mainServerHandlerProcs(pRecvBuf)
                     let retMain = mainServerHandler()
