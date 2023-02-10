@@ -149,13 +149,13 @@ proc send*(client: ptr Client, data: seq[byte] | string): SendResult =
         sendRet = client.sock.send(d, size.cint, 0'i32)
     else:
       sendRet = client.sock.send(d, size.cint, 0'i32)
-    if sendRet > 0:
+    if sendRet == size:
+      return SendResult.Success
+    elif sendRet > 0:
       debug "send sendRet=", sendRet, " size=", size
       size = size - sendRet
-      if size > 0:
-        pos = pos + sendRet
-        continue
-      return SendResult.Success
+      pos = pos + sendRet
+      continue
     elif sendRet < 0:
       when ENABLE_SSL:
         if not client.ssl.isNil:
