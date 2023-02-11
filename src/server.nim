@@ -2056,7 +2056,8 @@ template serverLib() =
     var evData: uint64
     var sockAddress: Sockaddr_in
     var addrLen = sizeof(sockAddress).SockLen
-    var recvBuf = newArray[byte](arg.workerParams.bufLen)
+    let recvBufLen = arg.workerParams.bufLen
+    var recvBuf = newArray[byte](recvBufLen)
     var pClient: ptr Client
     var sock: SocketHandle = osInvalidSocket
     var appId: int
@@ -2067,11 +2068,11 @@ template serverLib() =
 
     proc reserveRecvBuf(client: ptr Client, size: int) =
       if client.recvBuf.isNil:
-        client.recvBuf = cast[ptr UncheckedArray[byte]](allocShared0(sizeof(byte) * (size + arg.workerParams.bufLen)))
-        client.recvBufSize = size + arg.workerParams.bufLen
+        client.recvBuf = cast[ptr UncheckedArray[byte]](allocShared0(sizeof(byte) * (size + recvBufLen)))
+        client.recvBufSize = size + recvBufLen
       var left = client.recvBufSize - client.recvCurSize
       if size > left:
-        var nextSize = client.recvCurSize + size + arg.workerParams.bufLen
+        var nextSize = client.recvCurSize + size + recvBufLen
         if nextSize > RECVBUF_EXPAND_BREAK_SIZE:
           raise newException(ServerError, "client request too large")
         client.recvBuf = reallocClientBuf(client.recvBuf, nextSize)
@@ -2166,7 +2167,7 @@ template serverLib() =
 
             var chk = 0
             if atomic_compare_exchange_n(addr pClient[].threadId, addr chk, threadId, false, 0, 0):
-              let recvlen = sock.recv(addr recvBuf[0], recvBuf.len.cint, 0.cint)
+              let recvlen = sock.recv(addr recvBuf[0], recvBufLen, 0.cint)
               if recvlen > 0:
                 var nextPos = 0
                 var parseSize = recvlen
