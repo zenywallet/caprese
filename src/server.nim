@@ -2059,6 +2059,7 @@ template serverLib() =
     let recvBufLen = arg.workerParams.bufLen
     var recvBuf = newArray[byte](recvBufLen)
     var pClient: ptr Client
+    var pRecvBuf: ptr UncheckedArray[byte]
     var sock: SocketHandle = osInvalidSocket
     var appId: int
     var header: ReqHeader
@@ -2124,9 +2125,8 @@ template serverLib() =
 
     template reqClient: ptr Client = pClient
 
-    template mainServerHandlerProcs(pRecvBuf: ptr UncheckedArray[byte]) =
-      template reqHost: string =
-        getHeaderValue(pRecvBuf, header, InternalEssentialHeaderHost)
+    template reqHost: string =
+      getHeaderValue(pRecvBuf, header, InternalEssentialHeaderHost)
 
     template mainServerHandler(): SendResult {.dirty.} =
       (proc(): SendResult = mainServerHandlerMacro(appId))()
@@ -2172,12 +2172,11 @@ template serverLib() =
                 var nextPos = 0
                 var parseSize = recvlen
                 while true:
-                  let pRecvBuf = cast[ptr UncheckedArray[byte]](addr recvBuf[nextPos])
+                  pRecvBuf = cast[ptr UncheckedArray[byte]](addr recvBuf[nextPos])
                   let retHeader = parseHeader(pRecvBuf, parseSize, targetHeaders)
                   if retHeader.err == 0:
                     appId = pClient[].appId
                     header = retHeader.header
-                    mainServerHandlerProcs(pRecvBuf)
                     let retMain = mainServerHandler()
                     if retMain == SendResult.Success:
                       if header.minorVer == 0 or getHeaderValue(pRecvBuf, header,
