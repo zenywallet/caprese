@@ -782,7 +782,7 @@ proc close(client: ptr Client) =
   acquire(client.lock)
   defer:
     release(client.lock)
-  debug "close ", client.fd
+  debug "close ", client.sock.int
   when declared(freeExClient):
     freeExClient(client)
   let clientId = client.clientId
@@ -798,7 +798,7 @@ proc close(client: ptr Client) =
       SSL_free(client.ssl)
       client.ssl = nil
       client.sslErr = SSL_ERROR_NONE
-  client.fd.SocketHandle.close()
+  client.sock.close()
   client.recvCurSize = 0
   client.recvBufSize = 0
   if not client.recvBuf.isNil:
@@ -810,7 +810,7 @@ proc close(client: ptr Client) =
   client.keepAlive = true
   client.wsUpgrade = false
   client.payloadSize = 0
-  client.fd = osInvalidSocket.int
+  client.sock = osInvalidSocket
 
 when not declared(webMain):
   proc webMainDefault(client: ptr Client, url: string, headers: Headers): SendResult =
