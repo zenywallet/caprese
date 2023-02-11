@@ -2128,8 +2128,7 @@ template serverLib() =
     template reqHost: string =
       getHeaderValue(pRecvBuf, header, InternalEssentialHeaderHost)
 
-    template mainServerHandler(): SendResult {.dirty.} =
-      (proc(): SendResult = mainServerHandlerMacro(appId))()
+    proc mainServerHandler(): SendResult = mainServerHandlerMacro(appId)
 
     let threadId = arg.workerParams.threadId
     var ev: EpollEvent
