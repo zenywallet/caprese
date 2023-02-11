@@ -587,8 +587,8 @@ proc freeClient() =
   clients = nil
   for i in 0..<CLIENT_MAX:
     var client = addr p[i]
-    if client.fd != osInvalidSocket.int:
-      client.fd.SocketHandle.close()
+    if client.sock != osInvalidSocket:
+      client.sock.close()
     if not client.recvBuf.isNil:
       deallocShared(cast[pointer](client.recvBuf))
     if not client.sendBuf.isNil:
