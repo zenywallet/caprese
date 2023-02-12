@@ -2262,41 +2262,6 @@ template serverLib() =
 
               pClient[].threadId = 0
 
-          #[
-          let idx = (evData and 0xffffffff'u64).int
-          let client = addr clients[idx]
-          let sock = client.fd.SocketHandle
-          client.reserveRecvBuf(arg.workerParams.bufLen)
-          let recvlen = sock.recv(addr client.recvBuf[client.recvCurSize], arg.workerParams.bufLen.cint, 0.cint)
-          if recvlen > 0:
-            client.recvCurSize = client.recvCurSize + recvlen
-            var nextPos = 0
-            var parseSize = client.recvCurSize
-            while true:
-              let pRecvBuf = cast[ptr UncheckedArray[byte]](addr client.recvBuf[nextPos])
-              let retHeader = parseHeader(pRecvBuf, parseSize, targetHeaders)
-              if retHeader.err == 0:
-                header = retHeader.header
-                mainServerHandlerProcs(pRecvBuf)
-                discard mainServerHandler()
-                if retHeader.next < client.recvCurSize:
-                  nextPos = retHeader.next
-                  parseSize = client.recvCurSize - nextPos
-                else:
-                  client.recvCurSize = 0
-                  break
-              elif retHeader.err == 1:
-                break
-              else:
-                echo "retHeader err=", retHeader.err
-                sock.close()
-                break
-          elif recvlen == 0:
-            sock.close()
-          else:
-            discard
-          ]#
-
         except:
           let e = getCurrentException()
           error e.name, ": ", e.msg
