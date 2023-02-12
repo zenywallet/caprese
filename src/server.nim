@@ -575,10 +575,14 @@ proc initClient() =
   clientId2Tags = newHashTable[ClientId, Array[TagRef]](CLIENT_MAX * 3 div 2)
   clientId2Tasks = newHashTable[ClientId, Array[ClientTask]](CLIENT_MAX * 3 div 2)
 
-  clientFreePool.init(CLIENT_MAX)
-  for i in 0..<CLIENT_MAX:
-    clients[i].sock = osInvalidSocket
-    clientFreePool.add(addr clients[i])
+  try:
+    clientFreePool.init(CLIENT_MAX)
+    for i in 0..<CLIENT_MAX:
+      clients[i].sock = osInvalidSocket
+      clientFreePool.add(addr clients[i])
+  except:
+    let e = getCurrentException()
+    errorQuit e.name, ": ", e.msg
 
 proc freeClient() =
   pendingClients.delete()
@@ -1910,7 +1914,11 @@ macro addServerMacro*(bindAddress: string, port: uint16, body: untyped = newEmpt
 
     var ev: EpollEvent
     ev.events = EPOLLIN or EPOLLEXCLUSIVE
-    let newClient = clientFreePool.pop()
+    let newClient = try:
+      clientFreePool.pop()
+    except:
+      let e = getCurrentException()
+      errorQuit e.name, ": ", e.msg
     newClient.sock = serverSock
     newClient.listenFlag = true
     newClient.appId = `appId`
