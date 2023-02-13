@@ -2093,12 +2093,10 @@ template serverLib() =
       client.recvCurSize = client.recvCurSize + size
 
     proc send(client: ptr Client, data: seq[byte] | string | Array[byte]): SendResult =
-      var sendRet: int
       var pos = 0
       var size = data.len
       while true:
-        var d = cast[cstring](unsafeAddr data[pos])
-        sendRet = client.sock.send(d, size.cint, 0'i32)
+        let sendRet = client.sock.send(cast[cstring](unsafeAddr data[pos]), cast[cint](size), 0'i32)
         if sendRet == size:
           return SendResult.Success
         elif sendRet > 0:
