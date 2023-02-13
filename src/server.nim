@@ -2175,49 +2175,51 @@ template serverLib() =
               if pClient[].recvCurSize == 0:
                 let recvlen = sock.recv(addr recvBuf[0], recvBufLen, 0.cint)
                 if recvlen > 0:
-                  var nextPos = 0
-                  var parseSize = recvlen
-                  while true:
-                    pRecvBuf = cast[ptr UncheckedArray[byte]](addr recvBuf[nextPos])
-                    let retHeader = parseHeader(pRecvBuf, parseSize, targetHeaders)
-                    if retHeader.err == 0:
-                      appId = pClient[].appId
-                      header = retHeader.header
-                      let retMain = mainServerHandler()
-                      if retMain == SendResult.Success:
-                        if header.minorVer == 0 or getHeaderValue(pRecvBuf, header,
-                          InternalEssentialHeaderConnection) == "close":
+                  if recvlen >= 17 and equalMem(addr recvBuf[recvlen - 4], "\c\L\c\L".cstring, 4):
+                    pClient[].threadId = 0
+
+                    var nextPos = 0
+                    var parseSize = recvlen
+                    while true:
+                      pRecvBuf = cast[ptr UncheckedArray[byte]](addr recvBuf[nextPos])
+                      let retHeader = parseHeader(pRecvBuf, parseSize, targetHeaders)
+                      if retHeader.err == 0:
+                        appId = pClient[].appId
+                        header = retHeader.header
+                        let retMain = mainServerHandler()
+                        if retMain == SendResult.Success:
+                          if header.minorVer == 0 or getHeaderValue(pRecvBuf, header,
+                            InternalEssentialHeaderConnection) == "close":
+                            closeAndFreeClient()
+                            break
+                          elif retHeader.next < recvlen:
+                            nextPos = retHeader.next
+                            parseSize = recvlen - nextPos
+                          else:
+                            break
+                        elif retMain == SendResult.Pending:
+                          if retHeader.next < recvlen:
+                            nextPos = retHeader.next
+                            parseSize = recvlen - nextPos
+                          else:
+                            break
+                        else:
                           closeAndFreeClient()
                           break
-                        elif retHeader.next < recvlen:
-                          nextPos = retHeader.next
-                          parseSize = recvlen - nextPos
-                        else:
-                          break
-                      elif retMain == SendResult.Pending:
-                        if retHeader.next < recvlen:
-                          nextPos = retHeader.next
-                          parseSize = recvlen - nextPos
-                        else:
-                          break
                       else:
+                        echo "retHeader err=", retHeader.err
                         closeAndFreeClient()
                         break
-                    elif retHeader.err == 1:
-                      pClient.addRecvBuf(pRecvBuf, parseSize)
-                      header = retHeader.header
-                      if header.minorVer == 0 or getHeaderValue(pRecvBuf, header,
-                        InternalEssentialHeaderConnection) == "close":
-                        pClient[].keepAlive = false
-                      break
-                    else:
-                      echo "retHeader err=", retHeader.err
-                      closeAndFreeClient()
-                      break
+
+                  else:
+                    pClient.addRecvBuf(cast[ptr UncheckedArray[byte]](addr recvBuf[0]), recvlen)
+                    pClient[].threadId = 0
+
                 elif recvlen == 0:
+                  pClient[].threadId = 0
                   closeAndFreeClient()
                 else:
-                  discard
+                  pClient[].threadId = 0
 
               else:
                 pClient.reserveRecvBuf(recvBufLen)
@@ -2234,14 +2236,20 @@ template serverLib() =
                       header = retHeader.header
                       let retMain = mainServerHandler()
                       if retMain == SendResult.Success:
-                        if pClient[].keepAlive == false:
-                          closeAndFreeClient()
-                          break
-                        elif retHeader.next < pClient[].recvCurSize:
-                          nextPos = retHeader.next
-                          parseSize = pClient[].recvCurSize - nextPos
+                        if pClient[].keepAlive == true:
+                          if header.minorVer == 0 or getHeaderValue(pRecvBuf, header,
+                            InternalEssentialHeaderConnection) == "close":
+                            pClient[].keepAlive = false
+                            closeAndFreeClient()
+                            break
+                          elif retHeader.next < pClient[].recvCurSize:
+                            nextPos = retHeader.next
+                            parseSize = pClient[].recvCurSize - nextPos
+                          else:
+                            pClient[].recvCurSize = 0
+                            break
                         else:
-                          pClient[].recvCurSize = 0
+                          closeAndFreeClient()
                           break
                       elif retMain == SendResult.Pending:
                         if retHeader.next < pClient[].recvCurSize:
@@ -2261,12 +2269,12 @@ template serverLib() =
                       echo "retHeader err=", retHeader.err
                       closeAndFreeClient()
                       break
+                  pClient[].threadId = 0
                 elif recvlen == 0:
+                  pClient[].threadId = 0
                   closeAndFreeClient()
                 else:
-                  discard
-
-              pClient[].threadId = 0
+                  pClient[].threadId = 0
 
         except:
           let e = getCurrentException()
