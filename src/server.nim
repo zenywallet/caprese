@@ -2226,49 +2226,46 @@ template serverLib() =
                 let recvlen = sock.recv(addr pClient[].recvBuf[pClient[].recvCurSize], recvBufLen, 0.cint)
                 if recvlen > 0:
                   pClient[].recvCurSize = pClient[].recvCurSize + recvlen
-                  var nextPos = 0
-                  var parseSize = pClient[].recvCurSize
-                  while true:
-                    pRecvBuf = cast[ptr UncheckedArray[byte]](addr pClient[].recvBuf[nextPos])
-                    let retHeader = parseHeader(pRecvBuf, parseSize, targetHeaders)
-                    if retHeader.err == 0:
-                      appId = pClient[].appId
-                      header = retHeader.header
-                      let retMain = mainServerHandler()
-                      if retMain == SendResult.Success:
-                        if pClient[].keepAlive == true:
-                          if header.minorVer == 0 or getHeaderValue(pRecvBuf, header,
-                            InternalEssentialHeaderConnection) == "close":
-                            pClient[].keepAlive = false
+                  if pClient[].recvCurSize >= 17 and equalMem(addr pClient[].recvBuf[pClient[].recvCurSize - 4], "\c\L\c\L".cstring, 4):
+                    var nextPos = 0
+                    var parseSize = pClient[].recvCurSize
+                    while true:
+                      pRecvBuf = cast[ptr UncheckedArray[byte]](addr pClient[].recvBuf[nextPos])
+                      let retHeader = parseHeader(pRecvBuf, parseSize, targetHeaders)
+                      if retHeader.err == 0:
+                        appId = pClient[].appId
+                        header = retHeader.header
+                        let retMain = mainServerHandler()
+                        if retMain == SendResult.Success:
+                          if pClient[].keepAlive == true:
+                            if header.minorVer == 0 or getHeaderValue(pRecvBuf, header,
+                              InternalEssentialHeaderConnection) == "close":
+                              pClient[].keepAlive = false
+                              closeAndFreeClient()
+                              break
+                            elif retHeader.next < pClient[].recvCurSize:
+                              nextPos = retHeader.next
+                              parseSize = pClient[].recvCurSize - nextPos
+                            else:
+                              pClient[].recvCurSize = 0
+                              break
+                          else:
                             closeAndFreeClient()
                             break
-                          elif retHeader.next < pClient[].recvCurSize:
+                        elif retMain == SendResult.Pending:
+                          if retHeader.next < pClient[].recvCurSize:
                             nextPos = retHeader.next
                             parseSize = pClient[].recvCurSize - nextPos
                           else:
-                            pClient[].recvCurSize = 0
                             break
                         else:
                           closeAndFreeClient()
                           break
-                      elif retMain == SendResult.Pending:
-                        if retHeader.next < pClient[].recvCurSize:
-                          nextPos = retHeader.next
-                          parseSize = pClient[].recvCurSize - nextPos
-                        else:
-                          break
                       else:
+                        echo "retHeader err=", retHeader.err
                         closeAndFreeClient()
                         break
-                    elif retHeader.err == 1:
-                      if nextPos != 0:
-                        moveMem(addr pClient[].recvBuf[0], pRecvBuf, parseSize)
-                        pClient[].recvCurSize = parseSize
-                      break
-                    else:
-                      echo "retHeader err=", retHeader.err
-                      closeAndFreeClient()
-                      break
+
                   pClient[].threadId = 0
                 elif recvlen == 0:
                   pClient[].threadId = 0
