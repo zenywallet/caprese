@@ -1853,10 +1853,6 @@ proc stop*() {.inline.} =
   if not abortFlag:
     quitServer()
 
-const ListenFlag = 0x01
-const IndexFlag = 0x02
-const UpgradeFlag = 0x04
-
 var initServerFlag {.compileTime.} = false
 var curAppId {.compileTime.} = 0
 var serverWorkerInitStmt {.compileTime.} = nnkStmtList.newTree(newEmptyNode())
