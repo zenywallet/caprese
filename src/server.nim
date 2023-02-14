@@ -2149,10 +2149,9 @@ template serverLib() =
 
     serverWorkerInit()
 
-    while true:
+    while active:
       var nfd = epoll_wait(epfd, cast[ptr EpollEvent](addr events),
                           EPOLL_EVENTS_SIZE.cint, 3000.cint)
-      if not active: break
       for i in 0..<nfd:
         try:
           pClient = cast[ptr Client](events[i].data)
