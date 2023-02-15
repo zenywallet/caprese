@@ -2165,8 +2165,7 @@ template serverLib() =
                 errorQuit "error: epoll_ctl ret=", retCtl, " errno=", errno
           else:
             template closeAndFreeClient() =
-              var chk = cast[int](sock)
-              if atomic_compare_exchange_n(cast[ptr int](addr pClient[].sock), addr chk,
+              if atomic_compare_exchange_n(cast[ptr int](addr pClient[].sock), cast[ptr int](addr sock),
                                           cast[int](osInvalidSocket), false, 0, 0):
                 sock.close()
                 pClient[].listenFlag = false
