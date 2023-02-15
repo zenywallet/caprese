@@ -2147,7 +2147,7 @@ template serverLib() =
 
     while active:
       var nfd = epoll_wait(epfd, cast[ptr EpollEvent](addr events),
-                          EPOLL_EVENTS_SIZE.cint, 3000.cint)
+                          EPOLL_EVENTS_SIZE.cint, -1.cint)
       for i in 0..<nfd:
         try:
           pClient = cast[ptr Client](events[i].data)
