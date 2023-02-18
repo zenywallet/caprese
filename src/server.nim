@@ -24,7 +24,7 @@ import serverdef
 const RLIMIT_OPEN_FILES* = 65536
 const CLIENT_MAX = 32000
 const CLIENT_SEARCH_LIMIT = 30000
-const WORKER_THREAD_NUM = 16
+const WORKER_THREAD_NUM {.intdefine.} = 16
 const EPOLL_EVENTS_SIZE = 10
 const CLCL = 168626701'u32 # "\c\L\c\L"
 const RECVBUF_EXPAND_BREAK_SIZE = 131072 * 5
