@@ -2113,7 +2113,7 @@ template serverLib() =
             else:
               client.addSendBuf(data)
             var ev: EpollEvent
-            ev.events = EPOLLIN or EPOLLRDHUP or EPOLLOUT
+            ev.events = EPOLLIN or EPOLLRDHUP or EPOLLET or EPOLLOUT
             ev.data = cast[EpollData](client)
             var retCtl = epoll_ctl(epfd, EPOLL_CTL_MOD, cast[cint](client.sock), addr ev)
             if retCtl != 0:
@@ -2141,7 +2141,7 @@ template serverLib() =
 
     let threadId = arg.workerParams.threadId
     var ev: EpollEvent
-    ev.events = EPOLLIN or EPOLLRDHUP
+    ev.events = EPOLLIN or EPOLLRDHUP or EPOLLET
 
     serverWorkerInit()
 
