@@ -118,7 +118,7 @@ proc clear*[T](queue: var Queue[T]) =
   queue.count = 0
   queue.next = 0
 
-proc `=destroy`[T](queue: var Queue[T]) =
+proc `=destroy`*[T](queue: var Queue[T]) =
   if likely(not queue.buf.isNil):
     queue.buf.deallocShared()
     queue.buf = nil
