@@ -2,6 +2,7 @@
 
 import macros
 import locks
+import posix
 
 type
   Queue*[T] = object
@@ -11,6 +12,7 @@ type
     next*: int
     addLock: Lock
     popLock: Lock
+    sem: Sem
 
 
 proc `=destroy`*[T](queue: var Queue[T]) =
@@ -19,6 +21,7 @@ proc `=destroy`*[T](queue: var Queue[T]) =
     queue.buf = nil
     deinitLock(queue.addLock)
     deinitLock(queue.popLock)
+    discard sem_destroy(addr queue.sem)
 
 proc `=copy`*[T](a: var Queue[T]; b: Queue[T]) {.error: "=copy is not supported".}
 
@@ -34,6 +37,7 @@ proc init*[T](queue: var Queue[T], limit: int) {.inline.} =
   if unlikely(not queue.buf.isNil):
     `=destroy`(queue)
 
+  discard sem_init(addr queue.sem, 0, 0)
   initLock(queue.popLock)
   initLock(queue.addLock)
   let bufLen = limit + 1
@@ -91,4 +95,14 @@ proc popSafe*[T](queue: var Queue[T]): T {.inline.} =
       queue.pos = 0
     else:
       inc(queue.pos)
+  release(queue.popLock)
+
+proc send*[T](queue: var Queue[T], data: T) {.inline.} =
+  queue.add(data)
+  discard sem_post(addr queue.sem)
+
+proc recv*[T](queue: var Queue[T]): T {.inline.} =
+  discard sem_wait(addr queue.sem)
+  acquire(queue.popLock)
+  result = queue.pop()
   release(queue.popLock)
