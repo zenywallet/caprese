@@ -29,6 +29,8 @@ template clear*[T](queue: var Queue[T]) =
   queue.next = 0
 
 proc init*[T](queue: var Queue[T], limit: int) {.inline.} =
+  when not (T is ptr) and not (T is pointer): {.error: "T must be a pointer".}
+
   if unlikely(not queue.buf.isNil):
     `=destroy`(queue)
 
