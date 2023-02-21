@@ -1,6 +1,7 @@
 # Copyright (c) 2022 zenywallet
 
 import macros
+import locks
 
 type
   Queue*[T] = object
@@ -8,7 +9,8 @@ type
     bufLen*: int
     pos*: int
     next*: int
-    accessId: int
+    addLock: Lock
+    popLock: Lock
 
   QueueEmptyError* = object of CatchableError
   QueueFullError* = object of CatchableError
@@ -17,14 +19,12 @@ const QueueFullErrorMessage = "queue is full"
 const QueueEmptyErrorMessage = "no data"
 
 
-proc atomic_compare_exchange_n(p: ptr int, expected: ptr int, desired: int, weak: bool,
-                              success_memmodel: int, failure_memmodel: int): bool
-                              {.importc: "__atomic_compare_exchange_n", nodecl, discardable.}
-
 proc `=destroy`*[T](queue: var Queue[T]) =
   if likely(not queue.buf.isNil):
     queue.buf.deallocShared()
     queue.buf = nil
+    deinitLock(queue.addLock)
+    deinitLock(queue.popLock)
 
 proc `=copy`*[T](a: var Queue[T]; b: Queue[T]) {.error: "=copy is not supported".}
 
@@ -38,6 +38,8 @@ proc init*[T](queue: var Queue[T], limit: int) {.inline.} =
   if unlikely(not queue.buf.isNil):
     `=destroy`(queue)
 
+  initLock(queue.popLock)
+  initLock(queue.addLock)
   let bufLen = limit + 1
   queue.buf = cast[ptr UncheckedArray[T]](allocShared0(sizeof(T) * bufLen))
   queue.bufLen = bufLen
@@ -76,33 +78,25 @@ proc pop*[T](queue: var Queue[T]): T {.inline.} =
       else:
         inc(queue.pos)
 
-proc addSafe*[T](queue: var Queue[T], data: T, accessId: static int) {.inline.} =
-  while true:
-    var expectedAccessId = 0
-    if atomic_compare_exchange_n(addr queue.accessId, addr expectedAccessId, accessId, false, 0, 0):
-      break
-
+proc addSafe*[T](queue: var Queue[T], data: T) {.inline.} =
+  acquire(queue.addLock)
   queue.buf[queue.next] = data
   let next = queue.next + 1
   if unlikely(next >= queue.bufLen):
     if unlikely(queue.pos == 0):
-      queue.accessId = 0
+      release(queue.addLock)
       raise newException(QueueFullError, QueueFullErrorMessage)
     else:
       queue.next = 0
   elif unlikely(queue.pos == next):
-    queue.accessId = 0
+    release(queue.addLock)
     raise newException(QueueFullError, QueueFullErrorMessage)
   else:
     queue.next = next
-  queue.accessId = 0
+  release(queue.addLock)
 
-proc popSafe*[T](queue: var Queue[T], accessId: static int): T {.inline.} =
-  while true:
-    var expectedAccessId = 0
-    if atomic_compare_exchange_n(addr queue.accessId, addr expectedAccessId, accessId, false, 0, 0):
-      break
-
+proc popSafe*[T](queue: var Queue[T]): T {.inline.} =
+  acquire(queue.popLock)
   when not (T is ptr) and not (T is pointer):
     if likely(queue.pos != queue.next):
       result = queue.buf[queue.pos]
@@ -111,7 +105,7 @@ proc popSafe*[T](queue: var Queue[T], accessId: static int): T {.inline.} =
       else:
         inc(queue.pos)
     else:
-      queue.accessId = 0
+      release(queue.popLock)
       raise newException(QueueEmptyError, QueueEmptyErrorMessage)
   else:
     if likely(queue.pos != queue.next):
@@ -120,14 +114,4 @@ proc popSafe*[T](queue: var Queue[T], accessId: static int): T {.inline.} =
         queue.pos = 0
       else:
         inc(queue.pos)
-  queue.accessId = 0
-
-var curAccessId {.compileTime.} = 0
-
-macro createAccessId(): int =
-  inc(curAccessId)
-  quote do: `curAccessId`
-
-template addSafe*[T](queue: var Queue[T], data: T) = queue.addSafe(data, createAccessId())
-
-template popSafe*[T](queue: var Queue[T]): T = queue.popSafe(createAccessId())
+  release(queue.popLock)
