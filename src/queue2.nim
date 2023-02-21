@@ -12,12 +12,6 @@ type
     addLock: Lock
     popLock: Lock
 
-  QueueEmptyError* = object of CatchableError
-  QueueFullError* = object of CatchableError
-
-const QueueFullErrorMessage = "queue is full"
-const QueueEmptyErrorMessage = "no data"
-
 
 proc `=destroy`*[T](queue: var Queue[T]) =
   if likely(not queue.buf.isNil):
@@ -47,71 +41,52 @@ proc init*[T](queue: var Queue[T], limit: int) {.inline.} =
 
 proc newQueue*[T](limit: int): Queue[T] = result.init(limit)
 
-proc add*[T](queue: var Queue[T], data: T) {.inline.} =
+proc add*[T](queue: var Queue[T], data: T): bool {.discardable, inline.} =
   queue.buf[queue.next] = data
   let next = queue.next + 1
   if unlikely(next >= queue.bufLen):
     if unlikely(queue.pos == 0):
-      raise newException(QueueFullError, QueueFullErrorMessage)
+      return false
     else:
       queue.next = 0
   elif unlikely(queue.pos == next):
-    raise newException(QueueFullError, QueueFullErrorMessage)
+    return false
   else:
     queue.next = next
+  return true
 
 proc pop*[T](queue: var Queue[T]): T {.inline.} =
-  when not (T is ptr) and not (T is pointer):
-    if likely(queue.pos != queue.next):
-      result = queue.buf[queue.pos]
-      if unlikely(queue.pos + 1 >= queue.bufLen):
-        queue.pos = 0
-      else:
-        inc(queue.pos)
+  if likely(queue.pos != queue.next):
+    result = queue.buf[queue.pos]
+    if unlikely(queue.pos + 1 >= queue.bufLen):
+      queue.pos = 0
     else:
-      raise newException(QueueEmptyError, QueueEmptyErrorMessage)
-  else:
-    if likely(queue.pos != queue.next):
-      result = queue.buf[queue.pos]
-      if unlikely(queue.pos + 1 >= queue.bufLen):
-        queue.pos = 0
-      else:
-        inc(queue.pos)
+      inc(queue.pos)
 
-proc addSafe*[T](queue: var Queue[T], data: T) {.inline.} =
+proc addSafe*[T](queue: var Queue[T], data: T): bool {.discardable, inline.} =
   acquire(queue.addLock)
   queue.buf[queue.next] = data
   let next = queue.next + 1
   if unlikely(next >= queue.bufLen):
     if unlikely(queue.pos == 0):
       release(queue.addLock)
-      raise newException(QueueFullError, QueueFullErrorMessage)
+      return false
     else:
       queue.next = 0
   elif unlikely(queue.pos == next):
     release(queue.addLock)
-    raise newException(QueueFullError, QueueFullErrorMessage)
+    return false
   else:
     queue.next = next
   release(queue.addLock)
+  return true
 
 proc popSafe*[T](queue: var Queue[T]): T {.inline.} =
   acquire(queue.popLock)
-  when not (T is ptr) and not (T is pointer):
-    if likely(queue.pos != queue.next):
-      result = queue.buf[queue.pos]
-      if unlikely(queue.pos + 1 >= queue.bufLen):
-        queue.pos = 0
-      else:
-        inc(queue.pos)
+  if likely(queue.pos != queue.next):
+    result = queue.buf[queue.pos]
+    if unlikely(queue.pos + 1 >= queue.bufLen):
+      queue.pos = 0
     else:
-      release(queue.popLock)
-      raise newException(QueueEmptyError, QueueEmptyErrorMessage)
-  else:
-    if likely(queue.pos != queue.next):
-      result = queue.buf[queue.pos]
-      if unlikely(queue.pos + 1 >= queue.bufLen):
-        queue.pos = 0
-      else:
-        inc(queue.pos)
+      inc(queue.pos)
   release(queue.popLock)
