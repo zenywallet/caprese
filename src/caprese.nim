@@ -112,7 +112,7 @@ template setStream(body: untyped) {.dirty.} =
     body
   setStreamMain(streamMain)
 
-macro stream*(body: untyped): untyped =
+macro stream0*(body: untyped): untyped =
   quote do:
     setStream(`body`)
 
