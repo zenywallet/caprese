@@ -3,12 +3,15 @@
 when not compileOption("threads"):
   {.error: "requires --threads:on option.".}
 
+import nativesockets
 import posix
 import serverdef
 import contents
 import statuscode
 import queue
 import macros
+export nativesockets
+export posix
 export serverdef
 export contents
 export statuscode
