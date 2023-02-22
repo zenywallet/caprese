@@ -12,6 +12,21 @@ type
     Pending = 2
     Invalid = 3
 
+  SslLib* = enum
+    BearSSL
+    OpenSSL
+    LibreSSL
+    BoringSSL
+
+  Config* = object
+    ssl*: bool
+    sslLib*: SslLib
+    debugLog*: bool
+    sigTermQuit*: bool
+    sigPipeIgnore*: bool
+    maxOpenFiles*: bool
+    limitOpenFiles*: int
+
 
 macro HttpTargetHeader(idEnumName, valListName, targetHeaders, body: untyped): untyped =
   var enumParams = nnkEnumTy.newTree(newEmptyNode())

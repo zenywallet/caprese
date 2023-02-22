@@ -20,22 +20,6 @@ var workerNum = 0
 var onSigTermQuitBody {.compileTime.} = newStmtList()
 macro onSigTermQuit*(body: untyped) = discard onSigTermQuitBody.add(body)
 
-type
-  SslLib* = enum
-    BearSSL
-    OpenSSL
-    LibreSSL
-    BoringSSL
-
-  Config* = object
-    ssl*: bool
-    sslLib*: SslLib
-    debugLog*: bool
-    sigTermQuit*: bool
-    sigPipeIgnore*: bool
-    maxOpenFiles*: bool
-    limitOpenFiles*: int
-
 proc defaultConfig*(): Config {.compileTime.} =
   result.ssl = true
   result.sslLib = BearSSL
