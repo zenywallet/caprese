@@ -27,6 +27,14 @@ type
     maxOpenFiles*: bool
     limitOpenFiles*: int
 
+proc defaultConfig*(): Config {.compileTime.} =
+  result.ssl = true
+  result.sslLib = BearSSL
+  result.debugLog = false
+  result.sigTermQuit = true
+  result.sigPipeIgnore = true
+  result.maxOpenFiles = true
+  result.limitOpenFiles = 65536
 
 macro HttpTargetHeader(idEnumName, valListName, targetHeaders, body: untyped): untyped =
   var enumParams = nnkEnumTy.newTree(newEmptyNode())

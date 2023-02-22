@@ -23,15 +23,6 @@ var workerNum = 0
 var onSigTermQuitBody {.compileTime.} = newStmtList()
 macro onSigTermQuit*(body: untyped) = discard onSigTermQuitBody.add(body)
 
-proc defaultConfig*(): Config {.compileTime.} =
-  result.ssl = true
-  result.sslLib = BearSSL
-  result.debugLog = false
-  result.sigTermQuit = true
-  result.sigPipeIgnore = true
-  result.maxOpenFiles = true
-  result.limitOpenFiles = 65536
-
 var cfg* {.compileTime.}: Config = defaultConfig()
 
 macro addCfgDotExpr(body: untyped): untyped =
