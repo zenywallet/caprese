@@ -26,6 +26,7 @@ type
     sigPipeIgnore*: bool
     maxOpenFiles*: bool
     limitOpenFiles*: int
+    autoServerWorkerNum*: bool
     serverWorkerNum*: int
 
 proc defaultConfig*(): Config {.compileTime.} =
@@ -36,6 +37,7 @@ proc defaultConfig*(): Config {.compileTime.} =
   result.sigPipeIgnore = true
   result.maxOpenFiles = true
   result.limitOpenFiles = 65536
+  result.autoServerWorkerNum = true
   result.serverWorkerNum = 16
 
 macro HttpTargetHeader(idEnumName, valListName, targetHeaders, body: untyped): untyped =

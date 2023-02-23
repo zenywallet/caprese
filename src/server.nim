@@ -20,6 +20,7 @@ import ptlock
 import arraylib
 import locks
 import serverdef
+import std/cpuinfo
 
 const RLIMIT_OPEN_FILES* = 65536
 const CLIENT_MAX = 32000
@@ -2283,8 +2284,13 @@ template serverStartWithCfg(cfg: static Config) =
   serverLib()
   startTimeStampUpdater()
 
-  var threads: array[cfg.serverWorkerNum, Thread[WrapperThreadArg]]
-  for i in 0..<cfg.serverWorkerNum:
+  when cfg.autoServerWorkerNum:
+    var serverWorkerNum = countProcessors()
+  else:
+    var serverWorkerNum = cfg.serverWorkerNum
+
+  var threads = newSeq[Thread[WrapperThreadArg]](serverWorkerNum)
+  for i in 0..<serverWorkerNum:
     createThread(threads[i], threadWrapper, (serverWorker,
       ThreadArg(type: ThreadArgType.WorkerParams, workerParams: (i + 1, workerRecvBufSize))))
 
