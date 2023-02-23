@@ -2278,18 +2278,20 @@ template serverLib() =
           let e = getCurrentException()
           error e.name, ": ", e.msg
 
-template serverStart*() =
+template serverStartWithCfg(cfg: static Config) =
   serverType()
   serverLib()
   startTimeStampUpdater()
 
-  var threads: array[WORKER_THREAD_NUM, Thread[WrapperThreadArg]]
-  for i in 0..<WORKER_THREAD_NUM:
+  var threads: array[cfg.serverWorkerNum, Thread[WrapperThreadArg]]
+  for i in 0..<cfg.serverWorkerNum:
     createThread(threads[i], threadWrapper, (serverWorker,
       ThreadArg(type: ThreadArgType.WorkerParams, workerParams: (i + 1, workerRecvBufSize))))
 
   joinThreads(threads)
   joinThread(contents.timeStampThread)
+
+template serverStart*() = serverStartWithCfg(cfg)
 
 template serverStop*() =
   stop()

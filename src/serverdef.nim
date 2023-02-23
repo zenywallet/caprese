@@ -26,6 +26,7 @@ type
     sigPipeIgnore*: bool
     maxOpenFiles*: bool
     limitOpenFiles*: int
+    serverWorkerNum*: int
 
 proc defaultConfig*(): Config {.compileTime.} =
   result.ssl = true
@@ -35,6 +36,7 @@ proc defaultConfig*(): Config {.compileTime.} =
   result.sigPipeIgnore = true
   result.maxOpenFiles = true
   result.limitOpenFiles = 65536
+  result.serverWorkerNum = 16
 
 macro HttpTargetHeader(idEnumName, valListName, targetHeaders, body: untyped): untyped =
   var enumParams = nnkEnumTy.newTree(newEmptyNode())
