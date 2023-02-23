@@ -2073,7 +2073,6 @@ template serverLib() =
     var pClient: ptr Client
     var pRecvBuf: ptr UncheckedArray[byte]
     var sock: SocketHandle = osInvalidSocket
-    var appId: int
     var header: ReqHeader
     var targetHeaders: Array[ptr tuple[id: HeaderParams, val: string]]
     for i in 0..<TargetHeaders.len:
@@ -2125,20 +2124,22 @@ template serverLib() =
         else:
           return SendResult.None
 
-    template send(data: seq[byte] | string | Array[byte]): SendResult = pClient.send(data)
+    template send(data: seq[byte] | string | Array[byte]): SendResult {.dirty.} = pClient.send(data)
 
-    template get(urlPath: string, body: untyped) =
+    template get(urlPath: string, body: untyped) {.dirty.} =
       if header.url == urlPath:
         body
 
-    template reqUrl: string = header.url
+    template reqUrl: string {.dirty.} = header.url
 
-    template reqClient: ptr Client = pClient
+    template reqClient: ptr Client {.dirty.} = pClient
 
     template reqHost: string =
       getHeaderValue(pRecvBuf, header, InternalEssentialHeaderHost)
 
-    proc mainServerHandler(): SendResult = mainServerHandlerMacro(appId)
+    proc mainServerHandler(pClient: ptr Client, header: ReqHeader): SendResult {.inline.} =
+      let appId = pClient[].appId
+      mainServerHandlerMacro(appId)
 
     let threadId = arg.workerParams.threadId
     var ev: EpollEvent
@@ -2186,9 +2187,8 @@ template serverLib() =
                       pRecvBuf = cast[ptr UncheckedArray[byte]](addr recvBuf[nextPos])
                       let retHeader = parseHeader(pRecvBuf, parseSize, targetHeaders)
                       if retHeader.err == 0:
-                        appId = pClient[].appId
                         header = retHeader.header
-                        let retMain = mainServerHandler()
+                        let retMain = mainServerHandler(pClient, header)
                         if retMain == SendResult.Success:
                           if header.minorVer == 0 or getHeaderValue(pRecvBuf, header,
                             InternalEssentialHeaderConnection) == "close":
@@ -2235,9 +2235,8 @@ template serverLib() =
                       pRecvBuf = cast[ptr UncheckedArray[byte]](addr pClient[].recvBuf[nextPos])
                       let retHeader = parseHeader(pRecvBuf, parseSize, targetHeaders)
                       if retHeader.err == 0:
-                        appId = pClient[].appId
                         header = retHeader.header
-                        let retMain = mainServerHandler()
+                        let retMain = mainServerHandler(pClient, header)
                         if retMain == SendResult.Success:
                           if pClient[].keepAlive == true:
                             if header.minorVer == 0 or getHeaderValue(pRecvBuf, header,
