@@ -1850,6 +1850,13 @@ proc main(arg: ThreadArg) {.thread.} =
 
 proc start*() = threadWrapper((main, ThreadArg(type: ThreadArgType.Void)))
 
+var releaseOnQuitSocks: Array[SocketHandle]
+var releaseOnQuitEpfds: Array[cint]
+
+proc addReleaseOnQuit(sock: SocketHandle) = releaseOnQuitSocks.add(sock)
+
+proc addReleaseOnQuit(epfd: cint) = releaseOnQuitEpfds.add(epfd)
+
 proc stop*() {.inline.} =
   if not abortFlag:
     quitServer()
@@ -1898,6 +1905,7 @@ macro addServerMacro*(bindAddress: string, port: uint16, body: untyped = newEmpt
     from nativesockets import setBlocking, getSockOptInt, setSockOptInt
 
     var serverSock = createServer(`bindAddress`, `port`)
+    addReleaseOnQuit(serverSock)
     serverSock.setBlocking(false)
 
     var tcp_rmem = serverSock.getSockOptInt(SOL_SOCKET, SO_RCVBUF)
@@ -1908,6 +1916,7 @@ macro addServerMacro*(bindAddress: string, port: uint16, body: untyped = newEmpt
       epfd = epoll_create1(O_CLOEXEC)
       if epfd < 0:
         errorQuit "error: epfd=", epfd, " errno=", errno
+      addReleaseOnQuit(epfd)
 
     var ev: EpollEvent
     ev.events = EPOLLIN or EPOLLEXCLUSIVE
@@ -2294,14 +2303,24 @@ template serverStartWithCfg(cfg: static Config) =
       ThreadArg(type: ThreadArgType.WorkerParams, workerParams: (i + 1, workerRecvBufSize))))
 
   joinThreads(threads)
+  for i in countdown(releaseOnQuitEpfds.high, 0):
+    let retEpfdClose = releaseOnQuitEpfds[i].close()
+    if retEpfdClose != 0:
+      error "error: close epfd=", epfd, " ret=", retEpfdClose, " ", getErrnoStr()
+  freeClient()
   joinThread(contents.timeStampThread)
 
 template serverStart*() = serverStartWithCfg(cfg)
 
 template serverStop*() =
-  stop()
+  active = false
+  for i in countdown(releaseOnQuitSocks.high, 0):
+    let retShutdown = releaseOnQuitSocks[i].shutdown(SHUT_RD)
+    if retShutdown != 0:
+      error "error: quit shutdown ret=", retShutdown, " ", getErrnoStr()
+    echo "quit shutdown ", i
   stopTimeStampUpdater()
-  freeClient()
+
 
 when isMainModule:
   onSignal(SIGINT, SIGTERM):
