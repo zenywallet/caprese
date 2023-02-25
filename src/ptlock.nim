@@ -59,6 +59,24 @@ proc spinLockDestroy*(a: var SpinLock) =
   if pthread_spin_destroy(addr a) != 0:
     raise newException(PthreadLockError, "pthread spin lock destroy")
 
+template spinLockAcquire*(a: var SpinLock) =
+  discard pthread_spin_lock(addr a)
+
+template spinLockRelease*(a: var SpinLock) =
+  discard pthread_spin_unlock(addr a)
+
+template initLock*(a: var SpinLock, pshared: cint = PTHREAD_PROCESS_PRIVATE) =
+  discard pthread_spin_init(addr a, pshared)
+
+template deinitLock*(a: var SpinLock) =
+  discard pthread_spin_destroy(addr a)
+
+template acquire*(a: var SpinLock) =
+  discard pthread_spin_lock(addr a)
+
+template release*(a: var SpinLock) =
+  discard pthread_spin_unlock(addr a)
+
 template withSpinLock*(a: var SpinLock, body: untyped) =
   if pthread_spin_lock(addr a) != 0:
     raise newException(PthreadLockError, "pthread spin lock")
