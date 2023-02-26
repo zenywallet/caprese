@@ -7,7 +7,7 @@ proc setRlimitOpenFiles*(rlim: int): bool {.discardable.} =
   var rlp: RLimit
   var ret = getrlimit(RLIMIT_NOFILE, rlp)
   if ret != 0: return false
-  debug "RLIMIT_NOFILE prev=", rlp
+  var prevRlp = rlp
   if rlp.rlim_cur < rlim:
     if rlp.rlim_max < rlim:
       rlp.rlim_cur = rlp.rlim_max
@@ -16,11 +16,11 @@ proc setRlimitOpenFiles*(rlim: int): bool {.discardable.} =
     ret = setrlimit(RLIMIT_NOFILE, rlp)
     if ret != 0: return false
   else:
-    debug "RLIMIT_NOFILE cur=", rlp
+    debug "RLIMIT_NOFILE ", rlp.rlim_cur
     return true
   ret = getrlimit(RLIMIT_NOFILE, rlp)
   if ret != 0: return false
-  debug "RLIMIT_NOFILE new=", rlp
+  debug "RLIMIT_NOFILE ", prevRlp.rlim_cur, " -> ", rlp.rlim_cur
   if rlp.rlim_cur < rlim: return false
   return true
 
@@ -28,13 +28,13 @@ proc setMaxRlimitOpenFiles*(): bool {.discardable.} =
   var rlp: RLimit
   var ret = getrlimit(RLIMIT_NOFILE, rlp)
   if ret != 0: return false
-  debug "RLIMIT_NOFILE prev=", rlp
+  var prevRlp = rlp
   rlp.rlim_cur = rlp.rlim_max
   ret = setrlimit(RLIMIT_NOFILE, rlp)
   if ret != 0: return false
   ret = getrlimit(RLIMIT_NOFILE, rlp)
   if ret != 0: return false
-  debug "RLIMIT_NOFILE new=", rlp
+  debug "RLIMIT_NOFILE ", prevRlp.rlim_cur, " -> ", rlp.rlim_cur
   if rlp.rlim_cur < rlp.rlim_max: return false
   return true
 
