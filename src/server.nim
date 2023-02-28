@@ -2232,6 +2232,9 @@ template serverLib() =
               elif recvlen == 0:
                 closeAndFreeClient()
 
+              else:
+                closeAndFreeClient()
+
             else:
               pClient.reserveRecvBuf(recvBufLen)
               let recvlen = sock.recv(addr pClient[].recvBuf[pClient[].recvCurSize], recvBufLen, 0.cint)
@@ -2277,6 +2280,9 @@ template serverLib() =
                       break
 
               elif recvlen == 0:
+                closeAndFreeClient()
+
+              else:
                 closeAndFreeClient()
 
         except:
