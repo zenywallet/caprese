@@ -70,6 +70,7 @@ type
     ip: uint32
     invoke: bool
     lock: Lock
+    spinLock: SpinLock
     whackaMole: bool
 
   Client* = object of ClientBase
@@ -566,6 +567,7 @@ proc initClient() =
     p[i].ip = 0
     p[i].invoke = false
     initLock(p[i].lock)
+    initLock(p[i].spinLock)
     p[i].whackaMole = false
     when declared(initExClient):
       initExClient(addr p[i])
@@ -600,6 +602,7 @@ proc freeClient() =
       deallocShared(cast[pointer](client.sendBuf))
     when declared(freeExClient):
       freeExClient(client)
+    deinitLock(client.spinLock)
     deinitLock(client.lock)
   deallocShared(p)
 
@@ -2176,8 +2179,13 @@ template serverLib() =
                 errorQuit "error: epoll_ctl ret=", retCtl, " errno=", errno
           else:
             template closeAndFreeClient() =
-              if atomic_compare_exchange_n(cast[ptr int](addr pClient[].sock), cast[ptr int](addr sock),
-                                          cast[int](osInvalidSocket), false, 0, 0):
+              var flag = false
+              acquire(pClient[].spinLock)
+              if pClient[].sock != osInvalidSocket:
+                pClient[].sock = osInvalidSocket
+                flag = true
+              release(pClient[].spinLock)
+              if flag:
                 sock.close()
                 pClient[].listenFlag = false
                 clientFreePool.add(pClient)
