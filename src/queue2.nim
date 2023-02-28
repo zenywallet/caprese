@@ -70,37 +70,6 @@ proc pop*[T](queue: var Queue[T]): T {.inline.} =
     result = queue.buf[pos]
     queue.pos = pos
 
-proc addSafe*[T](queue: var Queue[T], data: T): bool {.discardable, inline.} =
-  acquire(queue.addLock)
-  let next = queue.next + 1
-  if unlikely(next >= queue.bufLen):
-    if unlikely(queue.pos == 0):
-      release(queue.addLock)
-      return false
-    else:
-      queue.buf[0] = data
-      queue.next = 0
-  elif unlikely(queue.pos == next):
-    release(queue.addLock)
-    return false
-  else:
-    queue.buf[next] = data
-    queue.next = next
-  release(queue.addLock)
-  return true
-
-proc popSafe*[T](queue: var Queue[T]): T {.inline.} =
-  acquire(queue.popLock)
-  let pos = queue.pos + 1
-  if unlikely(pos >= queue.bufLen):
-    if unlikely(queue.next != 0):
-      result = queue.buf[0]
-      queue.pos = 0
-  elif unlikely(pos != queue.next):
-    result = queue.buf[pos]
-    queue.pos = pos
-  release(queue.popLock)
-
 proc send*[T](queue: var Queue[T], data: T) {.inline.} =
   queue.add(data)
   signal(queue.cond)
