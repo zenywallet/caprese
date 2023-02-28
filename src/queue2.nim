@@ -13,6 +13,16 @@ type
     popLock: Lock
     cond: Cond
 
+proc atomic_compare_exchange_n(p: ptr uint64, expected: ptr uint64, desired: uint64, weak: bool,
+                              success_memmodel: int, failure_memmodel: int): bool
+                              {.importc: "__atomic_compare_exchange_n", nodecl, discardable.}
+
+proc atomic_fetch_add(p: ptr uint64, val: uint64, memmodel: int): uint64
+                        {.importc: "__atomic_fetch_add", nodecl, discardable.}
+
+proc atomic_fetch_sub(p: ptr uint64, val: uint64, memmodel: int): uint64
+                        {.importc: "__atomic_fetch_sub", nodecl, discardable.}
+
 
 proc `=destroy`*[T](queue: var Queue[T]) =
   if likely(not queue.buf.isNil):
@@ -27,8 +37,8 @@ proc `=copy`*[T](a: var Queue[T]; b: Queue[T]) {.error: "=copy is not supported"
 proc `=sink`*[T](a: var Queue[T]; b: Queue[T]) {.error: "=sink is not supported".}
 
 template clear*[T](queue: var Queue[T]) =
-  queue.pos = -1
-  queue.next = -1
+  queue.pos = 0
+  queue.next = 0
 
 proc init*[T](queue: var Queue[T], limit: int) {.inline.} =
   when not (T is ptr) and not (T is pointer): {.error: "T must be a pointer".}
@@ -43,32 +53,21 @@ proc init*[T](queue: var Queue[T], limit: int) {.inline.} =
   queue.bufLen = limit
   queue.clear()
 
-proc newQueue*[T](limit: int): Queue[T] = result.init(limit)
+proc newQueue*[T](limit: int = 0x10000): Queue[T] = result.init(0x10000)
 
 proc add*[T](queue: var Queue[T], data: T): bool {.discardable, inline.} =
-  let next = queue.next + 1
-  if unlikely(next >= queue.bufLen):
-    if unlikely(queue.pos == 0):
-      return false
-    else:
-      queue.buf[0] = data
-      queue.next = 0
-  elif unlikely(queue.pos == next):
+  if cast[uint16](queue.next + 1) == cast[uint16](queue.pos):
     return false
-  else:
-    queue.buf[next] = data
-    queue.next = next
+  queue.buf[cast[uint16](queue.next)] = data
+  inc(queue.next)
   return true
 
 proc pop*[T](queue: var Queue[T]): T {.inline.} =
-  let pos = queue.pos + 1
-  if unlikely(pos >= queue.bufLen):
-    if unlikely(queue.next != 0):
-      result = queue.buf[0]
-      queue.pos = 0
-  elif unlikely(pos != queue.next):
-    result = queue.buf[pos]
-    queue.pos = pos
+  var pos = queue.pos
+  if cast[uint16](queue.pos) != cast[uint16](queue.next):
+    if atomic_compare_exchange_n(cast[ptr uint64](addr queue.pos), cast[ptr uint64](addr pos),
+                                cast[uint64](pos + 1), false, 0, 0):
+      result = queue.buf[cast[uint16](pos)]
 
 proc send*[T](queue: var Queue[T], data: T) {.inline.} =
   queue.add(data)
@@ -82,3 +81,5 @@ proc recv*[T](queue: var Queue[T]): T {.inline.} =
     if not result.isNil: break
     wait(queue.cond, queue.popLock)
   release(queue.popLock)
+
+proc count*[T](queue: var Queue[T]): int = queue.next - queue.pos
