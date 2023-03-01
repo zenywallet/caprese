@@ -1880,6 +1880,7 @@ var serverWorkerMainStmt {.compileTime.} =
       )
     )
   )
+var freePoolServerUsedCount {.compileTime.} = 0
 var workerRecvBufSize: int = 0
 var serverWorkerNum: int
 
@@ -1904,6 +1905,7 @@ macro addServerMacro*(bindAddress: string, port: uint16, body: untyped = newEmpt
       mainStmt
     )
   serverWorkerMainStmt[0].insert(appId, ofBody)
+  inc(freePoolServerUsedCount)
 
   quote do:
     from nativesockets import setBlocking, getSockOptInt, setSockOptInt
@@ -1992,6 +1994,8 @@ template serverType() {.dirty.} =
 
 template serverLib() =
   mixin addSendBuf
+
+  const FreePoolServerUsedCount = freePoolServerUsedCount
 
   proc echoHeader(buf: ptr UncheckedArray[byte], size: int, header: ReqHeader) =
     echo "url: ", header.url
