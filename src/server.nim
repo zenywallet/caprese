@@ -1881,6 +1881,7 @@ var serverWorkerMainStmt {.compileTime.} =
     )
   )
 var workerRecvBufSize: int = 0
+var serverWorkerNum: int
 
 macro initServer*(): untyped =
   when not initServerFlag:
@@ -2295,9 +2296,9 @@ template serverStartWithCfg(cfg: static Config) =
   startTimeStampUpdater()
 
   when cfg.autoServerWorkerNum:
-    var serverWorkerNum = countProcessors()
+    serverWorkerNum = countProcessors()
   else:
-    var serverWorkerNum = cfg.serverWorkerNum
+    serverWorkerNum = cfg.serverWorkerNum
 
   var threads = newSeq[Thread[WrapperThreadArg]](serverWorkerNum)
   for i in 0..<serverWorkerNum:
