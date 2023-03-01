@@ -62,6 +62,16 @@ proc add*[T](queue: var Queue[T], data: T): bool {.discardable, inline.} =
   inc(queue.next)
   return true
 
+proc addSafe*[T](queue: var Queue[T], data: T): bool {.discardable, inline.} =
+  acquire(queue.addLock)
+  if cast[uint16](queue.next + 1) == cast[uint16](queue.pos):
+    release(queue.addLock)
+    return false
+  queue.buf[cast[uint16](queue.next)] = data
+  inc(queue.next)
+  release(queue.addLock)
+  return true
+
 proc pop*[T](queue: var Queue[T]): T {.inline.} =
   var pos = queue.pos
   if cast[uint16](queue.pos) != cast[uint16](queue.next):
