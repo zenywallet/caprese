@@ -2164,12 +2164,15 @@ template serverLib() =
 
     serverWorkerInit()
 
+    var pevents: ptr UncheckedArray[EpollEvent] = cast[ptr UncheckedArray[EpollEvent]](addr events[0])
+    var pRecvBuf0 = cast[ptr UncheckedArray[byte]](addr recvBuf[0])
+
     while active:
       var nfd = epoll_wait(epfd, cast[ptr EpollEvent](addr events),
                           EPOLL_EVENTS_SIZE.cint, -1.cint)
       for i in 0..<nfd:
         try:
-          pClient = cast[ptr Client](events[i].data)
+          pClient = cast[ptr Client](pevents[i].data)
           sock = pClient[].sock
           if pCLient[].listenFlag:
             let clientSock = sock.accept4(cast[ptr SockAddr](addr sockAddress), addr addrLen, O_NONBLOCK)
@@ -2196,9 +2199,9 @@ template serverLib() =
                 clientFreePool.add(pClient)
 
             if pClient[].recvCurSize == 0:
-              let recvlen = sock.recv(addr recvBuf[0], recvBufLen, 0.cint)
+              let recvlen = sock.recv(pRecvBuf0, recvBufLen, 0.cint)
               if recvlen > 0:
-                if recvlen >= 17 and equalMem(addr recvBuf[recvlen - 4], "\c\L\c\L".cstring, 4):
+                if recvlen >= 17 and equalMem(addr pRecvBuf0[recvlen - 4], "\c\L\c\L".cstring, 4):
                   var nextPos = 0
                   var parseSize = recvlen
                   while true:
@@ -2232,7 +2235,7 @@ template serverLib() =
                       break
 
                 else:
-                  pClient.addRecvBuf(cast[ptr UncheckedArray[byte]](addr recvBuf[0]), recvlen)
+                  pClient.addRecvBuf(pRecvBuf0, recvlen)
 
               elif recvlen == 0:
                 closeAndFreeClient()
