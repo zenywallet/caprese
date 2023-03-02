@@ -14,6 +14,7 @@ import rlimit
 export rlimit
 import contents
 import queue
+import queue2
 import logs
 import hashtable
 import ptlock
@@ -212,7 +213,7 @@ var epfd: cint = -1
 type
   WorkerChannelParam = tuple[appId: int, idx: int, events: uint32, evData: uint64]
 var workerChannelWaitingCount: int = 0
-var workerQueue: Queue[WorkerChannelParam]
+var workerQueue: queue.Queue[WorkerChannelParam]
 workerQueue.init(WORKER_QUEUE_LIMIT)
 
 type
@@ -547,7 +548,7 @@ proc abort() =
 
 #  include stream
 
-var clientFreePool*: Queue[ptr Client]
+var clientFreePool*: queue2.Queue[ptr Client]
 
 proc initClient() =
   var p = cast[ptr UncheckedArray[Client]](allocShared0(sizeof(ClientArray)))
@@ -1993,7 +1994,7 @@ template serverType() {.dirty.} =
       minorVer: int
 
 template serverLib() =
-  mixin addSendBuf
+  mixin addSendBuf, addSafe
 
   const FreePoolServerUsedCount = freePoolServerUsedCount
 
@@ -2178,7 +2179,12 @@ template serverLib() =
             let clientSock = sock.accept4(cast[ptr SockAddr](addr sockAddress), addr addrLen, O_NONBLOCK)
             if cast[int](clientSock) > 0:
               clientSock.setSockOptInt(Protocol.IPPROTO_TCP.int, TCP_NODELAY, 1)
-              let newClient = clientFreePool.pop()
+              var newClient = clientFreePool.pop()
+              while newClient.isNil:
+                if clientFreePool.count == 0:
+                  clientSock.close()
+                  raise
+                newClient = clientFreePool.pop()
               newClient.sock = clientSock
               newClient.appId = pCLient[].appId
               ev.data = cast[EpollData](newClient)
@@ -2196,7 +2202,7 @@ template serverLib() =
               if flag:
                 sock.close()
                 pClient[].listenFlag = false
-                clientFreePool.add(pClient)
+                clientFreePool.addSafe(pClient)
 
             if pClient[].recvCurSize == 0:
               let recvlen = sock.recv(pRecvBuf0, recvBufLen, 0.cint)
