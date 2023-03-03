@@ -84,6 +84,8 @@ proc send*[T](queue: var Queue[T], data: T) {.inline.} =
   signal(queue.cond)
   # warning: signal may miss and need to be resolved elsewhere
 
+proc sendFlush*[T](queue: var Queue[T]) {.inline.} = signal(queue.cond)
+
 proc recv*[T](queue: var Queue[T]): T {.inline.} =
   acquire(queue.popLock)
   while true:
