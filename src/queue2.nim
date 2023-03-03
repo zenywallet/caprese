@@ -87,8 +87,10 @@ proc send*[T](queue: var Queue[T], data: T) {.inline.} =
 proc recv*[T](queue: var Queue[T]): T {.inline.} =
   acquire(queue.popLock)
   while true:
-    result = queue.pop()
-    if not result.isNil: break
+    if cast[uint16](queue.pos) != cast[uint16](queue.next):
+      result = queue.buf[cast[uint16](queue.pos)]
+      inc(queue.pos)
+      break
     wait(queue.cond, queue.popLock)
   release(queue.popLock)
 
