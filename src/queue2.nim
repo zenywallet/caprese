@@ -79,6 +79,18 @@ proc pop*[T](queue: var Queue[T]): T {.inline.} =
                                 cast[uint64](pos + 1), false, 0, 0):
       result = queue.buf[cast[uint16](pos)]
 
+proc popUnsafe*[T](queue: var Queue[T]): T {.inline.} =
+  if cast[uint16](queue.pos) != cast[uint16](queue.next):
+      result = queue.buf[cast[uint16](queue.pos)]
+      inc(queue.pos)
+
+proc popSafe*[T](queue: var Queue[T]): T {.inline.} =
+  acquire(queue.popLock)
+  if cast[uint16](queue.pos) != cast[uint16](queue.next):
+      result = queue.buf[cast[uint16](queue.pos)]
+      inc(queue.pos)
+  release(queue.popLock)
+
 proc send*[T](queue: var Queue[T], data: T) {.inline.} =
   queue.add(data)
   signal(queue.cond)
