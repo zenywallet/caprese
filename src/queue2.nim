@@ -7,8 +7,8 @@ type
   Queue*[T] = object
     buf*: ptr UncheckedArray[T]
     bufLen*: int
-    pos*: int
-    next*: int
+    pos*: uint
+    next*: uint
     addLock: Lock
     popLock: Lock
     cond: Cond
