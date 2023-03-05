@@ -108,4 +108,4 @@ proc recv*[T](queue: var Queue[T]): T {.inline.} =
     wait(queue.cond, queue.popLock)
   release(queue.popLock)
 
-proc count*[T](queue: var Queue[T]): int = queue.next - queue.pos
+proc count*[T](queue: var Queue[T]): int = cast[int](queue.next - queue.pos)
