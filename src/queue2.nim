@@ -108,4 +108,16 @@ proc recv*[T](queue: var Queue[T]): T {.inline.} =
     wait(queue.cond, queue.popLock)
   release(queue.popLock)
 
+proc recv*[T](queue: var Queue[T], waitCond: var bool): T {.inline.} =
+  acquire(queue.popLock)
+  while true:
+    if cast[uint16](queue.pos) != cast[uint16](queue.next):
+      result = queue.buf[cast[uint16](queue.pos)]
+      inc(queue.pos)
+      break
+    if not waitCond:
+      break
+    wait(queue.cond, queue.popLock)
+  release(queue.popLock)
+
 proc count*[T](queue: var Queue[T]): int = cast[int](queue.next - queue.pos)
