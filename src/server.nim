@@ -611,6 +611,12 @@ proc atomic_compare_exchange_n(p: ptr int, expected: ptr int, desired: int, weak
                               success_memmodel: int, failure_memmodel: int): bool
                               {.importc: "__atomic_compare_exchange_n", nodecl, discardable.}
 
+proc atomic_fetch_add(p: ptr int, val: int, memmodel: int): int
+                        {.importc: "__atomic_fetch_add", nodecl, discardable.}
+
+proc atomic_fetch_sub(p: ptr int, val: int, memmodel: int): int
+                        {.importc: "__atomic_fetch_sub", nodecl, discardable.}
+
 proc setClient(fd: int): int =
   var usedCount = 0
   for i in clIdx..<CLIENT_MAX:
@@ -1884,6 +1890,12 @@ var serverWorkerMainStmt {.compileTime.} =
 var freePoolServerUsedCount {.compileTime.} = 0
 var workerRecvBufSize: int = 0
 var serverWorkerNum: int
+var clientQueue = queue2.newQueue[ptr Client](0x10000)
+var highGear = false
+var highGearManagerAssinged: int = 0
+var highGearSemaphore: Sem
+discard sem_init(addr highGearSemaphore, 0, 0)
+#discard sem_destroy(addr highGearSemaphore)
 
 macro initServer*(): untyped =
   when not initServerFlag:
@@ -1994,7 +2006,7 @@ template serverType() {.dirty.} =
       minorVer: int
 
 template serverLib() =
-  mixin addSendBuf, addSafe
+  mixin addSendBuf, addSafe, popSafe
 
   const FreePoolServerUsedCount = freePoolServerUsedCount
 
@@ -2191,6 +2203,11 @@ template serverLib() =
               let retCtl = epoll_ctl(epfd, EPOLL_CTL_ADD, cast[cint](clientSock), addr ev)
               if retCtl < 0:
                 errorQuit "error: epoll_ctl ret=", retCtl, " errno=", errno
+
+              if (CLIENT_MAX - FreePoolServerUsedCount) - clientFreePool.count  > serverWorkerNum:
+                if highGearManagerAssinged == 0:
+                  highGear = true
+
           else:
             template closeAndFreeClient() =
               var flag = false
@@ -2303,6 +2320,123 @@ template serverLib() =
           let e = getCurrentException()
           error e.name, ": ", e.msg
 
+      if highGear:
+        template closeAndFreeClient() =
+          var flag = false
+          acquire(pClient[].spinLock)
+          if pClient[].sock != osInvalidSocket:
+            pClient[].sock = osInvalidSocket
+            flag = true
+          release(pClient[].spinLock)
+          if flag:
+            sock.close()
+            clientFreePool.addSafe(pClient)
+            if highGear and (CLIENT_MAX - FreePoolServerUsedCount) - clientFreePool.count  <= serverWorkerNum:
+              highGear = false
+
+        template highGearMain() =
+          sock = pClient[].sock
+          if pClient[].recvCurSize == 0:
+            let recvlen = sock.recv(pRecvBuf0, recvBufLen, 0.cint)
+            if recvlen > 0:
+              if recvlen >= 17 and equalMem(addr pRecvBuf0[recvlen - 4], "\c\L\c\L".cstring, 4):
+                pClient[].threadId = 0
+
+                var nextPos = 0
+                var parseSize = recvlen
+                while true:
+                  pRecvBuf = cast[ptr UncheckedArray[byte]](addr pRecvBuf0[nextPos])
+                  let retHeader = parseHeader(pRecvBuf, parseSize, targetHeaders)
+                  if retHeader.err == 0:
+                    header = retHeader.header
+                    let retMain = mainServerHandler(pClient, header)
+                    if retMain == SendResult.Success:
+                      if header.minorVer == 0 or getHeaderValue(pRecvBuf, header,
+                        InternalEssentialHeaderConnection) == "close":
+                        closeAndFreeClient()
+                        break
+                      elif retHeader.next < recvlen:
+                        nextPos = retHeader.next
+                        parseSize = recvlen - nextPos
+                      else:
+                        break
+                    elif retMain == SendResult.Pending:
+                      if retHeader.next < recvlen:
+                        nextPos = retHeader.next
+                        parseSize = recvlen - nextPos
+                      else:
+                        break
+                    else:
+                      closeAndFreeClient()
+                      break
+                  else:
+                    closeAndFreeClient()
+                    break
+
+              else:
+                pClient.addRecvBuf(cast[ptr UncheckedArray[byte]](addr pRecvBuf0[0]), recvlen)
+
+            elif recvlen == 0:
+              closeAndFreeClient()
+
+            else:
+              closeAndFreeClient()
+
+        var assinged = atomic_fetch_add(addr highGearManagerAssinged, 1, 0)
+        if assinged == 0:
+          while highGear:
+            var nfd = epoll_wait(epfd, cast[ptr EpollEvent](addr events),
+                                EPOLL_EVENTS_SIZE.cint, 1000.cint)
+            if nfd > 0:
+              var i = 0
+              while true:
+                pClient = cast[ptr Client](pevents[i].data)
+                if pCLient[].listenFlag:
+                  sock = pClient[].sock
+                  let clientSock = sock.accept4(cast[ptr SockAddr](addr sockAddress), addr addrLen, O_NONBLOCK)
+                  if cast[int](clientSock) > 0:
+                    clientSock.setSockOptInt(Protocol.IPPROTO_TCP.int, TCP_NODELAY, 1)
+                    let newClient = clientFreePool.pop()
+                    newClient.sock = clientSock
+                    newClient.appId = pCLient[].appId
+                    ev.data = cast[EpollData](newClient)
+                    let retCtl = epoll_ctl(epfd, EPOLL_CTL_ADD, cast[cint](clientSock), addr ev)
+                    if retCtl < 0:
+                      errorQuit "error: epoll_ctl ret=", retCtl, " errno=", errno
+                else:
+                  clientQueue.send(pClient)
+                inc(i)
+                if i >= nfd: break
+            else:
+              if clientQueue.count > 0:
+                for i in 0..<serverWorkerNum:
+                  clientQueue.sendFlush()
+
+          if clientQueue.count > 0:
+            for i in 0..<serverWorkerNum:
+              clientQueue.sendFlush()
+          while true:
+            pClient = clientQueue.popSafe()
+            if pClient.isNil:
+              break
+            highGearMain()
+
+          for i in 0..<serverWorkerNum:
+            clientQueue.sendFlush()
+          while true:
+            if highGearManagerAssinged == 1:
+              atomic_fetch_sub(addr highGearManagerAssinged, 1, 0)
+              break
+            sleep(10)
+            clientQueue.sendFlush()
+
+        else:
+          while true:
+            pClient = clientQueue.recv(highGear)
+            if pClient.isNil: break
+            highGearMain()
+          atomic_fetch_sub(addr highGearManagerAssinged, 1, 0)
+
 template serverStartWithCfg(cfg: static Config) =
   serverType()
   serverLib()
@@ -2330,6 +2464,7 @@ template serverStart*() = serverStartWithCfg(cfg)
 
 template serverStop*() =
   active = false
+  highGear = false
   for i in countdown(releaseOnQuitSocks.high, 0):
     let retShutdown = releaseOnQuitSocks[i].shutdown(SHUT_RD)
     if retShutdown != 0:
