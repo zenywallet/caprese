@@ -1896,6 +1896,10 @@ var highGearManagerAssinged: int = 0
 var highGearSemaphore: Sem
 discard sem_init(addr highGearSemaphore, 0, 0)
 #discard sem_destroy(addr highGearSemaphore)
+var throttleBody: Sem
+discard sem_init(addr throttleBody, 0, 0)
+#discard sem_destroy(addr throttleBody)
+var throttleChanged: bool = false
 
 macro initServer*(): untyped =
   when not initServerFlag:
@@ -2179,10 +2183,30 @@ template serverLib() =
 
     var pevents: ptr UncheckedArray[EpollEvent] = cast[ptr UncheckedArray[EpollEvent]](addr events[0])
     var pRecvBuf0 = cast[ptr UncheckedArray[byte]](addr recvBuf[0])
+    var skip = false
+    var nfd: cint
 
     while active:
-      var nfd = epoll_wait(epfd, cast[ptr EpollEvent](addr events),
-                          EPOLL_EVENTS_SIZE.cint, -1.cint)
+      if threadId == 1:
+        nfd = epoll_wait(epfd, cast[ptr EpollEvent](addr events),
+                        EPOLL_EVENTS_SIZE.cint, -1.cint)
+        if not throttleChanged and nfd >= 7:
+          throttleChanged = true
+          discard sem_post(addr throttleBody)
+      else:
+        if skip:
+          nfd = epoll_wait(epfd, cast[ptr EpollEvent](addr events),
+                          EPOLL_EVENTS_SIZE.cint, 10.cint)
+        else:
+          discard sem_wait(addr throttleBody)
+          skip = true
+          nfd = epoll_wait(epfd, cast[ptr EpollEvent](addr events),
+                          EPOLL_EVENTS_SIZE.cint, 0.cint)
+          throttleChanged = false
+        if nfd == 0:
+          skip = false
+          continue
+
       for i in 0..<nfd:
         try:
           pClient = cast[ptr Client](pevents[i].data)
@@ -2207,6 +2231,8 @@ template serverLib() =
               if (CLIENT_MAX - FreePoolServerUsedCount) - clientFreePool.count  > serverWorkerNum:
                 if highGearManagerAssinged == 0:
                   highGear = true
+                  for i in 0..<serverWorkerNum:
+                    discard sem_post(addr throttleBody)
 
           else:
             template closeAndFreeClient() =
@@ -2436,6 +2462,9 @@ template serverLib() =
             if pClient.isNil: break
             highGearMain()
           atomic_fetch_sub(addr highGearManagerAssinged, 1, 0)
+
+    discard sem_post(addr throttleBody)
+
 
 template serverStartWithCfg(cfg: static Config) =
   serverType()
