@@ -1900,6 +1900,7 @@ var throttleBody: Sem
 discard sem_init(addr throttleBody, 0, 0)
 #discard sem_destroy(addr throttleBody)
 var throttleChanged: bool = false
+var highGearThreshold: int
 
 macro initServer*(): untyped =
   when not initServerFlag:
@@ -2228,7 +2229,7 @@ template serverLib() =
               if retCtl < 0:
                 errorQuit "error: epoll_ctl ret=", retCtl, " errno=", errno
 
-              if (CLIENT_MAX - FreePoolServerUsedCount) - clientFreePool.count  > serverWorkerNum:
+              if (CLIENT_MAX - FreePoolServerUsedCount) - clientFreePool.count  >= highGearThreshold:
                 if highGearManagerAssinged == 0:
                   highGear = true
                   for i in 0..<serverWorkerNum:
@@ -2357,7 +2358,7 @@ template serverLib() =
           if flag:
             sock.close()
             clientFreePool.addSafe(pClient)
-            if highGear and (CLIENT_MAX - FreePoolServerUsedCount) - clientFreePool.count  <= serverWorkerNum:
+            if highGear and (CLIENT_MAX - FreePoolServerUsedCount) - clientFreePool.count  < highGearThreshold:
               highGear = false
 
         template highGearMain() =
@@ -2475,6 +2476,8 @@ template serverStartWithCfg(cfg: static Config) =
     serverWorkerNum = countProcessors()
   else:
     serverWorkerNum = cfg.serverWorkerNum
+
+  highGearThreshold = serverWorkerNum * 3
 
   var threads = newSeq[Thread[WrapperThreadArg]](serverWorkerNum)
   for i in 0..<serverWorkerNum:
