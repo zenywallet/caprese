@@ -2200,11 +2200,14 @@ template serverLib() =
                           EPOLL_EVENTS_SIZE.cint, 10.cint)
         else:
           discard sem_wait(addr throttleBody)
-          skip = true
-          nfd = epoll_wait(epfd, cast[ptr EpollEvent](addr events),
-                          EPOLL_EVENTS_SIZE.cint, 0.cint)
-          throttleChanged = false
-        if nfd == 0:
+          if highGear:
+            nfd = 0
+          else:
+            skip = true
+            nfd = epoll_wait(epfd, cast[ptr EpollEvent](addr events),
+                            EPOLL_EVENTS_SIZE.cint, 0.cint)
+            throttleChanged = false
+        if nfd == 0 and not highGear:
           skip = false
           continue
 
