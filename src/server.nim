@@ -53,6 +53,9 @@ when (compiles do: include config):
 else:
   include config_default
 
+{.passC: "-flto".}
+{.passL: "-flto".}
+
 type
   ClientBase* = ref object of RootObj
     idx: int
