@@ -2429,7 +2429,12 @@ template serverLib() =
                   let clientSock = sock.accept4(cast[ptr SockAddr](addr sockAddress), addr addrLen, O_NONBLOCK)
                   if cast[int](clientSock) > 0:
                     clientSock.setSockOptInt(Protocol.IPPROTO_TCP.int, TCP_NODELAY, 1)
-                    let newClient = clientFreePool.pop()
+                    var newClient = clientFreePool.pop()
+                    while newClient.isNil:
+                      if clientFreePool.count == 0:
+                        clientSock.close()
+                        raise
+                      newClient = clientFreePool.pop()
                     newClient.sock = clientSock
                     newClient.appId = pCLient[].appId
                     ev.data = cast[EpollData](newClient)
