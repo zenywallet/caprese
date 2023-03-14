@@ -1947,11 +1947,9 @@ macro addServerMacro*(bindAddress: string, port: uint16, body: untyped = newEmpt
 
     var ev: EpollEvent
     ev.events = EPOLLIN or EPOLLEXCLUSIVE
-    let newClient = try:
-      clientFreePool.pop()
-    except:
-      let e = getCurrentException()
-      errorQuit e.name, ": ", e.msg
+    let newClient = clientFreePool.pop()
+    if newClient.isNil:
+      raise newException(ServerError, "no free pool")
     newClient.sock = serverSock
     newClient.listenFlag = true
     newClient.appId = `appId`
