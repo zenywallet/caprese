@@ -2481,10 +2481,12 @@ template serverStartWithCfg(cfg: static Config) =
   serverLib()
   startTimeStampUpdater()
 
+  let cpuCount = countProcessors()
   when cfg.autoServerWorkerNum:
-    serverWorkerNum = countProcessors()
+    serverWorkerNum = cpuCount
   else:
     serverWorkerNum = cfg.serverWorkerNum
+  echo "server workers: ", serverWorkerNum, "/", cpuCount
 
   highGearThreshold = serverWorkerNum * 3
 
