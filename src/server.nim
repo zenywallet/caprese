@@ -2253,13 +2253,143 @@ template serverLib() =
                 clientFreePool.addSafe(pClient)
 
             if pClient[].recvCurSize == 0:
+              while true:
+                let recvlen = sock.recv(pRecvBuf0, recvBufLen, 0.cint)
+                if recvlen > 0:
+                  if recvlen >= 17 and equalMem(addr pRecvBuf0[recvlen - 4], "\c\L\c\L".cstring, 4):
+                    var nextPos = 0
+                    var parseSize = recvlen
+                    while true:
+                      pRecvBuf = cast[ptr UncheckedArray[byte]](addr recvBuf[nextPos])
+                      let retHeader = parseHeader(pRecvBuf, parseSize, targetHeaders)
+                      if retHeader.err == 0:
+                        header = retHeader.header
+                        let retMain = mainServerHandler(pClient, header)
+                        if retMain == SendResult.Success:
+                          if header.minorVer == 0 or getHeaderValue(pRecvBuf, header,
+                            InternalEssentialHeaderConnection) == "close":
+                            closeAndFreeClient()
+                            break
+                          elif retHeader.next < recvlen:
+                            nextPos = retHeader.next
+                            parseSize = recvlen - nextPos
+                          else:
+                            break
+                        elif retMain == SendResult.Pending:
+                          if retHeader.next < recvlen:
+                            nextPos = retHeader.next
+                            parseSize = recvlen - nextPos
+                          else:
+                            break
+                        else:
+                          closeAndFreeClient()
+                          break
+                      else:
+                        echo "retHeader err=", retHeader.err
+                        closeAndFreeClient()
+                        break
+
+                  else:
+                    pClient.addRecvBuf(pRecvBuf0, recvlen)
+
+                elif recvlen == 0:
+                  closeAndFreeClient()
+
+                else:
+                  if errno == EAGAIN or errno == EWOULDBLOCK:
+                    break
+                  elif errno == EINTR:
+                    continue
+                  closeAndFreeClient()
+                break
+
+            else:
+              while true:
+                pClient.reserveRecvBuf(recvBufLen)
+                let recvlen = sock.recv(addr pClient[].recvBuf[pClient[].recvCurSize], recvBufLen, 0.cint)
+                if recvlen > 0:
+                  pClient[].recvCurSize = pClient[].recvCurSize + recvlen
+                  if pClient[].recvCurSize >= 17 and equalMem(addr pClient[].recvBuf[pClient[].recvCurSize - 4], "\c\L\c\L".cstring, 4):
+                    var nextPos = 0
+                    var parseSize = pClient[].recvCurSize
+                    while true:
+                      pRecvBuf = cast[ptr UncheckedArray[byte]](addr pClient[].recvBuf[nextPos])
+                      let retHeader = parseHeader(pRecvBuf, parseSize, targetHeaders)
+                      if retHeader.err == 0:
+                        header = retHeader.header
+                        let retMain = mainServerHandler(pClient, header)
+                        if retMain == SendResult.Success:
+                          if pClient[].keepAlive == true:
+                            if header.minorVer == 0 or getHeaderValue(pRecvBuf, header,
+                              InternalEssentialHeaderConnection) == "close":
+                              pClient[].keepAlive = false
+                              closeAndFreeClient()
+                              break
+                            elif retHeader.next < pClient[].recvCurSize:
+                              nextPos = retHeader.next
+                              parseSize = pClient[].recvCurSize - nextPos
+                            else:
+                              pClient[].recvCurSize = 0
+                              break
+                          else:
+                            closeAndFreeClient()
+                            break
+                        elif retMain == SendResult.Pending:
+                          if retHeader.next < pClient[].recvCurSize:
+                            nextPos = retHeader.next
+                            parseSize = pClient[].recvCurSize - nextPos
+                          else:
+                            break
+                        else:
+                          closeAndFreeClient()
+                          break
+                      else:
+                        echo "retHeader err=", retHeader.err
+                        closeAndFreeClient()
+                        break
+
+                elif recvlen == 0:
+                  closeAndFreeClient()
+
+                else:
+                  if errno == EAGAIN or errno == EWOULDBLOCK:
+                    break
+                  elif errno == EINTR:
+                    continue
+                  closeAndFreeClient()
+                break
+
+        except:
+          let e = getCurrentException()
+          error e.name, ": ", e.msg
+
+      if highGear:
+        template closeAndFreeClient() =
+          var flag = false
+          acquire(pClient[].spinLock)
+          if pClient[].sock != osInvalidSocket:
+            pClient[].sock = osInvalidSocket
+            flag = true
+          release(pClient[].spinLock)
+          if flag:
+            sock.close()
+            clientFreePool.addSafe(pClient)
+            if highGear and (CLIENT_MAX - FreePoolServerUsedCount) - clientFreePool.count  < highGearThreshold:
+              highGear = false
+
+        template highGearMain() =
+          sock = pClient[].sock
+          if pClient[].recvCurSize == 0:
+            while true:
               let recvlen = sock.recv(pRecvBuf0, recvBufLen, 0.cint)
               if recvlen > 0:
                 if recvlen >= 17 and equalMem(addr pRecvBuf0[recvlen - 4], "\c\L\c\L".cstring, 4):
+                  pClient[].threadId = 0
+
                   var nextPos = 0
                   var parseSize = recvlen
                   while true:
-                    pRecvBuf = cast[ptr UncheckedArray[byte]](addr recvBuf[nextPos])
+                    pRecvBuf = cast[ptr UncheckedArray[byte]](addr pRecvBuf0[nextPos])
                     let retHeader = parseHeader(pRecvBuf, parseSize, targetHeaders)
                     if retHeader.err == 0:
                       header = retHeader.header
@@ -2284,134 +2414,22 @@ template serverLib() =
                         closeAndFreeClient()
                         break
                     else:
-                      echo "retHeader err=", retHeader.err
                       closeAndFreeClient()
                       break
 
                 else:
-                  pClient.addRecvBuf(pRecvBuf0, recvlen)
+                  pClient.addRecvBuf(cast[ptr UncheckedArray[byte]](addr pRecvBuf0[0]), recvlen)
 
               elif recvlen == 0:
                 closeAndFreeClient()
 
               else:
+                if errno == EAGAIN or errno == EWOULDBLOCK:
+                  break
+                elif errno == EINTR:
+                  continue
                 closeAndFreeClient()
-
-            else:
-              pClient.reserveRecvBuf(recvBufLen)
-              let recvlen = sock.recv(addr pClient[].recvBuf[pClient[].recvCurSize], recvBufLen, 0.cint)
-              if recvlen > 0:
-                pClient[].recvCurSize = pClient[].recvCurSize + recvlen
-                if pClient[].recvCurSize >= 17 and equalMem(addr pClient[].recvBuf[pClient[].recvCurSize - 4], "\c\L\c\L".cstring, 4):
-                  var nextPos = 0
-                  var parseSize = pClient[].recvCurSize
-                  while true:
-                    pRecvBuf = cast[ptr UncheckedArray[byte]](addr pClient[].recvBuf[nextPos])
-                    let retHeader = parseHeader(pRecvBuf, parseSize, targetHeaders)
-                    if retHeader.err == 0:
-                      header = retHeader.header
-                      let retMain = mainServerHandler(pClient, header)
-                      if retMain == SendResult.Success:
-                        if pClient[].keepAlive == true:
-                          if header.minorVer == 0 or getHeaderValue(pRecvBuf, header,
-                            InternalEssentialHeaderConnection) == "close":
-                            pClient[].keepAlive = false
-                            closeAndFreeClient()
-                            break
-                          elif retHeader.next < pClient[].recvCurSize:
-                            nextPos = retHeader.next
-                            parseSize = pClient[].recvCurSize - nextPos
-                          else:
-                            pClient[].recvCurSize = 0
-                            break
-                        else:
-                          closeAndFreeClient()
-                          break
-                      elif retMain == SendResult.Pending:
-                        if retHeader.next < pClient[].recvCurSize:
-                          nextPos = retHeader.next
-                          parseSize = pClient[].recvCurSize - nextPos
-                        else:
-                          break
-                      else:
-                        closeAndFreeClient()
-                        break
-                    else:
-                      echo "retHeader err=", retHeader.err
-                      closeAndFreeClient()
-                      break
-
-              elif recvlen == 0:
-                closeAndFreeClient()
-
-              else:
-                closeAndFreeClient()
-
-        except:
-          let e = getCurrentException()
-          error e.name, ": ", e.msg
-
-      if highGear:
-        template closeAndFreeClient() =
-          var flag = false
-          acquire(pClient[].spinLock)
-          if pClient[].sock != osInvalidSocket:
-            pClient[].sock = osInvalidSocket
-            flag = true
-          release(pClient[].spinLock)
-          if flag:
-            sock.close()
-            clientFreePool.addSafe(pClient)
-            if highGear and (CLIENT_MAX - FreePoolServerUsedCount) - clientFreePool.count  < highGearThreshold:
-              highGear = false
-
-        template highGearMain() =
-          sock = pClient[].sock
-          if pClient[].recvCurSize == 0:
-            let recvlen = sock.recv(pRecvBuf0, recvBufLen, 0.cint)
-            if recvlen > 0:
-              if recvlen >= 17 and equalMem(addr pRecvBuf0[recvlen - 4], "\c\L\c\L".cstring, 4):
-                pClient[].threadId = 0
-
-                var nextPos = 0
-                var parseSize = recvlen
-                while true:
-                  pRecvBuf = cast[ptr UncheckedArray[byte]](addr pRecvBuf0[nextPos])
-                  let retHeader = parseHeader(pRecvBuf, parseSize, targetHeaders)
-                  if retHeader.err == 0:
-                    header = retHeader.header
-                    let retMain = mainServerHandler(pClient, header)
-                    if retMain == SendResult.Success:
-                      if header.minorVer == 0 or getHeaderValue(pRecvBuf, header,
-                        InternalEssentialHeaderConnection) == "close":
-                        closeAndFreeClient()
-                        break
-                      elif retHeader.next < recvlen:
-                        nextPos = retHeader.next
-                        parseSize = recvlen - nextPos
-                      else:
-                        break
-                    elif retMain == SendResult.Pending:
-                      if retHeader.next < recvlen:
-                        nextPos = retHeader.next
-                        parseSize = recvlen - nextPos
-                      else:
-                        break
-                    else:
-                      closeAndFreeClient()
-                      break
-                  else:
-                    closeAndFreeClient()
-                    break
-
-              else:
-                pClient.addRecvBuf(cast[ptr UncheckedArray[byte]](addr pRecvBuf0[0]), recvlen)
-
-            elif recvlen == 0:
-              closeAndFreeClient()
-
-            else:
-              closeAndFreeClient()
+              break
 
         var assinged = atomic_fetch_add(addr highGearManagerAssinged, 1, 0)
         if assinged == 0:
