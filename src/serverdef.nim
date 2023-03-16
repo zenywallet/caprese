@@ -87,7 +87,7 @@ macro HttpTargetHeader(idEnumName, valListName, targetHeaders, body: untyped): u
       ),
       nnkExprColonExpr.newTree(
         newIdentNode("val"),
-        newLit(b[1])
+        newLit(b[1] & ": ")
       )
     ))
 
