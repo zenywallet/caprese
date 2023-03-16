@@ -79,7 +79,8 @@ macro HttpTargetHeader(idEnumName, valListName, targetHeaders, body: untyped): u
 
   for b in internalEssentialHeaders:
     enumParams.add(newIdentNode(b[0]))
-    targetParams.add(newLit(b[1] & ": "))
+    var compareVal = b[1] & ": "
+    targetParams.add(newLit(compareVal))
     headers.add(nnkTupleConstr.newTree(
       nnkExprColonExpr.newTree(
         newIdentNode("id"),
@@ -87,7 +88,7 @@ macro HttpTargetHeader(idEnumName, valListName, targetHeaders, body: untyped): u
       ),
       nnkExprColonExpr.newTree(
         newIdentNode("val"),
-        newLit(b[1] & ": ")
+        newLit(compareVal)
       )
     ))
 
