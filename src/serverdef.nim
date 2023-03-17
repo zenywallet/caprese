@@ -45,7 +45,10 @@ macro HttpTargetHeader(idEnumName, valListName, targetHeaders, body: untyped): u
   var targetParams = nnkBracket.newTree()
   var headers = nnkBracket.newTree()
   var internalEssentialHeaders = @[("InternalEssentialHeaderHost", "Host"),
-                                  ("InternalEssentialHeaderConnection", "Connection")]
+                                  ("InternalEssentialHeaderConnection", "Connection"),
+                                  ("InternalSecWebSocketKey", "Sec-WebSocket-Key"),
+                                  ("InternalSecWebSocketProtocol", "Sec-WebSocket-Protocol"),
+                                  ("InternalSecWebSocketVersion", "Sec-WebSocket-Version")]
   var internalEssentialConst = nnkStmtList.newTree()
 
   for a in body:
