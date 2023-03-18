@@ -2164,8 +2164,8 @@ template serverLib() =
 
     template headerUrl(): string = header.url
 
-    template get(url: string, body: untyped) {.dirty.} =
-      if headerUrl() == url:
+    template get(path: string, body: untyped) {.dirty.} =
+      if headerUrl() == path:
         body
 
     template reqUrl: string {.dirty.} = header.url
