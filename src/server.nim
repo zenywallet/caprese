@@ -1911,6 +1911,10 @@ macro initServer*(): untyped =
     quote do:
       initClient()
 
+macro getAppId*(): int =
+  inc(curAppId)
+  newLit(curAppId)
+
 macro addServerMacro*(bindAddress: string, port: uint16, body: untyped = newEmptyNode()): untyped =
   inc(curAppId)
   var appId = curAppId
