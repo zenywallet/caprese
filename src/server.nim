@@ -2172,10 +2172,10 @@ template serverLib() =
 
     template reqClient: ptr Client {.dirty.} = pClient
 
-    template reqHost: string =
+    template reqHost: string {.dirty.} =
       getHeaderValue(pRecvBuf, header, InternalEssentialHeaderHost)
 
-    proc mainServerHandler(pClient: ptr Client, header: ReqHeader): SendResult {.inline.} =
+    proc mainServerHandler(pClient: ptr Client, pRecvBuf: ptr UncheckedArray[byte], header: ReqHeader): SendResult {.inline.} =
       let appId = pClient[].appId
       mainServerHandlerMacro(appId)
 
@@ -2266,7 +2266,7 @@ template serverLib() =
                       let retHeader = parseHeader(pRecvBuf, parseSize, targetHeaders)
                       if retHeader.err == 0:
                         header = retHeader.header
-                        let retMain = mainServerHandler(pClient, header)
+                        let retMain = mainServerHandler(pClient, pRecvBuf, header)
                         if retMain == SendResult.Success:
                           if header.minorVer == 0 or getHeaderValue(pRecvBuf, header,
                             InternalEssentialHeaderConnection) == "close":
@@ -2319,7 +2319,7 @@ template serverLib() =
                       let retHeader = parseHeader(pRecvBuf, parseSize, targetHeaders)
                       if retHeader.err == 0:
                         header = retHeader.header
-                        let retMain = mainServerHandler(pClient, header)
+                        let retMain = mainServerHandler(pClient, pRecvBuf, header)
                         if retMain == SendResult.Success:
                           if pClient[].keepAlive == true:
                             if header.minorVer == 0 or getHeaderValue(pRecvBuf, header,
@@ -2395,7 +2395,7 @@ template serverLib() =
                     let retHeader = parseHeader(pRecvBuf, parseSize, targetHeaders)
                     if retHeader.err == 0:
                       header = retHeader.header
-                      let retMain = mainServerHandler(pClient, header)
+                      let retMain = mainServerHandler(pClient, pRecvBuf, header)
                       if retMain == SendResult.Success:
                         if header.minorVer == 0 or getHeaderValue(pRecvBuf, header,
                           InternalEssentialHeaderConnection) == "close":
