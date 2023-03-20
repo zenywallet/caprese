@@ -2166,7 +2166,7 @@ template serverLib() =
 
     template send(data: seq[byte] | string | Array[byte]): SendResult {.dirty.} = pClient.send(data)
 
-    template headerUrl(): string = header.url
+    template headerUrl(): string {.dirty.} = header.url
 
     template get(path: string, body: untyped) {.dirty.} =
       if headerUrl() == path:
