@@ -208,6 +208,24 @@ when isMainModule:
       body:
         text "[worker] {urlText}"
 
+  const WsTestJs = staticScript:
+    import jsffi
+    type
+      WebSocketObj = JsObject
+      WebSocket = ref object of WebSocketObj
+    proc newWebSocket(url, protocols: cstring): WebSocket {.importcpp: "new WebSocket(#, #)".}
+    var ws = newWebSocket("ws://localhost:8009/ws", "caprese-0.1")
+
+  const WsTestMinJs = scriptMinifier(code = WsTestJs, extern = "")
+
+  const WsTestxHtml = staticHtmlDocument:
+    buildHtml(html):
+      head:
+        meta(charset="utf-8")
+      body:
+        text "websocket test"
+        script verbatim WsTestMinJs
+
   worker(num = 2):
     while true:
       let req = reqs.getPending()
@@ -226,6 +244,9 @@ when isMainModule:
 
       get "/test":
         return reqs.pending(PendingData(url: reqUrl))
+
+      get "/wstest":
+        return send(WsTestxHtml.addHeader())
 
       let urlText = sanitizeHtml(reqUrl)
       return send(fmt"Not found: {urlText}".addDocType().addHeader(Status404))
