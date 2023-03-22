@@ -22,6 +22,7 @@ import arraylib
 import locks
 import serverdef
 import std/cpuinfo
+import std/re
 
 const RLIMIT_OPEN_FILES* = 65536
 const CLIENT_MAX = 32000
@@ -2212,6 +2213,10 @@ template serverLib() =
 
     template get(path: string, body: untyped) {.dirty.} =
       if headerUrl() == path:
+        body
+
+    template get(path: Regex, body: untyped) {.dirty.} =
+      if headerUrl() =~ path:
         body
 
     template reqUrl: string {.dirty.} = header.url

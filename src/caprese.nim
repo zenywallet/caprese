@@ -174,6 +174,7 @@ template getPending*(reqs: auto): auto =
 
 when isMainModule:
   import strformat
+  import std/re
 
   type
     PendingData = object
@@ -241,6 +242,9 @@ when isMainModule:
 
       get "/":
         return send(IndexHtml.addHeader())
+
+      get re"/([a-z]+)(\d+)":
+        return send(sanitizeHtml(matches[0] & "|" & matches[1]).addHeader())
 
       get "/test":
         return reqs.pending(PendingData(url: reqUrl))
