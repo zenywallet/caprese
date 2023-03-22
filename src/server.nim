@@ -1905,6 +1905,8 @@ discard sem_init(addr throttleBody, 0, 0)
 var throttleChanged: bool = false
 var highGearThreshold: int
 
+var streamStmt {.compileTime.} = nnkStmtList.newTree(newEmptyNode())
+
 macro initServer*(): untyped =
   when not initServerFlag:
     initServerFlag = true
@@ -1920,10 +1922,14 @@ macro addServerMacro*(bindAddress: string, port: uint16, body: untyped = newEmpt
   var appId = curAppId
   var mainStmt = nnkStmtList.newTree(newEmptyNode())
   for s in body:
-    if s[0] == newIdentNode("routes") or s[0] == newIdentNode("stream"):
+    if s[0] == newIdentNode("routes"):
+      for s2 in s[1]:
+        if s2[0] == newIdentNode("stream"):
+          streamStmt.add(s2[3])
       mainStmt.add(s)
     else:
       serverWorkerInitStmt.add(s)
+
   var ofBody =
     nnkOfBranch.newTree(
       newLit(appId),
@@ -1931,6 +1937,19 @@ macro addServerMacro*(bindAddress: string, port: uint16, body: untyped = newEmpt
     )
   serverWorkerMainStmt[0].insert(appId, ofBody)
   inc(freePoolServerUsedCount)
+
+  for s in streamStmt:
+    if s == newEmptyNode():
+      continue
+    inc(curAppId)
+    var streamAppId = curAppId
+    ofBody =
+      nnkOfBranch.newTree(
+        newLit(streamAppId),
+        s
+      )
+    serverWorkerMainStmt[0].insert(streamAppId, ofBody)
+  streamStmt = nnkStmtList.newTree(newEmptyNode())
 
   quote do:
     from nativesockets import setBlocking, getSockOptInt, setSockOptInt
@@ -1972,6 +1991,7 @@ macro mainServerHandlerMacro*(appId: typed): untyped =
   serverWorkerMainStmt[0][0] = newIdentNode($appId)
   serverWorkerMainStmt
 
+
 template site*(hostname: string, body: untyped) =
   if reqHost() == hostname:
     body
@@ -1980,15 +2000,37 @@ template routes*(hostname: string, body: untyped) =
   if reqHost() == hostname:
     block: body
 
-template stream*(hostname: string, body: untyped) =
-  if reqHost() == hostname:
-    block: body
-
 template routes*(body: untyped) =
   block: body
 
-template stream*(body: untyped) =
-  block: body
+proc acceptKey(key: string): string =
+  var sh = secureHash(key & "258EAFA5-E914-47DA-95CA-C5AB0DC85B11")
+  return base64.encode(sh.Sha1Digest)
+
+template stream*(path: string, protocol: string, body: untyped) =
+  if reqUrl() == path:
+    let key = getHeaderValue(InternalSecWebSocketKey)
+    let ver = getHeaderValue(InternalSecWebSocketVersion)
+    if ver.len > 0 and key.len > 0:
+      if protocol.len > 0:
+        let prot = getHeaderValue(InternalSecWebSocketProtocol)
+        if prot == protocol:
+          return send("HTTP/1.1 " & $Status101 & "\c\L" &
+                      "Upgrade: websocket\c\L" &
+                      "Connection: Upgrade\c\L" &
+                      "Sec-WebSocket-Accept: " & acceptKey(key) & "\c\L" &
+                      "Sec-WebSocket-Protocol: " & protocol & "\c\L" &
+                      "Sec-WebSocket-Version: 13\c\L\c\L")
+        else:
+          return SendResult.Error
+      else:
+        return send("HTTP/1.1 " & $Status101 & "\c\L" &
+                    "Upgrade: websocket\c\L" &
+                    "Connection: Upgrade\c\L" &
+                    "Sec-WebSocket-Accept: " & acceptKey(key) & "\c\L" &
+                    "Sec-WebSocket-Version: 13\c\L\c\L")
+
+template stream*(path: string, body: untyped) = stream(path, "", body)
 
 var clientSocketLocks: array[WORKER_THREAD_NUM, cint]
 for i in 0..<WORKER_THREAD_NUM:
@@ -2178,6 +2220,9 @@ template serverLib() =
 
     template reqHost: string {.dirty.} =
       getHeaderValue(pRecvBuf, header, InternalEssentialHeaderHost)
+
+    template getHeaderValue(paramId: HeaderParams): string {.dirty.} =
+      getHeaderValue(pRecvBuf, header, paramId)
 
     proc mainServerHandler(pClient: ptr Client, pRecvBuf: ptr UncheckedArray[byte], header: ReqHeader): SendResult {.inline.} =
       let appId = pClient[].appId

@@ -248,16 +248,19 @@ when isMainModule:
       get "/wstest":
         return send(WsTestxHtml.addHeader())
 
+      stream(path = "/ws", protocol = "caprese-0.1"):
+        echo "stream test"
+
       let urlText = sanitizeHtml(reqUrl)
       return send(fmt"Not found: {urlText}".addDocType().addHeader(Status404))
 
-    stream:
+    #stream:
       # client: ptr Client
       # opcode: WebSocketOpCode
       # data: ptr UncheckedArray[byte]
       # size: int
 
       #echo "opcode=", opcode
-      discard
+      #discard
 
   serverStart()
