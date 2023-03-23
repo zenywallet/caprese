@@ -1926,7 +1926,7 @@ macro addServerMacro*(bindAddress: string, port: uint16, body: untyped = newEmpt
     if s[0] == newIdentNode("routes"):
       for s2 in s[1]:
         if s2[0] == newIdentNode("stream"):
-          streamStmt.add(s2[3])
+          streamStmt.add(s2[s2.len - 1])
       mainStmt.add(s)
     else:
       serverWorkerInitStmt.add(s)
