@@ -1892,7 +1892,9 @@ var serverWorkerMainStmt {.compileTime.} =
     )
   )
 var freePoolServerUsedCount {.compileTime.} = 0
-var workerRecvBufSize: int = 0
+var sockTmp = createNativeSocket()
+var workerRecvBufSize: int = sockTmp.getSockOptInt(SOL_SOCKET, SO_RCVBUF)
+sockTmp.close()
 var serverWorkerNum: int
 var clientQueue = queue2.newQueue[ptr Client](0x10000)
 var highGear = false
@@ -1966,10 +1968,6 @@ macro addServerMacro*(bindAddress: string, port: uint16, body: untyped = newEmpt
     var serverSock = createServer(`bindAddress`, `port`)
     addReleaseOnQuit(serverSock)
     serverSock.setBlocking(false)
-
-    var tcp_rmem = serverSock.getSockOptInt(SOL_SOCKET, SO_RCVBUF)
-    if workerRecvBufSize < tcp_rmem:
-      workerRecvBufSize = tcp_rmem
 
     if epfd < 0:
       epfd = epoll_create1(O_CLOEXEC)
