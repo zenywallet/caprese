@@ -2272,7 +2272,7 @@ template serverLib() =
         try:
           pClient = cast[ptr Client](pevents[i].data)
           sock = pClient[].sock
-          if pCLient[].listenFlag:
+          if pClient[].listenFlag:
             let clientSock = sock.accept4(cast[ptr SockAddr](addr sockAddress), addr addrLen, O_NONBLOCK)
             if cast[int](clientSock) > 0:
               clientSock.setSockOptInt(Protocol.IPPROTO_TCP.int, TCP_NODELAY, 1)
@@ -2283,7 +2283,7 @@ template serverLib() =
                   raise
                 newClient = clientFreePool.pop()
               newClient.sock = clientSock
-              newClient.appId = pCLient[].appId
+              newClient.appId = pClient[].appId
               ev.data = cast[EpollData](newClient)
               let retCtl = epoll_ctl(epfd, EPOLL_CTL_ADD, cast[cint](clientSock), addr ev)
               if retCtl < 0:
@@ -2496,7 +2496,7 @@ template serverLib() =
               var i = 0
               while true:
                 pClient = cast[ptr Client](pevents[i].data)
-                if pCLient[].listenFlag:
+                if pClient[].listenFlag:
                   sock = pClient[].sock
                   let clientSock = sock.accept4(cast[ptr SockAddr](addr sockAddress), addr addrLen, O_NONBLOCK)
                   if cast[int](clientSock) > 0:
@@ -2508,7 +2508,7 @@ template serverLib() =
                         raise
                       newClient = clientFreePool.pop()
                     newClient.sock = clientSock
-                    newClient.appId = pCLient[].appId
+                    newClient.appId = pClient[].appId
                     ev.data = cast[EpollData](newClient)
                     let retCtl = epoll_ctl(epfd, EPOLL_CTL_ADD, cast[cint](clientSock), addr ev)
                     if retCtl < 0:
