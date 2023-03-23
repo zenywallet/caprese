@@ -2162,8 +2162,7 @@ template serverLib() =
     var evData: uint64
     var sockAddress: Sockaddr_in
     var addrLen = sizeof(sockAddress).SockLen
-    let recvBufLen = arg.workerParams.bufLen
-    var recvBuf = newArray[byte](recvBufLen)
+    var recvBuf = newArray[byte](workerRecvBufSize)
     var pClient: ptr Client
     var pRecvBuf: ptr UncheckedArray[byte]
     var sock: SocketHandle = osInvalidSocket
@@ -2174,11 +2173,11 @@ template serverLib() =
 
     proc reserveRecvBuf(client: ptr Client, size: int) =
       if client.recvBuf.isNil:
-        client.recvBuf = cast[ptr UncheckedArray[byte]](allocShared0(sizeof(byte) * (size + recvBufLen)))
-        client.recvBufSize = size + recvBufLen
+        client.recvBuf = cast[ptr UncheckedArray[byte]](allocShared0(sizeof(byte) * (size + workerRecvBufSize)))
+        client.recvBufSize = size + workerRecvBufSize
       var left = client.recvBufSize - client.recvCurSize
       if size > left:
-        var nextSize = client.recvCurSize + size + recvBufLen
+        var nextSize = client.recvCurSize + size + workerRecvBufSize
         if nextSize > RECVBUF_EXPAND_BREAK_SIZE:
           raise newException(ServerError, "client request too large")
         client.recvBuf = reallocClientBuf(client.recvBuf, nextSize)
@@ -2321,7 +2320,7 @@ template serverLib() =
 
             if pClient[].recvCurSize == 0:
               while true:
-                let recvlen = sock.recv(pRecvBuf0, recvBufLen, 0.cint)
+                let recvlen = sock.recv(pRecvBuf0, workerRecvBufSize, 0.cint)
                 if recvlen > 0:
                   if recvlen >= 17 and equalMem(addr pRecvBuf0[recvlen - 4], "\c\L\c\L".cstring, 4):
                     var nextPos = 0
@@ -2372,8 +2371,8 @@ template serverLib() =
 
             else:
               while true:
-                pClient.reserveRecvBuf(recvBufLen)
-                let recvlen = sock.recv(addr pClient[].recvBuf[pClient[].recvCurSize], recvBufLen, 0.cint)
+                pClient.reserveRecvBuf(workerRecvBufSize)
+                let recvlen = sock.recv(addr pClient[].recvBuf[pClient[].recvCurSize], workerRecvBufSize, 0.cint)
                 if recvlen > 0:
                   pClient[].recvCurSize = pClient[].recvCurSize + recvlen
                   if pClient[].recvCurSize >= 17 and equalMem(addr pClient[].recvBuf[pClient[].recvCurSize - 4], "\c\L\c\L".cstring, 4):
@@ -2448,7 +2447,7 @@ template serverLib() =
           sock = pClient[].sock
           if pClient[].recvCurSize == 0:
             while true:
-              let recvlen = sock.recv(pRecvBuf0, recvBufLen, 0.cint)
+              let recvlen = sock.recv(pRecvBuf0, workerRecvBufSize, 0.cint)
               if recvlen > 0:
                 if recvlen >= 17 and equalMem(addr pRecvBuf0[recvlen - 4], "\c\L\c\L".cstring, 4):
                   pClient[].threadId = 0
