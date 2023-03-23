@@ -2157,6 +2157,52 @@ template serverLib() =
       result.err = 2
       result.next = -1
 
+  proc reserveRecvBuf(client: ptr Client, size: int) =
+    if client.recvBuf.isNil:
+      client.recvBuf = cast[ptr UncheckedArray[byte]](allocShared0(sizeof(byte) * (size + workerRecvBufSize)))
+      client.recvBufSize = size + workerRecvBufSize
+    var left = client.recvBufSize - client.recvCurSize
+    if size > left:
+      var nextSize = client.recvCurSize + size + workerRecvBufSize
+      if nextSize > RECVBUF_EXPAND_BREAK_SIZE:
+        raise newException(ServerError, "client request too large")
+      client.recvBuf = reallocClientBuf(client.recvBuf, nextSize)
+      client.recvBufSize = nextSize
+
+  proc addRecvBuf(client: ptr Client, data: ptr UncheckedArray[byte], size: int) =
+    client.reserveRecvBuf(size)
+    copyMem(addr client.recvBuf[client.recvCurSize], addr data[0], size)
+    client.recvCurSize = client.recvCurSize + size
+
+  proc send(client: ptr Client, data: seq[byte] | string | Array[byte]): SendResult =
+    var pos = 0
+    var size = data.len
+    while true:
+      let sendRet = client.sock.send(cast[cstring](unsafeAddr data[pos]), cast[cint](size), 0'i32)
+      if sendRet == size:
+        return SendResult.Success
+      elif sendRet > 0:
+        size = size - sendRet
+        pos = pos + sendRet
+        continue
+      elif sendRet < 0:
+        if errno == EAGAIN or errno == EWOULDBLOCK:
+          if pos > 0:
+            client.addSendBuf(data[pos..^1])
+          else:
+            client.addSendBuf(data)
+          var ev: EpollEvent
+          ev.events = EPOLLIN or EPOLLRDHUP or EPOLLET or EPOLLOUT
+          ev.data = cast[EpollData](client)
+          var retCtl = epoll_ctl(epfd, EPOLL_CTL_MOD, cast[cint](client.sock), addr ev)
+          if retCtl != 0:
+            errorQuit "error: send epoll_ctl ret=", retCtl, " ", getErrnoStr()
+        elif errno == EINTR:
+          continue
+        return SendResult.Error
+      else:
+        return SendResult.None
+
   proc serverWorker(arg: ThreadArg) {.thread.} =
     var events: array[EPOLL_EVENTS_SIZE, EpollEvent]
     var evData: uint64
@@ -2170,52 +2216,6 @@ template serverLib() =
     var targetHeaders: Array[ptr tuple[id: HeaderParams, val: string]]
     for i in 0..<TargetHeaders.len:
       targetHeaders.add(addr TargetHeaders[i])
-
-    proc reserveRecvBuf(client: ptr Client, size: int) =
-      if client.recvBuf.isNil:
-        client.recvBuf = cast[ptr UncheckedArray[byte]](allocShared0(sizeof(byte) * (size + workerRecvBufSize)))
-        client.recvBufSize = size + workerRecvBufSize
-      var left = client.recvBufSize - client.recvCurSize
-      if size > left:
-        var nextSize = client.recvCurSize + size + workerRecvBufSize
-        if nextSize > RECVBUF_EXPAND_BREAK_SIZE:
-          raise newException(ServerError, "client request too large")
-        client.recvBuf = reallocClientBuf(client.recvBuf, nextSize)
-        client.recvBufSize = nextSize
-
-    proc addRecvBuf(client: ptr Client, data: ptr UncheckedArray[byte], size: int) =
-      client.reserveRecvBuf(size)
-      copyMem(addr client.recvBuf[client.recvCurSize], addr data[0], size)
-      client.recvCurSize = client.recvCurSize + size
-
-    proc send(client: ptr Client, data: seq[byte] | string | Array[byte]): SendResult =
-      var pos = 0
-      var size = data.len
-      while true:
-        let sendRet = client.sock.send(cast[cstring](unsafeAddr data[pos]), cast[cint](size), 0'i32)
-        if sendRet == size:
-          return SendResult.Success
-        elif sendRet > 0:
-          size = size - sendRet
-          pos = pos + sendRet
-          continue
-        elif sendRet < 0:
-          if errno == EAGAIN or errno == EWOULDBLOCK:
-            if pos > 0:
-              client.addSendBuf(data[pos..^1])
-            else:
-              client.addSendBuf(data)
-            var ev: EpollEvent
-            ev.events = EPOLLIN or EPOLLRDHUP or EPOLLET or EPOLLOUT
-            ev.data = cast[EpollData](client)
-            var retCtl = epoll_ctl(epfd, EPOLL_CTL_MOD, cast[cint](client.sock), addr ev)
-            if retCtl != 0:
-              errorQuit "error: send epoll_ctl ret=", retCtl, " ", getErrnoStr()
-          elif errno == EINTR:
-            continue
-          return SendResult.Error
-        else:
-          return SendResult.None
 
     template send(data: seq[byte] | string | Array[byte]): SendResult {.dirty.} = pClient.send(data)
 
