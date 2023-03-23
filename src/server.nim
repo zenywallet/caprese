@@ -1906,8 +1906,6 @@ discard sem_init(addr throttleBody, 0, 0)
 var throttleChanged: bool = false
 var highGearThreshold: int
 
-var streamStmt {.compileTime.} = nnkStmtList.newTree(newEmptyNode())
-
 macro initServer*(): untyped =
   when not initServerFlag:
     initServerFlag = true
@@ -1922,12 +1920,27 @@ macro addServerMacro*(bindAddress: string, port: uint16, body: untyped = newEmpt
   inc(curAppId)
   var appId = curAppId
   var mainStmt = nnkStmtList.newTree(newEmptyNode())
+  var streamStmtData: seq[tuple[appId: int, n: NimNode]]
   for s in body:
     if s[0] == newIdentNode("routes"):
+      var routesBody = nnkStmtList.newTree(newEmptyNode())
       for s2 in s[1]:
         if s2[0] == newIdentNode("stream"):
-          streamStmt.add(s2[s2.len - 1])
-      mainStmt.add(s)
+          inc(curAppId)
+          var streamAppId = curAppId
+          if s2[1][0] != newIdentNode("streamAppId"):
+            s2.insert(1, nnkExprEqExpr.newTree(
+              newIdentNode("streamAppId"),
+              newLit(streamAppId)
+            ))
+          if s2.len < 5:
+            s2.insert(3, nnkExprEqExpr.newTree(
+              newIdentNode("protocol"),
+              newLit("")
+            ))
+          streamStmtData.add((streamAppId, s2[s2.len - 1]))
+        routesBody.add(s2)
+      mainStmt.add(routesBody)
     else:
       serverWorkerInitStmt.add(s)
 
@@ -1939,18 +1952,13 @@ macro addServerMacro*(bindAddress: string, port: uint16, body: untyped = newEmpt
   serverWorkerMainStmt[0].insert(appId, ofBody)
   inc(freePoolServerUsedCount)
 
-  for s in streamStmt:
-    if s == newEmptyNode():
-      continue
-    inc(curAppId)
-    var streamAppId = curAppId
+  for s in streamStmtData:
     ofBody =
       nnkOfBranch.newTree(
-        newLit(streamAppId),
-        s
+        newLit(s.appId),
+        s.n
       )
-    serverWorkerMainStmt[0].insert(streamAppId, ofBody)
-  streamStmt = nnkStmtList.newTree(newEmptyNode())
+    serverWorkerMainStmt[0].insert(s.appId, ofBody)
 
   quote do:
     from nativesockets import setBlocking, getSockOptInt, setSockOptInt
@@ -2008,7 +2016,12 @@ proc acceptKey(key: string): string =
   var sh = secureHash(key & "258EAFA5-E914-47DA-95CA-C5AB0DC85B11")
   return base64.encode(sh.Sha1Digest)
 
-template stream*(path: string, protocol: string, body: untyped) =
+template stream*(path: string, protocol: string, body: untyped) = discard # code is added by macro
+
+template stream*(path: string, body: untyped) = discard # code is added by macro
+
+# internal use only
+template stream*(streamAppId: int, path: string, protocol: string, body: untyped) =
   if reqUrl() == path:
     let key = getHeaderValue(InternalSecWebSocketKey)
     let ver = getHeaderValue(InternalSecWebSocketVersion)
@@ -2016,6 +2029,7 @@ template stream*(path: string, protocol: string, body: untyped) =
       if protocol.len > 0:
         let prot = getHeaderValue(InternalSecWebSocketProtocol)
         if prot == protocol:
+          reqClient()[].appId = streamAppId
           return send("HTTP/1.1 " & $Status101 & "\c\L" &
                       "Upgrade: websocket\c\L" &
                       "Connection: Upgrade\c\L" &
@@ -2025,13 +2039,12 @@ template stream*(path: string, protocol: string, body: untyped) =
         else:
           return SendResult.Error
       else:
+        reqClient()[].appId = streamAppId
         return send("HTTP/1.1 " & $Status101 & "\c\L" &
                     "Upgrade: websocket\c\L" &
                     "Connection: Upgrade\c\L" &
                     "Sec-WebSocket-Accept: " & acceptKey(key) & "\c\L" &
                     "Sec-WebSocket-Version: 13\c\L\c\L")
-
-template stream*(path: string, body: untyped) = stream(path, "", body)
 
 var clientSocketLocks: array[WORKER_THREAD_NUM, cint]
 for i in 0..<WORKER_THREAD_NUM:
