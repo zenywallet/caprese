@@ -78,7 +78,7 @@ type
     spinLock: SpinLock
     whackaMole: bool
 
-  Client* = object of ClientBase
+  ClientObj* = object of ClientBase
     pStream*: pointer
     clientId*: ClientId
     sock*: SocketHandle
@@ -86,7 +86,9 @@ type
     appId*: int
     listenFlag*: bool
 
-  ClientArray = array[CLIENT_MAX, Client]
+  Client = ptr ClientObj
+
+  ClientArray = array[CLIENT_MAX, ClientObj]
 
   Headers* = Table[string, string]
 
@@ -98,9 +100,9 @@ type
     Ping = 0x9
     Pong = 0xa
 
-  WebMainCallback* = proc (client: ptr Client, url: string, headers: Headers): SendResult {.thread.}
+  WebMainCallback* = proc (client: Client, url: string, headers: Headers): SendResult {.thread.}
 
-  StreamMainCallback* = proc (client: ptr Client, opcode: WebSocketOpCode,
+  StreamMainCallback* = proc (client: Client, opcode: WebSocketOpCode,
                               data: ptr UncheckedArray[byte], size: int): SendResult {.thread.}
 
   ThreadArgType* {.pure.} = enum
@@ -133,13 +135,13 @@ proc toWebSocketOpCode(opcode: int8): WebSocketOpCode =
 proc reallocClientBuf(buf: ptr UncheckedArray[byte], size: int): ptr UncheckedArray[byte] =
   result = cast[ptr UncheckedArray[byte]](reallocShared(buf, size))
 
-proc addSendBuf(client: ptr Client, data: seq[byte] | string | Array[byte]) =
+proc addSendBuf(client: Client, data: seq[byte] | string | Array[byte]) =
   let nextSize = client.sendCurSize + data.len
   client.sendBuf = reallocClientBuf(client.sendBuf, nextSize)
   copyMem(addr client.sendBuf[client.sendCurSize], unsafeAddr data[0], data.len)
   client.sendCurSize = nextSize
 
-proc send*(client: ptr Client, data: seq[byte] | string | Array[byte]): SendResult =
+proc send*(client: Client, data: seq[byte] | string | Array[byte]): SendResult =
   if client.sendCurSize > 0:
     client.addSendBuf(data)
     return SendResult.Pending
@@ -191,7 +193,7 @@ proc send*(client: ptr Client, data: seq[byte] | string | Array[byte]): SendResu
     else:
       return SendResult.None
 
-proc wsServerSend*(client: ptr Client, data: seq[byte] | string,
+proc wsServerSend*(client: Client, data: seq[byte] | string,
                           opcode: WebSocketOpCode = WebSocketOpCode.Binary): SendResult =
   var frame: seq[byte]
   var dataLen = data.len
@@ -209,7 +211,7 @@ var restartFlag = false
 var abortFlag = false
 var serverSock: SocketHandle = osInvalidSocket
 var httpSock: SocketHandle = osInvalidSocket
-var clients: ptr UncheckedArray[Client] = nil
+var clients: ptr UncheckedArray[ClientObj] = nil
 var clIdx = 0
 var events: array[EPOLL_EVENTS_SIZE, EpollEvent]
 var epfd: cint = -1
@@ -263,7 +265,7 @@ proc setEmpty*(pair: HashTableData) =
   else:
     pair.val = nil
 loadHashTableModules()
-var pendingClients: HashTableMem[ClientId, ptr Client]
+var pendingClients: HashTableMem[ClientId, Client]
 var clientsLock: RWLock
 var curClientId: ClientId = 0
 const INVALID_CLIENT_ID* = 0.ClientId
@@ -272,7 +274,7 @@ var tag2ClientIds: HashTableMem[Tag, Array[ClientId]]
 var clientId2Tags: HashTableMem[ClientId, Array[TagRef]]
 var clientId2Tasks: HashTableMem[ClientId, Array[ClientTask]]
 
-proc markPending*(client: ptr Client): ClientId {.discardable.} =
+proc markPending*(client: Client): ClientId {.discardable.} =
   withWriteLock clientsLock:
     while true:
       inc(curClientId)
@@ -293,7 +295,7 @@ proc unmarkPending*(clientId: ClientId) =
       pendingClients.del(pair)
       client.clientId = INVALID_CLIENT_ID
 
-proc unmarkPending*(client: ptr Client) =
+proc unmarkPending*(client: Client) =
   withWriteLock clientsLock:
     pendingClients.del(client.clientId)
     client.clientId = INVALID_CLIENT_ID
@@ -476,7 +478,7 @@ proc delTasks*(clientId: ClientId) =
         tasksPair.val[i].data.empty()
     clientId2Tasks.del(tasksPair)
 
-proc invokeSendEvent*(client: ptr Client): bool =
+proc invokeSendEvent*(client: Client): bool =
   acquire(client.lock)
   defer:
     release(client.lock)
@@ -503,7 +505,7 @@ proc send*(clientId: ClientId, data: string): SendResult {.discardable.} =
     result = SendResult.Error
 
 when not declared(invokeSendMain):
-  proc invokeSendMain(client: ptr Client): SendResult =
+  proc invokeSendMain(client: Client): SendResult =
     let clientId = client.clientId
 
     proc taskCallback(task: ClientTask): bool =
@@ -552,10 +554,10 @@ proc abort() =
 
 #  include stream
 
-var clientFreePool*: queue2.Queue[ptr Client]
+var clientFreePool*: queue2.Queue[Client]
 
 proc initClient() =
-  var p = cast[ptr UncheckedArray[Client]](allocShared0(sizeof(ClientArray)))
+  var p = cast[ptr UncheckedArray[ClientObj]](allocShared0(sizeof(ClientArray)))
   for i in 0..<CLIENT_MAX:
     p[i].idx = i
     p[i].fd = osInvalidSocket.int
@@ -578,7 +580,7 @@ proc initClient() =
       initExClient(addr p[i])
   clients = p
   rwlockInit(clientsLock)
-  pendingClients = newHashTable[ClientId, ptr Client](CLIENT_MAX * 3 div 2)
+  pendingClients = newHashTable[ClientId, Client](CLIENT_MAX * 3 div 2)
   tag2ClientIds = newHashTable[Tag, Array[ClientId]](CLIENT_MAX * 10 * 3 div 2)
   clientId2Tags = newHashTable[ClientId, Array[TagRef]](CLIENT_MAX * 3 div 2)
   clientId2Tasks = newHashTable[ClientId, Array[ClientTask]](CLIENT_MAX * 3 div 2)
@@ -664,7 +666,7 @@ when ENABLE_SSL:
         continue
       break
 
-proc sendInstant*(client: ptr Client, data: string) {.inline.} =
+proc sendInstant*(client: Client, data: string) {.inline.} =
   when ENABLE_SSL:
     if not client.ssl.isNil:
       client.ssl.sendInstant(data)
@@ -675,7 +677,7 @@ proc sendInstant*(client: ptr Client, data: string) {.inline.} =
 
 
 
-proc sendFlush(client: ptr Client): SendResult =
+proc sendFlush(client: Client): SendResult =
   if client.sendCurSize == 0:
     return SendResult.None
 
@@ -775,7 +777,7 @@ proc getFrame(data: ptr UncheckedArray[byte],
   else:
     return (true, fin, opcode, payload, payloadLen, nil, 0)
 
-proc waitEventAgain(client: ptr Client, evData: uint64, fd: int | SocketHandle, exEvents: uint32 = 0) =
+proc waitEventAgain(client: Client, evData: uint64, fd: int | SocketHandle, exEvents: uint32 = 0) =
   acquire(client.lock)
   defer:
     release(client.lock)
@@ -797,7 +799,7 @@ proc waitEventAgain(client: ptr Client, evData: uint64, fd: int | SocketHandle, 
       error "error: epoll_ctl ret=", ret, " errno=", errno
       abort()
 
-proc close(client: ptr Client) =
+proc close(client: Client) =
   acquire(client.lock)
   defer:
     release(client.lock)
@@ -832,7 +834,7 @@ proc close(client: ptr Client) =
   client.sock = osInvalidSocket
 
 when not declared(webMain):
-  proc webMainDefault(client: ptr Client, url: string, headers: Headers): SendResult =
+  proc webMainDefault(client: Client, url: string, headers: Headers): SendResult =
     debug "web url=", url, " headers=", headers
     when DYNAMIC_FILES:
       var retFile = getDynamicFile(url)
@@ -861,7 +863,7 @@ when not declared(webMain):
       return client.send(NotFound.addHeader(Status404))
 
 when not declared(streamMain):
-  proc streamMainDefault(client: ptr Client, opcode: WebSocketOpCode,
+  proc streamMainDefault(client: Client, opcode: WebSocketOpCode,
                         data: ptr UncheckedArray[byte], size: int): SendResult =
     debug "ws opcode=", opcode, " size=", size
     case opcode
@@ -876,7 +878,7 @@ when not declared(streamMain):
       result = SendResult.None
 
 when not declared(invokeSendMain):
-  proc invokeSendMainDefault(client: ptr Client): SendResult =
+  proc invokeSendMainDefault(client: Client): SendResult =
     result = SendResult.None
 
 var webMain: WebMainCallback = webMainDefault
@@ -888,7 +890,7 @@ proc setWebMain*(webMainCallback: WebMainCallback) =
 proc setStreamMain*(streamMainCallback: StreamMainCallback) =
   streamMain = streamMainCallback
 
-proc workerMain(client: ptr Client, buf: ptr UncheckedArray[byte], size: int, appId: int): SendResult =
+proc workerMain(client: Client, buf: ptr UncheckedArray[byte], size: int, appId: int): SendResult =
   var i = 0
   var cur = 0
   var first = true
@@ -995,7 +997,7 @@ proc worker(arg: ThreadArg) {.thread.} =
     initWorker()
   var recvBuf = newSeq[byte](arg.workerParams.bufLen)
 
-  proc reserveRecvBuf(client: ptr Client, size: int) =
+  proc reserveRecvBuf(client: Client, size: int) =
     if client.recvBuf.isNil:
       client.recvBuf = cast[ptr UncheckedArray[byte]](allocShared0(sizeof(byte) * (size + arg.workerParams.bufLen)))
       client.recvBufSize = size + arg.workerParams.bufLen
@@ -1007,7 +1009,7 @@ proc worker(arg: ThreadArg) {.thread.} =
       client.recvBuf = reallocClientBuf(client.recvBuf, nextSize)
       client.recvBufSize = nextSize
 
-  proc addRecvBuf(client: ptr Client, data: ptr UncheckedArray[byte], size: int) =
+  proc addRecvBuf(client: Client, data: ptr UncheckedArray[byte], size: int) =
     client.reserveRecvBuf(size)
     copyMem(addr client.recvBuf[client.recvCurSize], addr data[0], size)
     client.recvCurSize = client.recvCurSize + size
@@ -1896,7 +1898,7 @@ var sockTmp = createNativeSocket()
 var workerRecvBufSize: int = sockTmp.getSockOptInt(SOL_SOCKET, SO_RCVBUF)
 sockTmp.close()
 var serverWorkerNum: int
-var clientQueue = queue2.newQueue[ptr Client](0x10000)
+var clientQueue = queue2.newQueue[Client](0x10000)
 var highGear = false
 var highGearManagerAssinged: int = 0
 var highGearSemaphore: Sem
@@ -2157,7 +2159,7 @@ template serverLib() =
       result.err = 2
       result.next = -1
 
-  proc reserveRecvBuf(client: ptr Client, size: int) =
+  proc reserveRecvBuf(client: Client, size: int) =
     if client.recvBuf.isNil:
       client.recvBuf = cast[ptr UncheckedArray[byte]](allocShared0(sizeof(byte) * (size + workerRecvBufSize)))
       client.recvBufSize = size + workerRecvBufSize
@@ -2169,12 +2171,12 @@ template serverLib() =
       client.recvBuf = reallocClientBuf(client.recvBuf, nextSize)
       client.recvBufSize = nextSize
 
-  proc addRecvBuf(client: ptr Client, data: ptr UncheckedArray[byte], size: int) =
+  proc addRecvBuf(client: Client, data: ptr UncheckedArray[byte], size: int) =
     client.reserveRecvBuf(size)
     copyMem(addr client.recvBuf[client.recvCurSize], addr data[0], size)
     client.recvCurSize = client.recvCurSize + size
 
-  proc send(client: ptr Client, data: seq[byte] | string | Array[byte]): SendResult =
+  proc send(client: Client, data: seq[byte] | string | Array[byte]): SendResult =
     var pos = 0
     var size = data.len
     while true:
@@ -2209,7 +2211,7 @@ template serverLib() =
     var sockAddress: Sockaddr_in
     var addrLen = sizeof(sockAddress).SockLen
     var recvBuf = newArray[byte](workerRecvBufSize)
-    var pClient: ptr Client
+    var pClient: Client
     var pRecvBuf: ptr UncheckedArray[byte]
     var sock: SocketHandle = osInvalidSocket
     var header: ReqHeader
@@ -2231,7 +2233,7 @@ template serverLib() =
 
     template reqUrl: string {.dirty.} = header.url
 
-    template reqClient: ptr Client {.dirty.} = pClient
+    template reqClient: Client {.dirty.} = pClient
 
     template reqHost: string {.dirty.} =
       getHeaderValue(pRecvBuf, header, InternalEssentialHeaderHost)
@@ -2239,7 +2241,7 @@ template serverLib() =
     template getHeaderValue(paramId: HeaderParams): string {.dirty.} =
       getHeaderValue(pRecvBuf, header, paramId)
 
-    proc mainServerHandler(pClient: ptr Client, pRecvBuf: ptr UncheckedArray[byte], header: ReqHeader): SendResult {.inline.} =
+    proc mainServerHandler(pClient: Client, pRecvBuf: ptr UncheckedArray[byte], header: ReqHeader): SendResult {.inline.} =
       let appId = pClient[].appId
       mainServerHandlerMacro(appId)
 
@@ -2280,7 +2282,7 @@ template serverLib() =
 
       for i in 0..<nfd:
         try:
-          pClient = cast[ptr Client](pevents[i].data)
+          pClient = cast[Client](pevents[i].data)
           sock = pClient[].sock
           if pClient[].listenFlag:
             let clientSock = sock.accept4(cast[ptr SockAddr](addr sockAddress), addr addrLen, O_NONBLOCK)
@@ -2505,7 +2507,7 @@ template serverLib() =
             if nfd > 0:
               var i = 0
               while true:
-                pClient = cast[ptr Client](pevents[i].data)
+                pClient = cast[Client](pevents[i].data)
                 if pClient[].listenFlag:
                   sock = pClient[].sock
                   let clientSock = sock.accept4(cast[ptr SockAddr](addr sockAddress), addr addrLen, O_NONBLOCK)

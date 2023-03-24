@@ -98,7 +98,7 @@ macro get*(url: string, body: untyped): untyped =
       `body`
 
 template setStream(body: untyped) {.dirty.} =
-  proc streamMain(client: ptr Client, opcode: WebSocketOpCode,
+  proc streamMain(client: Client, opcode: WebSocketOpCode,
                   data: ptr UncheckedArray[byte], size: int): SendResult =
     body
   setStreamMain(streamMain)
@@ -236,7 +236,7 @@ when isMainModule:
 
   server(bindAddress = "0.0.0.0", port = 8009):
     routes:
-      # client: ptr Client
+      # client: Client
       # url: string
       # headers: Headers
 
@@ -259,7 +259,7 @@ when isMainModule:
       return send(fmt"Not found: {urlText}".addDocType().addHeader(Status404))
 
     #stream:
-      # client: ptr Client
+      # client: Client
       # opcode: WebSocketOpCode
       # data: ptr UncheckedArray[byte]
       # size: int
