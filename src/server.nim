@@ -2076,6 +2076,18 @@ template serverLib() =
 
   const FreePoolServerUsedCount = freePoolServerUsedCount
 
+  type
+    WorkerThreadCtxObj = object
+      pRecvBuf: ptr UncheckedArray[byte]
+      recvBuf: Array[byte]
+      targetHeaders: Array[ptr tuple[id: HeaderParams, val: string]]
+      header: ReqHeader
+
+    WorkerThreadCtx = ptr WorkerThreadCtxObj
+    ClientHandlerProc = proc (ctx: WorkerThreadCtx, client: Client) {.closure, gcsafe, locks: 0.}
+
+  #var clientHandlerProcs: Array[ClientHandlerProc]
+
   proc echoHeader(buf: ptr UncheckedArray[byte], size: int, header: ReqHeader) =
     echo "url: ", header.url
     for i, param in header.params:
@@ -2242,7 +2254,7 @@ template serverLib() =
       getHeaderValue(pRecvBuf, header, paramId)
 
     proc mainServerHandler(pClient: Client, pRecvBuf: ptr UncheckedArray[byte], header: ReqHeader): SendResult {.inline.} =
-      let appId = pClient[].appId
+      let appId = pClient[].appId - 1
       mainServerHandlerMacro(appId)
 
     let threadId = arg.workerParams.threadId
@@ -2255,6 +2267,168 @@ template serverLib() =
     var pRecvBuf0 = cast[ptr UncheckedArray[byte]](addr recvBuf[0])
     var skip = false
     var nfd: cint
+
+    var ctxObj: WorkerThreadCtxObj
+    var ctx = cast[WorkerThreadCtx](addr ctxObj)
+
+    proc handler1(ctx: WorkerThreadCtx, client: Client) {.closure, gcsafe, locks: 0.} =
+      var sock = client[].sock
+      let clientSock = sock.accept4(cast[ptr SockAddr](addr sockAddress), addr addrLen, O_NONBLOCK)
+      if cast[int](clientSock) > 0:
+        clientSock.setSockOptInt(Protocol.IPPROTO_TCP.int, TCP_NODELAY, 1)
+        var newClient = clientFreePool.pop()
+        while newClient.isNil:
+          if clientFreePool.count == 0:
+            clientSock.close()
+            raise
+          newClient = clientFreePool.pop()
+        newClient.sock = clientSock
+        newClient.appId = client[].appId + 1
+        ev.data = cast[EpollData](newClient)
+        let retCtl = epoll_ctl(epfd, EPOLL_CTL_ADD, cast[cint](clientSock), addr ev)
+        if retCtl < 0:
+          errorQuit "error: epoll_ctl ret=", retCtl, " errno=", errno
+
+    proc handler2(ctx: WorkerThreadCtx, client: Client) {.closure, gcsafe, locks: 0.} =
+      var sock = client[].sock
+
+      template closeAndFreeClient() =
+        var flag = false
+        acquire(client[].spinLock)
+        if client[].sock != osInvalidSocket:
+          client[].sock = osInvalidSocket
+          flag = true
+        release(client[].spinLock)
+        if flag:
+          sock.close()
+          client[].listenFlag = false
+          clientFreePool.addSafe(client)
+
+      if client[].recvCurSize == 0:
+        while true:
+          let recvlen = sock.recv(pRecvBuf0, workerRecvBufSize, 0.cint)
+          if recvlen > 0:
+            if recvlen >= 17 and equalMem(addr pRecvBuf0[recvlen - 4], "\c\L\c\L".cstring, 4):
+              var nextPos = 0
+              var parseSize = recvlen
+              while true:
+                pRecvBuf = cast[ptr UncheckedArray[byte]](addr recvBuf[nextPos])
+                let retHeader = parseHeader(pRecvBuf, parseSize, targetHeaders)
+                if retHeader.err == 0:
+                  header = retHeader.header
+                  let retMain = mainServerHandler(client, pRecvBuf, header)
+                  if retMain == SendResult.Success:
+                    if header.minorVer == 0 or getHeaderValue(pRecvBuf, header,
+                      InternalEssentialHeaderConnection) == "close":
+                      closeAndFreeClient()
+                      break
+                    elif retHeader.next < recvlen:
+                      nextPos = retHeader.next
+                      parseSize = recvlen - nextPos
+                    else:
+                      break
+                  elif retMain == SendResult.Pending:
+                    if retHeader.next < recvlen:
+                      nextPos = retHeader.next
+                      parseSize = recvlen - nextPos
+                    else:
+                      break
+                  else:
+                    closeAndFreeClient()
+                    break
+                else:
+                  echo "retHeader err=", retHeader.err
+                  closeAndFreeClient()
+                  break
+
+            else:
+              client.addRecvBuf(pRecvBuf0, recvlen)
+
+          elif recvlen == 0:
+            closeAndFreeClient()
+
+          else:
+            if errno == EAGAIN or errno == EWOULDBLOCK:
+              break
+            elif errno == EINTR:
+              continue
+            closeAndFreeClient()
+          break
+
+      else:
+        while true:
+          client.reserveRecvBuf(workerRecvBufSize)
+          let recvlen = sock.recv(addr client[].recvBuf[client[].recvCurSize], workerRecvBufSize, 0.cint)
+          if recvlen > 0:
+            client[].recvCurSize = client[].recvCurSize + recvlen
+            if client[].recvCurSize >= 17 and equalMem(addr client[].recvBuf[client[].recvCurSize - 4], "\c\L\c\L".cstring, 4):
+              var nextPos = 0
+              var parseSize = client[].recvCurSize
+              while true:
+                pRecvBuf = cast[ptr UncheckedArray[byte]](addr client[].recvBuf[nextPos])
+                let retHeader = parseHeader(pRecvBuf, parseSize, targetHeaders)
+                if retHeader.err == 0:
+                  header = retHeader.header
+                  let retMain = mainServerHandler(client, pRecvBuf, header)
+                  if retMain == SendResult.Success:
+                    if client[].keepAlive == true:
+                      if header.minorVer == 0 or getHeaderValue(pRecvBuf, header,
+                        InternalEssentialHeaderConnection) == "close":
+                        client[].keepAlive = false
+                        closeAndFreeClient()
+                        break
+                      elif retHeader.next < client[].recvCurSize:
+                        nextPos = retHeader.next
+                        parseSize = client[].recvCurSize - nextPos
+                      else:
+                        client[].recvCurSize = 0
+                        break
+                    else:
+                      closeAndFreeClient()
+                      break
+                  elif retMain == SendResult.Pending:
+                    if retHeader.next < client[].recvCurSize:
+                      nextPos = retHeader.next
+                      parseSize = client[].recvCurSize - nextPos
+                    else:
+                      break
+                  else:
+                    closeAndFreeClient()
+                    break
+                else:
+                  echo "retHeader err=", retHeader.err
+                  closeAndFreeClient()
+                  break
+
+          elif recvlen == 0:
+            closeAndFreeClient()
+
+          else:
+            if errno == EAGAIN or errno == EWOULDBLOCK:
+              break
+            elif errno == EINTR:
+              continue
+            closeAndFreeClient()
+          break
+
+    var clientHandlerProcs: Array[ClientHandlerProc]
+    clientHandlerProcs.add(handler1)
+    clientHandlerProcs.add(handler1)
+    clientHandlerProcs.add(handler2)
+
+    while active:
+      nfd = epoll_wait(epfd, cast[ptr EpollEvent](addr events),
+                      EPOLL_EVENTS_SIZE.cint, -1.cint)
+      for i in 0..<nfd:
+        try:
+          pClient = cast[Client](pevents[i].data)
+          cast[ClientHandlerProc](clientHandlerProcs[pClient[].appId])(ctx, pClient)
+        except:
+          let e = getCurrentException()
+          error e.name, ": ", e.msg
+    return
+
+
 
     while active:
       if threadId == 1:
