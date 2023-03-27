@@ -2081,7 +2081,7 @@ template serverLib() =
       sockAddress: Sockaddr_in
       addrLen: SockLen
       recvBuf: Array[byte]
-      pClient: Client
+      client: Client
       pRecvBuf: ptr UncheckedArray[byte]
       header: ReqHeader
       targetHeaders: Array[ptr tuple[id: HeaderParams, val: string]]
@@ -2222,7 +2222,7 @@ template serverLib() =
       else:
         return SendResult.None
 
-  template send(data: seq[byte] | string | Array[byte]): SendResult {.dirty.} = ctx.pClient.send(data)
+  template send(data: seq[byte] | string | Array[byte]): SendResult {.dirty.} = ctx.client.send(data)
 
   template headerUrl(): string {.dirty.} = ctx.header.url
 
@@ -2236,7 +2236,7 @@ template serverLib() =
 
   template reqUrl: string {.dirty.} = ctx.header.url
 
-  template reqClient: Client {.dirty.} = ctx.pClient
+  template reqClient: Client {.dirty.} = ctx.client
 
   template reqHost: string {.dirty.} =
     getHeaderValue(ctx.pRecvBuf, ctx.header, InternalEssentialHeaderHost)
@@ -2244,8 +2244,8 @@ template serverLib() =
   template getHeaderValue(paramId: HeaderParams): string {.dirty.} =
     getHeaderValue(ctx.pRecvBuf, ctx.header, paramId)
 
-  proc mainServerHandler(ctx: WorkerThreadCtx, pClient: Client, pRecvBuf: ptr UncheckedArray[byte], header: ReqHeader): SendResult {.inline.} =
-    let appId = pClient.appId - 1
+  proc mainServerHandler(ctx: WorkerThreadCtx, client: Client, pRecvBuf: ptr UncheckedArray[byte], header: ReqHeader): SendResult {.inline.} =
+    let appId = client.appId - 1
     mainServerHandlerMacro(appId)
 
   proc handler1(ctx: WorkerThreadCtx, client: Client) {.thread.} =
@@ -2429,8 +2429,8 @@ template serverLib() =
                       EPOLL_EVENTS_SIZE.cint, -1.cint)
       for i in 0..<nfd:
         try:
-          ctx.pClient = cast[Client](pevents[i].data)
-          cast[ClientHandlerProc](clientHandlerProcs[ctx.pClient.appId])(ctx, ctx.pClient)
+          ctx.client = cast[Client](pevents[i].data)
+          cast[ClientHandlerProc](clientHandlerProcs[ctx.client.appId])(ctx, ctx.client)
         except:
           let e = getCurrentException()
           error e.name, ": ", e.msg
