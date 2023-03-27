@@ -2245,7 +2245,7 @@ template serverLib() =
     getHeaderValue(ctx.pRecvBuf, ctx.header, paramId)
 
   proc mainServerHandler(ctx: WorkerThreadCtx, pClient: Client, pRecvBuf: ptr UncheckedArray[byte], header: ReqHeader): SendResult {.inline.} =
-    let appId = pClient[].appId - 1
+    let appId = pClient.appId - 1
     mainServerHandlerMacro(appId)
 
   proc handler1(ctx: WorkerThreadCtx, client: Client) {.thread.} =
@@ -2430,7 +2430,7 @@ template serverLib() =
       for i in 0..<nfd:
         try:
           ctx.pClient = cast[Client](pevents[i].data)
-          cast[ClientHandlerProc](clientHandlerProcs[ctx.pClient[].appId])(ctx, ctx.pClient)
+          cast[ClientHandlerProc](clientHandlerProcs[ctx.pClient.appId])(ctx, ctx.pClient)
         except:
           let e = getCurrentException()
           error e.name, ": ", e.msg
