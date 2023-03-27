@@ -2078,10 +2078,15 @@ template serverLib() =
 
   type
     WorkerThreadCtxObj = object
-      pRecvBuf: ptr UncheckedArray[byte]
+      sockAddress: Sockaddr_in
+      addrLen: SockLen
       recvBuf: Array[byte]
-      targetHeaders: Array[ptr tuple[id: HeaderParams, val: string]]
+      pClient: Client
+      pRecvBuf: ptr UncheckedArray[byte]
       header: ReqHeader
+      targetHeaders: Array[ptr tuple[id: HeaderParams, val: string]]
+      pRecvBuf0: ptr UncheckedArray[byte]
+      ev: EpollEvent
 
     WorkerThreadCtx = ptr WorkerThreadCtxObj
     ClientHandlerProc = proc (ctx: WorkerThreadCtx, client: Client) {.closure, gcsafe, locks: 0.}
@@ -2220,20 +2225,25 @@ template serverLib() =
   proc serverWorker(arg: ThreadArg) {.thread.} =
     var events: array[EPOLL_EVENTS_SIZE, EpollEvent]
     var evData: uint64
-    var sockAddress: Sockaddr_in
-    var addrLen = sizeof(sockAddress).SockLen
-    var recvBuf = newArray[byte](workerRecvBufSize)
-    var pClient: Client
-    var pRecvBuf: ptr UncheckedArray[byte]
-    var sock: SocketHandle = osInvalidSocket
-    var header: ReqHeader
-    var targetHeaders: Array[ptr tuple[id: HeaderParams, val: string]]
+    #var sockAddress: Sockaddr_in
+    #var addrLen = sizeof(sockAddress).SockLen
+    #var recvBuf = newArray[byte](workerRecvBufSize)
+    #var pClient: Client
+    #var pRecvBuf: ptr UncheckedArray[byte]
+    #var sock: SocketHandle = osInvalidSocket
+    #var header: ReqHeader
+    #var targetHeaders: Array[ptr tuple[id: HeaderParams, val: string]]
+
+    var ctxObj: WorkerThreadCtxObj
+    var ctx = cast[WorkerThreadCtx](addr ctxObj)
+    ctx.addrLen = sizeof(ctx.sockAddress).SockLen
+    ctx.recvBuf = newArray[byte](workerRecvBufSize)
     for i in 0..<TargetHeaders.len:
-      targetHeaders.add(addr TargetHeaders[i])
+      ctx.targetHeaders.add(addr TargetHeaders[i])
 
-    template send(data: seq[byte] | string | Array[byte]): SendResult {.dirty.} = pClient.send(data)
+    template send(data: seq[byte] | string | Array[byte]): SendResult {.dirty.} = ctx.pClient.send(data)
 
-    template headerUrl(): string {.dirty.} = header.url
+    template headerUrl(): string {.dirty.} = ctx.header.url
 
     template get(path: string, body: untyped) {.dirty.} =
       if headerUrl() == path:
@@ -2243,37 +2253,35 @@ template serverLib() =
       if headerUrl() =~ path:
         body
 
-    template reqUrl: string {.dirty.} = header.url
+    template reqUrl: string {.dirty.} = ctx.header.url
 
-    template reqClient: Client {.dirty.} = pClient
+    template reqClient: Client {.dirty.} = ctx.pClient
 
     template reqHost: string {.dirty.} =
-      getHeaderValue(pRecvBuf, header, InternalEssentialHeaderHost)
+      getHeaderValue(ctx.pRecvBuf, ctx.header, InternalEssentialHeaderHost)
 
     template getHeaderValue(paramId: HeaderParams): string {.dirty.} =
-      getHeaderValue(pRecvBuf, header, paramId)
+      getHeaderValue(ctx.pRecvBuf, ctx.header, paramId)
 
-    proc mainServerHandler(pClient: Client, pRecvBuf: ptr UncheckedArray[byte], header: ReqHeader): SendResult {.inline.} =
+    proc mainServerHandler(ctx: WorkerThreadCtx, pClient: Client, pRecvBuf: ptr UncheckedArray[byte], header: ReqHeader): SendResult {.inline.} =
       let appId = pClient[].appId - 1
       mainServerHandlerMacro(appId)
 
     let threadId = arg.workerParams.threadId
-    var ev: EpollEvent
-    ev.events = EPOLLIN or EPOLLRDHUP or EPOLLET
+    ctx.ev.events = EPOLLIN or EPOLLRDHUP or EPOLLET
 
     serverWorkerInit()
 
     var pevents: ptr UncheckedArray[EpollEvent] = cast[ptr UncheckedArray[EpollEvent]](addr events[0])
-    var pRecvBuf0 = cast[ptr UncheckedArray[byte]](addr recvBuf[0])
+    var pRecvBuf0 = cast[ptr UncheckedArray[byte]](addr ctx.recvBuf[0])
     var skip = false
     var nfd: cint
 
-    var ctxObj: WorkerThreadCtxObj
-    var ctx = cast[WorkerThreadCtx](addr ctxObj)
+    ctx.pRecvBuf0 = pRecvBuf0
 
     proc handler1(ctx: WorkerThreadCtx, client: Client) {.closure, gcsafe, locks: 0.} =
       var sock = client.sock
-      let clientSock = sock.accept4(cast[ptr SockAddr](addr sockAddress), addr addrLen, O_NONBLOCK)
+      let clientSock = sock.accept4(cast[ptr SockAddr](addr ctx.sockAddress), addr ctx.addrLen, O_NONBLOCK)
       if cast[int](clientSock) > 0:
         clientSock.setSockOptInt(Protocol.IPPROTO_TCP.int, TCP_NODELAY, 1)
         var newClient = clientFreePool.pop()
@@ -2284,8 +2292,8 @@ template serverLib() =
           newClient = clientFreePool.pop()
         newClient.sock = clientSock
         newClient.appId = client.appId + 1
-        ev.data = cast[EpollData](newClient)
-        let retCtl = epoll_ctl(epfd, EPOLL_CTL_ADD, cast[cint](clientSock), addr ev)
+        ctx.ev.data = cast[EpollData](newClient)
+        let retCtl = epoll_ctl(epfd, EPOLL_CTL_ADD, cast[cint](clientSock), addr ctx.ev)
         if retCtl < 0:
           errorQuit "error: epoll_ctl ret=", retCtl, " errno=", errno
 
@@ -2306,19 +2314,19 @@ template serverLib() =
 
       if client.recvCurSize == 0:
         while true:
-          let recvlen = sock.recv(pRecvBuf0, workerRecvBufSize, 0.cint)
+          let recvlen = sock.recv(ctx.pRecvBuf0, workerRecvBufSize, 0.cint)
           if recvlen > 0:
-            if recvlen >= 17 and equalMem(addr pRecvBuf0[recvlen - 4], "\c\L\c\L".cstring, 4):
+            if recvlen >= 17 and equalMem(addr ctx.pRecvBuf0[recvlen - 4], "\c\L\c\L".cstring, 4):
               var nextPos = 0
               var parseSize = recvlen
               while true:
-                pRecvBuf = cast[ptr UncheckedArray[byte]](addr recvBuf[nextPos])
-                let retHeader = parseHeader(pRecvBuf, parseSize, targetHeaders)
+                ctx.pRecvBuf = cast[ptr UncheckedArray[byte]](addr ctx.recvBuf[nextPos])
+                let retHeader = parseHeader(ctx.pRecvBuf, parseSize, ctx.targetHeaders)
                 if retHeader.err == 0:
-                  header = retHeader.header
-                  let retMain = mainServerHandler(client, pRecvBuf, header)
+                  ctx.header = retHeader.header
+                  let retMain = mainServerHandler(ctx, client, ctx.pRecvBuf, ctx.header)
                   if retMain == SendResult.Success:
-                    if header.minorVer == 0 or getHeaderValue(pRecvBuf, header,
+                    if ctx.header.minorVer == 0 or getHeaderValue(ctx.pRecvBuf, ctx.header,
                       InternalEssentialHeaderConnection) == "close":
                       closeAndFreeClient()
                       break
@@ -2342,7 +2350,7 @@ template serverLib() =
                   break
 
             else:
-              client.addRecvBuf(pRecvBuf0, recvlen)
+              client.addRecvBuf(ctx.pRecvBuf0, recvlen)
 
           elif recvlen == 0:
             closeAndFreeClient()
@@ -2365,14 +2373,14 @@ template serverLib() =
               var nextPos = 0
               var parseSize = client.recvCurSize
               while true:
-                pRecvBuf = cast[ptr UncheckedArray[byte]](addr client.recvBuf[nextPos])
-                let retHeader = parseHeader(pRecvBuf, parseSize, targetHeaders)
+                ctx.pRecvBuf = cast[ptr UncheckedArray[byte]](addr client.recvBuf[nextPos])
+                let retHeader = parseHeader(ctx.pRecvBuf, parseSize, ctx.targetHeaders)
                 if retHeader.err == 0:
-                  header = retHeader.header
-                  let retMain = mainServerHandler(client, pRecvBuf, header)
+                  ctx.header = retHeader.header
+                  let retMain = mainServerHandler(ctx, client, ctx.pRecvBuf, ctx.header)
                   if retMain == SendResult.Success:
                     if client.keepAlive == true:
-                      if header.minorVer == 0 or getHeaderValue(pRecvBuf, header,
+                      if ctx.header.minorVer == 0 or getHeaderValue(ctx.pRecvBuf, ctx.header,
                         InternalEssentialHeaderConnection) == "close":
                         client.keepAlive = false
                         closeAndFreeClient()
@@ -2421,15 +2429,15 @@ template serverLib() =
                       EPOLL_EVENTS_SIZE.cint, -1.cint)
       for i in 0..<nfd:
         try:
-          pClient = cast[Client](pevents[i].data)
-          cast[ClientHandlerProc](clientHandlerProcs[pClient[].appId])(ctx, pClient)
+          ctx.pClient = cast[Client](pevents[i].data)
+          cast[ClientHandlerProc](clientHandlerProcs[ctx.pClient[].appId])(ctx, ctx.pClient)
         except:
           let e = getCurrentException()
           error e.name, ": ", e.msg
     return
 
 
-
+    #[
     while active:
       if threadId == 1:
         nfd = epoll_wait(epfd, cast[ptr EpollEvent](addr events),
@@ -2734,6 +2742,7 @@ template serverLib() =
           atomic_fetch_sub(addr highGearManagerAssinged, 1, 0)
 
     discard sem_post(addr throttleBody)
+    ]#
 
 
 template serverStartWithCfg(cfg: static Config) =
