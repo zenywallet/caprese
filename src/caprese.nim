@@ -92,10 +92,12 @@ macro init(): untyped =
         active = false
         `onSigTermQuitBody`
 
+#[
 macro get*(url: string, body: untyped): untyped =
   quote do:
     if url == `url`:
       `body`
+]#
 
 template setStream(body: untyped) {.dirty.} =
   proc streamMain(client: Client, opcode: WebSocketOpCode,
