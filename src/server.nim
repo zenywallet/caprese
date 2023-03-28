@@ -2089,7 +2089,7 @@ template serverLib() =
       ev: EpollEvent
 
     WorkerThreadCtx = ptr WorkerThreadCtxObj
-    ClientHandlerProc = proc (ctx: WorkerThreadCtx, client: Client) {.thread.}
+    ClientHandlerProc = proc (ctx: WorkerThreadCtx) {.thread.}
 
   #var clientHandlerProcs: Array[ClientHandlerProc]
 
@@ -2248,7 +2248,8 @@ template serverLib() =
     let appId = client.appId - 1
     mainServerHandlerMacro(appId)
 
-  proc handler1(ctx: WorkerThreadCtx, client: Client) {.thread.} =
+  proc handler1(ctx: WorkerThreadCtx) {.thread.} =
+    let client = ctx.client
     var sock = client.sock
     let clientSock = sock.accept4(cast[ptr SockAddr](addr ctx.sockAddress), addr ctx.addrLen, O_NONBLOCK)
     if cast[int](clientSock) > 0:
@@ -2266,7 +2267,8 @@ template serverLib() =
       if retCtl < 0:
         errorQuit "error: epoll_ctl ret=", retCtl, " errno=", errno
 
-  proc handler2(ctx: WorkerThreadCtx, client: Client) {.thread.} =
+  proc handler2(ctx: WorkerThreadCtx) {.thread.} =
+    let client = ctx.client
     var sock = client.sock
 
     template closeAndFreeClient() =
@@ -2430,7 +2432,7 @@ template serverLib() =
       for i in 0..<nfd:
         try:
           ctx.client = cast[Client](pevents[i].data)
-          cast[ClientHandlerProc](clientHandlerProcs[ctx.client.appId])(ctx, ctx.client)
+          cast[ClientHandlerProc](clientHandlerProcs[ctx.client.appId])(ctx)
         except:
           let e = getCurrentException()
           error e.name, ": ", e.msg
