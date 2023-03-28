@@ -2267,7 +2267,7 @@ template serverLib() =
 
   proc handler2(ctx: WorkerThreadCtx) {.thread.} =
     let client = ctx.client
-    var sock = client.sock
+    let sock = client.sock
 
     template closeAndFreeClient() =
       var flag = false
