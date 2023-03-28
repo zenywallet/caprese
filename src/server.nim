@@ -2248,7 +2248,7 @@ template serverLib() =
     let appId = client.appId - 1
     mainServerHandlerMacro(appId)
 
-  proc handler1(ctx: WorkerThreadCtx) {.thread.} =
+  proc appListen(ctx: WorkerThreadCtx) {.thread.} =
     let clientSock = ctx.client.sock.accept4(cast[ptr SockAddr](addr ctx.sockAddress), addr ctx.addrLen, O_NONBLOCK)
     if cast[int](clientSock) > 0:
       clientSock.setSockOptInt(Protocol.IPPROTO_TCP.int, TCP_NODELAY, 1)
@@ -2389,8 +2389,8 @@ template serverLib() =
         break
 
   var clientHandlerProcs: Array[ClientHandlerProc]
-  clientHandlerProcs.add(handler1)
-  clientHandlerProcs.add(handler1)
+  clientHandlerProcs.add(appListen)
+  clientHandlerProcs.add(appListen)
   clientHandlerProcs.add(handler2)
 
   proc serverWorker(arg: ThreadArg) {.thread.} =
