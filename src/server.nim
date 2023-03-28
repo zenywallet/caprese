@@ -2249,9 +2249,7 @@ template serverLib() =
     mainServerHandlerMacro(appId)
 
   proc handler1(ctx: WorkerThreadCtx) {.thread.} =
-    let client = ctx.client
-    var sock = client.sock
-    let clientSock = sock.accept4(cast[ptr SockAddr](addr ctx.sockAddress), addr ctx.addrLen, O_NONBLOCK)
+    let clientSock = ctx.client.sock.accept4(cast[ptr SockAddr](addr ctx.sockAddress), addr ctx.addrLen, O_NONBLOCK)
     if cast[int](clientSock) > 0:
       clientSock.setSockOptInt(Protocol.IPPROTO_TCP.int, TCP_NODELAY, 1)
       var newClient = clientFreePool.pop()
@@ -2261,7 +2259,7 @@ template serverLib() =
           raise
         newClient = clientFreePool.pop()
       newClient.sock = clientSock
-      newClient.appId = client.appId + 1
+      newClient.appId = ctx.client.appId + 1
       ctx.ev.data = cast[EpollData](newClient)
       let retCtl = epoll_ctl(epfd, EPOLL_CTL_ADD, cast[cint](clientSock), addr ctx.ev)
       if retCtl < 0:
