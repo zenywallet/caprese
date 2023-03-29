@@ -1983,7 +1983,6 @@ macro addServerMacro*(bindAddress: string, port: uint16, body: untyped = newEmpt
     if newClient.isNil:
       raise newException(ServerError, "no free pool")
     newClient.sock = serverSock
-    newClient.listenFlag = true
     newClient.appId = `appId`
     ev.data = cast[EpollData](newClient)
     var retCtl = epoll_ctl(epfd, EPOLL_CTL_ADD, serverSock, addr ev)
@@ -2278,7 +2277,6 @@ template serverLib() =
       release(client.spinLock)
       if flag:
         sock.close()
-        client.listenFlag = false
         clientFreePool.addSafe(client)
 
     if client.recvCurSize == 0:
