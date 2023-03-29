@@ -1893,6 +1893,7 @@ var serverWorkerMainStmt {.compileTime.} =
       )
     )
   )
+var serverHandlerList {.compileTime.}: seq[string]
 var freePoolServerUsedCount {.compileTime.} = 0
 var sockTmp = createNativeSocket()
 var workerRecvBufSize: int = sockTmp.getSockOptInt(SOL_SOCKET, SO_RCVBUF)
@@ -1963,6 +1964,10 @@ macro addServerMacro*(bindAddress: string, port: uint16, body: untyped = newEmpt
         s.n
       )
     serverWorkerMainStmt[0].insert(s.appId, ofBody)
+
+  serverHandlerList.add("appListen")
+  serverHandlerList.add("appListen")
+  serverHandlerList.add("handler2")
 
   quote do:
     from nativesockets import setBlocking, getSockOptInt, setSockOptInt
@@ -2387,9 +2392,22 @@ template serverLib() =
         break
 
   var clientHandlerProcs: Array[ClientHandlerProc]
-  clientHandlerProcs.add(appListen)
-  clientHandlerProcs.add(appListen)
-  clientHandlerProcs.add(handler2)
+
+  macro serverHandlerMacro(): untyped =
+    var serverHandlerStmt = nnkStmtList.newTree(newEmptyNode())
+    var addCallDummy = quote do:
+      clientHandlerProcs.add(appDummy)
+
+    for s in serverHandlerList:
+      var addCall = addCallDummy.copy()
+      addCall[1] = newIdentNode(s)
+      if serverHandlerStmt[0].kind == nnkEmpty:
+        serverHandlerStmt[0] = addCall
+      else:
+        serverHandlerStmt.add(addCall)
+    serverHandlerStmt
+
+  serverHandlerMacro()
 
   proc serverWorker(arg: ThreadArg) {.thread.} =
     var events: array[EPOLL_EVENTS_SIZE, EpollEvent]
