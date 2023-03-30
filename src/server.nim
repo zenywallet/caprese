@@ -1893,7 +1893,7 @@ var serverWorkerMainStmt {.compileTime.} =
       )
     )
   )
-var serverHandlerList {.compileTime.}: seq[string]
+var serverHandlerList {.compileTime.} = @["appDummy"]
 var freePoolServerUsedCount {.compileTime.} = 0
 var sockTmp = createNativeSocket()
 var workerRecvBufSize: int = sockTmp.getSockOptInt(SOL_SOCKET, SO_RCVBUF)
@@ -1924,6 +1924,9 @@ macro getAppId*(): int =
 macro addServerMacro*(bindAddress: string, port: uint16, body: untyped = newEmptyNode()): untyped =
   inc(curAppId)
   var appId = curAppId
+  serverHandlerList.add("appListen")
+  inc(curAppId) # reserved
+  serverHandlerList.add("handler2")
   var mainStmt = nnkStmtList.newTree(newEmptyNode())
   var streamStmtData: seq[tuple[appId: int, n: NimNode]]
   for s in body:
@@ -1964,10 +1967,6 @@ macro addServerMacro*(bindAddress: string, port: uint16, body: untyped = newEmpt
         s.n
       )
     serverWorkerMainStmt[0].insert(s.appId, ofBody)
-
-  serverHandlerList.add("appListen")
-  serverHandlerList.add("appListen")
-  serverHandlerList.add("handler2")
 
   quote do:
     from nativesockets import setBlocking, getSockOptInt, setSockOptInt
@@ -2251,6 +2250,8 @@ template serverLib() =
   proc mainServerHandler(ctx: WorkerThreadCtx, client: Client, pRecvBuf: ptr UncheckedArray[byte], header: ReqHeader): SendResult {.inline.} =
     let appId = client.appId - 1
     mainServerHandlerMacro(appId)
+
+  proc appDummy(ctx: WorkerThreadCtx) {.thread.} = discard
 
   proc appListen(ctx: WorkerThreadCtx) {.thread.} =
     let clientSock = ctx.client.sock.accept4(cast[ptr SockAddr](addr ctx.sockAddress), addr ctx.addrLen, O_NONBLOCK)
