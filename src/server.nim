@@ -1936,6 +1936,7 @@ macro addServerMacro*(bindAddress: string, port: uint16, body: untyped = newEmpt
         if s2[0] == newIdentNode("stream"):
           inc(curAppId)
           var streamAppId = curAppId
+          serverHandlerList.add("appStream")
           if s2[1][0] != newIdentNode("streamAppId"):
             s2.insert(1, nnkExprEqExpr.newTree(
               newIdentNode("streamAppId"),
@@ -2391,6 +2392,9 @@ template serverLib() =
             continue
           closeAndFreeClient()
         break
+
+  proc appStream(ctx: WorkerThreadCtx) {.thread.} =
+    echo "appStream"
 
   var clientHandlerProcs: Array[ClientHandlerProc]
 
