@@ -1879,7 +1879,7 @@ proc stop*() {.inline.} =
 
 var initServerFlag {.compileTime.} = false
 var curAppId {.compileTime.} = 0
-var serverWorkerInitStmt {.compileTime.} = nnkStmtList.newTree(newEmptyNode())
+var serverWorkerInitStmt {.compileTime.} = newStmtList()
 var serverWorkerMainStmt {.compileTime.} =
   nnkStmtList.newTree(
     nnkCaseStmt.newTree(
@@ -1927,11 +1927,11 @@ macro addServerMacro*(bindAddress: string, port: uint16, body: untyped = newEmpt
   serverHandlerList.add("appListen")
   inc(curAppId) # reserved
   serverHandlerList.add("handler2")
-  var mainStmt = nnkStmtList.newTree(newEmptyNode())
+  var mainStmt = newStmtList()
   var streamStmtData: seq[tuple[appId: int, n: NimNode]]
   for s in body:
     if s[0] == newIdentNode("routes"):
-      var routesBody = nnkStmtList.newTree(newEmptyNode())
+      var routesBody = newStmtList()
       for s2 in s[1]:
         if s2[0] == newIdentNode("stream"):
           inc(curAppId)
@@ -2399,17 +2399,14 @@ template serverLib() =
   var clientHandlerProcs: Array[ClientHandlerProc]
 
   macro serverHandlerMacro(): untyped =
-    var serverHandlerStmt = nnkStmtList.newTree(newEmptyNode())
+    var serverHandlerStmt = newStmtList()
     var addCallDummy = quote do:
       clientHandlerProcs.add(appDummy)
 
     for s in serverHandlerList:
       var addCall = addCallDummy.copy()
       addCall[1] = newIdentNode(s)
-      if serverHandlerStmt[0].kind == nnkEmpty:
-        serverHandlerStmt[0] = addCall
-      else:
-        serverHandlerStmt.add(addCall)
+      serverHandlerStmt.add(addCall)
     serverHandlerStmt
 
   serverHandlerMacro()
