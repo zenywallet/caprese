@@ -28,9 +28,9 @@ const RLIMIT_OPEN_FILES* = 65536
 const CLIENT_MAX = 32000
 const CLIENT_SEARCH_LIMIT = 30000
 const WORKER_THREAD_NUM {.intdefine.} = 16
-const EPOLL_EVENTS_SIZE = 10
+const EPOLL_EVENTS_SIZE* = 10
 const CLCL = 168626701'u32 # "\c\L\c\L"
-const RECVBUF_EXPAND_BREAK_SIZE = 131072 * 5
+const RECVBUF_EXPAND_BREAK_SIZE* = 131072 * 5
 const MAX_FRAME_SIZE = 131072 * 5
 const WORKER_QUEUE_LIMIT = 10000
 const WEBSOCKET_PROTOCOL = "deoxy-0.1"
@@ -86,7 +86,7 @@ type
     appId*: int
     listenFlag*: bool
 
-  Client = ptr ClientObj
+  Client* = ptr ClientObj
 
   ClientArray = array[CLIENT_MAX, ClientObj]
 
@@ -120,7 +120,7 @@ type
   ServerNeedRestartError* = object of CatchableError
   ServerSslCertError* = object of CatchableError
 
-template errorQuit(x: varargs[string, `$`]) = errorException(x, ServerError)
+template errorQuit*(x: varargs[string, `$`]) = errorException(x, ServerError)
 
 proc toWebSocketOpCode(opcode: int8): WebSocketOpCode =
   case opcode
@@ -132,10 +132,10 @@ proc toWebSocketOpCode(opcode: int8): WebSocketOpCode =
   of 0xa: WebSocketOpcode.Pong
   else: raise
 
-proc reallocClientBuf(buf: ptr UncheckedArray[byte], size: int): ptr UncheckedArray[byte] =
+proc reallocClientBuf*(buf: ptr UncheckedArray[byte], size: int): ptr UncheckedArray[byte] =
   result = cast[ptr UncheckedArray[byte]](reallocShared(buf, size))
 
-proc addSendBuf(client: Client, data: seq[byte] | string | Array[byte]) =
+proc addSendBuf*(client: Client, data: seq[byte] | string | Array[byte]) =
   let nextSize = client.sendCurSize + data.len
   client.sendBuf = reallocClientBuf(client.sendBuf, nextSize)
   copyMem(addr client.sendBuf[client.sendCurSize], unsafeAddr data[0], data.len)
@@ -214,7 +214,7 @@ var httpSock: SocketHandle = osInvalidSocket
 var clients: ptr UncheckedArray[ClientObj] = nil
 var clIdx = 0
 var events: array[EPOLL_EVENTS_SIZE, EpollEvent]
-var epfd: cint = -1
+var epfd*: cint = -1
 
 type
   WorkerChannelParam = tuple[appId: int, idx: int, events: uint32, evData: uint64]
@@ -517,7 +517,7 @@ when not declared(invokeSendMain):
     else:
       result = SendResult.Pending
 
-proc getErrnoStr(): string =
+proc getErrnoStr*(): string =
   case errno
   of EADDRINUSE: "errno=EADDRINUSE(" & $errno & ")"
   else: "errno=" & $errno
@@ -1893,10 +1893,10 @@ var serverWorkerMainStmt {.compileTime.} =
       )
     )
   )
-var serverHandlerList {.compileTime.} = @["appDummy"]
-var freePoolServerUsedCount {.compileTime.} = 0
+var serverHandlerList* {.compileTime.} = @["appDummy"]
+var freePoolServerUsedCount* {.compileTime.} = 0
 var sockTmp = createNativeSocket()
-var workerRecvBufSize: int = sockTmp.getSockOptInt(SOL_SOCKET, SO_RCVBUF)
+var workerRecvBufSize*: int = sockTmp.getSockOptInt(SOL_SOCKET, SO_RCVBUF)
 sockTmp.close()
 var serverWorkerNum: int
 var clientQueue = queue2.newQueue[Client](0x10000)
@@ -1998,7 +1998,7 @@ template addServer*(bindAddress: string, port: uint16, body: untyped = newEmptyN
   initServer()
   addServerMacro(bindAddress, port, body)
 
-macro serverWorkerInit(): untyped = serverWorkerInitStmt
+macro serverWorkerInit*(): untyped = serverWorkerInitStmt
 
 macro mainServerHandlerMacro*(appId: typed): untyped =
   serverWorkerMainStmt[0][0] = newIdentNode($appId)
@@ -2075,7 +2075,14 @@ template serverType() {.dirty.} =
       params: array[TargetHeaderParams.len, tuple[cur: int, size: int]]
       minorVer: int
 
-template serverLib() =
+template serverLib() {.dirty.} =
+  import posix, epoll
+  import arraylib
+  import bytes
+  import queue2
+  import ptlock
+  import logs
+
   mixin addSendBuf, addSafe, popSafe
 
   const FreePoolServerUsedCount = freePoolServerUsedCount
@@ -2407,6 +2414,7 @@ template serverLib() =
       var addCall = addCallDummy.copy()
       addCall[1] = newIdentNode(s)
       serverHandlerStmt.add(addCall)
+
     serverHandlerStmt
 
   serverHandlerMacro()
