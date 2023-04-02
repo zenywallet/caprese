@@ -1893,7 +1893,7 @@ var serverWorkerMainStmt {.compileTime.} =
       )
     )
   )
-var serverHandlerList* {.compileTime.} = @["appDummy"]
+var serverHandlerList* {.compileTime.} = @[("appDummy", newStmtList())]
 var freePoolServerUsedCount* {.compileTime.} = 0
 var sockTmp = createNativeSocket()
 var workerRecvBufSize*: int = sockTmp.getSockOptInt(SOL_SOCKET, SO_RCVBUF)
@@ -1924,9 +1924,9 @@ macro getAppId*(): int =
 macro addServerMacro*(bindAddress: string, port: uint16, body: untyped = newEmptyNode()): untyped =
   inc(curAppId)
   var appId = curAppId
-  serverHandlerList.add("appListen")
+  serverHandlerList.add(("appListen", newStmtList()))
   inc(curAppId) # reserved
-  serverHandlerList.add("handler2")
+  serverHandlerList.add(("handler2", newStmtList()))
   var mainStmt = newStmtList()
   var streamStmtData: seq[tuple[appId: int, n: NimNode]]
   for s in body:
@@ -1936,7 +1936,7 @@ macro addServerMacro*(bindAddress: string, port: uint16, body: untyped = newEmpt
         if s2[0] == newIdentNode("stream"):
           inc(curAppId)
           var streamAppId = curAppId
-          serverHandlerList.add("appStream")
+          serverHandlerList.add(("appStream", newStmtList()))
           if s2[1][0] != newIdentNode("streamAppId"):
             s2.insert(1, nnkExprEqExpr.newTree(
               newIdentNode("streamAppId"),
@@ -2405,16 +2405,39 @@ template serverLib() {.dirty.} =
 
   var clientHandlerProcs: Array[ClientHandlerProc]
 
+  proc appDummy(body: NimNode): NimNode {.compileTime.} =
+    quote do:
+      clientHandlerProcs.add appDummy
+
+  proc appListen(body: NimNode): NimNode {.compileTime.} =
+    quote do:
+      clientHandlerProcs.add appListen
+
+  proc handler2(body: NimNode): NimNode {.compileTime.} =
+    quote do:
+      clientHandlerProcs.add handler2
+
+  proc appStream(body: NimNode): NimNode {.compileTime.} =
+    quote do:
+      clientHandlerProcs.add appStream
+
+  proc addHandlerProc(name: string, body: NimNode): NimNode {.compileTime.} =
+    case name
+    of "appDummy":
+      appDummy(body)
+    of "appListen":
+      appListen(body)
+    of "handler2":
+      handler2(body)
+    of "appStream":
+      appStream(body)
+    else:
+      appDummy(body)
+
   macro serverHandlerMacro(): untyped =
     var serverHandlerStmt = newStmtList()
-    var addCallDummy = quote do:
-      clientHandlerProcs.add(appDummy)
-
     for s in serverHandlerList:
-      var addCall = addCallDummy.copy()
-      addCall[1] = newIdentNode(s)
-      serverHandlerStmt.add(addCall)
-
+      serverHandlerStmt.add(addHandlerProc(s[0], s[1]))
     serverHandlerStmt
 
   serverHandlerMacro()
