@@ -213,11 +213,13 @@ when isMainModule:
 
   const WsTestJs = staticScript:
     import jsffi
-    type
-      WebSocketObj = JsObject
-      WebSocket = ref object of WebSocketObj
-    proc newWebSocket(url, protocols: cstring): WebSocket {.importcpp: "new WebSocket(#, #)".}
+    import jslib
+
     var ws = newWebSocket("ws://localhost:8009/ws", "caprese-0.1")
+    proc testSend() =
+      if ws.readyState == WebSocket.OPEN:
+        ws.send("hello!")
+    setInterval(testSend, 1000)
 
   const WsTestMinJs = scriptMinifier(code = WsTestJs, extern = "")
 
