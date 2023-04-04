@@ -258,6 +258,16 @@ when isMainModule:
 
       stream(path = "/ws", protocol = "caprese-0.1"):
         echo "stream test"
+        case opcode
+        of WebSocketOpcode.Binary, WebSocketOpcode.Text, WebSocketOpcode.Continue:
+          return client.wsServerSend(data.toString(size), WebSocketOpcode.Binary)
+        of WebSocketOpcode.Ping:
+          return client.wsServerSend(data.toString(size), WebSocketOpcode.Pong)
+        of WebSocketOpcode.Pong:
+          debug "pong ", data.toString(size)
+          return SendResult.Success
+        else: # WebSocketOpcode.Close
+          return SendResult.None
 
       let urlText = sanitizeHtml(reqUrl)
       return send(fmt"Not found: {urlText}".addDocType().addHeader(Status404))
