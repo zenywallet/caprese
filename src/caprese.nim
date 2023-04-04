@@ -215,11 +215,17 @@ when isMainModule:
     import jsffi
     import jslib
 
+    var testDataBase = ""
+    var testData = ""
+    for i in 0..<100:
+      testDataBase = testDataBase & "[testdata]"
+    for i in 0..<100:
+      testData = testData & testDataBase
     var ws = newWebSocket("ws://localhost:8009/ws", "caprese-0.1")
     proc testSend() =
       if ws.readyState == WebSocket.OPEN:
-        ws.send("hello!")
-    setInterval(testSend, 1000)
+        ws.send(testData)
+    setInterval(testSend, 3000)
 
   const WsTestMinJs = scriptMinifier(code = WsTestJs, extern = "")
 
