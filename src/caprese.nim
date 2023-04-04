@@ -263,6 +263,11 @@ when isMainModule:
         return send(WsTestxHtml.addHeader())
 
       stream(path = "/ws", protocol = "caprese-0.1"):
+        # client: Client
+        # opcode: WebSocketOpCode
+        # data: ptr UncheckedArray[byte]
+        # size: int
+
         echo "stream test"
         case opcode
         of WebSocketOpcode.Binary, WebSocketOpcode.Text, WebSocketOpcode.Continue:
@@ -277,14 +282,5 @@ when isMainModule:
 
       let urlText = sanitizeHtml(reqUrl)
       return send(fmt"Not found: {urlText}".addDocType().addHeader(Status404))
-
-    #stream:
-      # client: Client
-      # opcode: WebSocketOpCode
-      # data: ptr UncheckedArray[byte]
-      # size: int
-
-      #echo "opcode=", opcode
-      #discard
 
   serverStart()
