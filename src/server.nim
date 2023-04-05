@@ -122,7 +122,7 @@ type
 
 template errorQuit*(x: varargs[string, `$`]) = errorException(x, ServerError)
 
-proc toWebSocketOpCode(opcode: int8): WebSocketOpCode =
+proc toWebSocketOpCode*(opcode: int8): WebSocketOpCode =
   case opcode
   of 0x2: WebSocketOpcode.Binary
   of 0x0: WebSocketOpcode.Continue
@@ -727,7 +727,7 @@ proc sendFlush(client: Client): SendResult =
     else:
       return SendResult.None
 
-proc getFrame(data: ptr UncheckedArray[byte],
+proc getFrame*(data: ptr UncheckedArray[byte],
               size: int): tuple[find: bool, fin: bool, opcode: int8,
                                 payload: ptr UncheckedArray[byte], payloadSize: int,
                                 next: ptr UncheckedArray[byte], size: int] =
@@ -1936,7 +1936,6 @@ macro addServerMacro*(bindAddress: string, port: uint16, body: untyped = newEmpt
         if s2[0] == newIdentNode("stream"):
           inc(curAppId)
           var streamAppId = curAppId
-          serverHandlerList.add(("appStream", newStmtList()))
           if s2[1][0] != newIdentNode("streamAppId"):
             s2.insert(1, nnkExprEqExpr.newTree(
               newIdentNode("streamAppId"),
@@ -1947,7 +1946,8 @@ macro addServerMacro*(bindAddress: string, port: uint16, body: untyped = newEmpt
               newIdentNode("protocol"),
               newLit("")
             ))
-          streamStmtData.add((streamAppId, s2[s2.len - 1]))
+          #streamStmtData.add((streamAppId, s2[s2.len - 1]))
+          serverHandlerList.add(("appStream", s2[s2.len - 1]))
         routesBody.add(s2)
       mainStmt.add(routesBody)
     else:
@@ -2417,9 +2417,116 @@ template serverLib() {.dirty.} =
     quote do:
       clientHandlerProcs.add handler2
 
+  template streamMainTmpl(body: untyped) {.dirty.} =
+    proc streamMain(client: Client, opcode: WebSocketOpCode,
+      data: ptr UncheckedArray[byte], size: int): SendResult =
+      body
+
   proc appStream(body: NimNode): NimNode {.compileTime.} =
     quote do:
-      clientHandlerProcs.add appStream
+      clientHandlerProcs.add proc (ctx: WorkerThreadCtx) {.thread.} =
+        let client = ctx.client
+        let sock = client.sock
+
+        template closeAndFreeClient() =
+          var flag = false
+          acquire(client.spinLock)
+          if client.sock != osInvalidSocket:
+            client.sock = osInvalidSocket
+            flag = true
+          release(client.spinLock)
+          if flag:
+            sock.close()
+            clientFreePool.addSafe(client)
+
+        streamMainTmpl(`body`)
+
+        if client.recvCurSize == 0:
+          while true:
+            let recvlen = sock.recv(ctx.pRecvBuf0, workerRecvBufSize, 0.cint)
+            if recvlen > 0:
+              var (find, fin, opcode, payload, payloadSize,
+                  next, size) = getFrame(ctx.pRecvBuf0, recvlen)
+              while find:
+                if fin:
+                  var retStream = client.streamMain(opcode.toWebSocketOpCode, payload, payloadSize)
+                  case retStream
+                  of SendResult.Success:
+                    discard
+                  of SendResult.Pending:
+                    discard
+                  of SendResult.None, SendResult.Error, SendResult.Invalid:
+                    closeAndFreeClient()
+                else:
+                  if not payload.isNil and payloadSize > 0:
+                    client.addRecvBuf(payload, payloadSize)
+                    client.payloadSize = payloadSize
+                  break
+                (find, fin, opcode, payload, payloadSize, next, size) = getFrame(next, size)
+
+              if not next.isNil and size > 0:
+                client.addRecvBuf(next, size)
+                if recvlen == workerRecvBufSize:
+                  break
+              return
+            elif recvlen == 0:
+              closeAndFreeClient()
+              return
+            else:
+              if errno == EAGAIN or errno == EWOULDBLOCK:
+                return
+              elif errno == EINTR:
+                continue
+              closeAndFreeClient()
+              return
+
+        while true:
+          client.reserveRecvBuf(workerRecvBufSize)
+          var recvlen = sock.recv(addr client.recvBuf[client.recvCurSize], workerRecvBufSize.cint, 0.cint)
+          if recvlen > 0:
+            client.recvCurSize = client.recvCurSize + recvlen
+            var p = cast[ptr UncheckedArray[byte]](addr client.recvBuf[client.payloadSize])
+            var (find, fin, opcode, payload, payloadSize,
+                next, size) = getFrame(p, client.recvCurSize - client.payloadSize)
+            while find:
+              if not payload.isNil and payloadSize > 0:
+                copyMem(p, payload, payloadSize)
+                client.payloadSize = client.payloadSize + payloadSize
+                p = cast[ptr UncheckedArray[byte]](addr client.recvBuf[client.payloadSize])
+              if fin:
+                var retStream = client.streamMain(opcode.toWebSocketOpCode,
+                                                  cast[ptr UncheckedArray[byte]](addr client.recvBuf[0]),
+                                                  client.payloadSize)
+                case retStream
+                of SendResult.Success:
+                  discard
+                of SendResult.Pending:
+                  discard
+                of SendResult.None, SendResult.Error, SendResult.Invalid:
+                  closeAndFreeClient()
+                client.payloadSize = 0
+                client.recvCurSize = 0
+              (find, fin, opcode, payload, payloadSize, next, size) = getFrame(next, size)
+
+            if not next.isNil and size > 0:
+              copyMem(p, next, size)
+              client.recvCurSize = client.payloadSize + size
+              if recvlen == workerRecvBufSize:
+                continue
+            else:
+              client.recvCurSize = client.payloadSize
+
+            #break
+          elif recvlen == 0:
+            closeAndFreeClient()
+            break
+          else:
+            if errno == EAGAIN or errno == EWOULDBLOCK:
+              break
+            elif errno == EINTR:
+              continue
+            closeAndFreeClient()
+            break
 
   proc addHandlerProc(name: string, body: NimNode): NimNode {.compileTime.} =
     case name
