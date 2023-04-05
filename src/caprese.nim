@@ -186,7 +186,6 @@ when isMainModule:
     ssl = false
     sslLib = OpenSSL
     debugLog = true
-    autoServerWorkerNum = false
     serverWorkerNum = 1
 
     httpHeader:

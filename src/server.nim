@@ -2907,7 +2907,7 @@ template serverStartWithCfg(cfg: static Config) =
   startTimeStampUpdater()
 
   let cpuCount = countProcessors()
-  when cfg.autoServerWorkerNum:
+  when cfg.serverWorkerNum < 0:
     serverWorkerNum = cpuCount
   else:
     serverWorkerNum = cfg.serverWorkerNum
