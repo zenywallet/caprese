@@ -1931,13 +1931,13 @@ macro addServerMacro*(bindAddress: string, port: uint16, body: untyped = newEmpt
   var mainStmt = newStmtList()
   var streamStmtData: seq[tuple[appId: int, n: NimNode]]
   for s in body:
-    if s[0] == newIdentNode("routes"):
+    if eqIdent(s[0], "routes"):
       var routesBody = newStmtList()
       for s2 in s[1]:
-        if s2[0] == newIdentNode("stream"):
+        if eqIdent(s2[0], "stream"):
           inc(curAppId)
           var streamAppId = curAppId
-          if s2[1][0] != newIdentNode("streamAppId"):
+          if not eqIdent(s2[1][0], "streamAppId"):
             s2.insert(1, nnkExprEqExpr.newTree(
               newIdentNode("streamAppId"),
               newLit(streamAppId)
