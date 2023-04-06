@@ -85,6 +85,7 @@ type
     threadId*: int
     appId*: int
     listenFlag*: bool
+    dirty: bool
 
   Client* = ptr ClientObj
 
@@ -2098,6 +2099,7 @@ template serverLib() {.dirty.} =
       targetHeaders: Array[ptr tuple[id: HeaderParams, val: string]]
       pRecvBuf0: ptr UncheckedArray[byte]
       ev: EpollEvent
+      threadId: int
 
     WorkerThreadCtx = ptr WorkerThreadCtxObj
     ClientHandlerProc = proc (ctx: WorkerThreadCtx) {.thread.}
@@ -2426,6 +2428,16 @@ template serverLib() {.dirty.} =
     quote do:
       clientHandlerProcs.add proc (ctx: WorkerThreadCtx) {.thread.} =
         let client = ctx.client
+
+        acquire(client.spinLock)
+        if client.threadId == 0:
+          client.threadId = ctx.threadId
+          release(client.spinLock)
+        else:
+          client.dirty = true
+          release(client.spinLock)
+          return
+
         let sock = client.sock
 
         template closeAndFreeClient() =
@@ -2443,6 +2455,7 @@ template serverLib() {.dirty.} =
 
         if client.recvCurSize == 0:
           while true:
+            client.dirty = false
             let recvlen = sock.recv(ctx.pRecvBuf0, workerRecvBufSize, 0.cint)
             if recvlen > 0:
               var (find, fin, opcode, payload, payloadSize,
@@ -2468,20 +2481,43 @@ template serverLib() {.dirty.} =
                 client.addRecvBuf(next, size)
                 if recvlen == workerRecvBufSize:
                   break
-              return
+
+              acquire(client.spinLock)
+              if not client.dirty:
+                client.threadId = 0
+                release(client.spinLock)
+                return
+              else:
+                release(client.spinLock)
+                break
+
             elif recvlen == 0:
               closeAndFreeClient()
+              acquire(client.spinLock)
+              client.threadId = 0
+              release(client.spinLock)
               return
             else:
               if errno == EAGAIN or errno == EWOULDBLOCK:
-                return
+                acquire(client.spinLock)
+                if not client.dirty:
+                  client.threadId = 0
+                  release(client.spinLock)
+                  return
+                else:
+                  release(client.spinLock)
+                  break
               elif errno == EINTR:
                 continue
               closeAndFreeClient()
+              acquire(client.spinLock)
+              client.threadId = 0
+              release(client.spinLock)
               return
 
         while true:
           client.reserveRecvBuf(workerRecvBufSize)
+          client.dirty = false
           var recvlen = sock.recv(addr client.recvBuf[client.recvCurSize], workerRecvBufSize.cint, 0.cint)
           if recvlen > 0:
             client.recvCurSize = client.recvCurSize + recvlen
@@ -2517,16 +2553,27 @@ template serverLib() {.dirty.} =
               client.recvCurSize = client.payloadSize
 
             #break
+
           elif recvlen == 0:
             closeAndFreeClient()
             break
           else:
             if errno == EAGAIN or errno == EWOULDBLOCK:
-              break
+              acquire(client.spinLock)
+              if not client.dirty:
+                release(client.spinLock)
+                break
+              else:
+                release(client.spinLock)
+                continue
             elif errno == EINTR:
               continue
             closeAndFreeClient()
             break
+
+        acquire(client.spinLock)
+        client.threadId = 0
+        release(client.spinLock)
 
   proc addHandlerProc(name: string, body: NimNode): NimNode {.compileTime.} =
     case name
@@ -2568,7 +2615,7 @@ template serverLib() {.dirty.} =
     for i in 0..<TargetHeaders.len:
       ctx.targetHeaders.add(addr TargetHeaders[i])
 
-    let threadId = arg.workerParams.threadId
+    ctx.threadId = arg.workerParams.threadId
     ctx.ev.events = EPOLLIN or EPOLLRDHUP or EPOLLET
 
     serverWorkerInit()
