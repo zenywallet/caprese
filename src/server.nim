@@ -28,7 +28,7 @@ const RLIMIT_OPEN_FILES* = 65536
 const CLIENT_MAX = 32000
 const CLIENT_SEARCH_LIMIT = 30000
 const WORKER_THREAD_NUM {.intdefine.} = 16
-const EPOLL_EVENTS_SIZE* = 10
+const EPOLL_EVENTS_SIZE = 10
 const CLCL = 168626701'u32 # "\c\L\c\L"
 const RECVBUF_EXPAND_BREAK_SIZE* = 131072 * 5
 const MAX_FRAME_SIZE = 131072 * 5
@@ -2597,7 +2597,7 @@ template serverLib() {.dirty.} =
   serverHandlerMacro()
 
   proc serverWorker(arg: ThreadArg) {.thread.} =
-    var events: array[EPOLL_EVENTS_SIZE, EpollEvent]
+    var events: array[cfg.epollEventsSize, EpollEvent]
     var evData: uint64
     #var sockAddress: Sockaddr_in
     #var addrLen = sizeof(sockAddress).SockLen
@@ -2629,7 +2629,7 @@ template serverLib() {.dirty.} =
 
     while active:
       nfd = epoll_wait(epfd, cast[ptr EpollEvent](addr events),
-                      EPOLL_EVENTS_SIZE.cint, -1.cint)
+                      cfg.epollEventsSize.cint, -1.cint)
       for i in 0..<nfd:
         try:
           ctx.client = cast[Client](pevents[i].data)
@@ -2644,14 +2644,14 @@ template serverLib() {.dirty.} =
     while active:
       if threadId == 1:
         nfd = epoll_wait(epfd, cast[ptr EpollEvent](addr events),
-                        EPOLL_EVENTS_SIZE.cint, -1.cint)
+                        cfg.epollEventsSize.cint, -1.cint)
         if not throttleChanged and nfd >= 7:
           throttleChanged = true
           discard sem_post(addr throttleBody)
       else:
         if skip:
           nfd = epoll_wait(epfd, cast[ptr EpollEvent](addr events),
-                          EPOLL_EVENTS_SIZE.cint, 10.cint)
+                          cfg.epollEventsSize.cint, 10.cint)
         else:
           discard sem_wait(addr throttleBody)
           if highGear:
@@ -2659,7 +2659,7 @@ template serverLib() {.dirty.} =
           else:
             skip = true
             nfd = epoll_wait(epfd, cast[ptr EpollEvent](addr events),
-                            EPOLL_EVENTS_SIZE.cint, 0.cint)
+                            cfg.epollEventsSize.cint, 0.cint)
             throttleChanged = false
         if nfd == 0 and not highGear:
           skip = false
@@ -2888,7 +2888,7 @@ template serverLib() {.dirty.} =
         if assinged == 0:
           while highGear:
             var nfd = epoll_wait(epfd, cast[ptr EpollEvent](addr events),
-                                EPOLL_EVENTS_SIZE.cint, 1000.cint)
+                                cfg.epollEventsSize.cint, 1000.cint)
             if nfd > 0:
               var i = 0
               while true:

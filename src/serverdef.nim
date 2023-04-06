@@ -27,6 +27,7 @@ type
     maxOpenFiles*: bool
     limitOpenFiles*: int
     serverWorkerNum*: int
+    epollEventsSize*: int
 
 proc defaultConfig*(): Config {.compileTime.} =
   result.ssl = true
@@ -37,6 +38,7 @@ proc defaultConfig*(): Config {.compileTime.} =
   result.maxOpenFiles = true
   result.limitOpenFiles = 65536
   result.serverWorkerNum = -1
+  result.epollEventsSize = 10
 
 macro HttpTargetHeader(idEnumName, valListName, targetHeaders, body: untyped): untyped =
   var enumParams = nnkEnumTy.newTree(newEmptyNode())
