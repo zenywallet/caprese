@@ -1929,7 +1929,6 @@ macro addServerMacro*(bindAddress: string, port: uint16, body: untyped = newEmpt
   inc(curAppId) # reserved
   serverHandlerList.add(("handler2", newStmtList()))
   var mainStmt = newStmtList()
-  var streamStmtData: seq[tuple[appId: int, n: NimNode]]
   for s in body:
     if eqIdent(s[0], "routes"):
       var routesBody = newStmtList()
@@ -1947,7 +1946,6 @@ macro addServerMacro*(bindAddress: string, port: uint16, body: untyped = newEmpt
               newIdentNode("protocol"),
               newLit("")
             ))
-          #streamStmtData.add((streamAppId, s2[s2.len - 1]))
           serverHandlerList.add(("appStream", s2[s2.len - 1]))
         routesBody.add(s2)
       mainStmt.add(routesBody)
@@ -1961,14 +1959,6 @@ macro addServerMacro*(bindAddress: string, port: uint16, body: untyped = newEmpt
     )
   serverWorkerMainStmt[0].insert(appId, ofBody)
   inc(freePoolServerUsedCount)
-
-  for s in streamStmtData:
-    ofBody =
-      nnkOfBranch.newTree(
-        newLit(s.appId),
-        s.n
-      )
-    serverWorkerMainStmt[0].insert(s.appId, ofBody)
 
   quote do:
     from nativesockets import setBlocking, getSockOptInt, setSockOptInt
