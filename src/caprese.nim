@@ -23,9 +23,7 @@ var workerNum = 0
 var onSigTermQuitBody {.compileTime.} = newStmtList()
 macro onSigTermQuit*(body: untyped) = discard onSigTermQuitBody.add(body)
 
-var cfg* {.compileTime.}: Config = defaultConfig()
-
-macro addCfgDotExpr(body: untyped): untyped =
+macro addCfgDotExpr*(body: untyped): untyped =
   result = nnkStmtList.newTree()
   for i in 0..<body.len:
     if body[i].kind == nnkAsgn:
@@ -36,7 +34,7 @@ macro addCfgDotExpr(body: untyped): untyped =
       )
       result.add(a)
 
-macro configCalls(body: untyped): untyped =
+macro configCalls*(body: untyped): untyped =
   result = nnkStmtList.newTree()
   var flag = false
   for i in 0..<body.len:
@@ -54,7 +52,8 @@ macro configCalls(body: untyped): untyped =
     )
     result.insert(0, alib)
 
-template config*(body: untyped) =
+template config*(body: untyped) {.dirty.} =
+  var cfg* {.compileTime.}: Config = defaultConfig()
   macro addCfg() =
     addCfgDotExpr(body)
   addCfg()
