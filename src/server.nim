@@ -1927,7 +1927,7 @@ macro addServerMacro*(bindAddress: string, port: uint16, body: untyped = newEmpt
   var appId = curAppId
   serverHandlerList.add(("appListen", newStmtList()))
   inc(curAppId) # reserved
-  serverHandlerList.add(("handler2", newStmtList()))
+  serverHandlerList.add(("appRoutes", newStmtList()))
   var mainStmt = newStmtList()
   for s in body:
     if eqIdent(s[0], "routes"):
@@ -2270,7 +2270,7 @@ template serverLib() {.dirty.} =
       if retCtl < 0:
         errorQuit "error: epoll_ctl ret=", retCtl, " errno=", errno
 
-  proc handler2(ctx: WorkerThreadCtx) {.thread.} =
+  proc appRoutes(ctx: WorkerThreadCtx) {.thread.} =
     let client = ctx.client
     let sock = client.sock
 
@@ -2405,9 +2405,9 @@ template serverLib() {.dirty.} =
     quote do:
       clientHandlerProcs.add appListen
 
-  proc handler2(body: NimNode): NimNode {.compileTime.} =
+  proc appRoutes(body: NimNode): NimNode {.compileTime.} =
     quote do:
-      clientHandlerProcs.add handler2
+      clientHandlerProcs.add appRoutes
 
   template streamMainTmpl(body: untyped) {.dirty.} =
     proc streamMain(client: Client, opcode: WebSocketOpCode,
@@ -2571,8 +2571,8 @@ template serverLib() {.dirty.} =
       appDummy(body)
     of "appListen":
       appListen(body)
-    of "handler2":
-      handler2(body)
+    of "appRoutes":
+      appRoutes(body)
     of "appStream":
       appStream(body)
     else:
