@@ -1793,7 +1793,7 @@ when ENABLE_SSL and SSL_AUTO_RELOAD:
 
 proc createServer(bindAddress: string, port: uint16, reusePort: bool = false): SocketHandle =
   var sock = createNativeSocket()
-  var aiList = getAddrInfo("0.0.0.0", port.Port, Domain.AF_INET)
+  var aiList = getAddrInfo(bindAddress, port.Port, Domain.AF_INET)
   sock.setSockOptInt(SOL_SOCKET, SO_REUSEADDR, 1)
   if reusePort:
     sock.setSockOptInt(SOL_SOCKET, SO_REUSEPORT, 1)
