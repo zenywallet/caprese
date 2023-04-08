@@ -1792,17 +1792,17 @@ when ENABLE_SSL and SSL_AUTO_RELOAD:
 ]#
 
 proc createServer(bindAddress: string, port: uint16, reusePort: bool = false): SocketHandle =
-  var sock = createNativeSocket()
-  var aiList = getAddrInfo(bindAddress, port.Port, Domain.AF_INET)
+  let sock = createNativeSocket()
+  let aiList = getAddrInfo(bindAddress, port.Port, Domain.AF_INET)
   sock.setSockOptInt(SOL_SOCKET, SO_REUSEADDR, 1)
   if reusePort:
     sock.setSockOptInt(SOL_SOCKET, SO_REUSEPORT, 1)
-  var retBind = sock.bindAddr(aiList.ai_addr, aiList.ai_addrlen.SockLen)
+  let retBind = sock.bindAddr(aiList.ai_addr, aiList.ai_addrlen.SockLen)
   if retBind < 0:
     errorQuit "error: bind ret=", retBind, " ", getErrnoStr()
   freeaddrinfo(aiList)
 
-  var retListen = sock.listen()
+  let retListen = sock.listen()
   if retListen < 0:
     errorQuit "error: listen ret=", retListen, " ", getErrnoStr()
   result = sock
