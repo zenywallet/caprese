@@ -91,7 +91,7 @@ type
 
   ClientArray = array[CLIENT_MAX, ClientObj]
 
-  Headers* = Table[string, string]
+  #Headers* = Table[string, string]
 
   WebSocketOpCode* = enum
     Continue = 0x0
@@ -101,10 +101,12 @@ type
     Ping = 0x9
     Pong = 0xa
 
+#[
   WebMainCallback* = proc (client: Client, url: string, headers: Headers): SendResult {.thread.}
 
   StreamMainCallback* = proc (client: Client, opcode: WebSocketOpCode,
                               data: ptr UncheckedArray[byte], size: int): SendResult {.thread.}
+]#
 
   ThreadArgType* {.pure.} = enum
     Void
@@ -118,7 +120,7 @@ type
       workerParams*: tuple[threadId: int, bufLen: int]
 
   ServerError* = object of CatchableError
-  ServerNeedRestartError* = object of CatchableError
+  #ServerNeedRestartError* = object of CatchableError
   ServerSslCertError* = object of CatchableError
 
 template errorQuit*(x: varargs[string, `$`]) = errorException(x, ServerError)
@@ -217,14 +219,17 @@ var clIdx = 0
 var events: array[EPOLL_EVENTS_SIZE, EpollEvent]
 var epfd*: cint = -1
 
+#[
 type
   WorkerChannelParam = tuple[appId: int, idx: int, events: uint32, evData: uint64]
 var workerChannelWaitingCount: int = 0
 var workerQueue: queue.Queue[WorkerChannelParam]
 workerQueue.init(WORKER_QUEUE_LIMIT)
+]#
 
 type
   WrapperThreadArg = tuple[threadFunc: proc (arg: ThreadArg) {.thread.}, arg: ThreadArg]
+#[
 var workerThreads: array[WORKER_THREAD_NUM, Thread[WrapperThreadArg]]
 
 var dispatcherThread: Thread[WrapperThreadArg]
@@ -234,6 +239,7 @@ var monitorThread: Thread[WrapperThreadArg]
 when ENABLE_SSL and SSL_AUTO_RELOAD:
   var fileWatcherThread: Thread[WrapperThreadArg]
 var mainThread: Thread[WrapperThreadArg]
+]#
 
 type
   Tag* = Array[byte]
@@ -624,6 +630,7 @@ proc atomic_fetch_add(p: ptr int, val: int, memmodel: int): int
 proc atomic_fetch_sub(p: ptr int, val: int, memmodel: int): int
                         {.importc: "__atomic_fetch_sub", nodecl, discardable.}
 
+#[
 proc setClient(fd: int): int =
   var usedCount = 0
   for i in clIdx..<CLIENT_MAX:
@@ -727,6 +734,7 @@ proc sendFlush(client: Client): SendResult =
       return SendResult.Error
     else:
       return SendResult.None
+]#
 
 proc getFrame*(data: ptr UncheckedArray[byte],
               size: int): tuple[find: bool, fin: bool, opcode: int8,
@@ -2040,6 +2048,7 @@ template stream*(streamAppId: int, path: string, protocol: string, body: untyped
                     "Sec-WebSocket-Accept: " & acceptKey(key) & "\c\L" &
                     "Sec-WebSocket-Version: 13\c\L\c\L")
 
+#[
 var clientSocketLocks: array[WORKER_THREAD_NUM, cint]
 for i in 0..<WORKER_THREAD_NUM:
   clientSocketLocks[i] = osInvalidSocket.cint
@@ -2057,6 +2066,7 @@ proc setClientSocketLock(sock: cint, threadId: int): bool {.inline.} =
 
 proc resetClientSocketLock(threadId: int) {.inline.} =
   clientSocketLocks[threadId - 1] = osInvalidSocket.cint
+]#
 
 template serverType() {.dirty.} =
   type
