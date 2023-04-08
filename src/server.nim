@@ -2073,6 +2073,7 @@ template serverLib() {.dirty.} =
   import queue2
   import ptlock
   import logs
+  import std/re
 
   mixin addSendBuf, addSafe, popSafe
 
