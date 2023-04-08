@@ -778,6 +778,7 @@ proc getFrame*(data: ptr UncheckedArray[byte],
   else:
     return (true, fin, opcode, payload, payloadLen, nil, 0)
 
+#[
 proc waitEventAgain(client: Client, evData: uint64, fd: int | SocketHandle, exEvents: uint32 = 0) =
   acquire(client.lock)
   defer:
@@ -1788,6 +1789,7 @@ when ENABLE_SSL and SSL_AUTO_RELOAD:
         if updated:
           sleep(3000)
           sslFileChanged = true
+]#
 
 proc createServer(bindAddress: string, port: uint16, reusePort: bool = false): SocketHandle =
   var sock = createNativeSocket()
@@ -1813,6 +1815,7 @@ proc threadWrapper(wrapperArg: WrapperThreadArg) {.thread.} =
     echo e.name, ": ", e.msg
     abort()
 
+#[
 proc main(arg: ThreadArg) {.thread.} =
   while true:
     serverSock = createServer("0.0.0.0", HTTPS_PORT)
@@ -1866,6 +1869,7 @@ proc main(arg: ThreadArg) {.thread.} =
       break
 
 proc start*() = threadWrapper((main, ThreadArg(type: ThreadArgType.Void)))
+]#
 
 var releaseOnQuitSocks: Array[SocketHandle]
 var releaseOnQuitEpfds: Array[cint]
