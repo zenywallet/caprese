@@ -2252,6 +2252,8 @@ template serverLib() {.dirty.} =
   proc appListen(ctx: WorkerThreadCtx) {.thread.} =
     let clientSock = ctx.client.sock.accept4(cast[ptr SockAddr](addr ctx.sockAddress), addr ctx.addrLen, O_NONBLOCK)
     if cast[int](clientSock) > 0:
+      when cfg.soKeepalive:
+        clientSock.setSockOptInt(SOL_SOCKET, SO_KEEPALIVE, 1)
       when cfg.tcpNodelay:
         clientSock.setSockOptInt(Protocol.IPPROTO_TCP.int, TCP_NODELAY, 1)
       var newClient = clientFreePool.pop()
