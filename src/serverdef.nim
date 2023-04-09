@@ -30,6 +30,7 @@ type
     epollEventsSize*: int
     soKeepalive*: bool
     tcpNodelay*: bool
+    clientMax*: int
 
 proc defaultConfig*(): Config {.compileTime.} =
   result.ssl = true
@@ -43,6 +44,7 @@ proc defaultConfig*(): Config {.compileTime.} =
   result.epollEventsSize = 10
   result.soKeepalive = false
   result.tcpNodelay = true
+  result.clientMax = 32000
 
 macro HttpTargetHeader(idEnumName, valListName, targetHeaders, body: untyped): untyped =
   var enumParams = nnkEnumTy.newTree(newEmptyNode())

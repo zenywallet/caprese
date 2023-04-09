@@ -25,7 +25,7 @@ import std/cpuinfo
 import std/re
 
 #const RLIMIT_OPEN_FILES* = 65536
-const CLIENT_MAX = 32000
+#const CLIENT_MAX = 32000
 #const CLIENT_SEARCH_LIMIT = 30000
 #const WORKER_THREAD_NUM {.intdefine.} = 16
 #const EPOLL_EVENTS_SIZE = 10
@@ -91,7 +91,7 @@ type
 
   Client* = ptr ClientObj
 
-  ClientArray = array[CLIENT_MAX, ClientObj]
+  #ClientArray = array[CLIENT_MAX, ClientObj]
 
   #Headers* = Table[string, string]
 
@@ -565,9 +565,9 @@ proc abort() =
 
 var clientFreePool*: queue2.Queue[Client]
 
-proc initClient() =
-  var p = cast[ptr UncheckedArray[ClientObj]](allocShared0(sizeof(ClientArray)))
-  for i in 0..<CLIENT_MAX:
+proc initClient(clientMax: static int) =
+  var p = cast[ptr UncheckedArray[ClientObj]](allocShared0(sizeof(ClientObj) * clientMax))
+  for i in 0..<clientMax:
     p[i].idx = i
     p[i].fd = osInvalidSocket.int
     p[i].recvBuf = nil
@@ -589,26 +589,26 @@ proc initClient() =
       initExClient(addr p[i])
   clients = p
   rwlockInit(clientsLock)
-  pendingClients = newHashTable[ClientId, Client](CLIENT_MAX * 3 div 2)
-  tag2ClientIds = newHashTable[Tag, Array[ClientId]](CLIENT_MAX * 10 * 3 div 2)
-  clientId2Tags = newHashTable[ClientId, Array[TagRef]](CLIENT_MAX * 3 div 2)
-  clientId2Tasks = newHashTable[ClientId, Array[ClientTask]](CLIENT_MAX * 3 div 2)
+  pendingClients = newHashTable[ClientId, Client](clientMax * 3 div 2)
+  tag2ClientIds = newHashTable[Tag, Array[ClientId]](clientMax * 10 * 3 div 2)
+  clientId2Tags = newHashTable[ClientId, Array[TagRef]](clientMax * 3 div 2)
+  clientId2Tasks = newHashTable[ClientId, Array[ClientTask]](clientMax * 3 div 2)
 
   try:
-    clientFreePool.init(CLIENT_MAX)
-    for i in 0..<CLIENT_MAX:
+    clientFreePool.init(clientMax)
+    for i in 0..<clientMax:
       clients[i].sock = osInvalidSocket
       clientFreePool.add(addr clients[i])
   except:
     let e = getCurrentException()
     errorQuit e.name, ": ", e.msg
 
-proc freeClient() =
+proc freeClient(clientMax: static int) =
   pendingClients.delete()
   rwlockDestroy(clientsLock)
   var p = clients
   clients = nil
-  for i in 0..<CLIENT_MAX:
+  for i in 0..<clientMax:
     var client = addr p[i]
     if client.sock != osInvalidSocket:
       client.sock.close()
@@ -1930,7 +1930,7 @@ macro initServer*(): untyped =
   when not initServerFlag:
     initServerFlag = true
     quote do:
-      initClient()
+      initClient(cfg.clientMax)
 
 macro getAppId*(): int =
   inc(curAppId)
@@ -3105,7 +3105,7 @@ template serverStartWithCfg(cfg: static Config) =
     let retEpfdClose = releaseOnQuitEpfds[i].close()
     if retEpfdClose != 0:
       error "error: close epfd=", epfd, " ret=", retEpfdClose, " ", getErrnoStr()
-  freeClient()
+  freeClient(cfg.clientMax)
   joinThread(contents.timeStampThread)
 
 template serverStart*() = serverStartWithCfg(cfg)
