@@ -3122,7 +3122,6 @@ template serverStop*() =
     let retShutdown = releaseOnQuitSocks[i].shutdown(SHUT_RD)
     if retShutdown != 0:
       error "error: quit shutdown ret=", retShutdown, " ", getErrnoStr()
-    echo "quit shutdown ", i
   stopTimeStampUpdater()
 
 
