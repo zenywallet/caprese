@@ -84,11 +84,13 @@ macro init(): untyped =
     else:
       setRlimitOpenFiles(cfg.limitOpenFiles)
     when cfg.sigPipeIgnore: signal(SIGPIPE, SIG_IGN)
+    serverlib.abort = proc() {.thread.} =
+      serverlib.serverStop()
+      active = false
     when cfg.sigTermQuit:
       onSignal(SIGINT, SIGTERM):
         echo "bye from signal ", sig
-        serverlib.serverStop()
-        active = false
+        serverlib.abort()
         `onSigTermQuitBody`
 
 #[

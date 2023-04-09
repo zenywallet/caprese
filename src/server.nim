@@ -531,6 +531,7 @@ proc getErrnoStr*(): string =
   of EADDRINUSE: "errno=EADDRINUSE(" & $errno & ")"
   else: "errno=" & $errno
 
+#[
 proc quitServer(restart: bool = false) =
   debug "quit"
   restartFlag = restart
@@ -560,6 +561,9 @@ proc abort() =
   debug "abort"
   abortFlag = true
   quitServer()
+]#
+
+var abort*: proc() {.thread.} = proc() {.thread.} = active = false
 
 #  include stream
 
@@ -1888,9 +1892,11 @@ proc addReleaseOnQuit(sock: SocketHandle) = releaseOnQuitSocks.add(sock)
 
 proc addReleaseOnQuit(epfd: cint) = releaseOnQuitEpfds.add(epfd)
 
+#[
 proc stop*() {.inline.} =
   if not abortFlag:
     quitServer()
+]#
 
 var initServerFlag {.compileTime.} = false
 var curAppId {.compileTime.} = 0
@@ -3079,7 +3085,6 @@ template serverLib() {.dirty.} =
 
     discard sem_post(addr throttleBody)
     ]#
-
 
 template serverStartWithCfg(cfg: static Config) =
   serverType()
