@@ -2026,6 +2026,13 @@ proc acceptKey(key: string): string =
   var sh = secureHash(key & "258EAFA5-E914-47DA-95CA-C5AB0DC85B11")
   return base64.encode(sh.Sha1Digest)
 
+macro getOnOpenBody(body: untyped): untyped =
+  var onOpenStmt = newStmtList()
+  for s in body:
+    if eqIdent(s[0], "onOpen"):
+      onOpenStmt.add(s[1])
+  onOpenStmt
+
 template stream*(path: string, protocol: string, body: untyped) = discard # code is added by macro
 
 template stream*(path: string, body: untyped) = discard # code is added by macro
@@ -2040,21 +2047,25 @@ template stream*(streamAppId: int, path: string, protocol: string, body: untyped
         let prot = getHeaderValue(InternalSecWebSocketProtocol)
         if prot == protocol:
           reqClient()[].appId = streamAppId
-          return send("HTTP/1.1 " & $Status101 & "\c\L" &
-                      "Upgrade: websocket\c\L" &
-                      "Connection: Upgrade\c\L" &
-                      "Sec-WebSocket-Accept: " & acceptKey(key) & "\c\L" &
-                      "Sec-WebSocket-Protocol: " & protocol & "\c\L" &
-                      "Sec-WebSocket-Version: 13\c\L\c\L")
+          let ret = send("HTTP/1.1 " & $Status101 & "\c\L" &
+                        "Upgrade: websocket\c\L" &
+                        "Connection: Upgrade\c\L" &
+                        "Sec-WebSocket-Accept: " & acceptKey(key) & "\c\L" &
+                        "Sec-WebSocket-Protocol: " & protocol & "\c\L" &
+                        "Sec-WebSocket-Version: 13\c\L\c\L")
+          getOnOpenBody(body)
+          return ret
         else:
           return SendResult.Error
       else:
         reqClient()[].appId = streamAppId
-        return send("HTTP/1.1 " & $Status101 & "\c\L" &
-                    "Upgrade: websocket\c\L" &
-                    "Connection: Upgrade\c\L" &
-                    "Sec-WebSocket-Accept: " & acceptKey(key) & "\c\L" &
-                    "Sec-WebSocket-Version: 13\c\L\c\L")
+        let ret = send("HTTP/1.1 " & $Status101 & "\c\L" &
+                      "Upgrade: websocket\c\L" &
+                      "Connection: Upgrade\c\L" &
+                      "Sec-WebSocket-Accept: " & acceptKey(key) & "\c\L" &
+                      "Sec-WebSocket-Version: 13\c\L\c\L")
+        getOnOpenBody(body)
+        return ret
 
 #[
 var clientSocketLocks: array[WORKER_THREAD_NUM, cint]
@@ -2563,7 +2574,52 @@ template serverLib() {.dirty.} =
       data: ptr UncheckedArray[byte], size: int): SendResult =
       body
 
+  template streamMainTmpl(messageBody: untyped, closeBody: untyped) {.dirty.} =
+    proc streamMain(client: Client, opcode: WebSocketOpCode,
+      data: ptr UncheckedArray[byte], size: int): SendResult =
+      case opcode
+      of WebSocketOpcode.Binary, WebSocketOpcode.Text, WebSocketOpcode.Continue:
+        messageBody
+      of WebSocketOpcode.Ping:
+        return client.wsServerSend(data.toString(size), WebSocketOpcode.Pong)
+      of WebSocketOpcode.Pong:
+        debug "pong ", data.toString(size)
+        return SendResult.Success
+      else: # WebSocketOpcode.Close
+        closeBody
+        return SendResult.None
+
+  template onOpen(body: untyped) = discard
+  template onMessage(body: untyped) = discard
+  template onClose(body: untyped) = discard
+
   proc appStream(body: NimNode): NimNode {.compileTime.} =
+    var onOpenStmt = newStmtList()
+    var onMessageStmt = newStmtList()
+    var onCloseStmt = newStmtList()
+    var rawStmt = newStmtList()
+
+    for s in body:
+      if eqIdent(s[0], "onOpen"):
+        continue
+      elif eqIdent(s[0], "onMessage"):
+        onMessageStmt.add(s[1])
+      elif eqIdent(s[0], "onClose"):
+        onCloseStmt.add(s[1])
+      else:
+        rawStmt.add(s)
+
+    var callStreamMainTmplStmt: NimNode
+    if onMessageStmt.len > 0 or onCloseStmt.len > 0:
+      if onMessageStmt.len  == 0:
+        onMessageStmt.add quote do:
+          return SendResult.Pending
+      callStreamMainTmplStmt = quote do:
+        streamMainTmpl(`onMessageStmt`, `onCloseStmt`)
+    else:
+      callStreamMainTmplStmt = quote do:
+        streamMainTmpl(`rawStmt`)
+
     quote do:
       clientHandlerProcs.add proc (ctx: WorkerThreadCtx) {.thread.} =
         let client = ctx.client
@@ -2590,7 +2646,7 @@ template serverLib() {.dirty.} =
             sock.close()
             clientFreePool.addSafe(client)
 
-        streamMainTmpl(`body`)
+        `callStreamMainTmplStmt`
 
         if client.recvCurSize == 0:
           while true:

@@ -265,13 +265,33 @@ when isMainModule:
 
       stream(path = "/ws", protocol = "caprese-0.1"):
         # client: Client
+        onOpen:
+          echo "onOpen"
+
+        # client: Client
         # opcode: WebSocketOpCode
         # data: ptr UncheckedArray[byte]
         # size: int
+        onMessage:
+          echo "onMessage"
+          return client.wsServerSend(data.toString(size), WebSocketOpcode.Binary)
 
+        onClose:
+          echo "onClose"
+
+      stream(path = "/ws2", protocol = "caprese-0.1"):
+        # client: Client
+        onOpen:
+          echo "onOpen"
+
+        # client: Client
+        # opcode: WebSocketOpCode
+        # data: ptr UncheckedArray[byte]
+        # size: int
         echo "stream test"
         case opcode
         of WebSocketOpcode.Binary, WebSocketOpcode.Text, WebSocketOpcode.Continue:
+          echo "onMessage"
           return client.wsServerSend(data.toString(size), WebSocketOpcode.Binary)
         of WebSocketOpcode.Ping:
           return client.wsServerSend(data.toString(size), WebSocketOpcode.Pong)
@@ -279,6 +299,7 @@ when isMainModule:
           debug "pong ", data.toString(size)
           return SendResult.Success
         else: # WebSocketOpcode.Close
+          echo "onClose"
           return SendResult.None
 
       let urlText = sanitizeHtml(reqUrl)
