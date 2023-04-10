@@ -254,6 +254,9 @@ when isMainModule:
       get "/":
         return send(IndexHtml.addHeader())
 
+      get "/home", "/main", "/about":
+        return send(IndexHtml.addHeader())
+
       get re"/([a-z]+)(\d+)":
         return send(sanitizeHtml(matches[0] & "|" & matches[1]).addHeader())
 

@@ -2262,6 +2262,10 @@ template serverLib() {.dirty.} =
     if headerUrl() == path:
       body
 
+  template get(pathArgs: varargs[string], body: untyped) {.dirty.} =
+    if headerUrl() in pathArgs:
+      body
+
   template get(path: Regex, body: untyped) {.dirty.} =
     if headerUrl() =~ path:
       body
