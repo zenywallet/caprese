@@ -198,19 +198,6 @@ proc send*(client: Client, data: seq[byte] | string | Array[byte]): SendResult =
     else:
       return SendResult.None
 
-proc wsServerSend*(client: Client, data: seq[byte] | string | Array[byte],
-                          opcode: WebSocketOpCode = WebSocketOpCode.Binary): SendResult =
-  var frame: seq[byte]
-  var dataLen = data.len
-  var finOp = 0x80.byte or opcode.byte
-  if dataLen < 126:
-    frame = BytesBE(finOp, dataLen.byte, data)
-  elif dataLen <= 0xffff:
-    frame = BytesBE(finOp, 126.byte, dataLen.uint16, data)
-  else:
-    frame = BytesBE(finOp, 127.byte, dataLen.uint64, data)
-  result = client.send(frame)
-
 var active = true
 var restartFlag = false
 var abortFlag = false
@@ -2253,6 +2240,19 @@ template serverLib() {.dirty.} =
         return SendResult.Error
       else:
         return SendResult.None
+
+  proc wsServerSend*(client: Client, data: seq[byte] | string | Array[byte],
+                            opcode: WebSocketOpCode = WebSocketOpCode.Binary): SendResult =
+    var frame: seq[byte]
+    var dataLen = data.len
+    var finOp = 0x80.byte or opcode.byte
+    if dataLen < 126:
+      frame = BytesBE(finOp, dataLen.byte, data)
+    elif dataLen <= 0xffff:
+      frame = BytesBE(finOp, 126.byte, dataLen.uint16, data)
+    else:
+      frame = BytesBE(finOp, 127.byte, dataLen.uint64, data)
+    result = client.send(frame)
 
   template send(data: seq[byte] | string | Array[byte]): SendResult {.dirty.} = ctx.client.send(data)
 
