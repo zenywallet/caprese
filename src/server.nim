@@ -146,6 +146,7 @@ proc addSendBuf*(client: Client, data: seq[byte] | string | Array[byte]) =
   copyMem(addr client.sendBuf[client.sendCurSize], unsafeAddr data[0], data.len)
   client.sendCurSize = nextSize
 
+#[
 proc send*(client: Client, data: seq[byte] | string | Array[byte]): SendResult =
   if client.sendCurSize > 0:
     client.addSendBuf(data)
@@ -197,6 +198,7 @@ proc send*(client: Client, data: seq[byte] | string | Array[byte]): SendResult =
       return SendResult.Error
     else:
       return SendResult.None
+]#
 
 var active = true
 var restartFlag = false
@@ -500,6 +502,7 @@ proc send*(clientId: ClientId, data: string): SendResult {.discardable.} =
     clientId.delTasks()
     result = SendResult.Error
 
+#[
 when not declared(invokeSendMain):
   proc invokeSendMain(client: Client): SendResult =
     let clientId = client.clientId
@@ -512,6 +515,7 @@ when not declared(invokeSendMain):
       result = SendResult.None
     else:
       result = SendResult.Pending
+]#
 
 proc getErrnoStr*(): string =
   case errno
