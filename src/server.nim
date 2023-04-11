@@ -198,7 +198,7 @@ proc send*(client: Client, data: seq[byte] | string | Array[byte]): SendResult =
     else:
       return SendResult.None
 
-proc wsServerSend*(client: Client, data: seq[byte] | string,
+proc wsServerSend*(client: Client, data: seq[byte] | string | Array[byte],
                           opcode: WebSocketOpCode = WebSocketOpCode.Binary): SendResult =
   var frame: seq[byte]
   var dataLen = data.len
