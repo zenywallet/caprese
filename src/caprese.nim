@@ -230,7 +230,7 @@ when isMainModule:
 
   const WsTestMinJs = scriptMinifier(code = WsTestJs, extern = "")
 
-  const WsTestxHtml = staticHtmlDocument:
+  const WsTestHtml = staticHtmlDocument:
     buildHtml(html):
       head:
         meta(charset="utf-8")
@@ -264,7 +264,7 @@ when isMainModule:
         return reqs.pending(PendingData(url: reqUrl))
 
       get "/wstest":
-        return send(WsTestxHtml.addHeader())
+        return send(WsTestHtml.addHeader())
 
       stream(path = "/ws", protocol = "caprese-0.1"):
         # client: Client
