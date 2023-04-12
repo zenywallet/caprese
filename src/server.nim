@@ -1940,6 +1940,8 @@ macro addServerMacro*(bindAddress: string, port: uint16, body: untyped = newEmpt
   inc(curAppId) # reserved
   var appRoutes = curAppId
   serverHandlerList.add(("appRoutes", newStmtList()))
+  inc(curAppId)
+  serverHandlerList.add(("appRoutesSend", newStmtList()))
   for s in body:
     if eqIdent(s[0], "routes"):
       var routesBody = newStmtList()
@@ -1958,6 +1960,8 @@ macro addServerMacro*(bindAddress: string, port: uint16, body: untyped = newEmpt
               newLit("")
             ))
           serverHandlerList.add(("appStream", s2[s2.len - 1]))
+          inc(curAppId)
+          serverHandlerList.add(("appStreamSend", newStmtList()))
         routesBody.add(s2)
 
       serverHandlerList[appRoutes][1] = routesBody
@@ -2432,8 +2436,14 @@ template serverLib() {.dirty.} =
           closeAndFreeClient()
         break
 
+  proc appRoutesSend(ctx: WorkerThreadCtx) {.thread.} =
+    echo "appRoutes"
+
   proc appStream(ctx: WorkerThreadCtx) {.thread.} =
     echo "appStream"
+
+  proc appStreamSend(ctx: WorkerThreadCtx) {.thread.} =
+    echo "appStreamSend"
 
   var clientHandlerProcs: Array[ClientHandlerProc]
 
@@ -2576,6 +2586,10 @@ template serverLib() {.dirty.} =
                 continue
               closeAndFreeClient()
             break
+
+  proc appRoutesSend(body: NimNode): NimNode {.compileTime.} =
+    quote do:
+      clientHandlerProcs.add appRoutesSend
 
   template streamMainTmpl(body: untyped) {.dirty.} =
     proc streamMain(client: Client, opcode: WebSocketOpCode,
@@ -2778,6 +2792,10 @@ template serverLib() {.dirty.} =
         client.threadId = 0
         release(client.spinLock)
 
+  proc appStreamSend(body: NimNode): NimNode {.compileTime.} =
+    quote do:
+      clientHandlerProcs.add appStreamSend
+
   proc addHandlerProc(name: string, body: NimNode): NimNode {.compileTime.} =
     case name
     of "appDummy":
@@ -2786,8 +2804,12 @@ template serverLib() {.dirty.} =
       appListen(body)
     of "appRoutes":
       appRoutes(body)
+    of "appRoutesSend":
+      appRoutesSend(body)
     of "appStream":
       appStream(body)
+    of "appStreamSend":
+      appStreamSend(body)
     else:
       appDummy(body)
 
