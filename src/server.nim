@@ -201,12 +201,12 @@ proc send*(client: Client, data: seq[byte] | string | Array[byte]): SendResult =
 ]#
 
 var active = true
-var restartFlag = false
-var abortFlag = false
-var serverSock: SocketHandle = osInvalidSocket
-var httpSock: SocketHandle = osInvalidSocket
+#var restartFlag = false
+#var abortFlag = false
+#var serverSock: SocketHandle = osInvalidSocket
+#var httpSock: SocketHandle = osInvalidSocket
 var clients: ptr UncheckedArray[ClientObj] = nil
-var clIdx = 0
+#var clIdx = 0
 #var events: array[EPOLL_EVENTS_SIZE, EpollEvent]
 var epfd*: cint = -1
 
