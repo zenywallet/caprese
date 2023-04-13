@@ -2319,15 +2319,14 @@ template serverLib() {.dirty.} =
     let sock = client.sock
 
     template closeAndFreeClient() =
-      var flag = false
       acquire(client.spinLock)
       if client.sock != osInvalidSocket:
         client.sock = osInvalidSocket
-        flag = true
-      release(client.spinLock)
-      if flag:
+        release(client.spinLock)
         sock.close()
         clientFreePool.addSafe(client)
+      else:
+        release(client.spinLock)
 
     if client.recvCurSize == 0:
       while true:
@@ -2468,15 +2467,14 @@ template serverLib() {.dirty.} =
         let sock = client.sock
 
         template closeAndFreeClient() =
-          var flag = false
           acquire(client.spinLock)
           if client.sock != osInvalidSocket:
             client.sock = osInvalidSocket
-            flag = true
-          release(client.spinLock)
-          if flag:
+            release(client.spinLock)
             sock.close()
             clientFreePool.addSafe(client)
+          else:
+            release(client.spinLock)
 
         routesMainTmpl(`body`)
 
@@ -2658,15 +2656,14 @@ template serverLib() {.dirty.} =
         let sock = client.sock
 
         template closeAndFreeClient() =
-          var flag = false
           acquire(client.spinLock)
           if client.sock != osInvalidSocket:
             client.sock = osInvalidSocket
-            flag = true
-          release(client.spinLock)
-          if flag:
+            release(client.spinLock)
             sock.close()
             clientFreePool.addSafe(client)
+          else:
+            release(client.spinLock)
 
         `callStreamMainTmplStmt`
 
