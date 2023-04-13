@@ -749,7 +749,7 @@ proc getFrame*(data: ptr UncheckedArray[byte],
   var opcode = (b0 and 0x0f.byte).int8
 
   var payloadLen = (b1 and 0x7f.byte).int
-  var frameHeadSize: int
+  var frameHeadSize {.noInit.}: int
   if payloadLen < 126:
     frameHeadSize = 6
   elif payloadLen == 126:
@@ -772,7 +772,7 @@ proc getFrame*(data: ptr UncheckedArray[byte],
   if size < frameSize:
     return (false, fin, opcode, nil, 0, data, size)
 
-  var maskData: array[4, byte]
+  var maskData {.noInit.}: array[4, byte]
   copyMem(addr maskData[0], addr data[frameHeadSize - 4], 4)
   var payload = cast[ptr UncheckedArray[byte]](addr data[frameHeadSize])
   for i in 0..<payloadLen:
