@@ -31,6 +31,7 @@ type
     soKeepalive*: bool
     tcpNodelay*: bool
     clientMax*: int
+    recvBufExpandBreakSize*: int
 
 proc defaultConfig*(): Config {.compileTime.} =
   result.ssl = true
@@ -45,6 +46,7 @@ proc defaultConfig*(): Config {.compileTime.} =
   result.soKeepalive = false
   result.tcpNodelay = true
   result.clientMax = 32000
+  result.recvBufExpandBreakSize = 131072 * 5
 
 macro HttpTargetHeader(idEnumName, valListName, targetHeaders, body: untyped): untyped =
   var enumParams = nnkEnumTy.newTree(newEmptyNode())

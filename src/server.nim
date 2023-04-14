@@ -30,7 +30,7 @@ import std/re
 #const WORKER_THREAD_NUM {.intdefine.} = 16
 #const EPOLL_EVENTS_SIZE = 10
 #const CLCL = 168626701'u32 # "\c\L\c\L"
-const RECVBUF_EXPAND_BREAK_SIZE* = 131072 * 5
+#const RECVBUF_EXPAND_BREAK_SIZE* = 131072 * 5
 const MAX_FRAME_SIZE = 131072 * 5
 #const WORKER_QUEUE_LIMIT = 10000
 #const WEBSOCKET_PROTOCOL = "deoxy-0.1"
@@ -2210,7 +2210,7 @@ template serverLib() {.dirty.} =
     var left = client.recvBufSize - client.recvCurSize
     if size > left:
       var nextSize = client.recvCurSize + size + workerRecvBufSize
-      if nextSize > RECVBUF_EXPAND_BREAK_SIZE:
+      if nextSize > cfg.recvBufExpandBreakSize:
         raise newException(ServerError, "client request too large")
       client.recvBuf = reallocClientBuf(client.recvBuf, nextSize)
       client.recvBufSize = nextSize
