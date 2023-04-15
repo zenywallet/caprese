@@ -31,7 +31,7 @@ import std/re
 #const EPOLL_EVENTS_SIZE = 10
 #const CLCL = 168626701'u32 # "\c\L\c\L"
 #const RECVBUF_EXPAND_BREAK_SIZE* = 131072 * 5
-const MAX_FRAME_SIZE = 131072 * 5
+const MAX_FRAME_SIZE* = 131072 * 5
 #const WORKER_QUEUE_LIMIT = 10000
 #const WEBSOCKET_PROTOCOL = "deoxy-0.1"
 #const WEBSOCKET_ENTRY_POINT = "/ws"
@@ -731,59 +731,7 @@ proc sendFlush(client: Client): SendResult =
       return SendResult.Error
     else:
       return SendResult.None
-]#
 
-proc getFrame*(data: ptr UncheckedArray[byte],
-              size: int): tuple[find: bool, fin: bool, opcode: int8,
-                                payload: ptr UncheckedArray[byte], payloadSize: int,
-                                next: ptr UncheckedArray[byte], size: int] =
-  if size < 2:
-    return (false, false, -1.int8, nil, 0, data, size)
-
-  var b1 = data[1]
-  var mask = ((b1 and 0x80.byte) != 0)
-  if not mask:
-    raise newException(ServerError, "websocket client no mask")
-  var b0 = data[0]
-  var fin = ((b0 and 0xf0.byte) == 0x80.byte)
-  var opcode = (b0 and 0x0f.byte).int8
-
-  var payloadLen = (b1 and 0x7f.byte).int
-  var frameHeadSize {.noInit.}: int
-  if payloadLen < 126:
-    frameHeadSize = 6
-  elif payloadLen == 126:
-    if size < 4:
-      return (false, fin, opcode, nil, 0, data, size)
-    payloadLen = data[2].toUint16BE.int
-    frameHeadSize = 8
-  elif payloadLen == 127:
-    if size < 10:
-      return (false, fin, opcode, nil, 0, data, size)
-    payloadLen = data[2].toUint64BE.int # exception may occur. value out of range [RangeDefect]
-    frameHeadSize = 14
-  else:
-    return (false, fin, opcode, nil, 0, data, size)
-
-  var frameSize = frameHeadSize + payloadLen
-  if frameSize > MAX_FRAME_SIZE:
-    raise newException(ServerError, "websocket frame size is too big frameSize=" & $frameSize)
-
-  if size < frameSize:
-    return (false, fin, opcode, nil, 0, data, size)
-
-  var maskData {.noInit.}: array[4, byte]
-  copyMem(addr maskData[0], addr data[frameHeadSize - 4], 4)
-  var payload = cast[ptr UncheckedArray[byte]](addr data[frameHeadSize])
-  for i in 0..<payloadLen:
-    payload[i] = payload[i] xor maskData[i mod 4]
-
-  if size > frameSize:
-    return (true, fin, opcode, payload, payloadLen, cast[ptr UncheckedArray[byte]](addr data[frameSize]), size - frameSize)
-  else:
-    return (true, fin, opcode, payload, payloadLen, nil, 0)
-
-#[
 proc waitEventAgain(client: Client, evData: uint64, fd: int | SocketHandle, exEvents: uint32 = 0) =
   acquire(client.lock)
   defer:
@@ -2202,6 +2150,57 @@ template serverLib() {.dirty.} =
     else:
       result.err = 2
       result.next = -1
+
+
+  proc getFrame(data: ptr UncheckedArray[byte],
+                size: int): tuple[find: bool, fin: bool, opcode: int8,
+                                  payload: ptr UncheckedArray[byte], payloadSize: int,
+                                  next: ptr UncheckedArray[byte], size: int] =
+    if size < 2:
+      return (false, false, -1.int8, nil, 0, data, size)
+
+    var b1 = data[1]
+    var mask = ((b1 and 0x80.byte) != 0)
+    if not mask:
+      raise newException(ServerError, "websocket client no mask")
+    var b0 = data[0]
+    var fin = ((b0 and 0xf0.byte) == 0x80.byte)
+    var opcode = (b0 and 0x0f.byte).int8
+
+    var payloadLen = (b1 and 0x7f.byte).int
+    var frameHeadSize {.noInit.}: int
+    if payloadLen < 126:
+      frameHeadSize = 6
+    elif payloadLen == 126:
+      if size < 4:
+        return (false, fin, opcode, nil, 0, data, size)
+      payloadLen = data[2].toUint16BE.int
+      frameHeadSize = 8
+    elif payloadLen == 127:
+      if size < 10:
+        return (false, fin, opcode, nil, 0, data, size)
+      payloadLen = data[2].toUint64BE.int # exception may occur. value out of range [RangeDefect]
+      frameHeadSize = 14
+    else:
+      return (false, fin, opcode, nil, 0, data, size)
+
+    var frameSize = frameHeadSize + payloadLen
+    if frameSize > MAX_FRAME_SIZE:
+      raise newException(ServerError, "websocket frame size is too big frameSize=" & $frameSize)
+
+    if size < frameSize:
+      return (false, fin, opcode, nil, 0, data, size)
+
+    var maskData {.noInit.}: array[4, byte]
+    copyMem(addr maskData[0], addr data[frameHeadSize - 4], 4)
+    var payload = cast[ptr UncheckedArray[byte]](addr data[frameHeadSize])
+    for i in 0..<payloadLen:
+      payload[i] = payload[i] xor maskData[i mod 4]
+
+    if size > frameSize:
+      return (true, fin, opcode, payload, payloadLen, cast[ptr UncheckedArray[byte]](addr data[frameSize]), size - frameSize)
+    else:
+      return (true, fin, opcode, payload, payloadLen, nil, 0)
 
   proc reserveRecvBuf(client: Client, size: int) =
     if client.recvBuf.isNil:
