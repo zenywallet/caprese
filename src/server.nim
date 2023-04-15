@@ -140,12 +140,6 @@ proc toWebSocketOpCode*(opcode: int8): WebSocketOpCode =
 proc reallocClientBuf*(buf: ptr UncheckedArray[byte], size: int): ptr UncheckedArray[byte] =
   result = cast[ptr UncheckedArray[byte]](reallocShared(buf, size))
 
-proc addSendBuf*(client: Client, data: seq[byte] | string | Array[byte]) =
-  let nextSize = client.sendCurSize + data.len
-  client.sendBuf = reallocClientBuf(client.sendBuf, nextSize)
-  copyMem(addr client.sendBuf[client.sendCurSize], unsafeAddr data[0], data.len)
-  client.sendCurSize = nextSize
-
 #[
 proc send*(client: Client, data: seq[byte] | string | Array[byte]): SendResult =
   if client.sendCurSize > 0:
@@ -2046,7 +2040,7 @@ template serverLib() {.dirty.} =
   import logs
   import std/re
 
-  mixin addSendBuf, addSafe, popSafe
+  mixin addSafe, popSafe
 
   const FreePoolServerUsedCount = freePoolServerUsedCount
 
@@ -2201,6 +2195,12 @@ template serverLib() {.dirty.} =
       return (true, fin, opcode, payload, payloadLen, cast[ptr UncheckedArray[byte]](addr data[frameSize]), size - frameSize)
     else:
       return (true, fin, opcode, payload, payloadLen, nil, 0)
+
+  proc addSendBuf*(client: Client, data: seq[byte] | string | Array[byte]) =
+    let nextSize = client.sendCurSize + data.len
+    client.sendBuf = reallocClientBuf(client.sendBuf, nextSize)
+    copyMem(addr client.sendBuf[client.sendCurSize], unsafeAddr data[0], data.len)
+    client.sendCurSize = nextSize
 
   proc reserveRecvBuf(client: Client, size: int) =
     if client.recvBuf.isNil:
