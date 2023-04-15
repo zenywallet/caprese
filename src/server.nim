@@ -31,7 +31,7 @@ import std/re
 #const EPOLL_EVENTS_SIZE = 10
 #const CLCL = 168626701'u32 # "\c\L\c\L"
 #const RECVBUF_EXPAND_BREAK_SIZE* = 131072 * 5
-const MAX_FRAME_SIZE* = 131072 * 5
+#const MAX_FRAME_SIZE* = 131072 * 5
 #const WORKER_QUEUE_LIMIT = 10000
 #const WEBSOCKET_PROTOCOL = "deoxy-0.1"
 #const WEBSOCKET_ENTRY_POINT = "/ws"
@@ -2185,7 +2185,7 @@ template serverLib() {.dirty.} =
       return (false, fin, opcode, nil, 0, data, size)
 
     var frameSize = frameHeadSize + payloadLen
-    if frameSize > MAX_FRAME_SIZE:
+    if frameSize > cfg.maxFrameSize:
       raise newException(ServerError, "websocket frame size is too big frameSize=" & $frameSize)
 
     if size < frameSize:
