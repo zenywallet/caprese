@@ -554,7 +554,7 @@ var abort*: proc() {.thread.} = proc() {.thread.} = active = false
 
 var clientFreePool*: queue2.Queue[Client]
 
-proc initClient(clientMax: static int) =
+proc initClient(clientMax: static int, ClientObj, Client: typedesc) =
   var p = cast[ptr UncheckedArray[ClientObj]](allocShared0(sizeof(ClientObj) * clientMax))
   for i in 0..<clientMax:
     p[i].idx = i
@@ -1869,7 +1869,7 @@ macro initServer*(): untyped =
   when not initServerFlag:
     initServerFlag = true
     quote do:
-      initClient(cfg.clientMax)
+      initClient(cfg.clientMax, ClientObj, Client)
 
 macro getAppId*(): int =
   inc(curAppId)
