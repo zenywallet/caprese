@@ -573,8 +573,8 @@ template serverInitFreeClient() {.dirty.} =
       p[i].keepAlive = true
       p[i].wsUpgrade = false
       p[i].payloadSize = 0
-      #when ENABLE_SSL:
-      #  p[i].ssl = nil
+      when cfg.ssl:
+        p[i].ssl = nil
       p[i].ip = 0
       p[i].invoke = false
       initLock(p[i].lock)
