@@ -199,7 +199,6 @@ var active = true
 #var abortFlag = false
 #var serverSock: SocketHandle = osInvalidSocket
 #var httpSock: SocketHandle = osInvalidSocket
-var clients: ptr UncheckedArray[ClientObj] = nil
 #var clIdx = 0
 #var events: array[EPOLL_EVENTS_SIZE, EpollEvent]
 var epfd*: cint = -1
@@ -229,7 +228,7 @@ var mainThread: Thread[WrapperThreadArg]
 type
   Tag* = Array[byte]
 
-  TagRef = object
+  TagRef* = object
     tag: ptr Tag
     idx: int
 
@@ -257,14 +256,14 @@ proc setEmpty*(pair: HashTableData) =
   else:
     pair.val = nil
 loadHashTableModules()
-var pendingClients: HashTableMem[ClientId, Client]
-var clientsLock: RWLock
+var pendingClients*: HashTableMem[ClientId, Client]
+var clientsLock*: RWLock
 var curClientId: ClientId = 0
 const INVALID_CLIENT_ID* = 0.ClientId
 
-var tag2ClientIds: HashTableMem[Tag, Array[ClientId]]
-var clientId2Tags: HashTableMem[ClientId, Array[TagRef]]
-var clientId2Tasks: HashTableMem[ClientId, Array[ClientTask]]
+var tag2ClientIds*: HashTableMem[Tag, Array[ClientId]]
+var clientId2Tags*: HashTableMem[ClientId, Array[TagRef]]
+var clientId2Tasks*: HashTableMem[ClientId, Array[ClientTask]]
 
 proc markPending*(client: Client): ClientId {.discardable.} =
   withWriteLock clientsLock:
@@ -552,64 +551,71 @@ var abort*: proc() {.thread.} = proc() {.thread.} = active = false
 
 #  include stream
 
-var clientFreePool*: queue2.Queue[Client]
+template serverInitFreeClient() {.dirty.} =
+  import queue2
+  import locks
+  import ptlock
+  import arraylib
 
-proc initClient(clientMax: static int, ClientObj, Client: typedesc) =
-  var p = cast[ptr UncheckedArray[ClientObj]](allocShared0(sizeof(ClientObj) * clientMax))
-  for i in 0..<clientMax:
-    p[i].idx = i
-    p[i].fd = osInvalidSocket.int
-    p[i].recvBuf = nil
-    p[i].recvBufSize = 0
-    p[i].recvCurSize = 0
-    p[i].sendBuf = nil
-    p[i].sendCurSize = 0
-    p[i].keepAlive = true
-    p[i].wsUpgrade = false
-    p[i].payloadSize = 0
-    when ENABLE_SSL:
-      p[i].ssl = nil
-    p[i].ip = 0
-    p[i].invoke = false
-    initLock(p[i].lock)
-    initLock(p[i].spinLock)
-    p[i].whackaMole = false
-    when declared(initExClient):
-      initExClient(addr p[i])
-  clients = p
-  rwlockInit(clientsLock)
-  pendingClients = newHashTable[ClientId, Client](clientMax * 3 div 2)
-  tag2ClientIds = newHashTable[Tag, Array[ClientId]](clientMax * 10 * 3 div 2)
-  clientId2Tags = newHashTable[ClientId, Array[TagRef]](clientMax * 3 div 2)
-  clientId2Tasks = newHashTable[ClientId, Array[ClientTask]](clientMax * 3 div 2)
+  var clients: ptr UncheckedArray[ClientObj] = nil
+  var clientFreePool*: queue2.Queue[Client]
 
-  try:
-    clientFreePool.init(clientMax)
+  proc initClient(clientMax: static int, ClientObj, Client: typedesc) =
+    var p = cast[ptr UncheckedArray[ClientObj]](allocShared0(sizeof(ClientObj) * clientMax))
     for i in 0..<clientMax:
-      clients[i].sock = osInvalidSocket
-      clientFreePool.add(addr clients[i])
-  except:
-    let e = getCurrentException()
-    errorQuit e.name, ": ", e.msg
+      p[i].idx = i
+      p[i].fd = osInvalidSocket.int
+      p[i].recvBuf = nil
+      p[i].recvBufSize = 0
+      p[i].recvCurSize = 0
+      p[i].sendBuf = nil
+      p[i].sendCurSize = 0
+      p[i].keepAlive = true
+      p[i].wsUpgrade = false
+      p[i].payloadSize = 0
+      #when ENABLE_SSL:
+      #  p[i].ssl = nil
+      p[i].ip = 0
+      p[i].invoke = false
+      initLock(p[i].lock)
+      initLock(p[i].spinLock)
+      p[i].whackaMole = false
+      when declared(initExClient):
+        initExClient(addr p[i])
+    clients = p
+    rwlockInit(clientsLock)
+    pendingClients = newHashTable[ClientId, Client](clientMax * 3 div 2)
+    tag2ClientIds = newHashTable[Tag, Array[ClientId]](clientMax * 10 * 3 div 2)
+    clientId2Tags = newHashTable[ClientId, Array[TagRef]](clientMax * 3 div 2)
+    clientId2Tasks = newHashTable[ClientId, Array[ClientTask]](clientMax * 3 div 2)
 
-proc freeClient(clientMax: static int) =
-  pendingClients.delete()
-  rwlockDestroy(clientsLock)
-  var p = clients
-  clients = nil
-  for i in 0..<clientMax:
-    var client = addr p[i]
-    if client.sock != osInvalidSocket:
-      client.sock.close()
-    if not client.recvBuf.isNil:
-      deallocShared(cast[pointer](client.recvBuf))
-    if not client.sendBuf.isNil:
-      deallocShared(cast[pointer](client.sendBuf))
-    when declared(freeExClient):
-      freeExClient(client)
-    deinitLock(client.spinLock)
-    deinitLock(client.lock)
-  deallocShared(p)
+    try:
+      clientFreePool.init(clientMax)
+      for i in 0..<clientMax:
+        clients[i].sock = osInvalidSocket
+        clientFreePool.add(addr clients[i])
+    except:
+      let e = getCurrentException()
+      errorQuit e.name, ": ", e.msg
+
+  proc freeClient(clientMax: static int) =
+    pendingClients.delete()
+    rwlockDestroy(clientsLock)
+    var p = clients
+    clients = nil
+    for i in 0..<clientMax:
+      var client = addr p[i]
+      if client.sock != osInvalidSocket:
+        client.sock.close()
+      if not client.recvBuf.isNil:
+        deallocShared(cast[pointer](client.recvBuf))
+      if not client.sendBuf.isNil:
+        deallocShared(cast[pointer](client.sendBuf))
+      when declared(freeExClient):
+        freeExClient(client)
+      deinitLock(client.spinLock)
+      deinitLock(client.lock)
+    deallocShared(p)
 
 proc atomic_compare_exchange_n(p: ptr int, expected: ptr int, desired: int, weak: bool,
                               success_memmodel: int, failure_memmodel: int): bool
@@ -1869,6 +1875,7 @@ macro initServer*(): untyped =
   when not initServerFlag:
     initServerFlag = true
     quote do:
+      serverInitFreeClient()
       initClient(cfg.clientMax, ClientObj, Client)
 
 macro getAppId*(): int =
