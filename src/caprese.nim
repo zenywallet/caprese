@@ -79,6 +79,8 @@ macro init(): untyped =
     import server as serverlib
     export serverlib
 
+    serverTagLib()
+
     when cfg.maxOpenFiles:
       setMaxRlimitOpenFiles()
     else:

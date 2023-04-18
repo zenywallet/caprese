@@ -225,107 +225,139 @@ when ENABLE_SSL and SSL_AUTO_RELOAD:
 var mainThread: Thread[WrapperThreadArg]
 ]#
 
-type
-  Tag* = Array[byte]
+template serverTagLib*() {.dirty.} =
+  import arraylib
+  import bytes
+  import hashtable
+  import locks
+  import ptlock
+  import nativesockets, posix, epoll
 
-  TagRef* = object
-    tag: ptr Tag
-    idx: int
+  type
+    Tag* = Array[byte]
 
-  ClientTaskCmd* {.pure.} = enum
-    None
-    Data
+    TagRef* = object
+      tag: ptr Tag
+      idx: int
 
-  ClientTask* = object
-    case cmd*: ClientTaskCmd
-    of ClientTaskCmd.None:
-      discard
-    of ClientTaskCmd.Data:
-      data*: Array[byte]
+    ClientTaskCmd* {.pure.} = enum
+      None
+      Data
 
-proc toUint64(tag: Tag): uint64 = tag.toSeq.toUint64
+    ClientTask* = object
+      case cmd*: ClientTaskCmd
+      of ClientTaskCmd.None:
+        discard
+      of ClientTaskCmd.Data:
+        data*: Array[byte]
 
-proc empty*(pair: HashTableData): bool =
-  when pair.val is Array:
-    pair.val.len == 0
-  else:
-    pair.val == nil
-proc setEmpty*(pair: HashTableData) =
-  when pair.val is Array:
-    pair.val.empty()
-  else:
-    pair.val = nil
-loadHashTableModules()
-var pendingClients*: HashTableMem[ClientId, Client]
-var clientsLock*: RWLock
-var curClientId: ClientId = 0
-const INVALID_CLIENT_ID* = 0.ClientId
+  proc toUint64(tag: Tag): uint64 = tag.toSeq.toUint64
 
-var tag2ClientIds*: HashTableMem[Tag, Array[ClientId]]
-var clientId2Tags*: HashTableMem[ClientId, Array[TagRef]]
-var clientId2Tasks*: HashTableMem[ClientId, Array[ClientTask]]
+  proc empty*(pair: HashTableData): bool =
+    when pair.val is Array:
+      pair.val.len == 0
+    else:
+      pair.val == nil
+  proc setEmpty*(pair: HashTableData) =
+    when pair.val is Array:
+      pair.val.empty()
+    else:
+      pair.val = nil
+  loadHashTableModules()
+  var pendingClients*: HashTableMem[ClientId, Client]
+  var clientsLock*: RWLock
+  var curClientId: ClientId = 0
+  const INVALID_CLIENT_ID* = 0.ClientId
 
-proc markPending*(client: Client): ClientId {.discardable.} =
-  withWriteLock clientsLock:
-    while true:
-      inc(curClientId)
-      if curClientId >= int.high:
-        curClientId = 1
-      let cur = pendingClients.get(curClientId)
-      if cur.isNil:
-        break
-    client.clientId = curClientId
-    pendingClients.set(curClientId, client)
-    result = curClientId
+  var tag2ClientIds*: HashTableMem[Tag, Array[ClientId]]
+  var clientId2Tags*: HashTableMem[ClientId, Array[TagRef]]
+  var clientId2Tasks*: HashTableMem[ClientId, Array[ClientTask]]
 
-proc unmarkPending*(clientId: ClientId) =
-  withWriteLock clientsLock:
-    let pair = pendingClients.get(clientId)
-    if not pair.isNil:
-      let client = pair.val
-      pendingClients.del(pair)
+  proc markPending*(client: Client): ClientId {.discardable.} =
+    withWriteLock clientsLock:
+      while true:
+        inc(curClientId)
+        if curClientId >= int.high:
+          curClientId = 1
+        let cur = pendingClients.get(curClientId)
+        if cur.isNil:
+          break
+      client.clientId = curClientId
+      pendingClients.set(curClientId, client)
+      result = curClientId
+
+  proc unmarkPending*(clientId: ClientId) =
+    withWriteLock clientsLock:
+      let pair = pendingClients.get(clientId)
+      if not pair.isNil:
+        let client = pair.val
+        pendingClients.del(pair)
+        client.clientId = INVALID_CLIENT_ID
+
+  proc unmarkPending*(client: Client) =
+    withWriteLock clientsLock:
+      pendingClients.del(client.clientId)
       client.clientId = INVALID_CLIENT_ID
 
-proc unmarkPending*(client: Client) =
-  withWriteLock clientsLock:
-    pendingClients.del(client.clientId)
-    client.clientId = INVALID_CLIENT_ID
+  proc setTag*(clientId: ClientId, tag: Tag) =
+    withWriteLock clientsLock:
+      var tagRefsPair = clientId2Tags.get(clientId)
+      var clientIdsPair = tag2ClientIds.get(tag)
 
-proc setTag*(clientId: ClientId, tag: Tag) =
-  withWriteLock clientsLock:
-    var tagRefsPair = clientId2Tags.get(clientId)
-    var clientIdsPair = tag2ClientIds.get(tag)
-
-    template checkFirstTagAndReturn() {.dirty.} =
-      if clientIdsPair.isNil:
-        clientIdsPair = tag2ClientIds.set(tag, @^[ClientId clientId])
-        tagRefsPair.val.add(TagRef(tag: clientIdsPair.key.addr, idx: 0))
-        return
-
-    if tagRefsPair.isNil:
-      var emptyTagRef: Array[TagRef]
-      tagRefsPair = clientId2Tags.set(clientId, emptyTagRef)
-
-      checkFirstTagAndReturn()
-    else:
-      checkFirstTagAndReturn()
-
-      for t in tagRefsPair.val:
-        if clientIdsPair.key.addr == t.tag:
+      template checkFirstTagAndReturn() {.dirty.} =
+        if clientIdsPair.isNil:
+          clientIdsPair = tag2ClientIds.set(tag, @^[ClientId clientId])
+          tagRefsPair.val.add(TagRef(tag: clientIdsPair.key.addr, idx: 0))
           return
 
-    clientIdsPair.val.add(clientId)
-    tagRefsPair.val.add(TagRef(tag: clientIdsPair.key.addr, idx: clientIdsPair.val.high))
+      if tagRefsPair.isNil:
+        var emptyTagRef: Array[TagRef]
+        tagRefsPair = clientId2Tags.set(clientId, emptyTagRef)
 
-proc delTag*(clientId: ClientId, tag: Tag) =
-  withWriteLock clientsLock:
-    let tagRefsPair = clientId2Tags.get(clientId)
-    if tagRefsPair.isNil: return
-    let clientIdsPair = tag2ClientIds.get(tag)
-    if clientIdsPair.isNil: return
+        checkFirstTagAndReturn()
+      else:
+        checkFirstTagAndReturn()
 
-    for i, t in tagRefsPair.val:
-      if clientIdsPair.key.addr == t.tag:
+        for t in tagRefsPair.val:
+          if clientIdsPair.key.addr == t.tag:
+            return
+
+      clientIdsPair.val.add(clientId)
+      tagRefsPair.val.add(TagRef(tag: clientIdsPair.key.addr, idx: clientIdsPair.val.high))
+
+  proc delTag*(clientId: ClientId, tag: Tag) =
+    withWriteLock clientsLock:
+      let tagRefsPair = clientId2Tags.get(clientId)
+      if tagRefsPair.isNil: return
+      let clientIdsPair = tag2ClientIds.get(tag)
+      if clientIdsPair.isNil: return
+
+      for i, t in tagRefsPair.val:
+        if clientIdsPair.key.addr == t.tag:
+          if clientIdsPair.val.len <= 1:
+            tag2ClientIds.del(clientIdsPair)
+          else:
+            let lastIdx = clientIdsPair.val.high
+            if t.idx != lastIdx:
+              let lastClientIdTagsPair = clientId2Tags.get(clientIdsPair.val[lastIdx])
+              for j, last in lastClientIdTagsPair.val:
+                if clientIdsPair.key.addr == last.tag:
+                  lastClientIdTagsPair.val[j].idx = t.idx
+                  break
+            clientIdsPair.val.del(t.idx)
+
+          if tagRefsPair.val.len <= 1:
+            clientId2Tags.del(tagRefsPair)
+          else:
+            tagRefsPair.val.del(i)
+          return
+
+  proc delTags*(clientId: ClientId) =
+    withWriteLock clientsLock:
+      let tagRefsPair = clientId2Tags.get(clientId)
+      if tagRefsPair.isNil: return
+      for t in tagRefsPair.val:
+        let clientIdsPair = tag2ClientIds.get(t.tag[])
         if clientIdsPair.val.len <= 1:
           tag2ClientIds.del(clientIdsPair)
         else:
@@ -337,163 +369,139 @@ proc delTag*(clientId: ClientId, tag: Tag) =
                 lastClientIdTagsPair.val[j].idx = t.idx
                 break
           clientIdsPair.val.del(t.idx)
+      clientId2Tags.del(tagRefsPair)
 
-        if tagRefsPair.val.len <= 1:
-          clientId2Tags.del(tagRefsPair)
-        else:
-          tagRefsPair.val.del(i)
-        return
-
-proc delTags*(clientId: ClientId) =
-  withWriteLock clientsLock:
-    let tagRefsPair = clientId2Tags.get(clientId)
-    if tagRefsPair.isNil: return
-    for t in tagRefsPair.val:
-      let clientIdsPair = tag2ClientIds.get(t.tag[])
-      if clientIdsPair.val.len <= 1:
-        tag2ClientIds.del(clientIdsPair)
-      else:
-        let lastIdx = clientIdsPair.val.high
-        if t.idx != lastIdx:
-          let lastClientIdTagsPair = clientId2Tags.get(clientIdsPair.val[lastIdx])
-          for j, last in lastClientIdTagsPair.val:
-            if clientIdsPair.key.addr == last.tag:
-              lastClientIdTagsPair.val[j].idx = t.idx
-              break
-        clientIdsPair.val.del(t.idx)
-    clientId2Tags.del(tagRefsPair)
-
-proc delTags*(tag: Tag) =
-  withWriteLock clientsLock:
-    let clientIdsPair = tag2ClientIds.get(tag)
-    if clientIdsPair.isNil: return
-    for clientId in clientIdsPair.val:
-      let tagRefsPair = clientId2Tags.get(clientId)
-      for i, t in tagRefsPair.val:
-        if clientIdsPair.key.addr == t.tag:
-          if tagRefsPair.val.len <= 1:
-            clientId2Tags.del(tagRefsPair)
-          else:
-            tagRefsPair.val.del(i)
-          break
-    tag2ClientIds.del(clientIdsPair)
-
-proc getClientIds*(tag: Tag): Array[ClientId] =
-  withReadLock clientsLock:
-    let clientIds = tag2ClientIds.get(tag)
-    if not clientIds.isNil:
-      result = clientIds.val
-
-proc getTags*(clientId: ClientId): Array[Tag] =
-  withReadLock clientsLock:
-    let tagRefs = clientId2Tags.get(clientId)
-    if not tagRefs.isNil:
-      for t in tagRefs.val:
-        result.add(t.tag[])
-
-iterator getClientIds*(tag: Tag): ClientId =
-  withReadLock clientsLock:
-    let clientIds = tag2ClientIds.get(tag)
-    if not clientIds.isNil:
-      for c in clientIds.val:
-        yield c
-
-iterator getTags*(clientId: ClientId): Tag =
-  withReadLock clientsLock:
-    let tagRefs = clientId2Tags.get(clientId)
-    if not tagRefs.isNil:
-      for t in tagRefs.val:
-        yield t.tag[]
-
-proc addTask*(clientId: ClientId, task: ClientTask) =
-  withWriteLock clientsLock:
-    let tasksPair = clientId2Tasks.get(clientId)
-    if tasksPair.isNil:
-      clientId2Tasks.set(clientId, @^[task])
-    else:
-      tasksPair.val.add(task)
-
-proc getTasks*(clientId: ClientId): Array[ClientTask] =
-  withReadLock clientsLock:
-    let tasksPair = clientId2Tasks.get(clientId)
-    if not tasksPair.isNil:
-      result = tasksPair.val
-
-proc setTasks*(clientId: ClientId, tasks: Array[ClientTask]) =
-  withReadLock clientsLock:
-    let tasksPair = clientId2Tasks.get(clientId)
-    if tasksPair.isNil:
-      clientId2Tasks.set(clientId, tasks)
-    else:
-      tasksPair.val = tasks
-
-proc purgeTasks*(clientId: ClientId, idx: int) =
-  withReadLock clientsLock:
-    let tasksPair = clientId2Tasks.get(clientId)
-    if not tasksPair.isNil:
-      tasksPair.val = tasksPair.val[idx + 1..^1]
-
-proc getAndPurgeTasks*(clientId: ClientId, cb: proc(task: ClientTask): bool): bool =
-  result = true
-  var tasksPair: HashTableData[ClientId, Array[ClientTask]]
-  var tasks: Array[ClientTask]
-
-  withReadLock clientsLock:
-    tasksPair = clientId2Tasks.get(clientId)
-    if tasksPair.isNil: return
-    tasks = tasksPair.val
-
-  var idx: int = -1
-  for task in tasks:
-    if not cb(task):
-      result = false
-      break
-    inc(idx)
-
-  if idx >= 0 and idx < tasksPair.val.len:
+  proc delTags*(tag: Tag) =
     withWriteLock clientsLock:
-      for i in 0..idx:
-        if tasksPair.val[i].cmd == ClientTaskCmd.Data:
-          tasksPair.val[i].data.empty()
-      if idx == tasks.high:
-        clientId2Tasks.del(tasksPair)
+      let clientIdsPair = tag2ClientIds.get(tag)
+      if clientIdsPair.isNil: return
+      for clientId in clientIdsPair.val:
+        let tagRefsPair = clientId2Tags.get(clientId)
+        for i, t in tagRefsPair.val:
+          if clientIdsPair.key.addr == t.tag:
+            if tagRefsPair.val.len <= 1:
+              clientId2Tags.del(tagRefsPair)
+            else:
+              tagRefsPair.val.del(i)
+            break
+      tag2ClientIds.del(clientIdsPair)
+
+  proc getClientIds*(tag: Tag): Array[ClientId] =
+    withReadLock clientsLock:
+      let clientIds = tag2ClientIds.get(tag)
+      if not clientIds.isNil:
+        result = clientIds.val
+
+  proc getTags*(clientId: ClientId): Array[Tag] =
+    withReadLock clientsLock:
+      let tagRefs = clientId2Tags.get(clientId)
+      if not tagRefs.isNil:
+        for t in tagRefs.val:
+          result.add(t.tag[])
+
+  iterator getClientIds*(tag: Tag): ClientId =
+    withReadLock clientsLock:
+      let clientIds = tag2ClientIds.get(tag)
+      if not clientIds.isNil:
+        for c in clientIds.val:
+          yield c
+
+  iterator getTags*(clientId: ClientId): Tag =
+    withReadLock clientsLock:
+      let tagRefs = clientId2Tags.get(clientId)
+      if not tagRefs.isNil:
+        for t in tagRefs.val:
+          yield t.tag[]
+
+  proc addTask*(clientId: ClientId, task: ClientTask) =
+    withWriteLock clientsLock:
+      let tasksPair = clientId2Tasks.get(clientId)
+      if tasksPair.isNil:
+        clientId2Tasks.set(clientId, @^[task])
       else:
+        tasksPair.val.add(task)
+
+  proc getTasks*(clientId: ClientId): Array[ClientTask] =
+    withReadLock clientsLock:
+      let tasksPair = clientId2Tasks.get(clientId)
+      if not tasksPair.isNil:
+        result = tasksPair.val
+
+  proc setTasks*(clientId: ClientId, tasks: Array[ClientTask]) =
+    withReadLock clientsLock:
+      let tasksPair = clientId2Tasks.get(clientId)
+      if tasksPair.isNil:
+        clientId2Tasks.set(clientId, tasks)
+      else:
+        tasksPair.val = tasks
+
+  proc purgeTasks*(clientId: ClientId, idx: int) =
+    withReadLock clientsLock:
+      let tasksPair = clientId2Tasks.get(clientId)
+      if not tasksPair.isNil:
         tasksPair.val = tasksPair.val[idx + 1..^1]
 
-proc delTasks*(clientId: ClientId) =
-  withWriteLock clientsLock:
-    let tasksPair = clientId2Tasks.get(clientId)
-    if tasksPair.isNil: return
-    for i, task in tasksPair.val:
-      if task.cmd == ClientTaskCmd.Data:
-        tasksPair.val[i].data.empty()
-    clientId2Tasks.del(tasksPair)
+  proc getAndPurgeTasks*(clientId: ClientId, cb: proc(task: ClientTask): bool): bool =
+    result = true
+    var tasksPair: HashTableData[ClientId, Array[ClientTask]]
+    var tasks: Array[ClientTask]
 
-proc invokeSendEvent*(client: Client): bool =
-  acquire(client.lock)
-  defer:
-    release(client.lock)
-  if client.fd == osInvalidSocket.int:
-    return false
-  var ev: EpollEvent
-  ev.events = EPOLLIN or EPOLLRDHUP or EPOLLOUT
-  ev.data.u64 = client.idx.uint or 0x300000000'u64
-  var ret = epoll_ctl(epfd, EPOLL_CTL_MOD, client.fd.cint, addr ev)
-  if ret < 0:
-    client.invoke = true
-  result = true
+    withReadLock clientsLock:
+      tasksPair = clientId2Tasks.get(clientId)
+      if tasksPair.isNil: return
+      tasks = tasksPair.val
 
-proc send*(clientId: ClientId, data: string): SendResult {.discardable.} =
-  let pair = pendingClients.get(clientId)
-  if pair.isNil:
-    return SendResult.None
+    var idx: int = -1
+    for task in tasks:
+      if not cb(task):
+        result = false
+        break
+      inc(idx)
 
-  clientId.addTask(ClientTask(cmd: ClientTaskCmd.Data, data: data.toBytes.toArray))
-  if pair.val.invokeSendEvent():
-    result = SendResult.Pending
-  else:
-    clientId.delTasks()
-    result = SendResult.Error
+    if idx >= 0 and idx < tasksPair.val.len:
+      withWriteLock clientsLock:
+        for i in 0..idx:
+          if tasksPair.val[i].cmd == ClientTaskCmd.Data:
+            tasksPair.val[i].data.empty()
+        if idx == tasks.high:
+          clientId2Tasks.del(tasksPair)
+        else:
+          tasksPair.val = tasksPair.val[idx + 1..^1]
+
+  proc delTasks*(clientId: ClientId) =
+    withWriteLock clientsLock:
+      let tasksPair = clientId2Tasks.get(clientId)
+      if tasksPair.isNil: return
+      for i, task in tasksPair.val:
+        if task.cmd == ClientTaskCmd.Data:
+          tasksPair.val[i].data.empty()
+      clientId2Tasks.del(tasksPair)
+
+  proc invokeSendEvent*(client: Client): bool =
+    acquire(client.lock)
+    defer:
+      release(client.lock)
+    if client.fd == osInvalidSocket.int:
+      return false
+    var ev: EpollEvent
+    ev.events = EPOLLIN or EPOLLRDHUP or EPOLLOUT
+    ev.data.u64 = client.idx.uint or 0x300000000'u64
+    var ret = epoll_ctl(epfd, EPOLL_CTL_MOD, client.fd.cint, addr ev)
+    if ret < 0:
+      client.invoke = true
+    result = true
+
+  proc send*(clientId: ClientId, data: string): SendResult {.discardable.} =
+    let pair = pendingClients.get(clientId)
+    if pair.isNil:
+      return SendResult.None
+
+    clientId.addTask(ClientTask(cmd: ClientTaskCmd.Data, data: data.toBytes.toArray))
+    if pair.val.invokeSendEvent():
+      result = SendResult.Pending
+    else:
+      clientId.delTasks()
+      result = SendResult.Error
 
 #[
 when not declared(invokeSendMain):
