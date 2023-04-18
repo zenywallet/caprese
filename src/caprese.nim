@@ -67,16 +67,6 @@ macro init(): untyped =
   initFlag = true
   quote do:
     when cfg.debugLog: {.define: DEBUG_LOG.}
-    when cfg.ssl:
-      {.define: ENABLE_SSL.}
-      when cfg.sslLib == BearSSL:
-        {.define: USE_BEARSSL.}
-      elif cfg.sslLib == OpenSSL:
-        {.define: USE_OPENSSL.}
-      elif cfg.sslLib == LibreSSL:
-        {.define: USE_LIBRESSL.}
-      elif cfg.sslLib == BoringSSL:
-        {.define: USE_BORINGSSL.}
 
     serverInit()
     serverTagLib()
