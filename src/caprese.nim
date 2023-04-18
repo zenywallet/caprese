@@ -23,7 +23,9 @@ var active* = true
 var workerNum = 0
 
 var onSigTermQuitBody {.compileTime.} = newStmtList()
-macro onSigTermQuit*(body: untyped) = discard onSigTermQuitBody.add(body)
+macro onSigTermQuit(body: untyped) = discard onSigTermQuitBody.add(body)
+
+template onQuit*(body: untyped) = onSigTermQuit(body)
 
 macro addCfgDotExpr*(body: untyped): untyped =
   result = nnkStmtList.newTree()
@@ -187,7 +189,7 @@ when isMainModule:
 
   var reqs = newPending[PendingData](limit = 100)
 
-  onSigTermQuit:
+  onQuit:
     reqs.drop()
 
   const IndexHtml = staticHtmlDocument:
