@@ -59,42 +59,47 @@ else:
 {.passC: "-flto".}
 {.passL: "-flto".}
 
-type
-  ClientBase* = ref object of RootObj
-    idx: int
-    fd: int
-    recvBuf: ptr UncheckedArray[byte]
-    recvBufSize: int
-    recvCurSize: int
-    sendBuf: ptr UncheckedArray[byte]
-    sendCurSize: int
-    keepAlive: bool
-    wsUpgrade: bool
-    payloadSize: int
-    when ENABLE_SSL:
-      ssl: SSL
-      sslErr: int
-    ip: uint32
-    invoke: bool
-    lock: Lock
-    spinLock: SpinLock
-    whackaMole: bool
+template serverInit*() {.dirty.} =
+  import locks
+  import ptlock
 
-  ClientObj* = object of ClientBase
-    pStream*: pointer
-    clientId*: ClientId
-    sock*: SocketHandle
-    threadId*: int
-    appId*: int
-    listenFlag*: bool
-    dirty: bool
+  type
+    ClientBase* = ref object of RootObj
+      idx: int
+      fd: int
+      recvBuf: ptr UncheckedArray[byte]
+      recvBufSize: int
+      recvCurSize: int
+      sendBuf: ptr UncheckedArray[byte]
+      sendCurSize: int
+      keepAlive: bool
+      wsUpgrade: bool
+      payloadSize: int
+      when cfg.ssl:
+        ssl: SSL
+        sslErr: int
+      ip: uint32
+      invoke: bool
+      lock: Lock
+      spinLock: SpinLock
+      whackaMole: bool
 
-  Client* = ptr ClientObj
+    ClientObj* = object of ClientBase
+      pStream*: pointer
+      clientId*: ClientId
+      sock*: SocketHandle
+      threadId*: int
+      appId*: int
+      listenFlag*: bool
+      dirty: bool
+
+    Client* = ptr ClientObj
 
   #ClientArray = array[CLIENT_MAX, ClientObj]
 
   #Headers* = Table[string, string]
 
+type
   WebSocketOpCode* = enum
     Continue = 0x0
     Text = 0x1
@@ -1867,7 +1872,7 @@ var sockTmp = createNativeSocket()
 var workerRecvBufSize*: int = sockTmp.getSockOptInt(SOL_SOCKET, SO_RCVBUF)
 sockTmp.close()
 var serverWorkerNum: int
-var clientQueue = queue2.newQueue[Client](0x10000)
+#var clientQueue = queue2.newQueue[Client](0x10000)
 var highGear = false
 var highGearManagerAssinged: int = 0
 var highGearSemaphore: Sem

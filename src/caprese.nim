@@ -79,6 +79,7 @@ macro init(): untyped =
     import server as serverlib
     export serverlib
 
+    serverInit()
     serverTagLib()
 
     when cfg.maxOpenFiles:
