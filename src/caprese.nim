@@ -6,6 +6,7 @@ when not compileOption("threads"):
 import nativesockets
 import posix
 import serverdef
+import server as serverlib
 import contents
 import statuscode
 import queue
@@ -13,6 +14,7 @@ import macros
 export nativesockets
 export posix
 export serverdef
+export serverlib
 export contents
 export statuscode
 export queue
@@ -75,9 +77,6 @@ macro init(): untyped =
         {.define: USE_LIBRESSL.}
       elif cfg.sslLib == BoringSSL:
         {.define: USE_BORINGSSL.}
-
-    import server as serverlib
-    export serverlib
 
     serverInit()
     serverTagLib()
