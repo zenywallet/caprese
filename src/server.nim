@@ -2953,10 +2953,9 @@ template serverLib() {.dirty.} =
     newCall(name & "Macro", body)
 
   macro serverHandlerMacro(): untyped =
-    var serverHandlerStmt = newStmtList()
+    result = newStmtList()
     for s in serverHandlerList:
-      serverHandlerStmt.add(addHandlerProc(s[0], s[1]))
-    serverHandlerStmt
+      result.add(addHandlerProc(s[0], s[1]))
 
   serverHandlerMacro()
 
