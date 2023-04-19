@@ -2602,11 +2602,11 @@ template serverLib() {.dirty.} =
 
   var clientHandlerProcs: Array[ClientHandlerProc]
 
-  proc appDummy(body: NimNode): NimNode {.compileTime.} =
+  macro appDummyMacro(body: untyped): untyped =
     quote do:
       clientHandlerProcs.add appDummy
 
-  proc appListen(body: NimNode): NimNode {.compileTime.} =
+  macro appListenMacro(body: untyped): untyped =
     quote do:
       clientHandlerProcs.add appListen
 
@@ -2616,7 +2616,7 @@ template serverLib() {.dirty.} =
       header: ReqHeader): SendResult {.inline.} =
       body
 
-  proc appRoutes(body: NimNode): NimNode {.compileTime.} =
+  macro appRoutesMacro(body: untyped): untyped =
     quote do:
       clientHandlerProcs.add proc (ctx: WorkerThreadCtx) {.thread.} =
         let client = ctx.client
@@ -2741,7 +2741,7 @@ template serverLib() {.dirty.} =
               closeAndFreeClient()
             break
 
-  proc appRoutesSend(body: NimNode): NimNode {.compileTime.} =
+  macro appRoutesSendMacro(body: untyped): untyped =
     quote do:
       clientHandlerProcs.add appRoutesSend
 
@@ -2769,7 +2769,7 @@ template serverLib() {.dirty.} =
   template onMessage(body: untyped) = discard
   template onClose(body: untyped) = discard
 
-  proc appStream(body: NimNode): NimNode {.compileTime.} =
+  macro appStreamMacro(body: untyped): untyped =
     var onOpenStmt = newStmtList()
     var onMessageStmt = newStmtList()
     var onCloseStmt = newStmtList()
@@ -2945,26 +2945,12 @@ template serverLib() {.dirty.} =
         client.threadId = 0
         release(client.spinLock)
 
-  proc appStreamSend(body: NimNode): NimNode {.compileTime.} =
+  macro appStreamSendMacro(body: untyped): untyped =
     quote do:
       clientHandlerProcs.add appStreamSend
 
   proc addHandlerProc(name: string, body: NimNode): NimNode {.compileTime.} =
-    case name
-    of "appDummy":
-      appDummy(body)
-    of "appListen":
-      appListen(body)
-    of "appRoutes":
-      appRoutes(body)
-    of "appRoutesSend":
-      appRoutesSend(body)
-    of "appStream":
-      appStream(body)
-    of "appStreamSend":
-      appStreamSend(body)
-    else:
-      appDummy(body)
+    newCall(name & "Macro", body)
 
   macro serverHandlerMacro(): untyped =
     var serverHandlerStmt = newStmtList()
