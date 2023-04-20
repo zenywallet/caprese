@@ -265,8 +265,8 @@ proc toWebSocketOpCode*(opcode: int8): WebSocketOpCode =
   of 0xa: WebSocketOpcode.Pong
   else: raise
 
-proc reallocClientBuf*(buf: ptr UncheckedArray[byte], size: int): ptr UncheckedArray[byte] =
-  result = cast[ptr UncheckedArray[byte]](reallocShared(buf, size))
+template reallocClientBuf*(buf: ptr UncheckedArray[byte], size: int): ptr UncheckedArray[byte] =
+  cast[ptr UncheckedArray[byte]](reallocShared(buf, size))
 
 #[
 proc send*(client: Client, data: seq[byte] | string | Array[byte]): SendResult =
