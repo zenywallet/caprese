@@ -690,6 +690,7 @@ template serverInitFreeClient() {.dirty.} =
   import locks
   import ptlock
   import arraylib
+  import logs
 
   var clients: ptr UncheckedArray[ClientObj] = nil
   var clientFreePool*: queue2.Queue[Client]
@@ -750,6 +751,40 @@ template serverInitFreeClient() {.dirty.} =
       deinitLock(client.spinLock)
       deinitLock(client.lock)
     deallocShared(p)
+
+  proc close(client: Client) =
+    acquire(client.lock)
+    defer:
+      release(client.lock)
+    debug "close ", client.sock.int
+    when declared(freeExClient):
+      freeExClient(client)
+    let clientId = client.clientId
+    if clientId != INVALID_CLIENT_ID:
+      clientId.delTags()
+      clientId.delTasks()
+      client.unmarkPending()
+    client.whackaMole = false
+    client.invoke = false
+    client.ip = 0
+    when cfg.ssl:
+      if not client.ssl.isNil:
+        SSL_free(client.ssl)
+        client.ssl = nil
+        client.sslErr = SSL_ERROR_NONE
+    client.sock.close()
+    client.recvCurSize = 0
+    client.recvBufSize = 0
+    if not client.recvBuf.isNil:
+      deallocShared(cast[pointer](client.recvBuf))
+      client.recvBuf = nil
+    if not client.sendBuf.isNil:
+      deallocShared(cast[pointer](client.sendBuf))
+      client.sendBuf = nil
+    client.keepAlive = true
+    client.wsUpgrade = false
+    client.payloadSize = 0
+    client.sock = osInvalidSocket
 
 proc atomic_compare_exchange_n(p: ptr int, expected: ptr int, desired: int, weak: bool,
                               success_memmodel: int, failure_memmodel: int): bool
@@ -887,40 +922,6 @@ proc waitEventAgain(client: Client, evData: uint64, fd: int | SocketHandle, exEv
     if ret < 0:
       error "error: epoll_ctl ret=", ret, " errno=", errno
       abort()
-
-proc close(client: Client) =
-  acquire(client.lock)
-  defer:
-    release(client.lock)
-  debug "close ", client.sock.int
-  when declared(freeExClient):
-    freeExClient(client)
-  let clientId = client.clientId
-  if clientId != INVALID_CLIENT_ID:
-    clientId.delTags()
-    clientId.delTasks()
-    client.unmarkPending()
-  client.whackaMole = false
-  client.invoke = false
-  client.ip = 0
-  when ENABLE_SSL:
-    if not client.ssl.isNil:
-      SSL_free(client.ssl)
-      client.ssl = nil
-      client.sslErr = SSL_ERROR_NONE
-  client.sock.close()
-  client.recvCurSize = 0
-  client.recvBufSize = 0
-  if not client.recvBuf.isNil:
-    deallocShared(cast[pointer](client.recvBuf))
-    client.recvBuf = nil
-  if not client.sendBuf.isNil:
-    deallocShared(cast[pointer](client.sendBuf))
-    client.sendBuf = nil
-  client.keepAlive = true
-  client.wsUpgrade = false
-  client.payloadSize = 0
-  client.sock = osInvalidSocket
 
 when not declared(webMain):
   proc webMainDefault(client: Client, url: string, headers: Headers): SendResult =
