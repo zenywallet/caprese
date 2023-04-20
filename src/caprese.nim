@@ -10,6 +10,7 @@ import contents
 import statuscode
 import queue
 import macros
+import rlimit
 export nativesockets
 export posix
 export serverlib

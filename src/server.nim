@@ -10,8 +10,6 @@ import base64
 import times
 import stats
 import statuscode
-import rlimit
-export rlimit
 import contents
 import queue
 import queue2
