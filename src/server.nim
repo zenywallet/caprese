@@ -1,25 +1,13 @@
 # Copyright (c) 2021 zenywallet
 
-import nativesockets, posix, epoll
-import strutils, sequtils, tables
-from cgi import decodeUrl
-import os
-import bytes, files
+import macros
+import nativesockets
+import posix
+import logs
+import arraylib
 import std/sha1
 import base64
-import times
-import stats
-import statuscode
-import contents
-import queue
-import queue2
-import logs
-import hashtable
-import ptlock
-import arraylib
-import locks
 import std/cpuinfo
-import std/re
 
 type
   ClientId* = int
@@ -369,8 +357,6 @@ template serverTagLib*() {.dirty.} =
   import arraylib
   import bytes
   import hashtable
-  import locks
-  import ptlock
   import nativesockets, posix, epoll
 
   type
