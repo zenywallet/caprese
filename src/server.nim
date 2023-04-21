@@ -353,6 +353,11 @@ when ENABLE_SSL and SSL_AUTO_RELOAD:
 var mainThread: Thread[WrapperThreadArg]
 ]#
 
+proc getErrnoStr*(): string =
+  case errno
+  of EADDRINUSE: "errno=EADDRINUSE(" & $errno & ")"
+  else: "errno=" & $errno
+
 template serverTagLib*() {.dirty.} =
   import arraylib
   import bytes
@@ -643,12 +648,6 @@ when not declared(invokeSendMain):
     else:
       result = SendResult.Pending
 ]#
-
-proc getErrnoStr*(): string =
-  case errno
-  of EADDRINUSE: "errno=EADDRINUSE(" & $errno & ")"
-  else: "errno=" & $errno
-
 #[
 proc quitServer(restart: bool = false) =
   debug "quit"
