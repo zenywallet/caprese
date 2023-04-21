@@ -2452,16 +2452,6 @@ template serverLib() {.dirty.} =
     let client = ctx.client
     let sock = client.sock
 
-    template closeAndFreeClient() =
-      acquire(client.spinLock)
-      if client.sock != osInvalidSocket:
-        client.sock = osInvalidSocket
-        release(client.spinLock)
-        sock.close()
-        clientFreePool.addSafe(client)
-      else:
-        release(client.spinLock)
-
     if client.recvCurSize == 0:
       while true:
         let recvlen = sock.recv(ctx.pRecvBuf0, workerRecvBufSize, 0.cint)
@@ -2478,7 +2468,7 @@ template serverLib() {.dirty.} =
                 if retMain == SendResult.Success:
                   if ctx.header.minorVer == 0 or getHeaderValue(ctx.pRecvBuf, ctx.header,
                     InternalEssentialHeaderConnection) == "close":
-                    closeAndFreeClient()
+                    client.close()
                     break
                   elif retHeader.next < recvlen:
                     nextPos = retHeader.next
@@ -2492,25 +2482,25 @@ template serverLib() {.dirty.} =
                   else:
                     break
                 else:
-                  closeAndFreeClient()
+                  client.close()
                   break
               else:
                 echo "retHeader err=", retHeader.err
-                closeAndFreeClient()
+                client.close()
                 break
 
           else:
             client.addRecvBuf(ctx.pRecvBuf0, recvlen)
 
         elif recvlen == 0:
-          closeAndFreeClient()
+          client.close()
 
         else:
           if errno == EAGAIN or errno == EWOULDBLOCK:
             break
           elif errno == EINTR:
             continue
-          closeAndFreeClient()
+          client.close()
         break
 
     else:
@@ -2533,7 +2523,7 @@ template serverLib() {.dirty.} =
                     if ctx.header.minorVer == 0 or getHeaderValue(ctx.pRecvBuf, ctx.header,
                       InternalEssentialHeaderConnection) == "close":
                       client.keepAlive = false
-                      closeAndFreeClient()
+                      client.close()
                       break
                     elif retHeader.next < client.recvCurSize:
                       nextPos = retHeader.next
@@ -2542,7 +2532,7 @@ template serverLib() {.dirty.} =
                       client.recvCurSize = 0
                       break
                   else:
-                    closeAndFreeClient()
+                    client.close()
                     break
                 elif retMain == SendResult.Pending:
                   if retHeader.next < client.recvCurSize:
@@ -2551,22 +2541,22 @@ template serverLib() {.dirty.} =
                   else:
                     break
                 else:
-                  closeAndFreeClient()
+                  client.close()
                   break
               else:
                 echo "retHeader err=", retHeader.err
-                closeAndFreeClient()
+                client.close()
                 break
 
         elif recvlen == 0:
-          closeAndFreeClient()
+          client.close()
 
         else:
           if errno == EAGAIN or errno == EWOULDBLOCK:
             break
           elif errno == EINTR:
             continue
-          closeAndFreeClient()
+          client.close()
         break
 
   proc appRoutesSend(ctx: WorkerThreadCtx) {.thread.} =
@@ -2600,16 +2590,6 @@ template serverLib() {.dirty.} =
         let client = ctx.client
         let sock = client.sock
 
-        template closeAndFreeClient() =
-          acquire(client.spinLock)
-          if client.sock != osInvalidSocket:
-            client.sock = osInvalidSocket
-            release(client.spinLock)
-            sock.close()
-            clientFreePool.addSafe(client)
-          else:
-            release(client.spinLock)
-
         routesMainTmpl(`body`)
 
         if client.recvCurSize == 0:
@@ -2628,7 +2608,7 @@ template serverLib() {.dirty.} =
                     if retMain == SendResult.Success:
                       if ctx.header.minorVer == 0 or getHeaderValue(ctx.pRecvBuf, ctx.header,
                         InternalEssentialHeaderConnection) == "close":
-                        closeAndFreeClient()
+                        client.close()
                         break
                       elif retHeader.next < recvlen:
                         nextPos = retHeader.next
@@ -2642,25 +2622,25 @@ template serverLib() {.dirty.} =
                       else:
                         break
                     else:
-                      closeAndFreeClient()
+                      client.close()
                       break
                   else:
                     echo "retHeader err=", retHeader.err
-                    closeAndFreeClient()
+                    client.close()
                     break
 
               else:
                 client.addRecvBuf(ctx.pRecvBuf0, recvlen)
 
             elif recvlen == 0:
-              closeAndFreeClient()
+              client.close()
 
             else:
               if errno == EAGAIN or errno == EWOULDBLOCK:
                 break
               elif errno == EINTR:
                 continue
-              closeAndFreeClient()
+              client.close()
             break
 
         else:
@@ -2683,7 +2663,7 @@ template serverLib() {.dirty.} =
                         if ctx.header.minorVer == 0 or getHeaderValue(ctx.pRecvBuf, ctx.header,
                           InternalEssentialHeaderConnection) == "close":
                           client.keepAlive = false
-                          closeAndFreeClient()
+                          client.close()
                           break
                         elif retHeader.next < client.recvCurSize:
                           nextPos = retHeader.next
@@ -2692,7 +2672,7 @@ template serverLib() {.dirty.} =
                           client.recvCurSize = 0
                           break
                       else:
-                        closeAndFreeClient()
+                        client.close()
                         break
                     elif retMain == SendResult.Pending:
                       if retHeader.next < client.recvCurSize:
@@ -2701,22 +2681,22 @@ template serverLib() {.dirty.} =
                       else:
                         break
                     else:
-                      closeAndFreeClient()
+                      client.close()
                       break
                   else:
                     echo "retHeader err=", retHeader.err
-                    closeAndFreeClient()
+                    client.close()
                     break
 
             elif recvlen == 0:
-              closeAndFreeClient()
+              client.close()
 
             else:
               if errno == EAGAIN or errno == EWOULDBLOCK:
                 break
               elif errno == EINTR:
                 continue
-              closeAndFreeClient()
+              client.close()
             break
 
   macro appRoutesSendMacro(body: untyped): untyped =
@@ -2789,16 +2769,6 @@ template serverLib() {.dirty.} =
 
         let sock = client.sock
 
-        template closeAndFreeClient() =
-          acquire(client.spinLock)
-          if client.sock != osInvalidSocket:
-            client.sock = osInvalidSocket
-            release(client.spinLock)
-            sock.close()
-            clientFreePool.addSafe(client)
-          else:
-            release(client.spinLock)
-
         `callStreamMainTmplStmt`
 
         if client.recvCurSize == 0:
@@ -2817,7 +2787,7 @@ template serverLib() {.dirty.} =
                   of SendResult.Pending:
                     discard
                   of SendResult.None, SendResult.Error, SendResult.Invalid:
-                    closeAndFreeClient()
+                    client.close()
                 else:
                   if not payload.isNil and payloadSize > 0:
                     client.addRecvBuf(payload, payloadSize)
@@ -2840,7 +2810,7 @@ template serverLib() {.dirty.} =
                 break
 
             elif recvlen == 0:
-              closeAndFreeClient()
+              client.close()
               acquire(client.spinLock)
               client.threadId = 0
               release(client.spinLock)
@@ -2857,7 +2827,7 @@ template serverLib() {.dirty.} =
                   break
               elif errno == EINTR:
                 continue
-              closeAndFreeClient()
+              client.close()
               acquire(client.spinLock)
               client.threadId = 0
               release(client.spinLock)
@@ -2887,7 +2857,7 @@ template serverLib() {.dirty.} =
                 of SendResult.Pending:
                   discard
                 of SendResult.None, SendResult.Error, SendResult.Invalid:
-                  closeAndFreeClient()
+                  client.close()
                 client.payloadSize = 0
                 client.recvCurSize = 0
               (find, fin, opcode, payload, payloadSize, next, size) = getFrame(next, size)
@@ -2903,7 +2873,7 @@ template serverLib() {.dirty.} =
             #break
 
           elif recvlen == 0:
-            closeAndFreeClient()
+            client.close()
             break
           else:
             if errno == EAGAIN or errno == EWOULDBLOCK:
@@ -2916,7 +2886,7 @@ template serverLib() {.dirty.} =
                 continue
             elif errno == EINTR:
               continue
-            closeAndFreeClient()
+            client.close()
             break
 
         acquire(client.spinLock)
