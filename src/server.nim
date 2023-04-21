@@ -752,38 +752,32 @@ template serverInitFreeClient() {.dirty.} =
     deallocShared(p)
 
   proc close(client: Client) =
-    acquire(client.lock)
-    defer:
+    acquire(client.spinLock)
+    let sock = client.sock
+    if sock != osInvalidSocket:
+      client.sock = osInvalidSocket
+      release(client.spinLock)
+      sock.close()
+      client.recvCurSize = 0
+      client.recvBufSize = 0
+      if not client.recvBuf.isNil:
+        deallocShared(cast[pointer](client.recvBuf))
+        client.recvBuf = nil
+      if not client.sendBuf.isNil:
+        deallocShared(cast[pointer](client.sendBuf))
+        client.sendBuf = nil
+      client.keepAlive = true
+      client.payloadSize = 0
+      acquire(client.lock)
+      let clientId = client.clientId
+      if clientId != INVALID_CLIENT_ID:
+        clientId.delTags()
+        clientId.delTasks()
+        client.unmarkPending()
       release(client.lock)
-    debug "close ", client.sock.int
-    when declared(freeExClient):
-      freeExClient(client)
-    let clientId = client.clientId
-    if clientId != INVALID_CLIENT_ID:
-      clientId.delTags()
-      clientId.delTasks()
-      client.unmarkPending()
-    client.whackaMole = false
-    client.invoke = false
-    client.ip = 0
-    when cfg.ssl:
-      if not client.ssl.isNil:
-        SSL_free(client.ssl)
-        client.ssl = nil
-        client.sslErr = SSL_ERROR_NONE
-    client.sock.close()
-    client.recvCurSize = 0
-    client.recvBufSize = 0
-    if not client.recvBuf.isNil:
-      deallocShared(cast[pointer](client.recvBuf))
-      client.recvBuf = nil
-    if not client.sendBuf.isNil:
-      deallocShared(cast[pointer](client.sendBuf))
-      client.sendBuf = nil
-    client.keepAlive = true
-    client.wsUpgrade = false
-    client.payloadSize = 0
-    client.sock = osInvalidSocket
+      clientFreePool.addSafe(client)
+    else:
+      release(client.spinLock)
 
 proc atomic_compare_exchange_n(p: ptr int, expected: ptr int, desired: int, weak: bool,
                               success_memmodel: int, failure_memmodel: int): bool
