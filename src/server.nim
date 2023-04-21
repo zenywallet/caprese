@@ -2577,7 +2577,7 @@ template serverLib() {.dirty.} =
         break
 
   proc appRoutesSend(ctx: WorkerThreadCtx) {.thread.} =
-    echo "appRoutes"
+    echo "appRoutesSend"
 
   proc appStream(ctx: WorkerThreadCtx) {.thread.} =
     echo "appStream"
