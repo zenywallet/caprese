@@ -213,6 +213,7 @@ template serverInit*() {.dirty.} =
       sock*: SocketHandle
       threadId*: int
       appId*: int
+      appShift: bool
       listenFlag*: bool
       dirty: bool
 
@@ -609,18 +610,18 @@ template serverTagLib*() {.dirty.} =
       clientId2Tasks.del(tasksPair)
 
   proc invokeSendEvent*(client: Client): bool =
-    acquire(client.lock)
-    defer:
-      release(client.lock)
-    if client.fd == osInvalidSocket.int:
-      return false
+    acquire(client.spinLock)
+    if not client.appShift:
+      inc(client.appId)
+      client.appShift = true
+    release(client.spinLock)
     var ev: EpollEvent
-    ev.events = EPOLLIN or EPOLLRDHUP or EPOLLOUT
-    ev.data.u64 = client.idx.uint or 0x300000000'u64
-    var ret = epoll_ctl(epfd, EPOLL_CTL_MOD, client.fd.cint, addr ev)
-    if ret < 0:
-      client.invoke = true
-    result = true
+    ev.events = EPOLLIN or EPOLLRDHUP or EPOLLET or EPOLLOUT
+    ev.data = cast[EpollData](client)
+    var retCtl = epoll_ctl(epfd, EPOLL_CTL_MOD, cast[cint](client.sock), addr ev)
+    if retCtl != 0:
+      return false
+    return true
 
   proc send*(clientId: ClientId, data: string): SendResult {.discardable.} =
     let pair = pendingClients.get(clientId)
@@ -768,6 +769,7 @@ template serverInitFreeClient() {.dirty.} =
         client.sendBuf = nil
       client.keepAlive = true
       client.payloadSize = 0
+      client.appShift = false
       acquire(client.lock)
       let clientId = client.clientId
       if clientId != INVALID_CLIENT_ID:
@@ -2562,6 +2564,50 @@ template serverLib() {.dirty.} =
 
   proc appRoutesSend(ctx: WorkerThreadCtx) {.thread.} =
     echo "appRoutesSend"
+    let client = ctx.client
+
+    acquire(client.spinLock)
+    if client.threadId == 0:
+      client.threadId = ctx.threadId
+      release(client.spinLock)
+    else:
+      client.dirty = true
+      release(client.spinLock)
+      return
+
+    let clientId = client.clientId
+
+    var lastSendErr: SendResult
+    proc taskCallback(task: ClientTask): bool =
+      lastSendErr = client.send(task.data.toSeq().toString())
+      result = (lastSendErr == SendResult.Success)
+
+    while true:
+      client.dirty = false
+      if clientId.getAndPurgeTasks(taskCallback):
+        acquire(client.spinLock)
+        if not client.dirty:
+          if client.appShift:
+            dec(client.appId)
+            client.appShift = false
+          client.threadId = 0
+          release(client.spinLock)
+
+          var ev: EpollEvent
+          ev.events = EPOLLIN or EPOLLRDHUP or EPOLLET
+          ev.data = cast[EpollData](client)
+          var retCtl = epoll_ctl(epfd, EPOLL_CTL_MOD, cast[cint](client.sock), addr ev)
+          if retCtl != 0:
+            errorQuit "error: appRoutesSend epoll_ctl ret=", retCtl, " ", getErrnoStr()
+          return
+        else:
+          release(client.spinLock)
+      else:
+        if lastSendErr != SendResult.Pending:
+          client.close()
+        acquire(client.spinLock)
+        client.threadId = 0
+        release(client.spinLock)
 
   proc appStream(ctx: WorkerThreadCtx) {.thread.} =
     echo "appStream"
