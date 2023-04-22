@@ -2377,6 +2377,7 @@ template serverLib() {.dirty.} =
           var retCtl = epoll_ctl(epfd, EPOLL_CTL_MOD, cast[cint](client.sock), addr ev)
           if retCtl != 0:
             errorQuit "error: send epoll_ctl ret=", retCtl, " ", getErrnoStr()
+          return SendResult.Pending
         elif errno == EINTR:
           continue
         return SendResult.Error
