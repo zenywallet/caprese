@@ -86,23 +86,6 @@ macro init(): untyped =
         serverlib.abort()
         `onSigTermQuitBody`
 
-#[
-macro get*(url: string, body: untyped): untyped =
-  quote do:
-    if url == `url`:
-      `body`
-]#
-
-template setStream(body: untyped) {.dirty.} =
-  proc streamMain(client: Client, opcode: WebSocketOpCode,
-                  data: ptr UncheckedArray[byte], size: int): SendResult =
-    body
-  setStreamMain(streamMain)
-
-macro stream0*(body: untyped): untyped =
-  quote do:
-    setStream(`body`)
-
 macro server*(bindAddress: string, port: uint16, body: untyped): untyped =
   quote do:
     init()
