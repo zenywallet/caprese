@@ -253,7 +253,7 @@ when isMainModule:
         # size: int
         onMessage:
           echo "onMessage"
-          return client.wsServerSend(data.toString(size), WebSocketOpcode.Binary)
+          return client.wsSend(data.toString(size), WebSocketOpcode.Binary)
 
         onClose:
           echo "onClose"
@@ -271,9 +271,9 @@ when isMainModule:
         case opcode
         of WebSocketOpcode.Binary, WebSocketOpcode.Text, WebSocketOpcode.Continue:
           echo "onMessage"
-          return client.wsServerSend(data.toString(size), WebSocketOpcode.Binary)
+          return client.wsSend(data.toString(size), WebSocketOpcode.Binary)
         of WebSocketOpcode.Ping:
-          return client.wsServerSend(data.toString(size), WebSocketOpcode.Pong)
+          return client.wsSend(data.toString(size), WebSocketOpcode.Pong)
         of WebSocketOpcode.Pong:
           debug "pong ", data.toString(size)
           return SendResult.Success
