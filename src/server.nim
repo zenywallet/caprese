@@ -2401,6 +2401,10 @@ template serverLib() {.dirty.} =
 
   template send(data: seq[byte] | string | Array[byte]): SendResult {.dirty.} = ctx.client.send(data)
 
+  template wsSend(data: seq[byte] | string | Array[byte],
+                  opcode: WebSocketOpCode = WebSocketOpCode.Binary): SendResult {.dirty.} =
+    client.wsSend(data, opcode)
+
   template headerUrl(): string {.dirty.} = ctx.header.url
 
   template get(path: string, body: untyped) {.dirty.} =
