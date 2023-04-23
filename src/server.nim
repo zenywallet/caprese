@@ -2387,7 +2387,7 @@ template serverLib() {.dirty.} =
         return SendResult.None
 
   proc wsSend*(client: Client, data: seq[byte] | string | Array[byte],
-                            opcode: WebSocketOpCode = WebSocketOpCode.Binary): SendResult =
+              opcode: WebSocketOpCode = WebSocketOpCode.Binary): SendResult =
     var frame: seq[byte]
     var dataLen = data.len
     var finOp = 0x80.byte or opcode.byte
