@@ -2339,6 +2339,12 @@ template serverLib() {.dirty.} =
     copyMem(addr client.sendBuf[client.sendCurSize], unsafeAddr data[0], data.len)
     client.sendCurSize = nextSize
 
+  proc addSendBuf*(client: Client, data: ptr UncheckedArray[byte], size: int) =
+    let nextSize = client.sendCurSize + size
+    client.sendBuf = reallocClientBuf(client.sendBuf, nextSize)
+    copyMem(addr client.sendBuf[client.sendCurSize], addr data[0], size)
+    client.sendCurSize = nextSize
+
   proc reserveRecvBuf(client: Client, size: int) =
     if client.recvBuf.isNil:
       client.recvBuf = cast[ptr UncheckedArray[byte]](allocShared0(sizeof(byte) * (size + workerRecvBufSize)))
@@ -2369,14 +2375,9 @@ template serverLib() {.dirty.} =
         continue
       elif sendRet < 0:
         if errno == EAGAIN or errno == EWOULDBLOCK:
-          if pos > 0:
-            acquire(client.lock)
-            client.addSendBuf(data[pos..^1])
-            release(client.lock)
-          else:
-            acquire(client.lock)
-            client.addSendBuf(data)
-            release(client.lock)
+          acquire(client.lock)
+          client.addSendBuf(cast[ptr UncheckedArray[byte]](unsafeAddr data[pos]), data.len - pos)
+          release(client.lock)
           if client.invokeSendEvent():
             return SendResult.Pending
           else:
