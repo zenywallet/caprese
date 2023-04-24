@@ -2370,9 +2370,13 @@ template serverLib() {.dirty.} =
       elif sendRet < 0:
         if errno == EAGAIN or errno == EWOULDBLOCK:
           if pos > 0:
+            acquire(client.lock)
             client.addSendBuf(data[pos..^1])
+            release(client.lock)
           else:
+            acquire(client.lock)
             client.addSendBuf(data)
+            release(client.lock)
           if client.invokeSendEvent():
             return SendResult.Pending
           else:
