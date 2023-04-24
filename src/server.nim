@@ -2386,8 +2386,8 @@ template serverLib() {.dirty.} =
       else:
         return SendResult.None
 
-  proc wsSend*(client: Client, data: seq[byte] | string | Array[byte],
-              opcode: WebSocketOpCode = WebSocketOpCode.Binary): SendResult =
+  proc wsServerSend*(client: Client, data: seq[byte] | string | Array[byte],
+                    opcode: WebSocketOpCode = WebSocketOpCode.Binary): SendResult =
     var frame: seq[byte]
     var dataLen = data.len
     var finOp = 0x80.byte or opcode.byte
@@ -2403,7 +2403,7 @@ template serverLib() {.dirty.} =
 
   template wsSend(data: seq[byte] | string | Array[byte],
                   opcode: WebSocketOpCode = WebSocketOpCode.Binary): SendResult {.dirty.} =
-    client.wsSend(data, opcode)
+    client.wsServerSend(data, opcode)
 
   template headerUrl(): string {.dirty.} = ctx.header.url
 
@@ -2766,7 +2766,7 @@ template serverLib() {.dirty.} =
       of WebSocketOpcode.Binary, WebSocketOpcode.Text, WebSocketOpcode.Continue:
         messageBody
       of WebSocketOpcode.Ping:
-        return client.wsSend(data.toString(size), WebSocketOpcode.Pong)
+        return client.wsServerSend(data.toString(size), WebSocketOpcode.Pong)
       of WebSocketOpcode.Pong:
         debug "pong ", data.toString(size)
         return SendResult.Success
