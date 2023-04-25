@@ -2388,6 +2388,36 @@ template serverLib() {.dirty.} =
       else:
         return SendResult.None
 
+  proc sendFlush(client: Client): SendResult =
+    if client.sendCurSize == 0:
+      return SendResult.None
+
+    var pos = 0
+    var size = client.sendCurSize
+    while true:
+      var d = cast[cstring](addr client.sendBuf[pos])
+      let sendRet = client.sock.send(d, size.cint, 0'i32)
+      if sendRet > 0:
+        debug "flush sendRet=", sendRet, " size=", size
+        size = size - sendRet
+        if size > 0:
+          pos = pos + sendRet
+          continue
+        client.sendCurSize = 0
+        deallocShared(cast[pointer](client.sendBuf))
+        client.sendBuf = nil
+        return SendResult.Success
+      elif sendRet < 0:
+        if errno == EAGAIN or errno == EWOULDBLOCK:
+          copyMem(addr client.sendBuf[0], d, size)
+          client.sendCurSize = size
+          return SendResult.Pending
+        if errno == EINTR:
+          continue
+        return SendResult.Error
+      else:
+        return SendResult.None
+
   proc wsServerSend*(client: Client, data: seq[byte] | string | Array[byte],
                     opcode: WebSocketOpCode = WebSocketOpCode.Binary): SendResult =
     var frame: seq[byte]
@@ -2580,6 +2610,31 @@ template serverLib() {.dirty.} =
       client.dirty = true
       release(client.spinLock)
       return
+
+    while true:
+      client.dirty = false
+      let retFlush = client.sendFlush()
+      if retFlush == SendResult.Pending:
+        acquire(client.spinLock)
+        if not client.dirty:
+          client.threadId = 0
+          release(client.spinLock)
+          return
+        else:
+          release(client.spinLock)
+      elif retFlush == SendResult.Error:
+        client.close()
+        acquire(client.spinLock)
+        client.threadId = 0
+        release(client.spinLock)
+        return
+      else:
+        acquire(client.spinLock)
+        if not client.dirty:
+          release(client.spinLock)
+          break
+        else:
+          release(client.spinLock)
 
     let clientId = client.clientId
 
