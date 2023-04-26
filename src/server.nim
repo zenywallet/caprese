@@ -616,7 +616,7 @@ template serverTagLib*() {.dirty.} =
       client.appShift = true
     release(client.spinLock)
     var ev: EpollEvent
-    ev.events = EPOLLIN or EPOLLRDHUP or EPOLLET or EPOLLOUT
+    ev.events = EPOLLRDHUP or EPOLLET or EPOLLOUT
     ev.data = cast[EpollData](client)
     var retCtl = epoll_ctl(epfd, EPOLL_CTL_MOD, cast[cint](client.sock), addr ev)
     if retCtl != 0:
