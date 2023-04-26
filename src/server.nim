@@ -364,6 +364,7 @@ template serverTagLib*() {.dirty.} =
   import bytes
   import hashtable
   import nativesockets, posix, epoll
+  import logs
 
   type
     Tag* = Array[byte]
@@ -634,6 +635,110 @@ template serverTagLib*() {.dirty.} =
     else:
       clientId.delTasks()
       result = SendResult.Error
+
+  proc addSendBuf*(client: Client, data: seq[byte] | string | Array[byte]) =
+    let nextSize = client.sendCurSize + data.len
+    client.sendBuf = reallocClientBuf(client.sendBuf, nextSize)
+    copyMem(addr client.sendBuf[client.sendCurSize], unsafeAddr data[0], data.len)
+    client.sendCurSize = nextSize
+
+  proc addSendBuf*(client: Client, data: ptr UncheckedArray[byte], size: int) =
+    let nextSize = client.sendCurSize + size
+    client.sendBuf = reallocClientBuf(client.sendBuf, nextSize)
+    copyMem(addr client.sendBuf[client.sendCurSize], addr data[0], size)
+    client.sendCurSize = nextSize
+
+  proc reserveRecvBuf(client: Client, size: int) =
+    if client.recvBuf.isNil:
+      client.recvBuf = cast[ptr UncheckedArray[byte]](allocShared0(sizeof(byte) * (size + workerRecvBufSize)))
+      client.recvBufSize = size + workerRecvBufSize
+    var left = client.recvBufSize - client.recvCurSize
+    if size > left:
+      var nextSize = client.recvCurSize + size + workerRecvBufSize
+      if nextSize > cfg.recvBufExpandBreakSize:
+        raise newException(ServerError, "client request too large")
+      client.recvBuf = reallocClientBuf(client.recvBuf, nextSize)
+      client.recvBufSize = nextSize
+
+  proc addRecvBuf(client: Client, data: ptr UncheckedArray[byte], size: int) =
+    client.reserveRecvBuf(size)
+    copyMem(addr client.recvBuf[client.recvCurSize], addr data[0], size)
+    client.recvCurSize = client.recvCurSize + size
+
+  proc send(client: Client, data: seq[byte] | string | Array[byte]): SendResult =
+    var pos = 0
+    var size = data.len
+    while true:
+      let sendRet = client.sock.send(cast[cstring](unsafeAddr data[pos]), cast[cint](size), 0'i32)
+      if sendRet == size:
+        return SendResult.Success
+      elif sendRet > 0:
+        size = size - sendRet
+        pos = pos + sendRet
+        continue
+      elif sendRet < 0:
+        if errno == EAGAIN or errno == EWOULDBLOCK:
+          acquire(client.lock)
+          client.addSendBuf(cast[ptr UncheckedArray[byte]](unsafeAddr data[pos]), data.len - pos)
+          release(client.lock)
+          if client.invokeSendEvent():
+            return SendResult.Pending
+          else:
+            return SendResult.Error
+        elif errno == EINTR:
+          continue
+        return SendResult.Error
+      else:
+        return SendResult.None
+
+  proc sendFlush(client: Client): SendResult =
+    if client.sendCurSize == 0:
+      return SendResult.None
+
+    var pos = 0
+    var size = client.sendCurSize
+    while true:
+      var d = cast[cstring](addr client.sendBuf[pos])
+      let sendRet = client.sock.send(d, size.cint, 0'i32)
+      if sendRet > 0:
+        debug "flush sendRet=", sendRet, " size=", size
+        size = size - sendRet
+        if size > 0:
+          pos = pos + sendRet
+          continue
+        client.sendCurSize = 0
+        deallocShared(cast[pointer](client.sendBuf))
+        client.sendBuf = nil
+        return SendResult.Success
+      elif sendRet < 0:
+        if errno == EAGAIN or errno == EWOULDBLOCK:
+          copyMem(addr client.sendBuf[0], d, size)
+          client.sendCurSize = size
+          return SendResult.Pending
+        if errno == EINTR:
+          continue
+        return SendResult.Error
+      else:
+        return SendResult.None
+
+  proc wsServerSend*(client: Client, data: seq[byte] | string | Array[byte],
+                    opcode: WebSocketOpCode = WebSocketOpCode.Binary): SendResult =
+    var frame: seq[byte]
+    var dataLen = data.len
+    var finOp = 0x80.byte or opcode.byte
+    if dataLen < 126:
+      frame = BytesBE(finOp, dataLen.byte, data)
+    elif dataLen <= 0xffff:
+      frame = BytesBE(finOp, 126.byte, dataLen.uint16, data)
+    else:
+      frame = BytesBE(finOp, 127.byte, dataLen.uint64, data)
+    result = client.send(frame)
+
+  template send(data: seq[byte] | string | Array[byte]): SendResult {.dirty.} = ctx.client.send(data)
+
+  template wsSend(data: seq[byte] | string | Array[byte],
+                  opcode: WebSocketOpCode = WebSocketOpCode.Binary): SendResult {.dirty.} =
+    client.wsServerSend(data, opcode)
 
 #[
 when not declared(invokeSendMain):
@@ -2332,110 +2437,6 @@ template serverLib() {.dirty.} =
       return (true, fin, opcode, payload, payloadLen, cast[ptr UncheckedArray[byte]](addr data[frameSize]), size - frameSize)
     else:
       return (true, fin, opcode, payload, payloadLen, nil, 0)
-
-  proc addSendBuf*(client: Client, data: seq[byte] | string | Array[byte]) =
-    let nextSize = client.sendCurSize + data.len
-    client.sendBuf = reallocClientBuf(client.sendBuf, nextSize)
-    copyMem(addr client.sendBuf[client.sendCurSize], unsafeAddr data[0], data.len)
-    client.sendCurSize = nextSize
-
-  proc addSendBuf*(client: Client, data: ptr UncheckedArray[byte], size: int) =
-    let nextSize = client.sendCurSize + size
-    client.sendBuf = reallocClientBuf(client.sendBuf, nextSize)
-    copyMem(addr client.sendBuf[client.sendCurSize], addr data[0], size)
-    client.sendCurSize = nextSize
-
-  proc reserveRecvBuf(client: Client, size: int) =
-    if client.recvBuf.isNil:
-      client.recvBuf = cast[ptr UncheckedArray[byte]](allocShared0(sizeof(byte) * (size + workerRecvBufSize)))
-      client.recvBufSize = size + workerRecvBufSize
-    var left = client.recvBufSize - client.recvCurSize
-    if size > left:
-      var nextSize = client.recvCurSize + size + workerRecvBufSize
-      if nextSize > cfg.recvBufExpandBreakSize:
-        raise newException(ServerError, "client request too large")
-      client.recvBuf = reallocClientBuf(client.recvBuf, nextSize)
-      client.recvBufSize = nextSize
-
-  proc addRecvBuf(client: Client, data: ptr UncheckedArray[byte], size: int) =
-    client.reserveRecvBuf(size)
-    copyMem(addr client.recvBuf[client.recvCurSize], addr data[0], size)
-    client.recvCurSize = client.recvCurSize + size
-
-  proc send(client: Client, data: seq[byte] | string | Array[byte]): SendResult =
-    var pos = 0
-    var size = data.len
-    while true:
-      let sendRet = client.sock.send(cast[cstring](unsafeAddr data[pos]), cast[cint](size), 0'i32)
-      if sendRet == size:
-        return SendResult.Success
-      elif sendRet > 0:
-        size = size - sendRet
-        pos = pos + sendRet
-        continue
-      elif sendRet < 0:
-        if errno == EAGAIN or errno == EWOULDBLOCK:
-          acquire(client.lock)
-          client.addSendBuf(cast[ptr UncheckedArray[byte]](unsafeAddr data[pos]), data.len - pos)
-          release(client.lock)
-          if client.invokeSendEvent():
-            return SendResult.Pending
-          else:
-            return SendResult.Error
-        elif errno == EINTR:
-          continue
-        return SendResult.Error
-      else:
-        return SendResult.None
-
-  proc sendFlush(client: Client): SendResult =
-    if client.sendCurSize == 0:
-      return SendResult.None
-
-    var pos = 0
-    var size = client.sendCurSize
-    while true:
-      var d = cast[cstring](addr client.sendBuf[pos])
-      let sendRet = client.sock.send(d, size.cint, 0'i32)
-      if sendRet > 0:
-        debug "flush sendRet=", sendRet, " size=", size
-        size = size - sendRet
-        if size > 0:
-          pos = pos + sendRet
-          continue
-        client.sendCurSize = 0
-        deallocShared(cast[pointer](client.sendBuf))
-        client.sendBuf = nil
-        return SendResult.Success
-      elif sendRet < 0:
-        if errno == EAGAIN or errno == EWOULDBLOCK:
-          copyMem(addr client.sendBuf[0], d, size)
-          client.sendCurSize = size
-          return SendResult.Pending
-        if errno == EINTR:
-          continue
-        return SendResult.Error
-      else:
-        return SendResult.None
-
-  proc wsServerSend*(client: Client, data: seq[byte] | string | Array[byte],
-                    opcode: WebSocketOpCode = WebSocketOpCode.Binary): SendResult =
-    var frame: seq[byte]
-    var dataLen = data.len
-    var finOp = 0x80.byte or opcode.byte
-    if dataLen < 126:
-      frame = BytesBE(finOp, dataLen.byte, data)
-    elif dataLen <= 0xffff:
-      frame = BytesBE(finOp, 126.byte, dataLen.uint16, data)
-    else:
-      frame = BytesBE(finOp, 127.byte, dataLen.uint64, data)
-    result = client.send(frame)
-
-  template send(data: seq[byte] | string | Array[byte]): SendResult {.dirty.} = ctx.client.send(data)
-
-  template wsSend(data: seq[byte] | string | Array[byte],
-                  opcode: WebSocketOpCode = WebSocketOpCode.Binary): SendResult {.dirty.} =
-    client.wsServerSend(data, opcode)
 
   template headerUrl(): string {.dirty.} = ctx.header.url
 
