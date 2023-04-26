@@ -3003,7 +3003,7 @@ template serverLib() {.dirty.} =
 
   macro appStreamSendMacro(body: untyped): untyped =
     quote do:
-      clientHandlerProcs.add appStreamSend
+      clientHandlerProcs.add appRoutesSend # appStreamSend is same
 
   proc addHandlerProc(name: string, body: NimNode): NimNode {.compileTime.} =
     newCall(name & "Macro", body)
