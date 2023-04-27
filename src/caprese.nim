@@ -107,6 +107,8 @@ macro worker*(num: int, body: untyped): untyped =
       for i in 0..<`num`:
         createThread(workerThreads[i], workerProc)
 
+template worker*(body: untyped) = worker(1, body)
+
 proc newPending*[T](limit: int): Queue[tuple[cid: ClientId, data: T]] {.inline.} =
   newQueue[tuple[cid: ClientId, data: T]](limit)
 
