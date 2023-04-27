@@ -4,7 +4,6 @@ when not compileOption("threads"):
   {.error: "requires --threads:on option.".}
 
 import nativesockets
-import posix
 import server as serverlib
 import contents
 import statuscode
@@ -12,7 +11,6 @@ import queue
 import macros
 import rlimit
 export nativesockets
-export posix
 export serverlib
 export contents
 export statuscode
