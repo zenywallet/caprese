@@ -738,7 +738,10 @@ template serverTagLib*() {.dirty.} =
                     opcode: WebSocketOpCode = WebSocketOpCode.Binary): SendResult =
     var frame: seq[byte]
     var dataLen = data.len
-    var data = data.toSeq
+    when data is Array:
+      var data = data.toSeq
+    else:
+      var data = data.toBytes
     var finOp = 0x80.byte or opcode.byte
     if dataLen < 126:
       frame = BytesBE(finOp, dataLen.byte, data)
