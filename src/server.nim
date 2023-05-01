@@ -2109,7 +2109,7 @@ var serverWorkerMainStmt {.compileTime.} =
       )
     )
   )
-var serverHandlerList* {.compileTime.} = @[("appDummy", newStmtList())]
+var serverHandlerList* {.compileTime.} = @[("appDummy", ident("false"), newStmtList())]
 var freePoolServerUsedCount* {.compileTime.} = 0
 var sockTmp = createNativeSocket()
 var workerRecvBufSize*: int = sockTmp.getSockOptInt(SOL_SOCKET, SO_RCVBUF)
@@ -2138,15 +2138,15 @@ macro getAppId*(): int =
   inc(curAppId)
   newLit(curAppId)
 
-macro addServerMacro*(bindAddress: string, port: uint16, body: untyped = newEmptyNode()): untyped =
+macro addServerMacro*(bindAddress: string, port: uint16, ssl: bool, body: untyped = newEmptyNode()): untyped =
   inc(curAppId)
   var appId = curAppId
-  serverHandlerList.add(("appListen", newStmtList()))
+  serverHandlerList.add(("appListen", ssl, newStmtList()))
   inc(curAppId) # reserved
   var appRoutes = curAppId
-  serverHandlerList.add(("appRoutes", newStmtList()))
+  serverHandlerList.add(("appRoutes", ssl, newStmtList()))
   inc(curAppId)
-  serverHandlerList.add(("appRoutesSend", newStmtList()))
+  serverHandlerList.add(("appRoutesSend", ssl, newStmtList()))
   for s in body:
     if eqIdent(s[0], "routes"):
       var routesBody = newStmtList()
@@ -2164,12 +2164,12 @@ macro addServerMacro*(bindAddress: string, port: uint16, body: untyped = newEmpt
               newIdentNode("protocol"),
               newLit("")
             ))
-          serverHandlerList.add(("appStream", s2[s2.len - 1]))
+          serverHandlerList.add(("appStream", ssl, s2[s2.len - 1]))
           inc(curAppId)
-          serverHandlerList.add(("appStreamSend", newStmtList()))
+          serverHandlerList.add(("appStreamSend", ssl, newStmtList()))
         routesBody.add(s2)
 
-      serverHandlerList[appRoutes][1] = routesBody
+      serverHandlerList[appRoutes][2] = routesBody
     else:
       serverWorkerInitStmt.add(s)
 
@@ -2200,9 +2200,9 @@ macro addServerMacro*(bindAddress: string, port: uint16, body: untyped = newEmpt
     if retCtl != 0:
       errorQuit "error: addServer epoll_ctl ret=", retCtl, " ", getErrnoStr()
 
-template addServer*(bindAddress: string, port: uint16, body: untyped = newEmptyNode()) {.dirty.} =
+template addServer*(bindAddress: string, port: uint16, ssl: bool, body: untyped) {.dirty.} =
   initServer()
-  addServerMacro(bindAddress, port, body)
+  addServerMacro(bindAddress, port, ssl, body)
 
 macro serverWorkerInit*(): untyped = serverWorkerInitStmt
 
@@ -2700,11 +2700,11 @@ template serverLib() {.dirty.} =
 
   var clientHandlerProcs: Array[ClientHandlerProc]
 
-  macro appDummyMacro(body: untyped): untyped =
+  macro appDummyMacro(ssl: bool, body: untyped): untyped =
     quote do:
       clientHandlerProcs.add appDummy
 
-  macro appListenMacro(body: untyped): untyped =
+  macro appListenMacro(ssl: bool, body: untyped): untyped =
     quote do:
       clientHandlerProcs.add appListen
 
@@ -2714,7 +2714,7 @@ template serverLib() {.dirty.} =
       header: ReqHeader): SendResult {.inline.} =
       body
 
-  macro appRoutesMacro(body: untyped): untyped =
+  macro appRoutesMacro(ssl: bool, body: untyped): untyped =
     quote do:
       clientHandlerProcs.add proc (ctx: WorkerThreadCtx) {.thread.} =
         let client = ctx.client
@@ -2829,7 +2829,7 @@ template serverLib() {.dirty.} =
               client.close()
             break
 
-  macro appRoutesSendMacro(body: untyped): untyped =
+  macro appRoutesSendMacro(ssl: bool, body: untyped): untyped =
     quote do:
       clientHandlerProcs.add appRoutesSend
 
@@ -2857,7 +2857,7 @@ template serverLib() {.dirty.} =
   template onMessage(body: untyped) = discard
   template onClose(body: untyped) = discard
 
-  macro appStreamMacro(body: untyped): untyped =
+  macro appStreamMacro(ssl: bool, body: untyped): untyped =
     var onOpenStmt = newStmtList()
     var onMessageStmt = newStmtList()
     var onCloseStmt = newStmtList()
@@ -3023,17 +3023,17 @@ template serverLib() {.dirty.} =
         client.threadId = 0
         release(client.spinLock)
 
-  macro appStreamSendMacro(body: untyped): untyped =
+  macro appStreamSendMacro(ssl: bool, body: untyped): untyped =
     quote do:
       clientHandlerProcs.add appRoutesSend # appStreamSend is same
 
-  proc addHandlerProc(name: string, body: NimNode): NimNode {.compileTime.} =
-    newCall(name & "Macro", body)
+  proc addHandlerProc(name: string, ssl: NimNode, body: NimNode): NimNode {.compileTime.} =
+    newCall(name & "Macro", ssl, body)
 
   macro serverHandlerMacro(): untyped =
     result = newStmtList()
     for s in serverHandlerList:
-      result.add(addHandlerProc(s[0], s[1]))
+      result.add(addHandlerProc(s[0], s[1], s[2]))
 
   serverHandlerMacro()
 
