@@ -84,12 +84,19 @@ macro init(): untyped =
         serverlib.abort()
         `onSigTermQuitBody`
 
-macro server*(bindAddress: string, port: uint16, ssl: bool, body: untyped): untyped =
+macro server*(ssl: bool, bindAddress: string, port: uint16, body: untyped): untyped =
   quote do:
     init()
     echo "bind address: ", `bindAddress`
     echo "port: ", `port`
     addServer(`bindAddress`, `port`, `ssl`, `body`)
+
+macro server*(bindAddress: string, port: uint16, body: untyped): untyped =
+  quote do:
+    init()
+    echo "bind address: ", `bindAddress`
+    echo "port: ", `port`
+    addServer(`bindAddress`, `port`, false, `body`)
 
 macro worker*(num: int, body: untyped): untyped =
   var workerRootBlockBody = nnkStmtList.newTree(
@@ -221,7 +228,7 @@ when isMainModule:
       let clientId = req.cid
       clientId.send(fmt(TestHtml).addHeader())
 
-  server(bindAddress = "0.0.0.0", port = 8009, ssl = false):
+  server(bindAddress = "0.0.0.0", port = 8009):
     routes:
       # client: Client
       # url: string
