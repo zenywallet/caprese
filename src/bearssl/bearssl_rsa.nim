@@ -473,40 +473,81 @@ type
                         hf_mgf1: ptr br_hash_class; hash_value: ptr uint8;
                         salt_len: csize_t; sk: ptr br_rsa_private_key; x: ptr uint8): uint32_t
 
-## *
-##  \brief Encoded OID for SHA-1 (in RSA PKCS#1 signatures).
-##
+when not compileOption("gc", "arc") and not compileOption("gc", "orc"):
+  ## *
+  ##  \brief Encoded OID for SHA-1 (in RSA PKCS#1 signatures).
+  ##
 
-const
-  BR_HASH_OID_SHA1* = (cast[ptr uint8]("\x05+\x0E\x03\x02\x1A"))
+  const
+    BR_HASH_OID_SHA1* = (cast[ptr uint8]("\x05+\x0E\x03\x02\x1A"))
 
-## *
-##  \brief Encoded OID for SHA-224 (in RSA PKCS#1 signatures).
-##
+  ## *
+  ##  \brief Encoded OID for SHA-224 (in RSA PKCS#1 signatures).
+  ##
 
-const
-  BR_HASH_OID_SHA224* = (cast[ptr uint8]("\t`†H\x01e\x03\x04\x02\x04"))
+  const
+    BR_HASH_OID_SHA224* = (cast[ptr uint8]("\t`†H\x01e\x03\x04\x02\x04"))
 
-## *
-##  \brief Encoded OID for SHA-256 (in RSA PKCS#1 signatures).
-##
+  ## *
+  ##  \brief Encoded OID for SHA-256 (in RSA PKCS#1 signatures).
+  ##
 
-const
-  BR_HASH_OID_SHA256* = (cast[ptr uint8]("\t`†H\x01e\x03\x04\x02\x01"))
+  const
+    BR_HASH_OID_SHA256* = (cast[ptr uint8]("\t`†H\x01e\x03\x04\x02\x01"))
 
-## *
-##  \brief Encoded OID for SHA-384 (in RSA PKCS#1 signatures).
-##
+  ## *
+  ##  \brief Encoded OID for SHA-384 (in RSA PKCS#1 signatures).
+  ##
 
-const
-  BR_HASH_OID_SHA384* = (cast[ptr uint8]("\t`†H\x01e\x03\x04\x02\x02"))
+  const
+    BR_HASH_OID_SHA384* = (cast[ptr uint8]("\t`†H\x01e\x03\x04\x02\x02"))
 
-## *
-##  \brief Encoded OID for SHA-512 (in RSA PKCS#1 signatures).
-##
+  ## *
+  ##  \brief Encoded OID for SHA-512 (in RSA PKCS#1 signatures).
+  ##
 
-const
-  BR_HASH_OID_SHA512* = (cast[ptr uint8]("\t`†H\x01e\x03\x04\x02\x03"))
+  const
+    BR_HASH_OID_SHA512* = (cast[ptr uint8]("\t`†H\x01e\x03\x04\x02\x03"))
+else:
+  ## *
+  ##  \brief Encoded OID for SHA-1 (in RSA PKCS#1 signatures).
+  ##
+
+  let
+    BR_HASH_OID_SHA1_S = "\x05+\x0E\x03\x02\x1A"
+    BR_HASH_OID_SHA1* = (cast[ptr uint8](unsafeAddr BR_HASH_OID_SHA1_S[0]))
+
+  ## *
+  ##  \brief Encoded OID for SHA-224 (in RSA PKCS#1 signatures).
+  ##
+
+  let
+    BR_HASH_OID_SHA224_S = "\t`†H\x01e\x03\x04\x02\x04"
+    BR_HASH_OID_SHA224* = (cast[ptr uint8](unsafeAddr BR_HASH_OID_SHA224_S[0]))
+
+  ## *
+  ##  \brief Encoded OID for SHA-256 (in RSA PKCS#1 signatures).
+  ##
+
+  let
+    BR_HASH_OID_SHA256_S = "\t`†H\x01e\x03\x04\x02\x01"
+    BR_HASH_OID_SHA256* = (cast[ptr uint8](unsafeAddr BR_HASH_OID_SHA256_S[0]))
+
+  ## *
+  ##  \brief Encoded OID for SHA-384 (in RSA PKCS#1 signatures).
+  ##
+
+  let
+    BR_HASH_OID_SHA384_S = "\t`†H\x01e\x03\x04\x02\x02"
+    BR_HASH_OID_SHA384* = (cast[ptr uint8](unsafeAddr BR_HASH_OID_SHA384_S[0]))
+
+  ## *
+  ##  \brief Encoded OID for SHA-512 (in RSA PKCS#1 signatures).
+  ##
+
+  let
+    BR_HASH_OID_SHA512_S = "\t`†H\x01e\x03\x04\x02\x03"
+    BR_HASH_OID_SHA512* = (cast[ptr uint8](unsafeAddr BR_HASH_OID_SHA512_S[0]))
 
 ## *
 ##  \brief Type for a RSA decryption engine (OAEP).
