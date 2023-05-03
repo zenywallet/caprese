@@ -373,7 +373,7 @@ const
 ##  \brief Constant vtable for MD5.
 ##
 
-let br_md5_vtable* {.importc, nodecl.}: br_hash_class
+let br_md5_vtable* {.importc, nodecl.}: ptr br_hash_class
 
 ## *
 ##  \brief MD5 context.
@@ -472,7 +472,7 @@ const
 ##  \brief Constant vtable for SHA-1.
 ##
 
-let br_sha1_vtable* {.importc, nodecl.}: br_hash_class
+let br_sha1_vtable* {.importc, nodecl.}: ptr br_hash_class
 
 ## *
 ##  \brief SHA-1 context.
@@ -571,7 +571,7 @@ const
 ##  \brief Constant vtable for SHA-224.
 ##
 
-let br_sha224_vtable* {.importc, nodecl.}: br_hash_class
+let br_sha224_vtable* {.importc, nodecl.}: ptr br_hash_class
 
 ## *
 ##  \brief SHA-224 context.
@@ -670,7 +670,7 @@ const
 ##  \brief Constant vtable for SHA-256.
 ##
 
-let br_sha256_vtable* {.importc, nodecl.}: br_hash_class
+let br_sha256_vtable* {.importc, nodecl.}: ptr br_hash_class
 
 type
   br_sha256_context* = br_sha224_context
@@ -724,7 +724,7 @@ const
 ##  \brief Constant vtable for SHA-384.
 ##
 
-let br_sha384_vtable* {.importc, nodecl.}: br_hash_class
+let br_sha384_vtable* {.importc, nodecl.}: ptr br_hash_class
 
 ## *
 ##  \brief SHA-384 context.
@@ -823,7 +823,7 @@ const
 ##  \brief Constant vtable for SHA-512.
 ##
 
-let br_sha512_vtable* {.importc, nodecl.}: br_hash_class
+let br_sha512_vtable* {.importc, nodecl.}: ptr br_hash_class
 
 type
   br_sha512_context* = br_sha384_context
@@ -886,7 +886,7 @@ const
 ##  \brief Constant vtable for MD5+SHA-1.
 ##
 
-let br_md5sha1_vtable* {.importc, nodecl.}: br_hash_class
+let br_md5sha1_vtable* {.importc, nodecl.}: ptr br_hash_class
 
 ## *
 ##  \brief MD5+SHA-1 context.

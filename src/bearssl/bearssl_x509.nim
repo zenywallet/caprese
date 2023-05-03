@@ -539,7 +539,7 @@ type
 ##  \brief Class instance for the "known key" X.509 engine.
 ##
 
-let br_x509_knownkey_vtable* {.importc, nodecl.}: br_x509_class
+let br_x509_knownkey_vtable* {.importc, nodecl.}: ptr br_x509_class
 
 ## *
 ##  \brief Initialize a "known key" X.509 engine with a known RSA public key.
@@ -798,7 +798,7 @@ type
 ##  \brief Class instance for the "minimal" X.509 engine.
 ##
 
-let br_x509_minimal_vtable* {.importc, nodecl.}: br_x509_class
+let br_x509_minimal_vtable* {.importc, nodecl.}: ptr br_x509_class
 
 ## *
 ##  \brief Initialise a "minimal" X.509 engine.
