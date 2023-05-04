@@ -98,6 +98,12 @@ macro server*(bindAddress: string, port: uint16, body: untyped): untyped =
     echo "port: ", `port`
     addServer(`bindAddress`, `port`, false, `body`)
 
+template serverHttp*(bindAddress: string, port: uint16, body: untyped) =
+  server(false, bindAddress, port, body)
+
+template serverHttps*(bindAddress: string, port: uint16, body: untyped) =
+  server(true, bindAddress, port, body)
+
 macro worker*(num: int, body: untyped): untyped =
   var workerRootBlockBody = nnkStmtList.newTree(
     nnkBlockStmt.newTree(
