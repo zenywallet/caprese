@@ -20,6 +20,7 @@ type
     Invalid = 3
 
   SslLib* = enum
+    None
     BearSSL
     OpenSSL
     LibreSSL
