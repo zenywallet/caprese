@@ -195,6 +195,8 @@ template serverInit*() {.dirty.} =
     import bearssl/key_ec
 
   type
+    ClientSendProc = proc (client: Client, data: ptr UncheckedArray[byte], size: int): SendResult {.thread.}
+
     ClientBase* = ref object of RootObj
       idx: int
       fd: int
@@ -216,6 +218,7 @@ template serverInit*() {.dirty.} =
       lock: Lock
       spinLock: SpinLock
       whackaMole: bool
+      sendProc: ClientSendProc
 
     ClientObj* = object of ClientBase
       pStream*: pointer
