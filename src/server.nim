@@ -187,6 +187,13 @@ template serverInit*() {.dirty.} =
   import locks
   import ptlock
 
+  when cfg.sslLib == BearSSL:
+    import bearssl/bearssl_ssl
+    import bearssl/bearssl_x509
+    import bearssl/bearssl_ec
+    import bearssl/chain_ec
+    import bearssl/key_ec
+
   type
     ClientBase* = ref object of RootObj
       idx: int
@@ -202,6 +209,8 @@ template serverInit*() {.dirty.} =
       when cfg.ssl:
         ssl: SSL
         sslErr: int
+      when cfg.sslLib == BearSSL:
+        sc: ptr br_ssl_server_context
       ip: uint32
       invoke: bool
       lock: Lock
