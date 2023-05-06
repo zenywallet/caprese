@@ -678,11 +678,12 @@ template serverTagLib*() {.dirty.} =
     copyMem(addr client.recvBuf[client.recvCurSize], addr data[0], size)
     client.recvCurSize = client.recvCurSize + size
 
-  proc send(client: Client, data: seq[byte] | string | Array[byte]): SendResult =
+  proc sendNativeProc(client: Client, data: ptr UncheckedArray[byte], size: int): SendResult {.thread.} =
+    echo "sendProc"
     var pos = 0
-    var size = data.len
+    var size = size
     while true:
-      let sendRet = client.sock.send(cast[cstring](unsafeAddr data[pos]), cast[cint](size), 0'i32)
+      let sendRet = client.sock.send(cast[cstring](addr data[pos]), cast[cint](size), 0'i32)
       if sendRet == size:
         return SendResult.Success
       elif sendRet > 0:
@@ -692,7 +693,7 @@ template serverTagLib*() {.dirty.} =
       elif sendRet < 0:
         if errno == EAGAIN or errno == EWOULDBLOCK:
           acquire(client.lock)
-          client.addSendBuf(cast[ptr UncheckedArray[byte]](unsafeAddr data[pos]), size)
+          client.addSendBuf(cast[ptr UncheckedArray[byte]](addr data[pos]), size)
           release(client.lock)
           if client.invokeSendEvent():
             return SendResult.Pending
@@ -703,6 +704,17 @@ template serverTagLib*() {.dirty.} =
         return SendResult.Error
       else:
         return SendResult.None
+
+  proc sendSslProc(client: Client, data: ptr UncheckedArray[byte], size: int): SendResult {.thread.} =
+    echo "sendSslProc"
+    when cfg.sslLib == BearSSL:
+      acquire(client.lock)
+      client.addSendBuf(cast[ptr UncheckedArray[byte]](addr data[0]), size)
+      release(client.lock)
+      return SendResult.Pending
+
+  proc send(client: Client, data: seq[byte] | string | Array[byte]): SendResult {.inline.} =
+    return client.sendProc(client, cast[ptr UncheckedArray[byte]](unsafeAddr data[0]), data.len)
 
   proc sendFlush(client: Client): SendResult =
     if client.sendCurSize == 0:
@@ -2517,6 +2529,7 @@ template serverLib() {.dirty.} =
         newClient = clientFreePool.pop()
       newClient.sock = clientSock
       newClient.appId = ctx.client.appId + 1
+      newClient.sendProc = sendNativeProc
       ctx.ev.data = cast[EpollData](newClient)
       let retCtl = epoll_ctl(epfd, EPOLL_CTL_ADD, cast[cint](clientSock), addr ctx.ev)
       if retCtl < 0:
