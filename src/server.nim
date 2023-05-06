@@ -2808,9 +2808,9 @@ template serverLib() {.dirty.} =
                           client.keepAlive = false
                           client.close()
                           break
-                        elif retHeader.next < client.recvCurSize:
+                        elif retHeader.next < parseSize:
                           nextPos = retHeader.next
-                          parseSize = client.recvCurSize - nextPos
+                          parseSize = parseSize - nextPos
                         else:
                           client.recvCurSize = 0
                           break
@@ -2818,10 +2818,11 @@ template serverLib() {.dirty.} =
                         client.close()
                         break
                     elif retMain == SendResult.Pending:
-                      if retHeader.next < client.recvCurSize:
+                      if retHeader.next < parseSize:
                         nextPos = retHeader.next
-                        parseSize = client.recvCurSize - nextPos
+                        parseSize = parseSize - nextPos
                       else:
+                        client.recvCurSize = 0
                         break
                     else:
                       client.close()
