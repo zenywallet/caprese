@@ -2514,7 +2514,7 @@ template serverLib() {.dirty.} =
 
   proc appDummy(ctx: WorkerThreadCtx) {.thread.} = discard
 
-  proc appListen(ctx: WorkerThreadCtx) {.thread.} =
+  proc appListenBase(ctx: WorkerThreadCtx, ssl: static bool) {.thread, inline.} =
     let clientSock = ctx.client.sock.accept4(cast[ptr SockAddr](addr ctx.sockAddress), addr ctx.addrLen, O_NONBLOCK)
     if cast[int](clientSock) > 0:
       when cfg.soKeepalive:
@@ -2534,6 +2534,10 @@ template serverLib() {.dirty.} =
       let retCtl = epoll_ctl(epfd, EPOLL_CTL_ADD, cast[cint](clientSock), addr ctx.ev)
       if retCtl < 0:
         errorQuit "error: epoll_ctl ret=", retCtl, " errno=", errno
+
+  proc appListen(ctx: WorkerThreadCtx) {.thread.} = appListenBase(ctx, false)
+
+  proc appListenSsl(ctx: WorkerThreadCtx) {.thread.} = appListenBase(ctx, true)
 
   proc appRoutes(ctx: WorkerThreadCtx) {.thread.} =
     let client = ctx.client
