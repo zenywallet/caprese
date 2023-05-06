@@ -692,7 +692,7 @@ template serverTagLib*() {.dirty.} =
       elif sendRet < 0:
         if errno == EAGAIN or errno == EWOULDBLOCK:
           acquire(client.lock)
-          client.addSendBuf(cast[ptr UncheckedArray[byte]](unsafeAddr data[pos]), data.len - pos)
+          client.addSendBuf(cast[ptr UncheckedArray[byte]](unsafeAddr data[pos]), size)
           release(client.lock)
           if client.invokeSendEvent():
             return SendResult.Pending
