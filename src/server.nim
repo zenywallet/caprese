@@ -2752,7 +2752,10 @@ template serverLib() {.dirty.} =
 
   macro appListenMacro(ssl: bool, body: untyped): untyped =
     quote do:
-      clientHandlerProcs.add appListen
+      when `ssl`:
+        clientHandlerProcs.add appListenSsl
+      else:
+        clientHandlerProcs.add appListen
 
   template routesMainTmpl(body: untyped) {.dirty.} =
     proc routesMain(ctx: WorkerThreadCtx, client: Client,
