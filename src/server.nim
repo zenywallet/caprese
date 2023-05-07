@@ -2529,7 +2529,23 @@ template serverLib() {.dirty.} =
         newClient = clientFreePool.pop()
       newClient.sock = clientSock
       newClient.appId = ctx.client.appId + 1
-      newClient.sendProc = sendNativeProc
+
+      when ssl and cfg.sslLib == BearSSL:
+        if newClient.sc.isNil:
+          newClient.sc = cast[ptr br_ssl_server_context](allocShared0(sizeof(br_ssl_server_context)))
+          br_ssl_server_init_minf2c(newClient.sc,
+            cast[ptr br_x509_certificate](unsafeAddr CHAIN[0]), CHAIN_LEN.csize_t,
+            cast[ptr br_ec_private_key](unsafeAddr EC))
+          let bidi = 1.cint
+          let iobufLen = BR_SSL_BUFSIZE_BIDI.csize_t
+          let iobuf = allocShared0(iobufLen)
+          br_ssl_engine_set_buffer(addr newClient.sc.eng, iobuf, iobufLen, bidi)
+          newClient.sendProc = sendSslProc
+        if br_ssl_server_reset(newClient.sc) == 0:
+          errorQuit "error: br_ssl_server_reset"
+      else:
+        newClient.sendProc = sendNativeProc
+
       ctx.ev.data = cast[EpollData](newClient)
       let retCtl = epoll_ctl(epfd, EPOLL_CTL_ADD, cast[cint](clientSock), addr ctx.ev)
       if retCtl < 0:
