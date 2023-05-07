@@ -2738,6 +2738,10 @@ template serverLib() {.dirty.} =
         client.threadId = 0
         release(client.spinLock)
 
+  proc appRoutesSendSsl(ctx: WorkerThreadCtx) {.thread.} =
+    echo "appRoutesSendSsl"
+    raise
+
   proc appStream(ctx: WorkerThreadCtx) {.thread.} =
     echo "appStream"
 
@@ -2881,7 +2885,10 @@ template serverLib() {.dirty.} =
 
   macro appRoutesSendMacro(ssl: bool, body: untyped): untyped =
     quote do:
-      clientHandlerProcs.add appRoutesSend
+      when `ssl`:
+        clientHandlerProcs.add appRoutesSendSsl
+      else:
+        clientHandlerProcs.add appRoutesSend
 
   template streamMainTmpl(body: untyped) {.dirty.} =
     proc streamMain(client: Client, opcode: WebSocketOpCode,
