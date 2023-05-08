@@ -2775,6 +2775,21 @@ template serverLib() {.dirty.} =
         SendApp
         RecvApp
 
+    template brStateDebug(sc: ptr br_ssl_server_context) =
+      var st = br_ssl_engine_current_state(addr sc.eng)
+      var s = "state:"
+      if (st and BR_SSL_CLOSED) > 0:
+        s.add " BR_SSL_CLOSED"
+      if (st and BR_SSL_SENDREC) > 0:
+        s.add " BR_SSL_SENDREC"
+      if (st and BR_SSL_RECVREC) > 0:
+        s.add " BR_SSL_RECVREC"
+      if (st and BR_SSL_SENDAPP) > 0:
+        s.add " BR_SSL_SENDAPP"
+      if (st and BR_SSL_RECVAPP) > 0:
+        s.add " BR_SSL_RECVAPP"
+      echo s
+
   macro appRoutesMacro(ssl: bool, body: untyped): untyped =
     quote do:
       clientHandlerProcs.add proc (ctx: WorkerThreadCtx) {.thread.} =
