@@ -2767,6 +2767,14 @@ template serverLib() {.dirty.} =
       header: ReqHeader): SendResult {.inline.} =
       body
 
+  when cfg.sslLib == BearSSL:
+    type
+      BrEngineState = enum
+        SendRec
+        RecvRec
+        SendApp
+        RecvApp
+
   macro appRoutesMacro(ssl: bool, body: untyped): untyped =
     quote do:
       clientHandlerProcs.add proc (ctx: WorkerThreadCtx) {.thread.} =
