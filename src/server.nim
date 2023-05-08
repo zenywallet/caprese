@@ -2770,85 +2770,99 @@ template serverLib() {.dirty.} =
   macro appRoutesMacro(ssl: bool, body: untyped): untyped =
     quote do:
       clientHandlerProcs.add proc (ctx: WorkerThreadCtx) {.thread.} =
-        let client = ctx.client
-        let sock = client.sock
-
-        routesMainTmpl(`body`)
-
-        if client.recvCurSize == 0:
-          while true:
-            let recvlen = sock.recv(ctx.pRecvBuf0, workerRecvBufSize, 0.cint)
-            if recvlen > 0:
-              if recvlen >= 17 and equalMem(addr ctx.pRecvBuf0[recvlen - 4], "\c\L\c\L".cstring, 4):
-                var nextPos = 0
-                var parseSize = recvlen
-                while true:
-                  ctx.pRecvBuf = cast[ptr UncheckedArray[byte]](addr ctx.recvBuf[nextPos])
-                  let retHeader = parseHeader(ctx.pRecvBuf, parseSize, ctx.targetHeaders)
-                  if retHeader.err == 0:
-                    ctx.header = retHeader.header
-                    let retMain = routesMain(ctx, client, ctx.pRecvBuf, ctx.header)
-                    if retMain == SendResult.Success:
-                      if ctx.header.minorVer == 0 or getHeaderValue(ctx.pRecvBuf, ctx.header,
-                        InternalEssentialHeaderConnection) == "close":
-                        client.close()
-                        break
-                      elif retHeader.next < recvlen:
-                        nextPos = retHeader.next
-                        parseSize = recvlen - nextPos
-                      else:
-                        break
-                    elif retMain == SendResult.Pending:
-                      if retHeader.next < recvlen:
-                        nextPos = retHeader.next
-                        parseSize = recvlen - nextPos
-                      else:
-                        break
-                    else:
-                      client.close()
-                      break
-                  else:
-                    echo "retHeader err=", retHeader.err
-                    client.close()
-                    break
-
-              else:
-                client.addRecvBuf(ctx.pRecvBuf0, recvlen)
-
-            elif recvlen == 0:
-              client.close()
-
-            else:
-              if errno == EAGAIN or errno == EWOULDBLOCK:
-                break
-              elif errno == EINTR:
-                continue
-              client.close()
-            break
+        when `ssl`:
+          echo "appRoutesSsl"
 
         else:
-          while true:
-            client.reserveRecvBuf(workerRecvBufSize)
-            let recvlen = sock.recv(addr client.recvBuf[client.recvCurSize], workerRecvBufSize, 0.cint)
-            if recvlen > 0:
-              client.recvCurSize = client.recvCurSize + recvlen
-              if client.recvCurSize >= 17 and equalMem(addr client.recvBuf[client.recvCurSize - 4], "\c\L\c\L".cstring, 4):
-                var nextPos = 0
-                var parseSize = client.recvCurSize
-                while true:
-                  ctx.pRecvBuf = cast[ptr UncheckedArray[byte]](addr client.recvBuf[nextPos])
-                  let retHeader = parseHeader(ctx.pRecvBuf, parseSize, ctx.targetHeaders)
-                  if retHeader.err == 0:
-                    ctx.header = retHeader.header
-                    let retMain = routesMain(ctx, client, ctx.pRecvBuf, ctx.header)
-                    if retMain == SendResult.Success:
-                      if client.keepAlive == true:
+          let client = ctx.client
+          let sock = client.sock
+
+          routesMainTmpl(`body`)
+
+          if client.recvCurSize == 0:
+            while true:
+              let recvlen = sock.recv(ctx.pRecvBuf0, workerRecvBufSize, 0.cint)
+              if recvlen > 0:
+                if recvlen >= 17 and equalMem(addr ctx.pRecvBuf0[recvlen - 4], "\c\L\c\L".cstring, 4):
+                  var nextPos = 0
+                  var parseSize = recvlen
+                  while true:
+                    ctx.pRecvBuf = cast[ptr UncheckedArray[byte]](addr ctx.recvBuf[nextPos])
+                    let retHeader = parseHeader(ctx.pRecvBuf, parseSize, ctx.targetHeaders)
+                    if retHeader.err == 0:
+                      ctx.header = retHeader.header
+                      let retMain = routesMain(ctx, client, ctx.pRecvBuf, ctx.header)
+                      if retMain == SendResult.Success:
                         if ctx.header.minorVer == 0 or getHeaderValue(ctx.pRecvBuf, ctx.header,
                           InternalEssentialHeaderConnection) == "close":
-                          client.keepAlive = false
                           client.close()
                           break
-                        elif retHeader.next < parseSize:
+                        elif retHeader.next < recvlen:
+                          nextPos = retHeader.next
+                          parseSize = recvlen - nextPos
+                        else:
+                          break
+                      elif retMain == SendResult.Pending:
+                        if retHeader.next < recvlen:
+                          nextPos = retHeader.next
+                          parseSize = recvlen - nextPos
+                        else:
+                          break
+                      else:
+                        client.close()
+                        break
+                    else:
+                      echo "retHeader err=", retHeader.err
+                      client.close()
+                      break
+
+                else:
+                  client.addRecvBuf(ctx.pRecvBuf0, recvlen)
+
+              elif recvlen == 0:
+                client.close()
+
+              else:
+                if errno == EAGAIN or errno == EWOULDBLOCK:
+                  break
+                elif errno == EINTR:
+                  continue
+                client.close()
+              break
+
+          else:
+            while true:
+              client.reserveRecvBuf(workerRecvBufSize)
+              let recvlen = sock.recv(addr client.recvBuf[client.recvCurSize], workerRecvBufSize, 0.cint)
+              if recvlen > 0:
+                client.recvCurSize = client.recvCurSize + recvlen
+                if client.recvCurSize >= 17 and equalMem(addr client.recvBuf[client.recvCurSize - 4], "\c\L\c\L".cstring, 4):
+                  var nextPos = 0
+                  var parseSize = client.recvCurSize
+                  while true:
+                    ctx.pRecvBuf = cast[ptr UncheckedArray[byte]](addr client.recvBuf[nextPos])
+                    let retHeader = parseHeader(ctx.pRecvBuf, parseSize, ctx.targetHeaders)
+                    if retHeader.err == 0:
+                      ctx.header = retHeader.header
+                      let retMain = routesMain(ctx, client, ctx.pRecvBuf, ctx.header)
+                      if retMain == SendResult.Success:
+                        if client.keepAlive == true:
+                          if ctx.header.minorVer == 0 or getHeaderValue(ctx.pRecvBuf, ctx.header,
+                            InternalEssentialHeaderConnection) == "close":
+                            client.keepAlive = false
+                            client.close()
+                            break
+                          elif retHeader.next < parseSize:
+                            nextPos = retHeader.next
+                            parseSize = parseSize - nextPos
+                          else:
+                            client.recvCurSize = 0
+                            break
+                        else:
+                          client.close()
+                          break
+                      elif retMain == SendResult.Pending:
+                        if retHeader.next < parseSize:
                           nextPos = retHeader.next
                           parseSize = parseSize - nextPos
                         else:
@@ -2857,31 +2871,21 @@ template serverLib() {.dirty.} =
                       else:
                         client.close()
                         break
-                    elif retMain == SendResult.Pending:
-                      if retHeader.next < parseSize:
-                        nextPos = retHeader.next
-                        parseSize = parseSize - nextPos
-                      else:
-                        client.recvCurSize = 0
-                        break
                     else:
+                      echo "retHeader err=", retHeader.err
                       client.close()
                       break
-                  else:
-                    echo "retHeader err=", retHeader.err
-                    client.close()
-                    break
 
-            elif recvlen == 0:
-              client.close()
+              elif recvlen == 0:
+                client.close()
 
-            else:
-              if errno == EAGAIN or errno == EWOULDBLOCK:
-                break
-              elif errno == EINTR:
-                continue
-              client.close()
-            break
+              else:
+                if errno == EAGAIN or errno == EWOULDBLOCK:
+                  break
+                elif errno == EINTR:
+                  continue
+                client.close()
+              break
 
   macro appRoutesSendMacro(ssl: bool, body: untyped): untyped =
     quote do:
