@@ -2799,6 +2799,53 @@ template serverLib() {.dirty.} =
       clientHandlerProcs.add proc (ctx: WorkerThreadCtx) {.thread.} =
         when `ssl`:
           echo "appRoutesSsl"
+          let client = ctx.client
+          let sock = client.sock
+
+          routesMainTmpl(`body`)
+
+          when cfg.sslLib == BearSSL:
+            let sc = client.sc
+            let ec = addr client.sc.eng
+            var bufLen: csize_t
+            var buf: ptr UncheckedArray[byte]
+            var engine = RecvApp
+
+            block engineBlock:
+              while true:
+                {.computedGoto.}
+                case engine
+                of RecvApp:
+                  buf = cast[ptr UncheckedArray[byte]](br_ssl_engine_recvapp_buf(ec, addr bufLen))
+                  if buf.isNil:
+                    echo "recvapp nil"
+                    engine = SendRec
+                  else:
+                    echo "recvapp"
+
+                of SendRec:
+                  buf = cast[ptr UncheckedArray[byte]](br_ssl_engine_sendrec_buf(ec, addr bufLen))
+                  if buf.isNil:
+                    echo "sendrec nil"
+                    engine = RecvRec
+                  else:
+                    echo "sendrec"
+
+                of RecvRec:
+                  buf = cast[ptr UncheckedArray[byte]](br_ssl_engine_recvrec_buf(ec, addr bufLen))
+                  if buf.isNil:
+                    echo "recvrec nil"
+                    engine = SendApp
+                  else:
+                    echo "recvrec"
+
+                of SendApp:
+                  buf = cast[ptr UncheckedArray[byte]](br_ssl_engine_sendapp_buf(ec, addr bufLen))
+                  if buf.isNil:
+                    echo "sendapp nil"
+                    break
+                  else:
+                    echo "sendapp"
 
         else:
           let client = ctx.client
