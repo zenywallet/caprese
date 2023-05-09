@@ -2822,6 +2822,49 @@ template serverLib() {.dirty.} =
                     engine = SendRec
                   else:
                     echo "recvapp"
+                    client.reserveRecvBuf(workerRecvBufSize)
+                    client.addRecvBuf(buf, bufLen.int)
+                    br_ssl_engine_recvapp_ack(ec, bufLen.csize_t)
+
+                    if client.recvCurSize >= 17 and equalMem(addr client.recvBuf[client.recvCurSize - 4], "\c\L\c\L".cstring, 4):
+                      var nextPos = 0
+                      var parseSize = client.recvCurSize
+                      while true:
+                        ctx.pRecvBuf = cast[ptr UncheckedArray[byte]](addr client.recvBuf[nextPos])
+                        let retHeader = parseHeader(ctx.pRecvBuf, parseSize, ctx.targetHeaders)
+                        if retHeader.err == 0:
+                          ctx.header = retHeader.header
+                          let retMain = routesMain(ctx, client, ctx.pRecvBuf, ctx.header)
+                          engine = SendRec
+                          if retMain == SendResult.Success:
+                            if client.keepAlive == true:
+                              if ctx.header.minorVer == 0 or getHeaderValue(ctx.pRecvBuf, ctx.header,
+                                InternalEssentialHeaderConnection) == "close":
+                                client.keepAlive = false
+                                client.close()
+                                break engineBlock
+                              elif retHeader.next < client.recvCurSize:
+                                nextPos = retHeader.next
+                                parseSize = client.recvCurSize - nextPos
+                              else:
+                                client.recvCurSize = 0
+                                break engineBlock
+                            else:
+                              client.close()
+                              break engineBlock
+                          elif retMain == SendResult.Pending:
+                            if retHeader.next < parseSize:
+                              nextPos = retHeader.next
+                              parseSize = parseSize - nextPos
+                            else:
+                              engine = SendApp
+                              break
+                          else:
+                            client.close()
+                            break engineBlock
+                        else:
+                          client.close()
+                          break engineBlock
 
                 of SendRec:
                   buf = cast[ptr UncheckedArray[byte]](br_ssl_engine_sendrec_buf(ec, addr bufLen))
@@ -2830,6 +2873,33 @@ template serverLib() {.dirty.} =
                     engine = RecvRec
                   else:
                     echo "sendrec"
+                    let sendlen = sock.send(buf, bufLen.int, 0.cint)
+                    if sendlen > 0:
+                      br_ssl_engine_sendrec_ack(ec, sendlen.csize_t)
+                      engine = RecvApp
+
+                      var ev: EpollEvent
+                      ev.events = EPOLLIN or EPOLLRDHUP or EPOLLET #or EPOLLOUT
+                      ev.data = cast[EpollData](client)
+                      var retCtl = epoll_ctl(epfd, EPOLL_CTL_MOD, cast[cint](client.sock), addr ev)
+                      if retCtl != 0:
+                        break
+                    elif sendlen == 0:
+                      client.close()
+                      break
+                    else:
+                      if errno == EAGAIN or errno == EWOULDBLOCK:
+                        var ev: EpollEvent
+                        ev.events = EPOLLIN or EPOLLRDHUP or EPOLLET or EPOLLOUT
+                        ev.data = cast[EpollData](client)
+                        var retCtl = epoll_ctl(epfd, EPOLL_CTL_MOD, cast[cint](client.sock), addr ev)
+                        if retCtl != 0:
+                          break
+                        break
+                      elif errno == EINTR:
+                        continue
+                      client.close()
+                      break
 
                 of RecvRec:
                   buf = cast[ptr UncheckedArray[byte]](br_ssl_engine_recvrec_buf(ec, addr bufLen))
@@ -2838,6 +2908,20 @@ template serverLib() {.dirty.} =
                     engine = SendApp
                   else:
                     echo "recvrec"
+                    let recvlen = sock.recv(buf, bufLen.int, 0.cint)
+                    if recvlen > 0:
+                      br_ssl_engine_recvrec_ack(ec, recvlen.csize_t)
+                      engine = RecvApp
+                    elif recvlen == 0:
+                      client.close()
+                      break
+                    else:
+                      if errno == EAGAIN or errno == EWOULDBLOCK:
+                        break
+                      elif errno == EINTR:
+                        continue
+                      client.close()
+                      break
 
                 of SendApp:
                   buf = cast[ptr UncheckedArray[byte]](br_ssl_engine_sendapp_buf(ec, addr bufLen))
@@ -2846,6 +2930,25 @@ template serverLib() {.dirty.} =
                     break
                   else:
                     echo "sendapp"
+                    var sendSize = client.sendCurSize
+                    acquire(client.lock)
+                    if client.sendCurSize > 0:
+                      if bufLen.int >= client.sendCurSize:
+                        copyMem(buf, addr client.sendBuf[0], client.sendCurSize)
+                        client.sendCurSize = 0
+                        release(client.lock)
+                        br_ssl_engine_sendapp_ack(ec, sendSize.csize_t)
+                        br_ssl_engine_flush(ec, 0)
+                      else:
+                        copyMem(buf, client.sendBuf, bufLen.int)
+                        client.sendCurSize = client.sendCurSize - bufLen.int
+                        copyMem(addr client.sendBuf[0], addr client.sendBuf[bufLen], client.sendCurSize)
+                        release(client.lock)
+                        br_ssl_engine_sendapp_ack(ec, bufLen)
+                        br_ssl_engine_flush(ec, 0)
+                    else:
+                      release(client.lock)
+                    engine = SendRec
 
         else:
           let client = ctx.client
