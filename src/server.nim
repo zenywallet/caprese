@@ -2172,10 +2172,12 @@ macro addServerMacro*(bindAddress: string, port: uint16, ssl: bool, body: untype
   serverHandlerList.add(("appRoutes", ssl, newStmtList()))
   inc(curAppId)
   serverHandlerList.add(("appRoutesSend", ssl, newStmtList()))
+  var routesList = newStmtList()
   for s in body:
     if eqIdent(s[0], "routes"):
+      var routesBase = s.copy()
       var routesBody = newStmtList()
-      for s2 in s[1]:
+      for s2 in s[s.len - 1]:
         if eqIdent(s2[0], "stream"):
           inc(curAppId)
           var streamAppId = curAppId
@@ -2194,9 +2196,11 @@ macro addServerMacro*(bindAddress: string, port: uint16, ssl: bool, body: untype
           serverHandlerList.add(("appStreamSend", ssl, newStmtList()))
         routesBody.add(s2)
 
-      serverHandlerList[appRoutes][2] = routesBody
+      routesBase[routesBase.len - 1] = routesBody
+      routesList.add(routesBase)
     else:
       serverWorkerInitStmt.add(s)
+    serverHandlerList[appRoutes][2] = routesList
 
   inc(freePoolServerUsedCount)
 
