@@ -2826,10 +2826,8 @@ template serverLib() {.dirty.} =
                 of RecvApp:
                   buf = cast[ptr UncheckedArray[byte]](br_ssl_engine_recvapp_buf(ec, addr bufLen))
                   if buf.isNil:
-                    echo "recvapp nil"
                     engine = SendRec
                   else:
-                    echo "recvapp"
                     client.reserveRecvBuf(workerRecvBufSize)
                     client.addRecvBuf(buf, bufLen.int)
                     br_ssl_engine_recvapp_ack(ec, bufLen.csize_t)
@@ -2885,10 +2883,8 @@ template serverLib() {.dirty.} =
                 of SendRec:
                   buf = cast[ptr UncheckedArray[byte]](br_ssl_engine_sendrec_buf(ec, addr bufLen))
                   if buf.isNil:
-                    echo "sendrec nil"
                     engine = RecvRec
                   else:
-                    echo "sendrec"
                     let sendlen = sock.send(buf, bufLen.int, 0.cint)
                     if sendlen > 0:
                       br_ssl_engine_sendrec_ack(ec, sendlen.csize_t)
@@ -2929,10 +2925,8 @@ template serverLib() {.dirty.} =
                 of RecvRec:
                   buf = cast[ptr UncheckedArray[byte]](br_ssl_engine_recvrec_buf(ec, addr bufLen))
                   if buf.isNil:
-                    echo "recvrec nil"
                     engine = SendApp
                   else:
-                    echo "recvrec"
                     let recvlen = sock.recv(buf, bufLen.int, 0.cint)
                     if recvlen > 0:
                       br_ssl_engine_recvrec_ack(ec, recvlen.csize_t)
@@ -2959,7 +2953,6 @@ template serverLib() {.dirty.} =
                 of SendApp:
                   buf = cast[ptr UncheckedArray[byte]](br_ssl_engine_sendapp_buf(ec, addr bufLen))
                   if buf.isNil:
-                    echo "sendapp nil"
                     acquire(client.spinLock)
                     if client.dirty:
                       client.dirty = false
@@ -2969,7 +2962,6 @@ template serverLib() {.dirty.} =
                       release(client.spinLock)
                       break
                   else:
-                    echo "sendapp"
                     var sendSize = client.sendCurSize
                     acquire(client.lock)
                     if client.sendCurSize > 0:
