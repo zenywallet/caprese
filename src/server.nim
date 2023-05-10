@@ -706,7 +706,6 @@ template serverTagLib*() {.dirty.} =
         return SendResult.None
 
   proc sendSslProc(client: Client, data: ptr UncheckedArray[byte], size: int): SendResult {.thread.} =
-    echo "sendSslProc"
     when cfg.sslLib == BearSSL:
       acquire(client.lock)
       client.addSendBuf(cast[ptr UncheckedArray[byte]](addr data[0]), size)
@@ -2798,7 +2797,6 @@ template serverLib() {.dirty.} =
     quote do:
       clientHandlerProcs.add proc (ctx: WorkerThreadCtx) {.thread.} =
         when `ssl`:
-          echo "appRoutesSsl"
           let client = ctx.client
           let sock = client.sock
 
