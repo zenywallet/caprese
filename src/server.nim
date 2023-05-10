@@ -2802,6 +2802,15 @@ template serverLib() {.dirty.} =
           let client = ctx.client
           let sock = client.sock
 
+          acquire(client.spinLock)
+          if client.threadId == 0:
+            client.threadId = ctx.threadId
+            release(client.spinLock)
+          else:
+            client.dirty = true
+            release(client.spinLock)
+            return
+
           routesMainTmpl(`body`)
 
           when cfg.sslLib == BearSSL:
@@ -2809,6 +2818,7 @@ template serverLib() {.dirty.} =
             let ec = addr client.sc.eng
             var bufLen: csize_t
             var buf: ptr UncheckedArray[byte]
+
             var engine = RecvApp
 
             block engineBlock:
@@ -2848,7 +2858,15 @@ template serverLib() {.dirty.} =
                                 parseSize = client.recvCurSize - nextPos
                               else:
                                 client.recvCurSize = 0
-                                break engineBlock
+                                acquire(client.spinLock)
+                                if client.dirty:
+                                  client.dirty = false
+                                  release(client.spinLock)
+                                  engine = RecvApp
+                                  break
+                                else:
+                                  release(client.spinLock)
+                                  break engineBlock
                             else:
                               client.close()
                               break engineBlock
@@ -2884,6 +2902,7 @@ template serverLib() {.dirty.} =
                       var retCtl = epoll_ctl(epfd, EPOLL_CTL_MOD, cast[cint](client.sock), addr ev)
                       if retCtl != 0:
                         break
+
                     elif sendlen == 0:
                       client.close()
                       break
@@ -2895,11 +2914,19 @@ template serverLib() {.dirty.} =
                         var retCtl = epoll_ctl(epfd, EPOLL_CTL_MOD, cast[cint](client.sock), addr ev)
                         if retCtl != 0:
                           break
-                        break
+                        acquire(client.spinLock)
+                        if client.dirty:
+                          client.dirty = false
+                          release(client.spinLock)
+                          engine = RecvApp
+                        else:
+                          release(client.spinLock)
+                          break
                       elif errno == EINTR:
                         continue
-                      client.close()
-                      break
+                      else:
+                        client.close()
+                        break
 
                 of RecvRec:
                   buf = cast[ptr UncheckedArray[byte]](br_ssl_engine_recvrec_buf(ec, addr bufLen))
@@ -2917,17 +2944,32 @@ template serverLib() {.dirty.} =
                       break
                     else:
                       if errno == EAGAIN or errno == EWOULDBLOCK:
-                        break
+                        acquire(client.spinLock)
+                        if client.dirty:
+                          client.dirty = false
+                          release(client.spinLock)
+                          engine = RecvApp
+                        else:
+                          release(client.spinLock)
+                          break
                       elif errno == EINTR:
                         continue
-                      client.close()
-                      break
+                      else:
+                        client.close()
+                        break
 
                 of SendApp:
                   buf = cast[ptr UncheckedArray[byte]](br_ssl_engine_sendapp_buf(ec, addr bufLen))
                   if buf.isNil:
                     echo "sendapp nil"
-                    break
+                    acquire(client.spinLock)
+                    if client.dirty:
+                      client.dirty = false
+                      release(client.spinLock)
+                      engine = RecvApp
+                    else:
+                      release(client.spinLock)
+                      break
                   else:
                     echo "sendapp"
                     var sendSize = client.sendCurSize
@@ -2949,6 +2991,10 @@ template serverLib() {.dirty.} =
                     else:
                       release(client.lock)
                     engine = SendRec
+
+          acquire(client.spinLock)
+          client.threadId = 0
+          release(client.spinLock)
 
         else:
           let client = ctx.client
