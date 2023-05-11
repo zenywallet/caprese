@@ -679,7 +679,6 @@ template serverTagLib*() {.dirty.} =
     client.recvCurSize = client.recvCurSize + size
 
   proc sendNativeProc(client: Client, data: ptr UncheckedArray[byte], size: int): SendResult {.thread.} =
-    echo "sendProc"
     var pos = 0
     var size = size
     while true:
