@@ -186,6 +186,7 @@ else:
 template serverInit*() {.dirty.} =
   import locks
   import ptlock
+  import epoll
 
   when cfg.sslLib == BearSSL:
     import bearssl/bearssl_ssl
@@ -219,6 +220,7 @@ template serverInit*() {.dirty.} =
       spinLock: SpinLock
       whackaMole: bool
       sendProc: ClientSendProc
+      ev: EpollEvent
 
     ClientObj* = object of ClientBase
       pStream*: pointer
@@ -376,7 +378,7 @@ template serverTagLib*() {.dirty.} =
   import arraylib
   import bytes
   import hashtable
-  import nativesockets, posix, epoll
+  import nativesockets, posix
   import logs
 
   type
@@ -629,10 +631,8 @@ template serverTagLib*() {.dirty.} =
       inc(client.appId)
       client.appShift = true
     release(client.spinLock)
-    var ev: EpollEvent
-    ev.events = EPOLLRDHUP or EPOLLET or EPOLLOUT
-    ev.data = cast[EpollData](client)
-    var retCtl = epoll_ctl(epfd, EPOLL_CTL_MOD, cast[cint](client.sock), addr ev)
+    client.ev.events = EPOLLRDHUP or EPOLLET or EPOLLOUT
+    var retCtl = epoll_ctl(epfd, EPOLL_CTL_MOD, cast[cint](client.sock), addr client.ev)
     if retCtl != 0:
       return false
     return true
@@ -865,6 +865,8 @@ template serverInitFreeClient() {.dirty.} =
       initLock(p[i].lock)
       initLock(p[i].spinLock)
       p[i].whackaMole = false
+      p[i].ev.events = EPOLLIN or EPOLLRDHUP or EPOLLET
+      p[i].ev.data = cast[EpollData](addr p[i])
       when declared(initExClient):
         initExClient(addr p[i])
     clients = p
@@ -2216,15 +2218,13 @@ macro addServerMacro*(bindAddress: string, port: uint16, ssl: bool, body: untype
         errorQuit "error: epfd=", epfd, " errno=", errno
       addReleaseOnQuit(epfd)
 
-    var ev: EpollEvent
-    ev.events = EPOLLIN or EPOLLEXCLUSIVE
     let newClient = clientFreePool.pop()
     if newClient.isNil:
       raise newException(ServerError, "no free pool")
     newClient.sock = serverSock
     newClient.appId = `appId`
-    ev.data = cast[EpollData](newClient)
-    var retCtl = epoll_ctl(epfd, EPOLL_CTL_ADD, serverSock, addr ev)
+    newClient.ev.events = EPOLLIN or EPOLLEXCLUSIVE
+    var retCtl = epoll_ctl(epfd, EPOLL_CTL_ADD, serverSock, addr newClient.ev)
     if retCtl != 0:
       errorQuit "error: addServer epoll_ctl ret=", retCtl, " ", getErrnoStr()
 
@@ -2345,7 +2345,6 @@ template serverLib() {.dirty.} =
       header: ReqHeader
       targetHeaders: Array[ptr tuple[id: HeaderParams, val: string]]
       pRecvBuf0: ptr UncheckedArray[byte]
-      ev: EpollEvent
       threadId: int
 
     WorkerThreadCtx = ptr WorkerThreadCtxObj
@@ -2549,8 +2548,8 @@ template serverLib() {.dirty.} =
       else:
         newClient.sendProc = sendNativeProc
 
-      ctx.ev.data = cast[EpollData](newClient)
-      let retCtl = epoll_ctl(epfd, EPOLL_CTL_ADD, cast[cint](clientSock), addr ctx.ev)
+      newClient.ev.events = EPOLLIN or EPOLLRDHUP or EPOLLET
+      let retCtl = epoll_ctl(epfd, EPOLL_CTL_ADD, cast[cint](clientSock), addr newClient.ev)
       if retCtl < 0:
         errorQuit "error: epoll_ctl ret=", retCtl, " errno=", errno
 
@@ -2725,10 +2724,8 @@ template serverLib() {.dirty.} =
           client.threadId = 0
           release(client.spinLock)
 
-          var ev: EpollEvent
-          ev.events = EPOLLIN or EPOLLRDHUP or EPOLLET
-          ev.data = cast[EpollData](client)
-          var retCtl = epoll_ctl(epfd, EPOLL_CTL_MOD, cast[cint](client.sock), addr ev)
+          client.ev.events = EPOLLIN or EPOLLRDHUP or EPOLLET
+          var retCtl = epoll_ctl(epfd, EPOLL_CTL_MOD, cast[cint](client.sock), addr client.ev)
           if retCtl != 0:
             errorQuit "error: appRoutesSend epoll_ctl ret=", retCtl, " ", getErrnoStr()
           return
@@ -2890,10 +2887,8 @@ template serverLib() {.dirty.} =
                       br_ssl_engine_sendrec_ack(ec, sendlen.csize_t)
                       engine = RecvApp
 
-                      var ev: EpollEvent
-                      ev.events = EPOLLIN or EPOLLRDHUP or EPOLLET #or EPOLLOUT
-                      ev.data = cast[EpollData](client)
-                      var retCtl = epoll_ctl(epfd, EPOLL_CTL_MOD, cast[cint](client.sock), addr ev)
+                      client.ev.events = EPOLLIN or EPOLLRDHUP or EPOLLET #or EPOLLOUT
+                      var retCtl = epoll_ctl(epfd, EPOLL_CTL_MOD, cast[cint](client.sock), addr client.ev)
                       if retCtl != 0:
                         break
 
@@ -2902,10 +2897,8 @@ template serverLib() {.dirty.} =
                       break
                     else:
                       if errno == EAGAIN or errno == EWOULDBLOCK:
-                        var ev: EpollEvent
-                        ev.events = EPOLLIN or EPOLLRDHUP or EPOLLET or EPOLLOUT
-                        ev.data = cast[EpollData](client)
-                        var retCtl = epoll_ctl(epfd, EPOLL_CTL_MOD, cast[cint](client.sock), addr ev)
+                        client.ev.events = EPOLLIN or EPOLLRDHUP or EPOLLET or EPOLLOUT
+                        var retCtl = epoll_ctl(epfd, EPOLL_CTL_MOD, cast[cint](client.sock), addr client.ev)
                         if retCtl != 0:
                           break
                         acquire(client.spinLock)
@@ -3331,7 +3324,6 @@ template serverLib() {.dirty.} =
       ctx.targetHeaders.add(addr TargetHeaders[i])
 
     ctx.threadId = arg.workerParams.threadId
-    ctx.ev.events = EPOLLIN or EPOLLRDHUP or EPOLLET
 
     serverWorkerInit()
 
