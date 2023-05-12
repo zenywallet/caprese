@@ -23,7 +23,8 @@
 ##
 
 import
-  bearssl_block, bearssl_hash, bearssl_hmac, bearssl_prf, bearssl_rand, bearssl_x509
+  bearssl_block, bearssl_hash, bearssl_hmac, bearssl_prf, bearssl_rand, bearssl_x509,
+  bearssl_pem
 import
   bearssl_ec, bearssl_rsa
 
