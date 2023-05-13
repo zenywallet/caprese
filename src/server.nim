@@ -2880,17 +2880,16 @@ template serverLib() {.dirty.} =
                   buf = cast[ptr UncheckedArray[byte]](br_ssl_engine_sendrec_buf(ec, addr bufLen))
                   if buf.isNil:
                     engine = RecvRec
+                    if client.ev.events == (EPOLLIN or EPOLLRDHUP or EPOLLET or EPOLLOUT):
+                      client.ev.events = EPOLLIN or EPOLLRDHUP or EPOLLET
+                      var retCtl = epoll_ctl(epfd, EPOLL_CTL_MOD, cast[cint](client.sock), addr client.ev)
+                      if retCtl != 0:
+                        break
                   else:
                     let sendlen = sock.send(buf, bufLen.int, 0.cint)
                     if sendlen > 0:
                       br_ssl_engine_sendrec_ack(ec, sendlen.csize_t)
                       engine = RecvApp
-
-                      client.ev.events = EPOLLIN or EPOLLRDHUP or EPOLLET #or EPOLLOUT
-                      var retCtl = epoll_ctl(epfd, EPOLL_CTL_MOD, cast[cint](client.sock), addr client.ev)
-                      if retCtl != 0:
-                        break
-
                     elif sendlen == 0:
                       client.close()
                       break
