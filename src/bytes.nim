@@ -219,6 +219,8 @@ when TOHEX_COMPACT:
     for i in 0..a.high:
       result.add(hexChars[(a[i] and 0xf0'u8) shr 4])
       result.add(hexChars[a[i] and 0x0f'u8])
+
+  proc toHex*(a: byte): string = hexChars[(a and 0xf0'u8) shr 4] & hexChars[a and 0x0f'u8]
 else:
   const hexStr = ["00", "01", "02", "03", "04", "05", "06", "07",
                   "08", "09", "0a", "0b", "0c", "0d", "0e", "0f",
@@ -257,6 +259,8 @@ else:
     result = newStringOfCap(a.len * 2)
     for i in 0..a.high:
       result.add(hexStr[a[i]])
+
+  proc toHex*(a: byte): string = hexStr[a]
 
 proc `$`*(data: seq[byte]): string =
   if data.len > 0:
