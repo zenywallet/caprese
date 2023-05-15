@@ -305,7 +305,7 @@ type
 ##  \return  the system seeder, if available, or 0.
 ##
 
-proc br_prng_seeder_system*(name: cstringArray): br_prng_seeder  {.importc.}
+proc br_prng_seeder_system*(name: cstringArray): br_prng_seeder {.importc.}
 ## *
 ##  \brief Context for AESCTR_DRBG.
 ##
