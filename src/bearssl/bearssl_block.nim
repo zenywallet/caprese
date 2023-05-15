@@ -409,7 +409,7 @@ type
                          ##  \param key       secret key.
                          ##  \param key_len   key length (in bytes).
                          ##
-    init*: proc (ctx: ptr ptr br_block_cbcenc_class; key: pointer; key_len: csize_t) ## *
+    init*: proc (ctx: ptr ptr br_block_cbcenc_class; key: pointer; key_len: csize_t) {.cdecl.} ## *
                                                                            ##  \brief Run the CBC encryption.
                                                                            ##
                                                                            ##  The `iv` parameter points to the IV for this run; it is
@@ -423,7 +423,7 @@ type
                                                                            ##  \param len    data length (in bytes, multiple of block size).
                                                                            ##
     run*: proc (ctx: ptr ptr br_block_cbcenc_class; iv: pointer; data: pointer;
-              len: csize_t)
+              len: csize_t) {.cdecl.}
 
 
 ## *
@@ -458,7 +458,7 @@ type
                          ##  \param key       secret key.
                          ##  \param key_len   key length (in bytes).
                          ##
-    init*: proc (ctx: ptr ptr br_block_cbcdec_class; key: pointer; key_len: csize_t) ## *
+    init*: proc (ctx: ptr ptr br_block_cbcdec_class; key: pointer; key_len: csize_t) {.cdecl.} ## *
                                                                            ##  \brief Run the CBC decryption.
                                                                            ##
                                                                            ##  The `iv` parameter points to the IV for this run; it is
@@ -472,7 +472,7 @@ type
                                                                            ##  \param len    data length (in bytes, multiple of block size).
                                                                            ##
     run*: proc (ctx: ptr ptr br_block_cbcdec_class; iv: pointer; data: pointer;
-              len: csize_t)
+              len: csize_t) {.cdecl.}
 
 
 ## *
@@ -508,7 +508,7 @@ type
                          ##  \param key       secret key.
                          ##  \param key_len   key length (in bytes).
                          ##
-    init*: proc (ctx: ptr ptr br_block_ctr_class; key: pointer; key_len: csize_t) ## *
+    init*: proc (ctx: ptr ptr br_block_ctr_class; key: pointer; key_len: csize_t) {.cdecl.} ## *
                                                                         ##  \brief Run the CTR encryption or decryption.
                                                                         ##
                                                                         ##  The `iv` parameter points to the IV for this run; its
@@ -532,7 +532,7 @@ type
                                                                         ##  \return  the new block counter value.
                                                                         ##
     run*: proc (ctx: ptr ptr br_block_ctr_class; iv: pointer; cc: uint32_t; data: pointer;
-              len: csize_t): uint32_t
+              len: csize_t): uint32_t {.cdecl.}
 
 
 ## *
@@ -568,7 +568,7 @@ type
                          ##  \param key       secret key.
                          ##  \param key_len   key length (in bytes).
                          ##
-    init*: proc (ctx: ptr ptr br_block_ctrcbc_class; key: pointer; key_len: csize_t) ## *
+    init*: proc (ctx: ptr ptr br_block_ctrcbc_class; key: pointer; key_len: csize_t) {.cdecl.} ## *
                                                                            ##  \brief Run the CTR encryption + CBC-MAC.
                                                                            ##
                                                                            ##  The `ctr` parameter points to the counter; its length shall
@@ -590,7 +590,7 @@ type
                                                                            ##  \param len      data length (in bytes).
                                                                            ##
     encrypt*: proc (ctx: ptr ptr br_block_ctrcbc_class; ctr: pointer; cbcmac: pointer;
-                  data: pointer; len: csize_t) ## *
+                  data: pointer; len: csize_t) {.cdecl.} ## *
                                            ##  \brief Run the CTR decryption + CBC-MAC.
                                            ##
                                            ##  The `ctr` parameter points to the counter; its length shall
@@ -612,7 +612,7 @@ type
                                            ##  \param len      data length (in bytes).
                                            ##
     decrypt*: proc (ctx: ptr ptr br_block_ctrcbc_class; ctr: pointer; cbcmac: pointer;
-                  data: pointer; len: csize_t) ## *
+                  data: pointer; len: csize_t) {.cdecl.} ## *
                                            ##  \brief Run the CTR encryption/decryption only.
                                            ##
                                            ##  The `ctr` parameter points to the counter; its length shall
@@ -628,7 +628,7 @@ type
                                            ##  \param len      data length (in bytes).
                                            ##
     ctr*: proc (ctx: ptr ptr br_block_ctrcbc_class; ctr: pointer; data: pointer;
-              len: csize_t) ## *
+              len: csize_t) {.cdecl.} ## *
                           ##  \brief Run the CBC-MAC only.
                           ##
                           ##  The `cbcmac` parameter points to the IV for CBC-MAC. The MAC
@@ -645,7 +645,7 @@ type
                           ##  \param len      data length (in bytes).
                           ##
     mac*: proc (ctx: ptr ptr br_block_ctrcbc_class; cbcmac: pointer; data: pointer;
-              len: csize_t)
+              len: csize_t) {.cdecl.}
 
 
 ##
@@ -2417,7 +2417,7 @@ type
 
 type
   br_chacha20_run* = proc (key: pointer; iv: pointer; cc: uint32_t; data: pointer;
-                        len: csize_t): uint32_t
+                        len: csize_t): uint32_t {.cdecl.}
 
 ## *
 ##  \brief ChaCha20 implementation (straightforward C code, constant-time).
@@ -2491,7 +2491,7 @@ proc br_chacha20_sse2_get*(): br_chacha20_run {.importc.}
 type
   br_poly1305_run* = proc (key: pointer; iv: pointer; data: pointer; len: csize_t;
                         aad: pointer; aad_len: csize_t; tag: pointer;
-                        ichacha: br_chacha20_run; encrypt: cint)
+                        ichacha: br_chacha20_run; encrypt: cint) {.cdecl.}
 
 ## *
 ##  \brief ChaCha20+Poly1305 AEAD implementation (mixed 32-bit multiplications).

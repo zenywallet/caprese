@@ -213,7 +213,7 @@ type
 ##
 
 type
-  br_rsa_public* = proc (x: ptr uint8; xlen: csize_t; pk: ptr br_rsa_public_key): uint32_t
+  br_rsa_public* = proc (x: ptr uint8; xlen: csize_t; pk: ptr br_rsa_public_key): uint32_t {.cdecl.}
 
 ## *
 ##  \brief Type for a RSA signature verification engine (PKCS#1 v1.5).
@@ -264,7 +264,7 @@ type
 type
   br_rsa_pkcs1_vrfy* = proc (x: ptr uint8; xlen: csize_t; hash_oid: ptr uint8;
                           hash_len: csize_t; pk: ptr br_rsa_public_key;
-                          hash_out: ptr uint8): uint32_t
+                          hash_out: ptr uint8): uint32_t {.cdecl.}
 
 ## *
 ##  \brief Type for a RSA signature verification engine (PSS).
@@ -315,7 +315,7 @@ type
 type
   br_rsa_pss_vrfy* = proc (x: ptr uint8; xlen: csize_t; hf_data: ptr br_hash_class;
                         hf_mgf1: ptr br_hash_class; hash: pointer; salt_len: csize_t;
-                        pk: ptr br_rsa_public_key): uint32_t
+                        pk: ptr br_rsa_public_key): uint32_t {.cdecl.}
 
 ## *
 ##  \brief Type for a RSA encryption engine (OAEP).
@@ -366,7 +366,7 @@ type
   br_rsa_oaep_encrypt* = proc (rnd: ptr ptr br_prng_class; dig: ptr br_hash_class;
                             label: pointer; label_len: csize_t;
                             pk: ptr br_rsa_public_key; dst: pointer;
-                            dst_max_len: csize_t; src: pointer; src_len: csize_t): csize_t
+                            dst_max_len: csize_t; src: pointer; src_len: csize_t): csize_t {.cdecl.}
 
 ## *
 ##  \brief Type for a RSA private key engine.
@@ -383,7 +383,7 @@ type
 ##
 
 type
-  br_rsa_private* = proc (x: ptr uint8; sk: ptr br_rsa_private_key): uint32_t
+  br_rsa_private* = proc (x: ptr uint8; sk: ptr br_rsa_private_key): uint32_t {.cdecl.}
 
 ## *
 ##  \brief Type for a RSA signature generation engine (PKCS#1 v1.5).
@@ -423,7 +423,7 @@ type
 
 type
   br_rsa_pkcs1_sign* = proc (hash_oid: ptr uint8; hash: ptr uint8; hash_len: csize_t;
-                          sk: ptr br_rsa_private_key; x: ptr uint8): uint32_t
+                          sk: ptr br_rsa_private_key; x: ptr uint8): uint32_t {.cdecl.}
 
 ## *
 ##  \brief Type for a RSA signature generation engine (PSS).
@@ -471,7 +471,7 @@ type
 type
   br_rsa_pss_sign* = proc (rng: ptr ptr br_prng_class; hf_data: ptr br_hash_class;
                         hf_mgf1: ptr br_hash_class; hash_value: ptr uint8;
-                        salt_len: csize_t; sk: ptr br_rsa_private_key; x: ptr uint8): uint32_t
+                        salt_len: csize_t; sk: ptr br_rsa_private_key; x: ptr uint8): uint32_t {.cdecl.}
 
 when not compileOption("gc", "arc") and not compileOption("gc", "orc"):
   ## *
@@ -590,7 +590,7 @@ else:
 type
   br_rsa_oaep_decrypt* = proc (dig: ptr br_hash_class; label: pointer;
                             label_len: csize_t; sk: ptr br_rsa_private_key;
-                            data: pointer; len: ptr csize_t): uint32_t
+                            data: pointer; len: ptr csize_t): uint32_t {.cdecl.}
 
 ##
 ##  RSA "i32" engine. Integers are internally represented as arrays of
@@ -1406,7 +1406,7 @@ template BR_RSA_KBUF_PUB_SIZE*(size: untyped): untyped =
 type
   br_rsa_keygen* = proc (rng_ctx: ptr ptr br_prng_class; sk: ptr br_rsa_private_key;
                       kbuf_priv: pointer; pk: ptr br_rsa_public_key;
-                      kbuf_pub: pointer; size: cuint; pubexp: uint32_t): uint32_t
+                      kbuf_pub: pointer; size: cuint; pubexp: uint32_t): uint32_t {.cdecl.}
 
 ## *
 ##  \brief RSA key pair generation with the "i15" engine.
@@ -1500,7 +1500,7 @@ proc br_rsa_keygen_get_default*(): br_rsa_keygen {.importc.}
 ##
 
 type
-  br_rsa_compute_modulus* = proc (n: pointer; sk: ptr br_rsa_private_key): csize_t
+  br_rsa_compute_modulus* = proc (n: pointer; sk: ptr br_rsa_private_key): csize_t {.cdecl.}
 
 ## *
 ##  \brief Recompute RSA modulus ("i15" engine).
@@ -1557,7 +1557,7 @@ proc br_rsa_compute_modulus_get_default*(): br_rsa_compute_modulus {.importc.}
 ##
 
 type
-  br_rsa_compute_pubexp* = proc (sk: ptr br_rsa_private_key): uint32_t
+  br_rsa_compute_pubexp* = proc (sk: ptr br_rsa_private_key): uint32_t {.cdecl.}
 
 ## *
 ##  \brief Recompute RSA public exponent ("i15" engine).
@@ -1625,7 +1625,7 @@ proc br_rsa_compute_pubexp_get_default*(): br_rsa_compute_pubexp {.importc.}
 
 type
   br_rsa_compute_privexp* = proc (d: pointer; sk: ptr br_rsa_private_key;
-                               pubexp: uint32_t): csize_t
+                               pubexp: uint32_t): csize_t {.cdecl.}
 
 ## *
 ##  \brief Recompute RSA private exponent ("i15" engine).

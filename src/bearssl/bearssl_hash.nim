@@ -257,7 +257,7 @@ type
                   ##
                   ##  \param ctx   pointer to (the first field of) the context.
                   ##
-    init*: proc (ctx: ptr ptr br_hash_class) ## *
+    init*: proc (ctx: ptr ptr br_hash_class) {.cdecl.} ## *
                                        ##  \brief Data injection method.
                                        ##
                                        ##  The `len` bytes starting at address `data` are injected into
@@ -271,7 +271,7 @@ type
                                        ##  \param data   pointer to the first data byte to inject.
                                        ##  \param len    number of bytes to inject.
                                        ##
-    update*: proc (ctx: ptr ptr br_hash_class; data: pointer; len: csize_t) ## *
+    update*: proc (ctx: ptr ptr br_hash_class; data: pointer; len: csize_t) {.cdecl.} ## *
                                                                   ##  \brief Produce hash output.
                                                                   ##
                                                                   ##  The hash output corresponding to all data bytes injected in the
@@ -284,7 +284,7 @@ type
                                                                   ##  \param ctx   pointer to (the first field of) the context.
                                                                   ##  \param dst   destination buffer for the hash output.
                                                                   ##
-    `out`*: proc (ctx: ptr ptr br_hash_class; dst: pointer) ## *
+    `out`*: proc (ctx: ptr ptr br_hash_class; dst: pointer) {.cdecl.} ## *
                                                     ##  \brief Get running state.
                                                     ##
                                                     ##  This method saves the current running state into the `dst`
@@ -298,7 +298,7 @@ type
                                                     ##  \param dst   destination buffer for the state.
                                                     ##  \return  the injected total byte length.
                                                     ##
-    state*: proc (ctx: ptr ptr br_hash_class; dst: pointer): uint64_t ## *
+    state*: proc (ctx: ptr ptr br_hash_class; dst: pointer): uint64_t {.cdecl.} ## *
                                                              ##  \brief Set running state.
                                                              ##
                                                              ##  This methods replaces the running state for the function.
@@ -307,7 +307,7 @@ type
                                                              ##  \param stb     source buffer for the state.
                                                              ##  \param count   injected total byte length.
                                                              ##
-    set_state*: proc (ctx: ptr ptr br_hash_class; stb: pointer; count: uint64_t)
+    set_state*: proc (ctx: ptr ptr br_hash_class; stb: pointer; count: uint64_t) {.cdecl.}
 
 
 template BR_HASHDESC_ID*(id: untyped): untyped =
@@ -1135,7 +1135,7 @@ proc br_multihash_out*(ctx: ptr br_multihash_context; id: cint; dst: pointer): c
 ##
 
 type
-  br_ghash* = proc (y: pointer; h: pointer; data: pointer; len: csize_t)
+  br_ghash* = proc (y: pointer; h: pointer; data: pointer; len: csize_t) {.cdecl.}
 
 ## *
 ##  \brief GHASH implementation using multiplications (mixed 32-bit).

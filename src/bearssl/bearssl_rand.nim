@@ -151,7 +151,7 @@ type
     ##  \param seed_len   initial seed length (in bytes).
     ##
     init*: proc (ctx: ptr ptr br_prng_class; params: pointer; seed: pointer;
-               seed_len: csize_t) ## *
+               seed_len: csize_t) {.cdecl.} ## *
                                 ##  \brief Random bytes generation.
                                 ##
                                 ##  This method produces `len` pseudorandom bytes, in the `out`
@@ -161,7 +161,7 @@ type
                                 ##  \param out   output buffer.
                                 ##  \param len   number of pseudorandom bytes to produce.
                                 ##
-    generate*: proc (ctx: ptr ptr br_prng_class; `out`: pointer; len: csize_t) ## *
+    generate*: proc (ctx: ptr ptr br_prng_class; `out`: pointer; len: csize_t) {.cdecl.} ## *
                                                                      ##  \brief Inject additional seed bytes.
                                                                      ##
                                                                      ##  The provided seed bytes are added into the PRNG internal
@@ -171,7 +171,7 @@ type
                                                                      ##  \param seed       additional seed.
                                                                      ##  \param seed_len   additional seed length (in bytes).
                                                                      ##
-    update*: proc (ctx: ptr ptr br_prng_class; seed: pointer; seed_len: csize_t)
+    update*: proc (ctx: ptr ptr br_prng_class; seed: pointer; seed_len: csize_t) {.cdecl.}
 
 
 ## *
@@ -287,7 +287,7 @@ proc br_hmac_drbg_get_hash*(ctx: ptr br_hmac_drbg_context): ptr br_hash_class {.
 ##
 
 type
-  br_prng_seeder* = proc (ctx: ptr ptr br_prng_class): cint
+  br_prng_seeder* = proc (ctx: ptr ptr br_prng_class): cint {.cdecl.}
 
 ## *
 ##  \brief Get a seeder backed by the operating system or hardware.

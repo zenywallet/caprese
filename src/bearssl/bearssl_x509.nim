@@ -717,7 +717,7 @@ type
 type
   br_x509_time_check* = proc (tctx: pointer; not_before_days: uint32_t;
                            not_before_seconds: uint32_t; not_after_days: uint32_t;
-                           not_after_seconds: uint32_t): cint
+                           not_after_seconds: uint32_t): cint {.cdecl.}
 
 ## *
 ##  \brief The "minimal" X.509 engine structure.
@@ -1025,7 +1025,7 @@ type
                 ## 	   provided callback.
     copy_dn*: uint8
     append_dn_ctx*: pointer
-    append_dn*: proc (ctx: pointer; buf: pointer; len: csize_t) ##  Certificate data chunk.
+    append_dn*: proc (ctx: pointer; buf: pointer; len: csize_t) {.cdecl.} ##  Certificate data chunk.
     hbuf*: ptr uint8
     hlen*: csize_t             ##  Buffer for decoded public key.
     pkey_data*: array[BR_X509_BUFSIZE_KEY, uint8] ##  Type of key and hash function used in the certificate signature.

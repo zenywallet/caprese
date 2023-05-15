@@ -131,4 +131,4 @@ proc br_tls12_sha384_prf*(dst: pointer; len: csize_t; secret: pointer;
 type
   br_tls_prf_impl* = proc (dst: pointer; len: csize_t; secret: pointer;
                         secret_len: csize_t; label: cstring; seed_num: csize_t;
-                        seed: ptr br_tls_prf_seed_chunk)
+                        seed: ptr br_tls_prf_seed_chunk) {.cdecl.}

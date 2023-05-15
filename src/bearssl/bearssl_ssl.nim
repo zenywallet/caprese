@@ -327,7 +327,7 @@ type
     ##  \param record_len   incoming record length.
     ##  \return  1 of a valid length, 0 otherwise.
     ##
-    check_length*: proc (ctx: ptr ptr br_sslrec_in_class; record_len: csize_t): cint ## *
+    check_length*: proc (ctx: ptr ptr br_sslrec_in_class; record_len: csize_t): cint {.cdecl.} ## *
                                                                             ##  \brief Decrypt the incoming record.
                                                                             ##
                                                                             ##  This function may assume that the record length is valid
@@ -347,7 +347,7 @@ type
                                                                             ##  \return  pointer to plaintext, or `NULL` on error.
                                                                             ##
     decrypt*: proc (ctx: ptr ptr br_sslrec_in_class; record_type: cint; version: cuint;
-                  payload: pointer; len: ptr csize_t): ptr uint8
+                  payload: pointer; len: ptr csize_t): ptr uint8 {.cdecl.}
 
 
 ## *
@@ -385,7 +385,7 @@ type
     ##  \param end     pointer to start of plaintext offset (updated).
     ##
     max_plaintext*: proc (ctx: ptr ptr br_sslrec_out_class; start: ptr csize_t;
-                        `end`: ptr csize_t) ## *
+                        `end`: ptr csize_t) {.cdecl.} # *
                                          ##  \brief Perform record encryption.
                                          ##
                                          ##  This function encrypts the record. The plaintext address and
@@ -403,7 +403,7 @@ type
                                          ##  \return  pointer to start of built record.
                                          ##
     encrypt*: proc (ctx: ptr ptr br_sslrec_out_class; record_type: cint; version: cuint;
-                  plaintext: pointer; len: ptr csize_t): ptr uint8
+                  plaintext: pointer; len: ptr csize_t): ptr uint8 {.cdecl.}
 
 
 ## *
@@ -457,7 +457,7 @@ type
     init*: proc (ctx: ptr ptr br_sslrec_in_cbc_class;
                bc_impl: ptr br_block_cbcdec_class; bc_key: pointer;
                bc_key_len: csize_t; dig_impl: ptr br_hash_class; mac_key: pointer;
-               mac_key_len: csize_t; mac_out_len: csize_t; iv: pointer)
+               mac_key_len: csize_t; mac_out_len: csize_t; iv: pointer) {.cdecl.}
 
 
 ## *
@@ -494,7 +494,7 @@ type
     init*: proc (ctx: ptr ptr br_sslrec_out_cbc_class;
                bc_impl: ptr br_block_cbcenc_class; bc_key: pointer;
                bc_key_len: csize_t; dig_impl: ptr br_hash_class; mac_key: pointer;
-               mac_key_len: csize_t; mac_out_len: csize_t; iv: pointer)
+               mac_key_len: csize_t; mac_out_len: csize_t; iv: pointer) {.cdecl.}
 
 
 ## *
@@ -586,7 +586,7 @@ type
     ##  \param iv            static IV (4 bytes).
     ##
     init*: proc (ctx: ptr ptr br_sslrec_in_gcm_class; bc_impl: ptr br_block_ctr_class;
-               key: pointer; key_len: csize_t; gh_impl: br_ghash; iv: pointer)
+               key: pointer; key_len: csize_t; gh_impl: br_ghash; iv: pointer) {.cdecl.}
 
 
 ## *
@@ -618,7 +618,7 @@ type
     ##
     init*: proc (ctx: ptr ptr br_sslrec_out_gcm_class;
                bc_impl: ptr br_block_ctr_class; key: pointer; key_len: csize_t;
-               gh_impl: br_ghash; iv: pointer)
+               gh_impl: br_ghash; iv: pointer) {.cdecl.}
 
 
 ## *
@@ -689,7 +689,7 @@ type
     ##  \param iv            static IV (12 bytes).
     ##
     init*: proc (ctx: ptr ptr br_sslrec_in_chapol_class; ichacha: br_chacha20_run;
-               ipoly: br_poly1305_run; key: pointer; iv: pointer)
+               ipoly: br_poly1305_run; key: pointer; iv: pointer) {.cdecl.}
 
 
 ## *
@@ -719,7 +719,7 @@ type
     ##  \param iv            static IV (12 bytes).
     ##
     init*: proc (ctx: ptr ptr br_sslrec_out_chapol_class; ichacha: br_chacha20_run;
-               ipoly: br_poly1305_run; key: pointer; iv: pointer)
+               ipoly: br_poly1305_run; key: pointer; iv: pointer) {.cdecl.}
 
 
 ## *
@@ -788,7 +788,7 @@ type
     ##
     init*: proc (ctx: ptr ptr br_sslrec_in_ccm_class;
                bc_impl: ptr br_block_ctrcbc_class; key: pointer; key_len: csize_t;
-               iv: pointer; tag_len: csize_t)
+               iv: pointer; tag_len: csize_t) {.cdecl.}
 
 
 ## *
@@ -820,7 +820,7 @@ type
     ##
     init*: proc (ctx: ptr ptr br_sslrec_out_ccm_class;
                bc_impl: ptr br_block_ctrcbc_class; key: pointer; key_len: csize_t;
-               iv: pointer; tag_len: csize_t)
+               iv: pointer; tag_len: csize_t) {.cdecl.}
 
 
 ## *
@@ -1054,7 +1054,7 @@ type
     saved_hbuf_out*: ptr uint8
     hlen_in*: csize_t
     hlen_out*: csize_t
-    hsrun*: proc (ctx: pointer) ##
+    hsrun*: proc (ctx: pointer) {.cdecl.} ##
                             ##  The 'action' value communicates OOB information between the
                             ##  engine and the handshake processor.
                             ##
@@ -2345,7 +2345,7 @@ type
     ##
     ##  \param pctx   certificate handler context.
     ##
-    start_name_list*: proc (pctx: ptr ptr br_ssl_client_certificate_class) ## *
+    start_name_list*: proc (pctx: ptr ptr br_ssl_client_certificate_class) {.cdecl.} ## *
                                                                      ##  \brief Begin reception of a new trust anchor name.
                                                                      ##
                                                                      ##  The total encoded name length is provided; it is less than
@@ -2354,7 +2354,7 @@ type
                                                                      ##  \param pctx   certificate handler context.
                                                                      ##  \param len    encoded name length (in bytes).
                                                                      ##
-    start_name*: proc (pctx: ptr ptr br_ssl_client_certificate_class; len: csize_t) ## *
+    start_name*: proc (pctx: ptr ptr br_ssl_client_certificate_class; len: csize_t) {.cdecl.} ## *
                                                                             ##  \brief Receive some more bytes for the current trust anchor name.
                                                                             ##
                                                                             ##  The provided reference (`data`) points to a transient buffer
@@ -2366,7 +2366,7 @@ type
                                                                             ##  \param len    anchor name chunk length (in bytes).
                                                                             ##
     append_name*: proc (pctx: ptr ptr br_ssl_client_certificate_class;
-                      data: ptr uint8; len: csize_t) ## *
+                      data: ptr uint8; len: csize_t) {.cdecl.} ## *
                                                  ##  \brief End current trust anchor name.
                                                  ##
                                                  ##  This function is called when all the encoded anchor name data
@@ -2374,7 +2374,7 @@ type
                                                  ##
                                                  ##  \param pctx   certificate handler context.
                                                  ##
-    end_name*: proc (pctx: ptr ptr br_ssl_client_certificate_class) ## *
+    end_name*: proc (pctx: ptr ptr br_ssl_client_certificate_class) {.cdecl.} ## *
                                                               ##  \brief End list of trust anchor names.
                                                               ##
                                                               ##  This function is called when all the anchor names in the
@@ -2382,7 +2382,7 @@ type
                                                               ##
                                                               ##  \param pctx   certificate handler context.
                                                               ##
-    end_name_list*: proc (pctx: ptr ptr br_ssl_client_certificate_class) ## *
+    end_name_list*: proc (pctx: ptr ptr br_ssl_client_certificate_class) {.cdecl.} ## *
                                                                    ##  \brief Select client certificate and algorithms.
                                                                    ##
                                                                    ##  This callback function shall fill the provided `choices`
@@ -2428,7 +2428,7 @@ type
                                                                    ##
     choose*: proc (pctx: ptr ptr br_ssl_client_certificate_class;
                  cc: ptr br_ssl_client_context; auth_types: uint32_t;
-                 choices: ptr br_ssl_client_certificate) ## *
+                 choices: ptr br_ssl_client_certificate) {.cdecl.} ## *
                                                       ##  \brief Perform key exchange (client part).
                                                       ##
                                                       ##  This callback is invoked in case of a full static ECDH key
@@ -2471,7 +2471,7 @@ type
                                                       ##  \return  1 on success, 0 on error.
                                                       ##
     do_keyx*: proc (pctx: ptr ptr br_ssl_client_certificate_class; data: ptr uint8;
-                  len: ptr csize_t): uint32_t ## *
+                  len: ptr csize_t): uint32_t {.cdecl.} ## *
                                           ##  \brief Perform a signature (client authentication).
                                           ##
                                           ##  This callback is invoked when a client certificate was sent,
@@ -2507,7 +2507,7 @@ type
                                           ##  \return  signature length (in bytes) on success, or 0 on error.
                                           ##
     do_sign*: proc (pctx: ptr ptr br_ssl_client_certificate_class; hash_id: cint;
-                  hv_len: csize_t; data: ptr uint8; len: csize_t): csize_t
+                  hv_len: csize_t; data: ptr uint8; len: csize_t): csize_t {.cdecl.}
 
 
   ## *
@@ -3069,7 +3069,7 @@ type
     ##  \return  1 on success, 0 on error.
     ##
     choose*: proc (pctx: ptr ptr br_ssl_server_policy_class;
-                 cc: ptr br_ssl_server_context; choices: ptr br_ssl_server_choices): cint ## *
+                 cc: ptr br_ssl_server_context; choices: ptr br_ssl_server_choices): cint {.cdecl.} ## *
                                                                                    ##  \brief Perform key exchange (server part).
                                                                                    ##
                                                                                    ##  This callback is invoked to perform the server-side cryptographic
@@ -3121,7 +3121,7 @@ type
                                                                                    ##  \return  1 on success, 0 on error.
                                                                                    ##
     do_keyx*: proc (pctx: ptr ptr br_ssl_server_policy_class; data: ptr uint8;
-                  len: ptr csize_t): uint32_t ## *
+                  len: ptr csize_t): uint32_t {.cdecl.} ## *
                                           ##  \brief Perform a signature (for a ServerKeyExchange message).
                                           ##
                                           ##  This callback function is invoked for ECDHE cipher suites. On
@@ -3161,7 +3161,7 @@ type
                                           ##  \return  signature length (in bytes) on success, or 0 on error.
                                           ##
     do_sign*: proc (pctx: ptr ptr br_ssl_server_policy_class; algo_id: cuint;
-                  data: ptr uint8; hv_len: csize_t; len: csize_t): csize_t
+                  data: ptr uint8; hv_len: csize_t; len: csize_t): csize_t {.cdecl.}
 
 
   ## *
@@ -3245,7 +3245,7 @@ type
     ##
     save*: proc (ctx: ptr ptr br_ssl_session_cache_class;
                server_ctx: ptr br_ssl_server_context;
-               params: ptr br_ssl_session_parameters) ## *
+               params: ptr br_ssl_session_parameters) {.cdecl.} ## *
                                                    ##  \brief Lookup a session in the cache.
                                                    ##
                                                    ##  The session ID to lookup is in `params` and always has length
@@ -3261,7 +3261,7 @@ type
                                                    ##
     load*: proc (ctx: ptr ptr br_ssl_session_cache_class;
                server_ctx: ptr br_ssl_server_context;
-               params: ptr br_ssl_session_parameters): cint
+               params: ptr br_ssl_session_parameters): cint {.cdecl.}
 
 
   ## *
@@ -3851,9 +3851,9 @@ proc br_ssl_server_reset*(cc: ptr br_ssl_server_context): cint {.importc, discar
 type
   br_sslio_context* {.bycopy.} = object
     engine*: ptr br_ssl_engine_context
-    low_read*: proc (read_context: pointer; data: ptr uint8; len: csize_t): cint
+    low_read*: proc (read_context: pointer; data: ptr uint8; len: csize_t): cint {.cdecl.}
     read_context*: pointer
-    low_write*: proc (write_context: pointer; data: ptr uint8; len: csize_t): cint
+    low_write*: proc (write_context: pointer; data: ptr uint8; len: csize_t): cint {.cdecl.}
     write_context*: pointer
 
 
