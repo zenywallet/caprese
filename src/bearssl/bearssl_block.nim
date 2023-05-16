@@ -722,27 +722,27 @@ type
 ##  \brief Class instance for AES CBC encryption (`aes_big` implementation).
 ##
 
-let br_aes_big_cbcenc_vtable* {.importc, nodecl.}: ptr br_block_cbcenc_class
+var br_aes_big_cbcenc_vtable* {.importc.}: br_block_cbcenc_class
 
 ## *
 ##  \brief Class instance for AES CBC decryption (`aes_big` implementation).
 ##
 
-let br_aes_big_cbcdec_vtable* {.importc, nodecl.}: ptr br_block_cbcdec_class
+var br_aes_big_cbcdec_vtable* {.importc.}: br_block_cbcdec_class
 
 ## *
 ##  \brief Class instance for AES CTR encryption and decryption
 ##  (`aes_big` implementation).
 ##
 
-let br_aes_big_ctr_vtable* {.importc, nodecl.}: ptr br_block_ctr_class
+var br_aes_big_ctr_vtable* {.importc.}: br_block_ctr_class
 
 ## *
 ##  \brief Class instance for AES CTR encryption/decryption + CBC-MAC
 ##  (`aes_big` implementation).
 ##
 
-let br_aes_big_ctrcbc_vtable* {.importc, nodecl.}: ptr br_block_ctrcbc_class
+var br_aes_big_ctrcbc_vtable* {.importc.}: br_block_ctrcbc_class
 
 ## *
 ##  \brief Context initialisation (key schedule) for AES CBC encryption
@@ -942,27 +942,27 @@ type
 ##  \brief Class instance for AES CBC encryption (`aes_small` implementation).
 ##
 
-let br_aes_small_cbcenc_vtable* {.importc, nodecl.}: ptr br_block_cbcenc_class
+var br_aes_small_cbcenc_vtable* {.importc.}: br_block_cbcenc_class
 
 ## *
 ##  \brief Class instance for AES CBC decryption (`aes_small` implementation).
 ##
 
-let br_aes_small_cbcdec_vtable* {.importc, nodecl.}: ptr br_block_cbcdec_class
+var br_aes_small_cbcdec_vtable* {.importc.}: br_block_cbcdec_class
 
 ## *
 ##  \brief Class instance for AES CTR encryption and decryption
 ##  (`aes_small` implementation).
 ##
 
-let br_aes_small_ctr_vtable* {.importc, nodecl.}: ptr br_block_ctr_class
+var br_aes_small_ctr_vtable* {.importc.}: br_block_ctr_class
 
 ## *
 ##  \brief Class instance for AES CTR encryption/decryption + CBC-MAC
 ##  (`aes_small` implementation).
 ##
 
-let br_aes_small_ctrcbc_vtable* {.importc, nodecl.}: ptr br_block_ctrcbc_class
+var br_aes_small_ctrcbc_vtable* {.importc.}: br_block_ctrcbc_class
 
 ## *
 ##  \brief Context initialisation (key schedule) for AES CBC encryption
@@ -1161,27 +1161,27 @@ type
 ##  \brief Class instance for AES CBC encryption (`aes_ct` implementation).
 ##
 
-let br_aes_ct_cbcenc_vtable* {.importc, nodecl.}: ptr br_block_cbcenc_class
+var br_aes_ct_cbcenc_vtable* {.importc.}: br_block_cbcenc_class
 
 ## *
 ##  \brief Class instance for AES CBC decryption (`aes_ct` implementation).
 ##
 
-let br_aes_ct_cbcdec_vtable* {.importc, nodecl.}: ptr br_block_cbcdec_class
+var br_aes_ct_cbcdec_vtable* {.importc.}: br_block_cbcdec_class
 
 ## *
 ##  \brief Class instance for AES CTR encryption and decryption
 ##  (`aes_ct` implementation).
 ##
 
-let br_aes_ct_ctr_vtable* {.importc, nodecl.}: ptr br_block_ctr_class
+var br_aes_ct_ctr_vtable* {.importc.}: br_block_ctr_class
 
 ## *
 ##  \brief Class instance for AES CTR encryption/decryption + CBC-MAC
 ##  (`aes_ct` implementation).
 ##
 
-let br_aes_ct_ctrcbc_vtable* {.importc, nodecl.}: ptr br_block_ctrcbc_class
+var br_aes_ct_ctrcbc_vtable* {.importc.}: br_block_ctrcbc_class
 
 ## *
 ##  \brief Context initialisation (key schedule) for AES CBC encryption
@@ -1379,27 +1379,27 @@ type
 ##  \brief Class instance for AES CBC encryption (`aes_ct64` implementation).
 ##
 
-let br_aes_ct64_cbcenc_vtable* {.importc, nodecl.}: ptr br_block_cbcenc_class
+var br_aes_ct64_cbcenc_vtable* {.importc.}: br_block_cbcenc_class
 
 ## *
 ##  \brief Class instance for AES CBC decryption (`aes_ct64` implementation).
 ##
 
-let br_aes_ct64_cbcdec_vtable* {.importc, nodecl.}: ptr br_block_cbcdec_class
+var br_aes_ct64_cbcdec_vtable* {.importc.}: br_block_cbcdec_class
 
 ## *
 ##  \brief Class instance for AES CTR encryption and decryption
 ##  (`aes_ct64` implementation).
 ##
 
-let br_aes_ct64_ctr_vtable* {.importc, nodecl.}: ptr br_block_ctr_class
+var br_aes_ct64_ctr_vtable* {.importc.}: br_block_ctr_class
 
 ## *
 ##  \brief Class instance for AES CTR encryption/decryption + CBC-MAC
 ##  (`aes_ct64` implementation).
 ##
 
-let br_aes_ct64_ctrcbc_vtable* {.importc, nodecl.}: ptr br_block_ctrcbc_class
+var br_aes_ct64_ctrcbc_vtable* {.importc.}: br_block_ctrcbc_class
 
 ## *
 ##  \brief Context initialisation (key schedule) for AES CBC encryption
@@ -1611,7 +1611,7 @@ type
 ##  instance should be obtained through `br_aes_x86ni_cbcenc_get_vtable()`.
 ##
 
-let br_aes_x86ni_cbcenc_vtable* {.importc, nodecl.}: ptr br_block_cbcenc_class
+var br_aes_x86ni_cbcenc_vtable* {.importc.}: br_block_cbcenc_class
 
 ## *
 ##  \brief Class instance for AES CBC decryption (`aes_x86ni` implementation).
@@ -1621,7 +1621,7 @@ let br_aes_x86ni_cbcenc_vtable* {.importc, nodecl.}: ptr br_block_cbcenc_class
 ##  instance should be obtained through `br_aes_x86ni_cbcdec_get_vtable()`.
 ##
 
-let br_aes_x86ni_cbcdec_vtable* {.importc, nodecl.}: ptr br_block_cbcdec_class
+var br_aes_x86ni_cbcdec_vtable* {.importc.}: br_block_cbcdec_class
 
 ## *
 ##  \brief Class instance for AES CTR encryption and decryption
@@ -1632,7 +1632,7 @@ let br_aes_x86ni_cbcdec_vtable* {.importc, nodecl.}: ptr br_block_cbcdec_class
 ##  instance should be obtained through `br_aes_x86ni_ctr_get_vtable()`.
 ##
 
-let br_aes_x86ni_ctr_vtable* {.importc, nodecl.}: ptr br_block_ctr_class
+var br_aes_x86ni_ctr_vtable* {.importc.}: br_block_ctr_class
 
 ## *
 ##  \brief Class instance for AES CTR encryption/decryption + CBC-MAC
@@ -1643,7 +1643,7 @@ let br_aes_x86ni_ctr_vtable* {.importc, nodecl.}: ptr br_block_ctr_class
 ##  instance should be obtained through `br_aes_x86ni_ctrcbc_get_vtable()`.
 ##
 
-let br_aes_x86ni_ctrcbc_vtable* {.importc, nodecl.}: ptr br_block_ctrcbc_class
+var br_aes_x86ni_ctrcbc_vtable* {.importc.}: br_block_ctrcbc_class
 
 ## *
 ##  \brief Context initialisation (key schedule) for AES CBC encryption
@@ -1906,7 +1906,7 @@ type
 ##  instance should be obtained through `br_aes_pwr8_cbcenc_get_vtable()`.
 ##
 
-let br_aes_pwr8_cbcenc_vtable* {.importc, nodecl.}: ptr br_block_cbcenc_class
+var br_aes_pwr8_cbcenc_vtable* {.importc.}: br_block_cbcenc_class
 
 ## *
 ##  \brief Class instance for AES CBC decryption (`aes_pwr8` implementation).
@@ -1916,7 +1916,7 @@ let br_aes_pwr8_cbcenc_vtable* {.importc, nodecl.}: ptr br_block_cbcenc_class
 ##  instance should be obtained through `br_aes_pwr8_cbcdec_get_vtable()`.
 ##
 
-let br_aes_pwr8_cbcdec_vtable* {.importc, nodecl.}: ptr br_block_cbcdec_class
+var br_aes_pwr8_cbcdec_vtable* {.importc.}: br_block_cbcdec_class
 
 ## *
 ##  \brief Class instance for AES CTR encryption and decryption
@@ -1927,7 +1927,7 @@ let br_aes_pwr8_cbcdec_vtable* {.importc, nodecl.}: ptr br_block_cbcdec_class
 ##  instance should be obtained through `br_aes_pwr8_ctr_get_vtable()`.
 ##
 
-let br_aes_pwr8_ctr_vtable* {.importc, nodecl.}: ptr br_block_ctr_class
+var br_aes_pwr8_ctr_vtable* {.importc.}: br_block_ctr_class
 
 ## *
 ##  \brief Class instance for AES CTR encryption/decryption + CBC-MAC
@@ -1938,7 +1938,7 @@ let br_aes_pwr8_ctr_vtable* {.importc, nodecl.}: ptr br_block_ctr_class
 ##  instance should be obtained through `br_aes_pwr8_ctrcbc_get_vtable()`.
 ##
 
-let br_aes_pwr8_ctrcbc_vtable* {.importc, nodecl.}: ptr br_block_ctrcbc_class
+var br_aes_pwr8_ctrcbc_vtable* {.importc.}: br_block_ctrcbc_class
 
 ## *
 ##  \brief Context initialisation (key schedule) for AES CBC encryption
@@ -2220,13 +2220,13 @@ type
 ##  \brief Class instance for DES CBC encryption (`des_tab` implementation).
 ##
 
-let br_des_tab_cbcenc_vtable* {.importc, nodecl.}: ptr br_block_cbcenc_class
+var br_des_tab_cbcenc_vtable* {.importc.}: br_block_cbcenc_class
 
 ## *
 ##  \brief Class instance for DES CBC decryption (`des_tab` implementation).
 ##
 
-let br_des_tab_cbcdec_vtable* {.importc, nodecl.}: ptr br_block_cbcdec_class
+var br_des_tab_cbcdec_vtable* {.importc.}: br_block_cbcdec_class
 
 ## *
 ##  \brief Context initialisation (key schedule) for DES CBC encryption
@@ -2313,13 +2313,13 @@ type
 ##  \brief Class instance for DES CBC encryption (`des_ct` implementation).
 ##
 
-let br_des_ct_cbcenc_vtable* {.importc, nodecl.}: ptr br_block_cbcenc_class
+var br_des_ct_cbcenc_vtable* {.importc.}: br_block_cbcenc_class
 
 ## *
 ##  \brief Class instance for DES CBC decryption (`des_ct` implementation).
 ##
 
-let br_des_ct_cbcdec_vtable* {.importc, nodecl.}: ptr br_block_cbcdec_class
+var br_des_ct_cbcdec_vtable* {.importc.}: br_block_cbcdec_class
 
 ## *
 ##  \brief Context initialisation (key schedule) for DES CBC encryption

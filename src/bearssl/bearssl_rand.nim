@@ -197,7 +197,7 @@ type
 ##  \brief Statically allocated, constant vtable for HMAC_DRBG.
 ##
 
-let br_hmac_drbg_vtable* {.importc, nodecl.}: ptr br_prng_class
+var br_hmac_drbg_vtable* {.importc.}: br_prng_class
 
 ## *
 ##  \brief HMAC_DRBG initialisation.
@@ -328,7 +328,7 @@ type
 ##  \brief Statically allocated, constant vtable for AESCTR_DRBG.
 ##
 
-let br_aesctr_drbg_vtable* {.importc, nodecl.}: ptr br_prng_class
+var br_aesctr_drbg_vtable* {.importc.}: br_prng_class
 
 ## *
 ##  \brief AESCTR_DRBG initialisation.

@@ -420,7 +420,7 @@ type
 
 ## * \brief Static, constant vtable for the no-encryption engine.
 
-let br_sslrec_out_clear_vtable* {.importc, nodecl.}: ptr br_sslrec_out_class
+var br_sslrec_out_clear_vtable* {.importc.}: br_sslrec_out_class
 
 ##  =====================================================================
 ## *
@@ -525,7 +525,7 @@ type
 ##  \brief Static, constant vtable for record decryption with CBC.
 ##
 
-let br_sslrec_in_cbc_vtable* {.importc, nodecl.}: ptr br_sslrec_in_cbc_class
+var br_sslrec_in_cbc_vtable* {.importc.}: br_sslrec_in_cbc_class
 
 ## *
 ##  \brief Context structure for encrypting outgoing records with
@@ -555,7 +555,7 @@ type
 ##  \brief Static, constant vtable for record encryption with CBC.
 ##
 
-let br_sslrec_out_cbc_vtable* {.importc, nodecl.}: ptr br_sslrec_out_cbc_class
+var br_sslrec_out_cbc_vtable* {.importc.}: br_sslrec_out_cbc_class
 
 ##  =====================================================================
 ## *
@@ -653,13 +653,13 @@ type
 ##  \brief Static, constant vtable for record decryption with GCM.
 ##
 
-let br_sslrec_in_gcm_vtable* {.importc, nodecl.}: ptr br_sslrec_in_gcm_class
+var br_sslrec_in_gcm_vtable* {.importc.}: br_sslrec_in_gcm_class
 
 ## *
 ##  \brief Static, constant vtable for record encryption with GCM.
 ##
 
-let br_sslrec_out_gcm_vtable* {.importc, nodecl.}: ptr br_sslrec_out_gcm_class
+var br_sslrec_out_gcm_vtable* {.importc.}: br_sslrec_out_gcm_class
 
 ##  =====================================================================
 ## *
@@ -750,13 +750,13 @@ type
 ##  \brief Static, constant vtable for record decryption with ChaCha20+Poly1305.
 ##
 
-let br_sslrec_in_chapol_vtable* {.importc, nodecl.}: ptr br_sslrec_in_chapol_class
+var br_sslrec_in_chapol_vtable* {.importc.}: br_sslrec_in_chapol_class
 
 ## *
 ##  \brief Static, constant vtable for record encryption with ChaCha20+Poly1305.
 ##
 
-let br_sslrec_out_chapol_vtable* {.importc, nodecl.}: ptr br_sslrec_out_chapol_class
+var br_sslrec_out_chapol_vtable* {.importc.}: br_sslrec_out_chapol_class
 
 ##  =====================================================================
 ## *
@@ -854,13 +854,13 @@ type
 ##  \brief Static, constant vtable for record decryption with CCM.
 ##
 
-let br_sslrec_in_ccm_vtable* {.importc, nodecl.}: ptr br_sslrec_in_ccm_class
+var br_sslrec_in_ccm_vtable* {.importc.}: br_sslrec_in_ccm_class
 
 ## *
 ##  \brief Static, constant vtable for record encryption with CCM.
 ##
 
-let br_sslrec_out_ccm_vtable* {.importc, nodecl.}: ptr br_sslrec_out_ccm_class
+var br_sslrec_out_ccm_vtable* {.importc.}: br_sslrec_out_ccm_class
 
 ##  =====================================================================
 ## *

@@ -465,7 +465,7 @@ type
 ##  secp384r1 and secp521r1 (aka NIST curves P-256, P-384 and P-521).
 ##
 
-let br_ec_prime_i31* {.importc, nodecl.}: ptr br_ec_impl
+var br_ec_prime_i31* {.importc.}: br_ec_impl
 
 ## *
 ##  \brief EC implementation "i15".
@@ -475,7 +475,7 @@ let br_ec_prime_i31* {.importc, nodecl.}: ptr br_ec_impl
 ##  secp384r1 and secp521r1 (aka NIST curves P-256, P-384 and P-521).
 ##
 
-let br_ec_prime_i15* {.importc, nodecl.}: ptr br_ec_impl
+var br_ec_prime_i15* {.importc.}: br_ec_impl
 
 ## *
 ##  \brief EC implementation "m15" for P-256.
@@ -486,7 +486,7 @@ let br_ec_prime_i15* {.importc, nodecl.}: ptr br_ec_impl
 ##  32-bit multiplications are used (with 32-bit results, not 64-bit).
 ##
 
-let br_ec_p256_m15* {.importc, nodecl.}: ptr br_ec_impl
+var br_ec_p256_m15* {.importc.}: br_ec_impl
 
 ## *
 ##  \brief EC implementation "m31" for P-256.
@@ -496,7 +496,7 @@ let br_ec_p256_m15* {.importc, nodecl.}: ptr br_ec_impl
 ##  (MUL31).
 ##
 
-let br_ec_p256_m31* {.importc, nodecl.}: ptr br_ec_impl
+var br_ec_p256_m31* {.importc.}: br_ec_impl
 
 ## *
 ##  \brief EC implementation "m62" (specialised code) for P-256.
@@ -508,7 +508,7 @@ let br_ec_p256_m31* {.importc, nodecl.}: ptr br_ec_impl
 ##  to that implementation.
 ##
 
-let br_ec_p256_m62* {.importc, nodecl.}: ptr br_ec_impl
+var br_ec_p256_m62* {.importc.}: br_ec_impl
 
 ## *
 ##  \brief Get the "m62" implementation of P-256, if available.
@@ -527,7 +527,7 @@ proc br_ec_p256_m62_get*(): ptr br_ec_impl {.importc.}
 ##  to that implementation.
 ##
 
-let br_ec_p256_m64* {.importc, nodecl.}: ptr br_ec_impl
+var br_ec_p256_m64* {.importc.}: br_ec_impl
 
 ## *
 ##  \brief Get the "m64" implementation of P-256, if available.
@@ -549,7 +549,7 @@ proc br_ec_p256_m64_get*(): ptr br_ec_impl {.importc.}
 ##      three bits systematically).
 ##
 
-let br_ec_c25519_i15* {.importc, nodecl.}: ptr br_ec_impl
+var br_ec_c25519_i15* {.importc.}: br_ec_impl
 
 ## *
 ##  \brief EC implementation "i31" (generic code) for Curve25519.
@@ -564,7 +564,7 @@ let br_ec_c25519_i15* {.importc, nodecl.}: ptr br_ec_impl
 ##      three bits systematically).
 ##
 
-let br_ec_c25519_i31* {.importc, nodecl.}: ptr br_ec_impl
+var br_ec_c25519_i31* {.importc.}: br_ec_impl
 
 ## *
 ##  \brief EC implementation "m15" (specialised code) for Curve25519.
@@ -579,7 +579,7 @@ let br_ec_c25519_i31* {.importc, nodecl.}: ptr br_ec_impl
 ##      three bits systematically).
 ##
 
-let br_ec_c25519_m15* {.importc, nodecl.}: ptr br_ec_impl
+var br_ec_c25519_m15* {.importc.}: br_ec_impl
 
 ## *
 ##  \brief EC implementation "m31" (specialised code) for Curve25519.
@@ -594,7 +594,7 @@ let br_ec_c25519_m15* {.importc, nodecl.}: ptr br_ec_impl
 ##      three bits systematically).
 ##
 
-let br_ec_c25519_m31* {.importc, nodecl.}: ptr br_ec_impl
+var br_ec_c25519_m31* {.importc.}: br_ec_impl
 
 ## *
 ##  \brief EC implementation "m62" (specialised code) for Curve25519.
@@ -612,7 +612,7 @@ let br_ec_c25519_m31* {.importc, nodecl.}: ptr br_ec_impl
 ##      three bits systematically).
 ##
 
-let br_ec_c25519_m62* {.importc, nodecl.}: ptr br_ec_impl
+var br_ec_c25519_m62* {.importc.}: br_ec_impl
 
 ## *
 ##  \brief Get the "m62" implementation of Curve25519, if available.
@@ -637,7 +637,7 @@ proc br_ec_c25519_m62_get*(): ptr br_ec_impl {.importc.}
 ##      three bits systematically).
 ##
 
-let br_ec_c25519_m64* {.importc, nodecl.}: ptr br_ec_impl
+var br_ec_c25519_m64* {.importc.}: br_ec_impl
 
 ## *
 ##  \brief Get the "m64" implementation of Curve25519, if available.
@@ -656,7 +656,7 @@ proc br_ec_c25519_m64_get*(): ptr br_ec_impl {.importc.}
 ##    - `br_ec_prime_i15` for other curves (NIST P-384 and NIST-P512)
 ##
 
-let br_ec_all_m15* {.importc, nodecl.}: ptr br_ec_impl
+var br_ec_all_m15* {.importc.}: br_ec_impl
 
 ## *
 ##  \brief Aggregate EC implementation "m31".
@@ -668,7 +668,7 @@ let br_ec_all_m15* {.importc, nodecl.}: ptr br_ec_impl
 ##    - `br_ec_prime_i31` for other curves (NIST P-384 and NIST-P512)
 ##
 
-let br_ec_all_m31* {.importc, nodecl.}: ptr br_ec_impl
+var br_ec_all_m31* {.importc.}: br_ec_impl
 
 ## *
 ##  \brief Get the "default" EC implementation for the current system.
