@@ -192,6 +192,8 @@ template serverInit*() {.dirty.} =
     import bearssl/bearssl_ssl
     import bearssl/bearssl_x509
     import bearssl/bearssl_ec
+    import bearssl/bearssl_hash
+    import bearssl/bearssl_prf
     import bearssl/chain_ec
     import bearssl/key_ec
 
@@ -2515,6 +2517,24 @@ template serverLib() {.dirty.} =
 
   proc appDummy(ctx: WorkerThreadCtx) {.thread.} = discard
 
+  when cfg.sslLib == BearSSL:
+    type
+      uint16_t = uint16
+
+    let suites = [uint16_t BR_TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256]
+
+    proc br_ssl_server_init_caprese(cc: ptr br_ssl_server_context) {.gcsafe.} =
+      br_ssl_server_zero(cc)
+      br_ssl_engine_set_versions(addr cc.eng, BR_TLS12, BR_TLS12)
+      br_ssl_engine_set_suites(addr cc.eng, unsafeAddr suites[0], suites.len.csize_t)
+      br_ssl_engine_set_ec(addr cc.eng, addr br_ec_all_m15)
+      br_ssl_server_set_single_ec(cc, cast[ptr br_x509_certificate](unsafeAddr CHAIN[0]), CHAIN_LEN.csize_t,
+        cast[ptr br_ec_private_key](unsafeAddr EC), BR_KEYTYPE_SIGN, 0, addr br_ec_all_m15,
+        cast[br_ecdsa_sign](br_ecdsa_i31_sign_asn1))
+      br_ssl_engine_set_hash(addr cc.eng, br_sha256_ID, addr br_sha256_vtable)
+      br_ssl_engine_set_prf_sha256(addr cc.eng, br_tls12_sha256_prf)
+      br_ssl_engine_set_default_chapol(addr cc.eng)
+
   proc appListenBase(ctx: WorkerThreadCtx, ssl: static bool) {.thread, inline.} =
     let clientSock = ctx.client.sock.accept4(cast[ptr SockAddr](addr ctx.sockAddress), addr ctx.addrLen, O_NONBLOCK)
     if cast[int](clientSock) > 0:
@@ -2534,9 +2554,7 @@ template serverLib() {.dirty.} =
       when ssl and cfg.sslLib == BearSSL:
         if newClient.sc.isNil:
           newClient.sc = cast[ptr br_ssl_server_context](allocShared0(sizeof(br_ssl_server_context)))
-          br_ssl_server_init_minf2c(newClient.sc,
-            cast[ptr br_x509_certificate](unsafeAddr CHAIN[0]), CHAIN_LEN.csize_t,
-            cast[ptr br_ec_private_key](unsafeAddr EC))
+          br_ssl_server_init_caprese(newClient.sc)
           let bidi = 1.cint
           let iobufLen = BR_SSL_BUFSIZE_BIDI.csize_t
           let iobuf = allocShared0(iobufLen)
