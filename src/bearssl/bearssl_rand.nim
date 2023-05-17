@@ -224,7 +224,7 @@ var br_hmac_drbg_vtable* {.importc.}: br_prng_class
 
 proc br_hmac_drbg_init*(ctx: ptr br_hmac_drbg_context;
                        digest_class: ptr br_hash_class; seed: pointer;
-                       seed_len: csize_t) {.importc.}
+                       seed_len: csize_t) {.importc, cdecl, gcsafe.}
 ## *
 ##  \brief Random bytes generation with HMAC_DRBG.
 ##
@@ -239,7 +239,7 @@ proc br_hmac_drbg_init*(ctx: ptr br_hmac_drbg_context;
 ##
 
 proc br_hmac_drbg_generate*(ctx: ptr br_hmac_drbg_context; `out`: pointer;
-                           len: csize_t) {.importc.}
+                           len: csize_t) {.importc, cdecl, gcsafe.}
 ## *
 ##  \brief Inject additional seed bytes in HMAC_DRBG.
 ##
@@ -254,7 +254,7 @@ proc br_hmac_drbg_generate*(ctx: ptr br_hmac_drbg_context; `out`: pointer;
 ##
 
 proc br_hmac_drbg_update*(ctx: ptr br_hmac_drbg_context; seed: pointer;
-                         seed_len: csize_t) {.importc.}
+                         seed_len: csize_t) {.importc, cdecl, gcsafe.}
 ## *
 ##  \brief Get the hash function implementation used by a given instance of
 ##  HMAC_DRBG.
@@ -305,7 +305,7 @@ type
 ##  \return  the system seeder, if available, or 0.
 ##
 
-proc br_prng_seeder_system*(name: cstringArray): br_prng_seeder {.importc.}
+proc br_prng_seeder_system*(name: cstringArray): br_prng_seeder {.importc, cdecl, gcsafe.}
 ## *
 ##  \brief Context for AESCTR_DRBG.
 ##
@@ -351,7 +351,7 @@ var br_aesctr_drbg_vtable* {.importc.}: br_prng_class
 
 proc br_aesctr_drbg_init*(ctx: ptr br_aesctr_drbg_context;
                          aesctr: ptr br_block_ctr_class; seed: pointer;
-                         seed_len: csize_t) {.importc.}
+                         seed_len: csize_t) {.importc, cdecl, gcsafe.}
 ## *
 ##  \brief Random bytes generation with AESCTR_DRBG.
 ##
@@ -364,7 +364,7 @@ proc br_aesctr_drbg_init*(ctx: ptr br_aesctr_drbg_context;
 ##
 
 proc br_aesctr_drbg_generate*(ctx: ptr br_aesctr_drbg_context; `out`: pointer;
-                             len: csize_t) {.importc.}
+                             len: csize_t) {.importc, cdecl, gcsafe.}
 ## *
 ##  \brief Inject additional seed bytes in AESCTR_DRBG.
 ##
@@ -379,4 +379,4 @@ proc br_aesctr_drbg_generate*(ctx: ptr br_aesctr_drbg_context; `out`: pointer;
 ##
 
 proc br_aesctr_drbg_update*(ctx: ptr br_aesctr_drbg_context; seed: pointer;
-                           seed_len: csize_t) {.importc.}
+                           seed_len: csize_t) {.importc, cdecl, gcsafe.}

@@ -1295,7 +1295,7 @@ proc br_ssl_engine_set_versions*(cc: ptr br_ssl_engine_context; version_min: cui
 ##
 
 proc br_ssl_engine_set_suites*(cc: ptr br_ssl_engine_context; suites: ptr uint16_t;
-                              suites_num: csize_t) {.importc.}
+                              suites_num: csize_t) {.importc, cdecl, gcsafe.}
 ## *
 ##  \brief Set the X.509 engine.
 ##
@@ -1463,7 +1463,7 @@ proc br_ssl_engine_set_aes_cbc*(cc: ptr br_ssl_engine_context;
 ##  \param cc   SSL engine context.
 ##
 
-proc br_ssl_engine_set_default_aes_cbc*(cc: ptr br_ssl_engine_context) {.importc.}
+proc br_ssl_engine_set_default_aes_cbc*(cc: ptr br_ssl_engine_context) {.importc, cdecl, gcsafe.}
 ## *
 ##  \brief Set the AES/CTR implementation.
 ##
@@ -1486,7 +1486,7 @@ proc br_ssl_engine_set_aes_ctr*(cc: ptr br_ssl_engine_context;
 ##  \param cc   SSL engine context.
 ##
 
-proc br_ssl_engine_set_default_aes_gcm*(cc: ptr br_ssl_engine_context) {.importc.}
+proc br_ssl_engine_set_default_aes_gcm*(cc: ptr br_ssl_engine_context) {.importc, cdecl, gcsafe.}
 ## *
 ##  \brief Set the DES/CBC implementations.
 ##
@@ -1512,7 +1512,7 @@ proc br_ssl_engine_set_des_cbc*(cc: ptr br_ssl_engine_context;
 ##  \param cc   SSL engine context.
 ##
 
-proc br_ssl_engine_set_default_des_cbc*(cc: ptr br_ssl_engine_context) {.importc.}
+proc br_ssl_engine_set_default_des_cbc*(cc: ptr br_ssl_engine_context) {.importc, cdecl, gcsafe.}
 ## *
 ##  \brief Set the GHASH implementation (used in GCM mode).
 ##
@@ -1556,7 +1556,7 @@ proc br_ssl_engine_set_poly1305*(cc: ptr br_ssl_engine_context;
 ##  \param cc   SSL engine context.
 ##
 
-proc br_ssl_engine_set_default_chapol*(cc: ptr br_ssl_engine_context) {.importc.}
+proc br_ssl_engine_set_default_chapol*(cc: ptr br_ssl_engine_context) {.importc, cdecl, gcsafe.}
 ## *
 ##  \brief Set the AES/CTR+CBC implementation.
 ##
@@ -1579,7 +1579,7 @@ proc br_ssl_engine_set_aes_ctrcbc*(cc: ptr br_ssl_engine_context;
 ##  \param cc   SSL engine context.
 ##
 
-proc br_ssl_engine_set_default_aes_ccm*(cc: ptr br_ssl_engine_context) {.importc.}
+proc br_ssl_engine_set_default_aes_ccm*(cc: ptr br_ssl_engine_context) {.importc, cdecl, gcsafe.}
 ## *
 ##  \brief Set the record encryption and decryption engines for CBC + HMAC.
 ##
@@ -1660,7 +1660,7 @@ proc br_ssl_engine_set_ec*(cc: ptr br_ssl_engine_context; iec: ptr br_ec_impl) {
 ##  \param cc   SSL engine context.
 ##
 
-proc br_ssl_engine_set_default_ec*(cc: ptr br_ssl_engine_context) {.importc.}
+proc br_ssl_engine_set_default_ec*(cc: ptr br_ssl_engine_context) {.importc, cdecl, gcsafe.}
 ## *
 ##  \brief Get the EC implementation configured in the provided engine.
 ##
@@ -1696,7 +1696,7 @@ proc br_ssl_engine_set_rsavrfy*(cc: ptr br_ssl_engine_context;
 ##  \param cc   SSL engine context.
 ##
 
-proc br_ssl_engine_set_default_rsavrfy*(cc: ptr br_ssl_engine_context) {.importc.}
+proc br_ssl_engine_set_default_rsavrfy*(cc: ptr br_ssl_engine_context) {.importc, cdecl, gcsafe.}
 ## *
 ##  \brief Get the RSA implementation (signature verification) configured
 ##  in the provided engine.
@@ -1740,7 +1740,7 @@ proc br_ssl_engine_set_ecdsa*(cc: ptr br_ssl_engine_context; iecdsa: br_ecdsa_vr
 ##  \param cc   SSL engine context.
 ##
 
-proc br_ssl_engine_set_default_ecdsa*(cc: ptr br_ssl_engine_context) {.importc.}
+proc br_ssl_engine_set_default_ecdsa*(cc: ptr br_ssl_engine_context) {.importc, cdecl, gcsafe.}
 ## *
 ##  \brief Get the ECDSA implementation (signature verification) configured
 ##  in the provided engine.
@@ -1784,7 +1784,7 @@ proc br_ssl_engine_get_ecdsa*(cc: ptr br_ssl_engine_context): br_ecdsa_vrfy {.in
 ##
 
 proc br_ssl_engine_set_buffer*(cc: ptr br_ssl_engine_context; iobuf: pointer;
-                              iobuf_len: csize_t; bidi: cint) {.importc.}
+                              iobuf_len: csize_t; bidi: cint) {.importc, cdecl, gcsafe.}
 ## *
 ##  \brief Set the I/O buffers for the SSL engine.
 ##
@@ -1808,7 +1808,7 @@ proc br_ssl_engine_set_buffer*(cc: ptr br_ssl_engine_context; iobuf: pointer;
 
 proc br_ssl_engine_set_buffers_bidi*(cc: ptr br_ssl_engine_context; ibuf: pointer;
                                     ibuf_len: csize_t; obuf: pointer;
-                                    obuf_len: csize_t) {.importc.}
+                                    obuf_len: csize_t) {.importc, cdecl, gcsafe.}
 ## *
 ##  \brief Inject some "initial entropy" in the context.
 ##
@@ -1842,7 +1842,7 @@ proc br_ssl_engine_set_buffers_bidi*(cc: ptr br_ssl_engine_context; ibuf: pointe
 ##
 
 proc br_ssl_engine_inject_entropy*(cc: ptr br_ssl_engine_context; data: pointer;
-                                  len: csize_t) {.importc.}
+                                  len: csize_t) {.importc, cdecl, gcsafe.}
 ## *
 ##  \brief Get the "server name" in this engine.
 ##
@@ -1975,7 +1975,7 @@ proc br_ssl_engine_get_ecdhe_curve*(cc: ptr br_ssl_engine_context): cint {.inlin
 ##  \return  the current engine state.
 ##
 
-proc br_ssl_engine_current_state*(cc: ptr br_ssl_engine_context): cuint {.importc.}
+proc br_ssl_engine_current_state*(cc: ptr br_ssl_engine_context): cuint {.importc, cdecl, gcsafe.}
 ## * \brief SSL engine state: closed or failed.
 
 const
@@ -2065,7 +2065,7 @@ proc br_ssl_engine_last_error*(cc: ptr br_ssl_engine_context): cint {.inline.} =
 ##  \return  the application data output buffer, or `NULL`.
 ##
 
-proc br_ssl_engine_sendapp_buf*(cc: ptr br_ssl_engine_context; len: ptr csize_t): ptr uint8 {.importc.}
+proc br_ssl_engine_sendapp_buf*(cc: ptr br_ssl_engine_context; len: ptr csize_t): ptr uint8 {.importc, cdecl, gcsafe.}
 ## *
 ##  \brief Inform the engine of some new application data.
 ##
@@ -2079,7 +2079,7 @@ proc br_ssl_engine_sendapp_buf*(cc: ptr br_ssl_engine_context; len: ptr csize_t)
 ##  \param len   number of bytes pushed (not zero).
 ##
 
-proc br_ssl_engine_sendapp_ack*(cc: ptr br_ssl_engine_context; len: csize_t) {.importc.}
+proc br_ssl_engine_sendapp_ack*(cc: ptr br_ssl_engine_context; len: csize_t) {.importc, cdecl, gcsafe.}
 ## *
 ##  \brief Get buffer for received application data.
 ##
@@ -2093,7 +2093,7 @@ proc br_ssl_engine_sendapp_ack*(cc: ptr br_ssl_engine_context; len: csize_t) {.i
 ##  \return  the application data input buffer, or `NULL`.
 ##
 
-proc br_ssl_engine_recvapp_buf*(cc: ptr br_ssl_engine_context; len: ptr csize_t): ptr uint8 {.importc.}
+proc br_ssl_engine_recvapp_buf*(cc: ptr br_ssl_engine_context; len: ptr csize_t): ptr uint8 {.importc, cdecl, gcsafe.}
 ## *
 ##  \brief Acknowledge some received application data.
 ##
@@ -2107,7 +2107,7 @@ proc br_ssl_engine_recvapp_buf*(cc: ptr br_ssl_engine_context; len: ptr csize_t)
 ##  \param len   number of bytes read (not zero).
 ##
 
-proc br_ssl_engine_recvapp_ack*(cc: ptr br_ssl_engine_context; len: csize_t) {.importc.}
+proc br_ssl_engine_recvapp_ack*(cc: ptr br_ssl_engine_context; len: csize_t) {.importc, cdecl, gcsafe.}
 ## *
 ##  \brief Get buffer for record data to send.
 ##
@@ -2121,7 +2121,7 @@ proc br_ssl_engine_recvapp_ack*(cc: ptr br_ssl_engine_context; len: csize_t) {.i
 ##  \return  the record data output buffer, or `NULL`.
 ##
 
-proc br_ssl_engine_sendrec_buf*(cc: ptr br_ssl_engine_context; len: ptr csize_t): ptr uint8 {.importc.}
+proc br_ssl_engine_sendrec_buf*(cc: ptr br_ssl_engine_context; len: ptr csize_t): ptr uint8 {.importc, cdecl, gcsafe.}
 ## *
 ##  \brief Acknowledge some sent record data.
 ##
@@ -2135,7 +2135,7 @@ proc br_ssl_engine_sendrec_buf*(cc: ptr br_ssl_engine_context; len: ptr csize_t)
 ##  \param len   number of bytes read (not zero).
 ##
 
-proc br_ssl_engine_sendrec_ack*(cc: ptr br_ssl_engine_context; len: csize_t) {.importc.}
+proc br_ssl_engine_sendrec_ack*(cc: ptr br_ssl_engine_context; len: csize_t) {.importc, cdecl, gcsafe.}
 ## *
 ##  \brief Get buffer for incoming records.
 ##
@@ -2149,7 +2149,7 @@ proc br_ssl_engine_sendrec_ack*(cc: ptr br_ssl_engine_context; len: csize_t) {.i
 ##  \return  the record data input buffer, or `NULL`.
 ##
 
-proc br_ssl_engine_recvrec_buf*(cc: ptr br_ssl_engine_context; len: ptr csize_t): ptr uint8 {.importc.}
+proc br_ssl_engine_recvrec_buf*(cc: ptr br_ssl_engine_context; len: ptr csize_t): ptr uint8 {.importc, cdecl, gcsafe.}
 ## *
 ##  \brief Inform the engine of some new record data.
 ##
@@ -2163,7 +2163,7 @@ proc br_ssl_engine_recvrec_buf*(cc: ptr br_ssl_engine_context; len: ptr csize_t)
 ##  \param len   number of bytes pushed (not zero).
 ##
 
-proc br_ssl_engine_recvrec_ack*(cc: ptr br_ssl_engine_context; len: csize_t) {.importc.}
+proc br_ssl_engine_recvrec_ack*(cc: ptr br_ssl_engine_context; len: csize_t) {.importc, cdecl, gcsafe.}
 ## *
 ##  \brief Flush buffered application data.
 ##
@@ -2182,7 +2182,7 @@ proc br_ssl_engine_recvrec_ack*(cc: ptr br_ssl_engine_context; len: csize_t) {.i
 ##  \param force   non-zero to force sending an empty record.
 ##
 
-proc br_ssl_engine_flush*(cc: ptr br_ssl_engine_context; force: cint) {.importc.}
+proc br_ssl_engine_flush*(cc: ptr br_ssl_engine_context; force: cint) {.importc, cdecl, gcsafe.}
 ## *
 ##  \brief Initiate a closure.
 ##
@@ -2193,7 +2193,7 @@ proc br_ssl_engine_flush*(cc: ptr br_ssl_engine_context; force: cint) {.importc.
 ##  \param cc   SSL engine context.
 ##
 
-proc br_ssl_engine_close*(cc: ptr br_ssl_engine_context) {.importc.}
+proc br_ssl_engine_close*(cc: ptr br_ssl_engine_context) {.importc, cdecl, gcsafe.}
 ## *
 ##  \brief Initiate a renegotiation.
 ##
@@ -2211,7 +2211,7 @@ proc br_ssl_engine_close*(cc: ptr br_ssl_engine_context) {.importc.}
 ##  \return  1 on success, 0 on error.
 ##
 
-proc br_ssl_engine_renegotiate*(cc: ptr br_ssl_engine_context): cint {.importc, discardable.}
+proc br_ssl_engine_renegotiate*(cc: ptr br_ssl_engine_context): cint {.importc, cdecl, gcsafe, discardable.}
 ## *
 ##  \brief Export key material from a connected SSL engine (RFC 5705).
 ##
@@ -2245,7 +2245,7 @@ proc br_ssl_engine_renegotiate*(cc: ptr br_ssl_engine_context): cint {.importc, 
 ##
 
 proc br_ssl_key_export*(cc: ptr br_ssl_engine_context; dst: pointer; len: csize_t;
-                       label: cstring; context: pointer; context_len: csize_t): cint {.importc, discardable.}
+                       label: cstring; context: pointer; context_len: csize_t): cint {.importc, cdecl, gcsafe, discardable.}
 
 ##
 ##  Note: the constants below for signatures match the TLS constants.
@@ -2681,7 +2681,7 @@ proc br_ssl_client_get_server_curve*(cc: ptr br_ssl_client_context): cint {.inli
 proc br_ssl_client_init_full*(cc: ptr br_ssl_client_context;
                              xc: ptr br_x509_minimal_context;
                              trust_anchors: ptr br_x509_trust_anchor;
-                             trust_anchors_num: csize_t) {.importc.}
+                             trust_anchors_num: csize_t) {.importc, cdecl, gcsafe.}
 ## *
 ##  \brief Clear the complete contents of a SSL client context.
 ##
@@ -2692,7 +2692,7 @@ proc br_ssl_client_init_full*(cc: ptr br_ssl_client_context;
 ##  \param cc   client context to clear.
 ##
 
-proc br_ssl_client_zero*(cc: ptr br_ssl_client_context) {.importc.}
+proc br_ssl_client_zero*(cc: ptr br_ssl_client_context) {.importc, cdecl, gcsafe.}
 ## *
 ##  \brief Set an externally provided client certificate handler context.
 ##
@@ -2731,7 +2731,7 @@ proc br_ssl_client_set_rsapub*(cc: ptr br_ssl_client_context; irsapub: br_rsa_pu
 ##  \param cc   client context.
 ##
 
-proc br_ssl_client_set_default_rsapub*(cc: ptr br_ssl_client_context) {.importc.}
+proc br_ssl_client_set_default_rsapub*(cc: ptr br_ssl_client_context) {.importc, cdecl, gcsafe.}
 ## *
 ##  \brief Set the minimum ClientHello length (RFC 7685 padding).
 ##
@@ -2786,7 +2786,7 @@ proc br_ssl_client_set_min_clienthello_len*(cc: ptr br_ssl_client_context;
 ##
 
 proc br_ssl_client_reset*(cc: ptr br_ssl_client_context; server_name: cstring;
-                         resume_session: cint): cint {.importc, discardable.}
+                         resume_session: cint): cint {.importc, cdecl, gcsafe, discardable.}
 ## *
 ##  \brief Forget any session in the context.
 ##
@@ -2824,7 +2824,7 @@ proc br_ssl_client_forget_session*(cc: ptr br_ssl_client_context) {.inline.} =
 proc br_ssl_client_set_single_rsa*(cc: ptr br_ssl_client_context;
                                   chain: ptr br_x509_certificate;
                                   chain_len: csize_t; sk: ptr br_rsa_private_key;
-                                  irsasign: br_rsa_pkcs1_sign) {.importc.}
+                                  irsasign: br_rsa_pkcs1_sign) {.importc, cdecl, gcsafe.}
 ##
 ##  \brief Set the client certificate chain and key (single EC case).
 ##
@@ -2868,7 +2868,7 @@ proc br_ssl_client_set_single_ec*(cc: ptr br_ssl_client_context;
                                  chain_len: csize_t; sk: ptr br_ec_private_key;
                                  allowed_usages: cuint;
                                  cert_issuer_key_type: cuint; iec: ptr br_ec_impl;
-                                 iecdsa: br_ecdsa_sign) {.importc.}
+                                 iecdsa: br_ecdsa_sign) {.importc, cdecl, gcsafe.}
 ## *
 ##  \brief Type for a "translated cipher suite", as an array of two
 ##  16-bit integers.
@@ -3378,7 +3378,7 @@ type
 ##
 
 proc br_ssl_session_cache_lru_init*(cc: ptr br_ssl_session_cache_lru;
-                                   store: ptr uint8; store_len: csize_t) {.importc.}
+                                   store: ptr uint8; store_len: csize_t) {.importc, cdecl, gcsafe.}
 ## *
 ##  \brief Forget an entry in an LRU session cache.
 ##
@@ -3391,7 +3391,7 @@ proc br_ssl_session_cache_lru_init*(cc: ptr br_ssl_session_cache_lru;
 ##
 
 proc br_ssl_session_cache_lru_forget*(cc: ptr br_ssl_session_cache_lru;
-                                     id: ptr uint8) {.importc.}
+                                     id: ptr uint8) {.importc, cdecl, gcsafe.}
 
 
 ##
@@ -3436,7 +3436,7 @@ proc br_ssl_session_cache_lru_forget*(cc: ptr br_ssl_session_cache_lru;
 
 proc br_ssl_server_init_full_rsa*(cc: ptr br_ssl_server_context;
                                  chain: ptr br_x509_certificate;
-                                 chain_len: csize_t; sk: ptr br_rsa_private_key) {.importc.}
+                                 chain_len: csize_t; sk: ptr br_rsa_private_key) {.importc, cdecl, gcsafe.}
 ## *
 ##  \brief SSL server profile: full_ec.
 ##
@@ -3459,7 +3459,7 @@ proc br_ssl_server_init_full_rsa*(cc: ptr br_ssl_server_context;
 proc br_ssl_server_init_full_ec*(cc: ptr br_ssl_server_context;
                                 chain: ptr br_x509_certificate; chain_len: csize_t;
                                 cert_issuer_key_type: cuint;
-                                sk: ptr br_ec_private_key) {.importc.}
+                                sk: ptr br_ec_private_key) {.importc, cdecl, gcsafe.}
 ## *
 ##  \brief SSL server profile: minr2g.
 ##
@@ -3475,7 +3475,7 @@ proc br_ssl_server_init_full_ec*(cc: ptr br_ssl_server_context;
 
 proc br_ssl_server_init_minr2g*(cc: ptr br_ssl_server_context;
                                chain: ptr br_x509_certificate; chain_len: csize_t;
-                               sk: ptr br_rsa_private_key) {.importc.}
+                               sk: ptr br_rsa_private_key) {.importc, cdecl, gcsafe.}
 ## *
 ##  \brief SSL server profile: mine2g.
 ##
@@ -3492,7 +3492,7 @@ proc br_ssl_server_init_minr2g*(cc: ptr br_ssl_server_context;
 
 proc br_ssl_server_init_mine2g*(cc: ptr br_ssl_server_context;
                                chain: ptr br_x509_certificate; chain_len: csize_t;
-                               sk: ptr br_rsa_private_key) {.importc.}
+                               sk: ptr br_rsa_private_key) {.importc, cdecl, gcsafe.}
 ## *
 ##  \brief SSL server profile: minf2g.
 ##
@@ -3510,7 +3510,7 @@ proc br_ssl_server_init_mine2g*(cc: ptr br_ssl_server_context;
 
 proc br_ssl_server_init_minf2g*(cc: ptr br_ssl_server_context;
                                chain: ptr br_x509_certificate; chain_len: csize_t;
-                               sk: ptr br_ec_private_key) {.importc.}
+                               sk: ptr br_ec_private_key) {.importc, cdecl, gcsafe.}
 ## *
 ##  \brief SSL server profile: minu2g.
 ##
@@ -3530,7 +3530,7 @@ proc br_ssl_server_init_minf2g*(cc: ptr br_ssl_server_context;
 
 proc br_ssl_server_init_minu2g*(cc: ptr br_ssl_server_context;
                                chain: ptr br_x509_certificate; chain_len: csize_t;
-                               sk: ptr br_ec_private_key) {.importc.}
+                               sk: ptr br_ec_private_key) {.importc, cdecl, gcsafe.}
 ## *
 ##  \brief SSL server profile: minv2g.
 ##
@@ -3550,7 +3550,7 @@ proc br_ssl_server_init_minu2g*(cc: ptr br_ssl_server_context;
 
 proc br_ssl_server_init_minv2g*(cc: ptr br_ssl_server_context;
                                chain: ptr br_x509_certificate; chain_len: csize_t;
-                               sk: ptr br_ec_private_key) {.importc.}
+                               sk: ptr br_ec_private_key) {.importc, cdecl, gcsafe.}
 ## *
 ##  \brief SSL server profile: mine2c.
 ##
@@ -3566,7 +3566,7 @@ proc br_ssl_server_init_minv2g*(cc: ptr br_ssl_server_context;
 
 proc br_ssl_server_init_mine2c*(cc: ptr br_ssl_server_context;
                                chain: ptr br_x509_certificate; chain_len: csize_t;
-                               sk: ptr br_rsa_private_key) {.importc.}
+                               sk: ptr br_rsa_private_key) {.importc, cdecl, gcsafe.}
 ## *
 ##  \brief SSL server profile: minf2c.
 ##
@@ -3582,7 +3582,7 @@ proc br_ssl_server_init_mine2c*(cc: ptr br_ssl_server_context;
 
 proc br_ssl_server_init_minf2c*(cc: ptr br_ssl_server_context;
                                chain: ptr br_x509_certificate; chain_len: csize_t;
-                               sk: ptr br_ec_private_key) {.importc.}
+                               sk: ptr br_ec_private_key) {.importc, cdecl, gcsafe.}
 ## *
 ##  \brief Get the supported client suites.
 ##
@@ -3670,7 +3670,7 @@ proc br_ssl_server_get_client_curves*(cc: ptr br_ssl_server_context): uint32_t {
 ##  \param cc   server context to clear.
 ##
 
-proc br_ssl_server_zero*(cc: ptr br_ssl_server_context) {.importc.}
+proc br_ssl_server_zero*(cc: ptr br_ssl_server_context) {.importc, cdecl, gcsafe.}
 ## *
 ##  \brief Set an externally provided policy context.
 ##
@@ -3709,7 +3709,7 @@ proc br_ssl_server_set_single_rsa*(cc: ptr br_ssl_server_context;
                                   chain: ptr br_x509_certificate;
                                   chain_len: csize_t; sk: ptr br_rsa_private_key;
                                   allowed_usages: cuint; irsacore: br_rsa_private;
-                                  irsasign: br_rsa_pkcs1_sign) {.importc.}
+                                  irsasign: br_rsa_pkcs1_sign) {.importc, cdecl, gcsafe.}
 ## *
 ##  \brief Set the server certificate chain and key (single EC case).
 ##
@@ -3740,7 +3740,7 @@ proc br_ssl_server_set_single_ec*(cc: ptr br_ssl_server_context;
                                  chain_len: csize_t; sk: ptr br_ec_private_key;
                                  allowed_usages: cuint;
                                  cert_issuer_key_type: cuint; iec: ptr br_ec_impl;
-                                 iecdsa: br_ecdsa_sign) {.importc.}
+                                 iecdsa: br_ecdsa_sign) {.importc, cdecl, gcsafe.}
 ## *
 ##  \brief Activate client certificate authentication.
 ##
@@ -3813,7 +3813,7 @@ proc br_ssl_server_set_cache*(cc: ptr br_ssl_server_context;
 ##  \return  1 on success, 0 on error.
 ##
 
-proc br_ssl_server_reset*(cc: ptr br_ssl_server_context): cint {.importc, discardable.}
+proc br_ssl_server_reset*(cc: ptr br_ssl_server_context): cint {.importc, cdecl, gcsafe, discardable.}
 ##  =====================================================================
 ##
 ##  Context for the simplified I/O context. The transport medium is accessed
@@ -3908,7 +3908,7 @@ type
 proc br_sslio_init*(ctx: ptr br_sslio_context; engine: ptr br_ssl_engine_context;
     low_read: proc (read_context: pointer; data: ptr uint8; len: csize_t): cint;
                    read_context: pointer; low_write: proc (write_context: pointer;
-    data: ptr uint8; len: csize_t): cint; write_context: pointer) {.importc.}
+    data: ptr uint8; len: csize_t): cint; write_context: pointer) {.importc, cdecl, gcsafe.}
 ## *
 ##  \brief Read some application data from a SSL connection.
 ##
@@ -3930,7 +3930,7 @@ proc br_sslio_init*(ctx: ptr br_sslio_context; engine: ptr br_ssl_engine_context
 ##  \return  number of bytes obtained, or -1 on error.
 ##
 
-proc br_sslio_read*(cc: ptr br_sslio_context; dst: pointer; len: csize_t): cint {.importc.}
+proc br_sslio_read*(cc: ptr br_sslio_context; dst: pointer; len: csize_t): cint {.importc, cdecl, gcsafe.}
 ## *
 ##  \brief Read application data from a SSL connection.
 ##
@@ -3945,7 +3945,7 @@ proc br_sslio_read*(cc: ptr br_sslio_context; dst: pointer; len: csize_t): cint 
 ##  \return  0 on success, or -1 on error.
 ##
 
-proc br_sslio_read_all*(cc: ptr br_sslio_context; dst: pointer; len: csize_t): cint {.importc.}
+proc br_sslio_read_all*(cc: ptr br_sslio_context; dst: pointer; len: csize_t): cint {.importc, cdecl, gcsafe.}
 ## *
 ##  \brief Write some application data unto a SSL connection.
 ##
@@ -3971,7 +3971,7 @@ proc br_sslio_read_all*(cc: ptr br_sslio_context; dst: pointer; len: csize_t): c
 ##  \return  number of bytes written, or -1 on error.
 ##
 
-proc br_sslio_write*(cc: ptr br_sslio_context; src: pointer; len: csize_t): cint {.importc.}
+proc br_sslio_write*(cc: ptr br_sslio_context; src: pointer; len: csize_t): cint {.importc, cdecl, gcsafe.}
 ## *
 ##  \brief Write application data unto a SSL connection.
 ##
@@ -3991,7 +3991,7 @@ proc br_sslio_write*(cc: ptr br_sslio_context; src: pointer; len: csize_t): cint
 ##  \return  0 on success, or -1 on error.
 ##
 
-proc br_sslio_write_all*(cc: ptr br_sslio_context; src: pointer; len: csize_t): cint {.importc.}
+proc br_sslio_write_all*(cc: ptr br_sslio_context; src: pointer; len: csize_t): cint {.importc, cdecl, gcsafe.}
 ## *
 ##  \brief Flush pending data.
 ##
@@ -4010,7 +4010,7 @@ proc br_sslio_write_all*(cc: ptr br_sslio_context; src: pointer; len: csize_t): 
 ##  \return  0 on success, or -1 on error.
 ##
 
-proc br_sslio_flush*(cc: ptr br_sslio_context): cint {.importc, discardable.}
+proc br_sslio_flush*(cc: ptr br_sslio_context): cint {.importc, cdecl, gcsafe, discardable.}
 ## *
 ##  \brief Close the SSL connection.
 ##
@@ -4028,7 +4028,7 @@ proc br_sslio_flush*(cc: ptr br_sslio_context): cint {.importc, discardable.}
 ##  \return  0 on success, or -1 on error.
 ##
 
-proc br_sslio_close*(cc: ptr br_sslio_context): cint {.importc, discardable.}
+proc br_sslio_close*(cc: ptr br_sslio_context): cint {.importc, cdecl, gcsafe, discardable.}
 ##  =====================================================================
 ##
 ##  Symbolic constants for cipher suites.

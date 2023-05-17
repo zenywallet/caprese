@@ -785,7 +785,7 @@ type
 
 proc br_ecdsa_i31_sign_asn1*(impl: ptr br_ec_impl; hf: ptr br_hash_class;
                             hash_value: pointer; sk: ptr br_ec_private_key;
-                            sig: pointer): csize_t {.importc.}
+                            sig: pointer): csize_t {.importc, cdecl, gcsafe.}
 ## *
 ##  \brief ECDSA signature generator, "i31" implementation, "raw" format.
 ##
@@ -801,7 +801,7 @@ proc br_ecdsa_i31_sign_asn1*(impl: ptr br_ec_impl; hf: ptr br_hash_class;
 
 proc br_ecdsa_i31_sign_raw*(impl: ptr br_ec_impl; hf: ptr br_hash_class;
                            hash_value: pointer; sk: ptr br_ec_private_key;
-                           sig: pointer): csize_t {.importc.}
+                           sig: pointer): csize_t {.importc, cdecl, gcsafe.}
 ## *
 ##  \brief ECDSA signature verifier, "i31" implementation, "asn1" format.
 ##
@@ -817,7 +817,7 @@ proc br_ecdsa_i31_sign_raw*(impl: ptr br_ec_impl; hf: ptr br_hash_class;
 ##
 
 proc br_ecdsa_i31_vrfy_asn1*(impl: ptr br_ec_impl; hash: pointer; hash_len: csize_t;
-                            pk: ptr br_ec_public_key; sig: pointer; sig_len: csize_t): uint32_t {.importc.}
+                            pk: ptr br_ec_public_key; sig: pointer; sig_len: csize_t): uint32_t {.importc, cdecl, gcsafe.}
 ## *
 ##  \brief ECDSA signature verifier, "i31" implementation, "raw" format.
 ##
@@ -833,7 +833,7 @@ proc br_ecdsa_i31_vrfy_asn1*(impl: ptr br_ec_impl; hash: pointer; hash_len: csiz
 ##
 
 proc br_ecdsa_i31_vrfy_raw*(impl: ptr br_ec_impl; hash: pointer; hash_len: csize_t;
-                           pk: ptr br_ec_public_key; sig: pointer; sig_len: csize_t): uint32_t {.importc.}
+                           pk: ptr br_ec_public_key; sig: pointer; sig_len: csize_t): uint32_t {.importc, cdecl, gcsafe.}
 ## *
 ##  \brief ECDSA signature generator, "i15" implementation, "asn1" format.
 ##
@@ -849,7 +849,7 @@ proc br_ecdsa_i31_vrfy_raw*(impl: ptr br_ec_impl; hash: pointer; hash_len: csize
 
 proc br_ecdsa_i15_sign_asn1*(impl: ptr br_ec_impl; hf: ptr br_hash_class;
                             hash_value: pointer; sk: ptr br_ec_private_key;
-                            sig: pointer): csize_t {.importc.}
+                            sig: pointer): csize_t {.importc, cdecl, gcsafe.}
 ## *
 ##  \brief ECDSA signature generator, "i15" implementation, "raw" format.
 ##
@@ -865,7 +865,7 @@ proc br_ecdsa_i15_sign_asn1*(impl: ptr br_ec_impl; hf: ptr br_hash_class;
 
 proc br_ecdsa_i15_sign_raw*(impl: ptr br_ec_impl; hf: ptr br_hash_class;
                            hash_value: pointer; sk: ptr br_ec_private_key;
-                           sig: pointer): csize_t {.importc.}
+                           sig: pointer): csize_t {.importc, cdecl, gcsafe.}
 ## *
 ##  \brief ECDSA signature verifier, "i15" implementation, "asn1" format.
 ##
@@ -881,7 +881,7 @@ proc br_ecdsa_i15_sign_raw*(impl: ptr br_ec_impl; hf: ptr br_hash_class;
 ##
 
 proc br_ecdsa_i15_vrfy_asn1*(impl: ptr br_ec_impl; hash: pointer; hash_len: csize_t;
-                            pk: ptr br_ec_public_key; sig: pointer; sig_len: csize_t): uint32_t {.importc.}
+                            pk: ptr br_ec_public_key; sig: pointer; sig_len: csize_t): uint32_t {.importc, cdecl, gcsafe.}
 ## *
 ##  \brief ECDSA signature verifier, "i15" implementation, "raw" format.
 ##
@@ -897,7 +897,7 @@ proc br_ecdsa_i15_vrfy_asn1*(impl: ptr br_ec_impl; hash: pointer; hash_len: csiz
 ##
 
 proc br_ecdsa_i15_vrfy_raw*(impl: ptr br_ec_impl; hash: pointer; hash_len: csize_t;
-                           pk: ptr br_ec_public_key; sig: pointer; sig_len: csize_t): uint32_t {.importc.}
+                           pk: ptr br_ec_public_key; sig: pointer; sig_len: csize_t): uint32_t {.importc, cdecl, gcsafe.}
 ## *
 ##  \brief Get "default" ECDSA implementation (signer, asn1 format).
 ##
@@ -907,7 +907,7 @@ proc br_ecdsa_i15_vrfy_raw*(impl: ptr br_ec_impl; hash: pointer; hash_len: csize
 ##  \return  the default implementation.
 ##
 
-proc br_ecdsa_sign_asn1_get_default*(): br_ecdsa_sign {.importc.}
+proc br_ecdsa_sign_asn1_get_default*(): br_ecdsa_sign {.importc, cdecl, gcsafe.}
 ## *
 ##  \brief Get "default" ECDSA implementation (signer, raw format).
 ##
@@ -917,7 +917,7 @@ proc br_ecdsa_sign_asn1_get_default*(): br_ecdsa_sign {.importc.}
 ##  \return  the default implementation.
 ##
 
-proc br_ecdsa_sign_raw_get_default*(): br_ecdsa_sign {.importc.}
+proc br_ecdsa_sign_raw_get_default*(): br_ecdsa_sign {.importc, cdecl, gcsafe.}
 ## *
 ##  \brief Get "default" ECDSA implementation (verifier, asn1 format).
 ##
@@ -927,7 +927,7 @@ proc br_ecdsa_sign_raw_get_default*(): br_ecdsa_sign {.importc.}
 ##  \return  the default implementation.
 ##
 
-proc br_ecdsa_vrfy_asn1_get_default*(): br_ecdsa_vrfy {.importc.}
+proc br_ecdsa_vrfy_asn1_get_default*(): br_ecdsa_vrfy {.importc, cdecl, gcsafe.}
 ## *
 ##  \brief Get "default" ECDSA implementation (verifier, raw format).
 ##
@@ -937,7 +937,7 @@ proc br_ecdsa_vrfy_asn1_get_default*(): br_ecdsa_vrfy {.importc.}
 ##  \return  the default implementation.
 ##
 
-proc br_ecdsa_vrfy_raw_get_default*(): br_ecdsa_vrfy {.importc.}
+proc br_ecdsa_vrfy_raw_get_default*(): br_ecdsa_vrfy {.importc, cdecl, gcsafe.}
 ## *
 ##  \brief Maximum size for EC private key element buffer.
 ##
@@ -986,7 +986,7 @@ const
 ##
 
 proc br_ec_keygen*(rng_ctx: ptr ptr br_prng_class; impl: ptr br_ec_impl;
-                  sk: ptr br_ec_private_key; kbuf: pointer; curve: cint): csize_t {.importc.}
+                  sk: ptr br_ec_private_key; kbuf: pointer; curve: cint): csize_t {.importc, cdecl, gcsafe.}
 ## *
 ##  \brief Compute EC public key from EC private key.
 ##
@@ -1017,4 +1017,4 @@ proc br_ec_keygen*(rng_ctx: ptr ptr br_prng_class; impl: ptr br_ec_impl;
 ##
 
 proc br_ec_compute_pub*(impl: ptr br_ec_impl; pk: ptr br_ec_public_key; kbuf: pointer;
-                       sk: ptr br_ec_private_key): csize_t {.importc.}
+                       sk: ptr br_ec_private_key): csize_t {.importc, cdecl, gcsafe.}

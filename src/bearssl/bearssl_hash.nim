@@ -401,7 +401,7 @@ type
 ##  \param ctx   pointer to the context structure.
 ##
 
-proc br_md5_init*(ctx: ptr br_md5_context) {.importc.}
+proc br_md5_init*(ctx: ptr br_md5_context) {.importc, cdecl, gcsafe.}
 ## *
 ##  \brief Inject some data bytes in a running MD5 computation.
 ##
@@ -414,7 +414,7 @@ proc br_md5_init*(ctx: ptr br_md5_context) {.importc.}
 ##  \param len    injected data length (in bytes).
 ##
 
-proc br_md5_update*(ctx: ptr br_md5_context; data: pointer; len: csize_t) {.importc.}
+proc br_md5_update*(ctx: ptr br_md5_context; data: pointer; len: csize_t) {.importc, cdecl, gcsafe.}
 ## *
 ##  \brief Compute MD5 output.
 ##
@@ -428,7 +428,7 @@ proc br_md5_update*(ctx: ptr br_md5_context; data: pointer; len: csize_t) {.impo
 ##  \param out   destination buffer for the hash output.
 ##
 
-proc br_md5_out*(ctx: ptr br_md5_context; `out`: pointer) {.importc.}
+proc br_md5_out*(ctx: ptr br_md5_context; `out`: pointer) {.importc, cdecl, gcsafe.}
 ## *
 ##  \brief Save MD5 running state.
 ##
@@ -442,7 +442,7 @@ proc br_md5_out*(ctx: ptr br_md5_context; `out`: pointer) {.importc.}
 ##  \return  the injected total byte length.
 ##
 
-proc br_md5_state*(ctx: ptr br_md5_context; `out`: pointer): uint64_t {.importc.}
+proc br_md5_state*(ctx: ptr br_md5_context; `out`: pointer): uint64_t {.importc, cdecl, gcsafe.}
 ## *
 ##  \brief Restore MD5 running state.
 ##
@@ -453,7 +453,7 @@ proc br_md5_state*(ctx: ptr br_md5_context; `out`: pointer): uint64_t {.importc.
 ##  \param count   the injected total byte length.
 ##
 
-proc br_md5_set_state*(ctx: ptr br_md5_context; stb: pointer; count: uint64_t) {.importc.}
+proc br_md5_set_state*(ctx: ptr br_md5_context; stb: pointer; count: uint64_t) {.importc, cdecl, gcsafe.}
 ## *
 ##  \brief Symbolic identifier for SHA-1.
 ##
@@ -500,7 +500,7 @@ type
 ##  \param ctx   pointer to the context structure.
 ##
 
-proc br_sha1_init*(ctx: ptr br_sha1_context) {.importc.}
+proc br_sha1_init*(ctx: ptr br_sha1_context) {.importc, cdecl, gcsafe.}
 ## *
 ##  \brief Inject some data bytes in a running SHA-1 computation.
 ##
@@ -513,7 +513,7 @@ proc br_sha1_init*(ctx: ptr br_sha1_context) {.importc.}
 ##  \param len    injected data length (in bytes).
 ##
 
-proc br_sha1_update*(ctx: ptr br_sha1_context; data: pointer; len: csize_t) {.importc.}
+proc br_sha1_update*(ctx: ptr br_sha1_context; data: pointer; len: csize_t) {.importc, cdecl, gcsafe.}
 ## *
 ##  \brief Compute SHA-1 output.
 ##
@@ -527,7 +527,7 @@ proc br_sha1_update*(ctx: ptr br_sha1_context; data: pointer; len: csize_t) {.im
 ##  \param out   destination buffer for the hash output.
 ##
 
-proc br_sha1_out*(ctx: ptr br_sha1_context; `out`: pointer) {.importc.}
+proc br_sha1_out*(ctx: ptr br_sha1_context; `out`: pointer) {.importc, cdecl, gcsafe.}
 ## *
 ##  \brief Save SHA-1 running state.
 ##
@@ -541,7 +541,7 @@ proc br_sha1_out*(ctx: ptr br_sha1_context; `out`: pointer) {.importc.}
 ##  \return  the injected total byte length.
 ##
 
-proc br_sha1_state*(ctx: ptr br_sha1_context; `out`: pointer): uint64_t {.importc.}
+proc br_sha1_state*(ctx: ptr br_sha1_context; `out`: pointer): uint64_t {.importc, cdecl, gcsafe.}
 ## *
 ##  \brief Restore SHA-1 running state.
 ##
@@ -552,7 +552,7 @@ proc br_sha1_state*(ctx: ptr br_sha1_context; `out`: pointer): uint64_t {.import
 ##  \param count   the injected total byte length.
 ##
 
-proc br_sha1_set_state*(ctx: ptr br_sha1_context; stb: pointer; count: uint64_t) {.importc.}
+proc br_sha1_set_state*(ctx: ptr br_sha1_context; stb: pointer; count: uint64_t) {.importc, cdecl, gcsafe.}
 ## *
 ##  \brief Symbolic identifier for SHA-224.
 ##
@@ -599,7 +599,7 @@ type
 ##  \param ctx   pointer to the context structure.
 ##
 
-proc br_sha224_init*(ctx: ptr br_sha224_context) {.importc.}
+proc br_sha224_init*(ctx: ptr br_sha224_context) {.importc, cdecl, gcsafe.}
 ## *
 ##  \brief Inject some data bytes in a running SHA-224 computation.
 ##
@@ -612,7 +612,7 @@ proc br_sha224_init*(ctx: ptr br_sha224_context) {.importc.}
 ##  \param len    injected data length (in bytes).
 ##
 
-proc br_sha224_update*(ctx: ptr br_sha224_context; data: pointer; len: csize_t) {.importc.}
+proc br_sha224_update*(ctx: ptr br_sha224_context; data: pointer; len: csize_t) {.importc, cdecl, gcsafe.}
 ## *
 ##  \brief Compute SHA-224 output.
 ##
@@ -626,7 +626,7 @@ proc br_sha224_update*(ctx: ptr br_sha224_context; data: pointer; len: csize_t) 
 ##  \param out   destination buffer for the hash output.
 ##
 
-proc br_sha224_out*(ctx: ptr br_sha224_context; `out`: pointer) {.importc.}
+proc br_sha224_out*(ctx: ptr br_sha224_context; `out`: pointer) {.importc, cdecl, gcsafe.}
 ## *
 ##  \brief Save SHA-224 running state.
 ##
@@ -640,7 +640,7 @@ proc br_sha224_out*(ctx: ptr br_sha224_context; `out`: pointer) {.importc.}
 ##  \return  the injected total byte length.
 ##
 
-proc br_sha224_state*(ctx: ptr br_sha224_context; `out`: pointer): uint64_t {.importc.}
+proc br_sha224_state*(ctx: ptr br_sha224_context; `out`: pointer): uint64_t {.importc, cdecl, gcsafe.}
 ## *
 ##  \brief Restore SHA-224 running state.
 ##
@@ -651,7 +651,7 @@ proc br_sha224_state*(ctx: ptr br_sha224_context; `out`: pointer): uint64_t {.im
 ##  \param count   the injected total byte length.
 ##
 
-proc br_sha224_set_state*(ctx: ptr br_sha224_context; stb: pointer; count: uint64_t) {.importc.}
+proc br_sha224_set_state*(ctx: ptr br_sha224_context; stb: pointer; count: uint64_t) {.importc, cdecl, gcsafe.}
 ## *
 ##  \brief Symbolic identifier for SHA-256.
 ##
@@ -684,7 +684,7 @@ type
 ##  \param ctx   pointer to the context structure.
 ##
 
-proc br_sha256_init*(ctx: ptr br_sha256_context) {.importc.}
+proc br_sha256_init*(ctx: ptr br_sha256_context) {.importc, cdecl, gcsafe.}
 const
   br_sha256_update* = br_sha224_update
 
@@ -701,7 +701,7 @@ const
 ##  \param out   destination buffer for the hash output.
 ##
 
-proc br_sha256_out*(ctx: ptr br_sha256_context; `out`: pointer) {.importc.}
+proc br_sha256_out*(ctx: ptr br_sha256_context; `out`: pointer) {.importc, cdecl, gcsafe.}
 const
   br_sha256_state* = br_sha224_state
   br_sha256_set_state* = br_sha224_set_state
@@ -752,7 +752,7 @@ type
 ##  \param ctx   pointer to the context structure.
 ##
 
-proc br_sha384_init*(ctx: ptr br_sha384_context) {.importc.}
+proc br_sha384_init*(ctx: ptr br_sha384_context) {.importc, cdecl, gcsafe.}
 ## *
 ##  \brief Inject some data bytes in a running SHA-384 computation.
 ##
@@ -765,7 +765,7 @@ proc br_sha384_init*(ctx: ptr br_sha384_context) {.importc.}
 ##  \param len    injected data length (in bytes).
 ##
 
-proc br_sha384_update*(ctx: ptr br_sha384_context; data: pointer; len: csize_t) {.importc.}
+proc br_sha384_update*(ctx: ptr br_sha384_context; data: pointer; len: csize_t) {.importc, cdecl, gcsafe.}
 ## *
 ##  \brief Compute SHA-384 output.
 ##
@@ -779,7 +779,7 @@ proc br_sha384_update*(ctx: ptr br_sha384_context; data: pointer; len: csize_t) 
 ##  \param out   destination buffer for the hash output.
 ##
 
-proc br_sha384_out*(ctx: ptr br_sha384_context; `out`: pointer) {.importc.}
+proc br_sha384_out*(ctx: ptr br_sha384_context; `out`: pointer) {.importc, cdecl, gcsafe.}
 ## *
 ##  \brief Save SHA-384 running state.
 ##
@@ -793,7 +793,7 @@ proc br_sha384_out*(ctx: ptr br_sha384_context; `out`: pointer) {.importc.}
 ##  \return  the injected total byte length.
 ##
 
-proc br_sha384_state*(ctx: ptr br_sha384_context; `out`: pointer): uint64_t {.importc.}
+proc br_sha384_state*(ctx: ptr br_sha384_context; `out`: pointer): uint64_t {.importc, cdecl, gcsafe.}
 ## *
 ##  \brief Restore SHA-384 running state.
 ##
@@ -804,7 +804,7 @@ proc br_sha384_state*(ctx: ptr br_sha384_context; `out`: pointer): uint64_t {.im
 ##  \param count   the injected total byte length.
 ##
 
-proc br_sha384_set_state*(ctx: ptr br_sha384_context; stb: pointer; count: uint64_t) {.importc.}
+proc br_sha384_set_state*(ctx: ptr br_sha384_context; stb: pointer; count: uint64_t) {.importc, cdecl, gcsafe.}
 ## *
 ##  \brief Symbolic identifier for SHA-512.
 ##
@@ -837,7 +837,7 @@ type
 ##  \param ctx   pointer to the context structure.
 ##
 
-proc br_sha512_init*(ctx: ptr br_sha512_context) {.importc.}
+proc br_sha512_init*(ctx: ptr br_sha512_context) {.importc, cdecl, gcsafe.}
 const
   br_sha512_update* = br_sha384_update
 
@@ -854,7 +854,7 @@ const
 ##  \param out   destination buffer for the hash output.
 ##
 
-proc br_sha512_out*(ctx: ptr br_sha512_context; `out`: pointer) {.importc.}
+proc br_sha512_out*(ctx: ptr br_sha512_context; `out`: pointer) {.importc, cdecl, gcsafe.}
 const
   br_sha512_state* = br_sha384_state
   br_sha512_set_state* = br_sha384_set_state
@@ -915,7 +915,7 @@ type
 ##  \param ctx   pointer to the context structure.
 ##
 
-proc br_md5sha1_init*(ctx: ptr br_md5sha1_context) {.importc.}
+proc br_md5sha1_init*(ctx: ptr br_md5sha1_context) {.importc, cdecl, gcsafe.}
 ## *
 ##  \brief Inject some data bytes in a running MD5+SHA-1 computation.
 ##
@@ -928,7 +928,7 @@ proc br_md5sha1_init*(ctx: ptr br_md5sha1_context) {.importc.}
 ##  \param len    injected data length (in bytes).
 ##
 
-proc br_md5sha1_update*(ctx: ptr br_md5sha1_context; data: pointer; len: csize_t) {.importc.}
+proc br_md5sha1_update*(ctx: ptr br_md5sha1_context; data: pointer; len: csize_t) {.importc, cdecl, gcsafe.}
 ## *
 ##  \brief Compute MD5+SHA-1 output.
 ##
@@ -942,7 +942,7 @@ proc br_md5sha1_update*(ctx: ptr br_md5sha1_context; data: pointer; len: csize_t
 ##  \param out   destination buffer for the hash output.
 ##
 
-proc br_md5sha1_out*(ctx: ptr br_md5sha1_context; `out`: pointer) {.importc.}
+proc br_md5sha1_out*(ctx: ptr br_md5sha1_context; `out`: pointer) {.importc, cdecl, gcsafe.}
 ## *
 ##  \brief Save MD5+SHA-1 running state.
 ##
@@ -956,7 +956,7 @@ proc br_md5sha1_out*(ctx: ptr br_md5sha1_context; `out`: pointer) {.importc.}
 ##  \return  the injected total byte length.
 ##
 
-proc br_md5sha1_state*(ctx: ptr br_md5sha1_context; `out`: pointer): uint64_t {.importc.}
+proc br_md5sha1_state*(ctx: ptr br_md5sha1_context; `out`: pointer): uint64_t {.importc, cdecl, gcsafe.}
 ## *
 ##  \brief Restore MD5+SHA-1 running state.
 ##
@@ -967,7 +967,7 @@ proc br_md5sha1_state*(ctx: ptr br_md5sha1_context; `out`: pointer): uint64_t {.
 ##  \param count   the injected total byte length.
 ##
 
-proc br_md5sha1_set_state*(ctx: ptr br_md5sha1_context; stb: pointer; count: uint64_t) {.importc.}
+proc br_md5sha1_set_state*(ctx: ptr br_md5sha1_context; stb: pointer; count: uint64_t) {.importc, cdecl, gcsafe.}
 ## *
 ##  \brief Aggregate context for configurable hash function support.
 ##
@@ -1024,7 +1024,7 @@ type
 ##  \param ctx   the multi-hasher context.
 ##
 
-proc br_multihash_zero*(ctx: ptr br_multihash_context) {.importc.}
+proc br_multihash_zero*(ctx: ptr br_multihash_context) {.importc, cdecl, gcsafe.}
 ## *
 ##  \brief Set a hash function implementation.
 ##
@@ -1073,7 +1073,7 @@ proc br_multihash_getimpl*(ctx: ptr br_multihash_context; id: cint): ptr br_hash
 ##  \param ctx    the multi-hasher context.
 ##
 
-proc br_multihash_init*(ctx: ptr br_multihash_context) {.importc.}
+proc br_multihash_init*(ctx: ptr br_multihash_context) {.importc, cdecl, gcsafe.}
 ## *
 ##  \brief Inject some data bytes in a running multi-hashing computation.
 ##
@@ -1086,7 +1086,7 @@ proc br_multihash_init*(ctx: ptr br_multihash_context) {.importc.}
 ##  \param len    injected data length (in bytes).
 ##
 
-proc br_multihash_update*(ctx: ptr br_multihash_context; data: pointer; len: csize_t) {.importc.}
+proc br_multihash_update*(ctx: ptr br_multihash_context; data: pointer; len: csize_t) {.importc, cdecl, gcsafe.}
 ## *
 ##  \brief Compute a hash output from a multi-hasher.
 ##
@@ -1109,7 +1109,7 @@ proc br_multihash_update*(ctx: ptr br_multihash_context; data: pointer; len: csi
 ##  \return  the hash output length (in bytes), or 0.
 ##
 
-proc br_multihash_out*(ctx: ptr br_multihash_context; id: cint; dst: pointer): csize_t {.importc.}
+proc br_multihash_out*(ctx: ptr br_multihash_context; id: cint; dst: pointer): csize_t {.importc, cdecl, gcsafe.}
 ## *
 ##  \brief Type for a GHASH implementation.
 ##
@@ -1150,7 +1150,7 @@ type
 ##  \param len    the input data length (in bytes).
 ##
 
-proc br_ghash_ctmul*(y: pointer; h: pointer; data: pointer; len: csize_t) {.importc.}
+proc br_ghash_ctmul*(y: pointer; h: pointer; data: pointer; len: csize_t) {.importc, cdecl, gcsafe.}
 ## *
 ##  \brief GHASH implementation using multiplications (strict 32-bit).
 ##
@@ -1166,7 +1166,7 @@ proc br_ghash_ctmul*(y: pointer; h: pointer; data: pointer; len: csize_t) {.impo
 ##  \param len    the input data length (in bytes).
 ##
 
-proc br_ghash_ctmul32*(y: pointer; h: pointer; data: pointer; len: csize_t) {.importc.}
+proc br_ghash_ctmul32*(y: pointer; h: pointer; data: pointer; len: csize_t) {.importc, cdecl, gcsafe.}
 ## *
 ##  \brief GHASH implementation using multiplications (64-bit).
 ##
@@ -1181,7 +1181,7 @@ proc br_ghash_ctmul32*(y: pointer; h: pointer; data: pointer; len: csize_t) {.im
 ##  \param len    the input data length (in bytes).
 ##
 
-proc br_ghash_ctmul64*(y: pointer; h: pointer; data: pointer; len: csize_t) {.importc.}
+proc br_ghash_ctmul64*(y: pointer; h: pointer; data: pointer; len: csize_t) {.importc, cdecl, gcsafe.}
 ## *
 ##  \brief GHASH implementation using the `pclmulqdq` opcode (part of the
 ##  AES-NI instructions).
@@ -1199,7 +1199,7 @@ proc br_ghash_ctmul64*(y: pointer; h: pointer; data: pointer; len: csize_t) {.im
 ##  \param len    the input data length (in bytes).
 ##
 
-proc br_ghash_pclmul*(y: pointer; h: pointer; data: pointer; len: csize_t) {.importc.}
+proc br_ghash_pclmul*(y: pointer; h: pointer; data: pointer; len: csize_t) {.importc, cdecl, gcsafe.}
 ## *
 ##  \brief Obtain the `pclmul` GHASH implementation, if available.
 ##
@@ -1211,7 +1211,7 @@ proc br_ghash_pclmul*(y: pointer; h: pointer; data: pointer; len: csize_t) {.imp
 ##  \return  the `pclmul` GHASH implementation, or `0`.
 ##
 
-proc br_ghash_pclmul_get*(): br_ghash {.importc.}
+proc br_ghash_pclmul_get*(): br_ghash {.importc, cdecl, gcsafe.}
 ## *
 ##  \brief GHASH implementation using the POWER8 opcodes.
 ##
@@ -1225,7 +1225,7 @@ proc br_ghash_pclmul_get*(): br_ghash {.importc.}
 ##  \param len    the input data length (in bytes).
 ##
 
-proc br_ghash_pwr8*(y: pointer; h: pointer; data: pointer; len: csize_t) {.importc.}
+proc br_ghash_pwr8*(y: pointer; h: pointer; data: pointer; len: csize_t) {.importc, cdecl, gcsafe.}
 ## *
 ##  \brief Obtain the `pwr8` GHASH implementation, if available.
 ##
@@ -1237,4 +1237,4 @@ proc br_ghash_pwr8*(y: pointer; h: pointer; data: pointer; len: csize_t) {.impor
 ##  \return  the `pwr8` GHASH implementation, or `0`.
 ##
 
-proc br_ghash_pwr8_get*(): br_ghash {.importc.}
+proc br_ghash_pwr8_get*(): br_ghash {.importc, cdecl, gcsafe.}

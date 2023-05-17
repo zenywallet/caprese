@@ -754,7 +754,7 @@ var br_aes_big_ctrcbc_vtable* {.importc.}: br_block_ctrcbc_class
 ##
 
 proc br_aes_big_cbcenc_init*(ctx: ptr br_aes_big_cbcenc_keys; key: pointer;
-                            len: csize_t) {.importc.}
+                            len: csize_t) {.importc, cdecl, gcsafe.}
 ## *
 ##  \brief Context initialisation (key schedule) for AES CBC decryption
 ##  (`aes_big` implementation).
@@ -765,7 +765,7 @@ proc br_aes_big_cbcenc_init*(ctx: ptr br_aes_big_cbcenc_keys; key: pointer;
 ##
 
 proc br_aes_big_cbcdec_init*(ctx: ptr br_aes_big_cbcdec_keys; key: pointer;
-                            len: csize_t) {.importc.}
+                            len: csize_t) {.importc, cdecl, gcsafe.}
 ## *
 ##  \brief Context initialisation (key schedule) for AES CTR encryption
 ##  and decryption (`aes_big` implementation).
@@ -775,7 +775,7 @@ proc br_aes_big_cbcdec_init*(ctx: ptr br_aes_big_cbcdec_keys; key: pointer;
 ##  \param len   secret key length (in bytes).
 ##
 
-proc br_aes_big_ctr_init*(ctx: ptr br_aes_big_ctr_keys; key: pointer; len: csize_t) {.importc.}
+proc br_aes_big_ctr_init*(ctx: ptr br_aes_big_ctr_keys; key: pointer; len: csize_t) {.importc, cdecl, gcsafe.}
 ## *
 ##  \brief Context initialisation (key schedule) for AES CTR + CBC-MAC
 ##  (`aes_big` implementation).
@@ -786,7 +786,7 @@ proc br_aes_big_ctr_init*(ctx: ptr br_aes_big_ctr_keys; key: pointer; len: csize
 ##
 
 proc br_aes_big_ctrcbc_init*(ctx: ptr br_aes_big_ctrcbc_keys; key: pointer;
-                            len: csize_t) {.importc.}
+                            len: csize_t) {.importc, cdecl, gcsafe.}
 ## *
 ##  \brief CBC encryption with AES (`aes_big` implementation).
 ##
@@ -797,7 +797,7 @@ proc br_aes_big_ctrcbc_init*(ctx: ptr br_aes_big_ctrcbc_keys; key: pointer;
 ##
 
 proc br_aes_big_cbcenc_run*(ctx: ptr br_aes_big_cbcenc_keys; iv: pointer;
-                           data: pointer; len: csize_t) {.importc.}
+                           data: pointer; len: csize_t) {.importc, cdecl, gcsafe.}
 ## *
 ##  \brief CBC decryption with AES (`aes_big` implementation).
 ##
@@ -808,7 +808,7 @@ proc br_aes_big_cbcenc_run*(ctx: ptr br_aes_big_cbcenc_keys; iv: pointer;
 ##
 
 proc br_aes_big_cbcdec_run*(ctx: ptr br_aes_big_cbcdec_keys; iv: pointer;
-                           data: pointer; len: csize_t) {.importc.}
+                           data: pointer; len: csize_t) {.importc, cdecl, gcsafe.}
 ## *
 ##  \brief CTR encryption and decryption with AES (`aes_big` implementation).
 ##
@@ -821,7 +821,7 @@ proc br_aes_big_cbcdec_run*(ctx: ptr br_aes_big_cbcdec_keys; iv: pointer;
 ##
 
 proc br_aes_big_ctr_run*(ctx: ptr br_aes_big_ctr_keys; iv: pointer; cc: uint32_t;
-                        data: pointer; len: csize_t): uint32_t {.importc, discardable.}
+                        data: pointer; len: csize_t): uint32_t {.importc, cdecl, gcsafe, discardable.}
 ## *
 ##  \brief CTR encryption + CBC-MAC with AES (`aes_big` implementation).
 ##
@@ -833,7 +833,7 @@ proc br_aes_big_ctr_run*(ctx: ptr br_aes_big_ctr_keys; iv: pointer; cc: uint32_t
 ##
 
 proc br_aes_big_ctrcbc_encrypt*(ctx: ptr br_aes_big_ctrcbc_keys; ctr: pointer;
-                               cbcmac: pointer; data: pointer; len: csize_t) {.importc.}
+                               cbcmac: pointer; data: pointer; len: csize_t) {.importc, cdecl, gcsafe.}
 ## *
 ##  \brief CTR decryption + CBC-MAC with AES (`aes_big` implementation).
 ##
@@ -845,7 +845,7 @@ proc br_aes_big_ctrcbc_encrypt*(ctx: ptr br_aes_big_ctrcbc_keys; ctr: pointer;
 ##
 
 proc br_aes_big_ctrcbc_decrypt*(ctx: ptr br_aes_big_ctrcbc_keys; ctr: pointer;
-                               cbcmac: pointer; data: pointer; len: csize_t) {.importc.}
+                               cbcmac: pointer; data: pointer; len: csize_t) {.importc, cdecl, gcsafe.}
 ## *
 ##  \brief CTR encryption/decryption with AES (`aes_big` implementation).
 ##
@@ -856,7 +856,7 @@ proc br_aes_big_ctrcbc_decrypt*(ctx: ptr br_aes_big_ctrcbc_keys; ctr: pointer;
 ##
 
 proc br_aes_big_ctrcbc_ctr*(ctx: ptr br_aes_big_ctrcbc_keys; ctr: pointer;
-                           data: pointer; len: csize_t) {.importc.}
+                           data: pointer; len: csize_t) {.importc, cdecl, gcsafe.}
 ## *
 ##  \brief CBC-MAC with AES (`aes_big` implementation).
 ##
@@ -867,7 +867,7 @@ proc br_aes_big_ctrcbc_ctr*(ctx: ptr br_aes_big_ctrcbc_keys; ctr: pointer;
 ##
 
 proc br_aes_big_ctrcbc_mac*(ctx: ptr br_aes_big_ctrcbc_keys; cbcmac: pointer;
-                           data: pointer; len: csize_t) {.importc.}
+                           data: pointer; len: csize_t) {.importc, cdecl, gcsafe.}
 ##
 ##  AES implementation optimized for size. It is slower than the
 ##  traditional table-based AES implementation, but requires much less
@@ -974,7 +974,7 @@ var br_aes_small_ctrcbc_vtable* {.importc.}: br_block_ctrcbc_class
 ##
 
 proc br_aes_small_cbcenc_init*(ctx: ptr br_aes_small_cbcenc_keys; key: pointer;
-                              len: csize_t) {.importc.}
+                              len: csize_t) {.importc, cdecl, gcsafe.}
 ## *
 ##  \brief Context initialisation (key schedule) for AES CBC decryption
 ##  (`aes_small` implementation).
@@ -985,7 +985,7 @@ proc br_aes_small_cbcenc_init*(ctx: ptr br_aes_small_cbcenc_keys; key: pointer;
 ##
 
 proc br_aes_small_cbcdec_init*(ctx: ptr br_aes_small_cbcdec_keys; key: pointer;
-                              len: csize_t) {.importc.}
+                              len: csize_t) {.importc, cdecl, gcsafe.}
 ## *
 ##  \brief Context initialisation (key schedule) for AES CTR encryption
 ##  and decryption (`aes_small` implementation).
@@ -995,7 +995,7 @@ proc br_aes_small_cbcdec_init*(ctx: ptr br_aes_small_cbcdec_keys; key: pointer;
 ##  \param len   secret key length (in bytes).
 ##
 
-proc br_aes_small_ctr_init*(ctx: ptr br_aes_small_ctr_keys; key: pointer; len: csize_t) {.importc.}
+proc br_aes_small_ctr_init*(ctx: ptr br_aes_small_ctr_keys; key: pointer; len: csize_t) {.importc, cdecl, gcsafe.}
 ## *
 ##  \brief Context initialisation (key schedule) for AES CTR + CBC-MAC
 ##  (`aes_small` implementation).
@@ -1006,7 +1006,7 @@ proc br_aes_small_ctr_init*(ctx: ptr br_aes_small_ctr_keys; key: pointer; len: c
 ##
 
 proc br_aes_small_ctrcbc_init*(ctx: ptr br_aes_small_ctrcbc_keys; key: pointer;
-                              len: csize_t) {.importc.}
+                              len: csize_t) {.importc, cdecl, gcsafe.}
 ## *
 ##  \brief CBC encryption with AES (`aes_small` implementation).
 ##
@@ -1017,7 +1017,7 @@ proc br_aes_small_ctrcbc_init*(ctx: ptr br_aes_small_ctrcbc_keys; key: pointer;
 ##
 
 proc br_aes_small_cbcenc_run*(ctx: ptr br_aes_small_cbcenc_keys; iv: pointer;
-                             data: pointer; len: csize_t) {.importc.}
+                             data: pointer; len: csize_t) {.importc, cdecl, gcsafe.}
 ## *
 ##  \brief CBC decryption with AES (`aes_small` implementation).
 ##
@@ -1028,7 +1028,7 @@ proc br_aes_small_cbcenc_run*(ctx: ptr br_aes_small_cbcenc_keys; iv: pointer;
 ##
 
 proc br_aes_small_cbcdec_run*(ctx: ptr br_aes_small_cbcdec_keys; iv: pointer;
-                             data: pointer; len: csize_t) {.importc.}
+                             data: pointer; len: csize_t) {.importc, cdecl, gcsafe.}
 ## *
 ##  \brief CTR encryption and decryption with AES (`aes_small` implementation).
 ##
@@ -1041,7 +1041,7 @@ proc br_aes_small_cbcdec_run*(ctx: ptr br_aes_small_cbcdec_keys; iv: pointer;
 ##
 
 proc br_aes_small_ctr_run*(ctx: ptr br_aes_small_ctr_keys; iv: pointer; cc: uint32_t;
-                          data: pointer; len: csize_t): uint32_t {.importc, discardable.}
+                          data: pointer; len: csize_t): uint32_t {.importc, cdecl, gcsafe.}
 ## *
 ##  \brief CTR encryption + CBC-MAC with AES (`aes_small` implementation).
 ##
@@ -1053,7 +1053,7 @@ proc br_aes_small_ctr_run*(ctx: ptr br_aes_small_ctr_keys; iv: pointer; cc: uint
 ##
 
 proc br_aes_small_ctrcbc_encrypt*(ctx: ptr br_aes_small_ctrcbc_keys; ctr: pointer;
-                                 cbcmac: pointer; data: pointer; len: csize_t) {.importc.}
+                                 cbcmac: pointer; data: pointer; len: csize_t) {.importc, cdecl, gcsafe.}
 ## *
 ##  \brief CTR decryption + CBC-MAC with AES (`aes_small` implementation).
 ##
@@ -1065,7 +1065,7 @@ proc br_aes_small_ctrcbc_encrypt*(ctx: ptr br_aes_small_ctrcbc_keys; ctr: pointe
 ##
 
 proc br_aes_small_ctrcbc_decrypt*(ctx: ptr br_aes_small_ctrcbc_keys; ctr: pointer;
-                                 cbcmac: pointer; data: pointer; len: csize_t) {.importc.}
+                                 cbcmac: pointer; data: pointer; len: csize_t) {.importc, cdecl, gcsafe.}
 ## *
 ##  \brief CTR encryption/decryption with AES (`aes_small` implementation).
 ##
@@ -1076,7 +1076,7 @@ proc br_aes_small_ctrcbc_decrypt*(ctx: ptr br_aes_small_ctrcbc_keys; ctr: pointe
 ##
 
 proc br_aes_small_ctrcbc_ctr*(ctx: ptr br_aes_small_ctrcbc_keys; ctr: pointer;
-                             data: pointer; len: csize_t) {.importc.}
+                             data: pointer; len: csize_t) {.importc, cdecl, gcsafe.}
 ## *
 ##  \brief CBC-MAC with AES (`aes_small` implementation).
 ##
@@ -1087,7 +1087,7 @@ proc br_aes_small_ctrcbc_ctr*(ctx: ptr br_aes_small_ctrcbc_keys; ctr: pointer;
 ##
 
 proc br_aes_small_ctrcbc_mac*(ctx: ptr br_aes_small_ctrcbc_keys; cbcmac: pointer;
-                             data: pointer; len: csize_t) {.importc.}
+                             data: pointer; len: csize_t) {.importc, cdecl, gcsafe.}
 ##
 ##  Constant-time AES implementation. Its size is similar to that of
 ##  'aes_big', and its performance is similar to that of 'aes_small' (faster
@@ -1192,7 +1192,7 @@ var br_aes_ct_ctrcbc_vtable* {.importc.}: br_block_ctrcbc_class
 ##  \param len   secret key length (in bytes).
 ##
 
-proc br_aes_ct_cbcenc_init*(ctx: ptr br_aes_ct_cbcenc_keys; key: pointer; len: csize_t) {.importc.}
+proc br_aes_ct_cbcenc_init*(ctx: ptr br_aes_ct_cbcenc_keys; key: pointer; len: csize_t) {.importc, cdecl, gcsafe.}
 ## *
 ##  \brief Context initialisation (key schedule) for AES CBC decryption
 ##  (`aes_ct` implementation).
@@ -1202,7 +1202,7 @@ proc br_aes_ct_cbcenc_init*(ctx: ptr br_aes_ct_cbcenc_keys; key: pointer; len: c
 ##  \param len   secret key length (in bytes).
 ##
 
-proc br_aes_ct_cbcdec_init*(ctx: ptr br_aes_ct_cbcdec_keys; key: pointer; len: csize_t) {.importc.}
+proc br_aes_ct_cbcdec_init*(ctx: ptr br_aes_ct_cbcdec_keys; key: pointer; len: csize_t) {.importc, cdecl, gcsafe.}
 ## *
 ##  \brief Context initialisation (key schedule) for AES CTR encryption
 ##  and decryption (`aes_ct` implementation).
@@ -1212,7 +1212,7 @@ proc br_aes_ct_cbcdec_init*(ctx: ptr br_aes_ct_cbcdec_keys; key: pointer; len: c
 ##  \param len   secret key length (in bytes).
 ##
 
-proc br_aes_ct_ctr_init*(ctx: ptr br_aes_ct_ctr_keys; key: pointer; len: csize_t) {.importc.}
+proc br_aes_ct_ctr_init*(ctx: ptr br_aes_ct_ctr_keys; key: pointer; len: csize_t) {.importc, cdecl, gcsafe.}
 ## *
 ##  \brief Context initialisation (key schedule) for AES CTR + CBC-MAC
 ##  (`aes_ct` implementation).
@@ -1222,7 +1222,7 @@ proc br_aes_ct_ctr_init*(ctx: ptr br_aes_ct_ctr_keys; key: pointer; len: csize_t
 ##  \param len   secret key length (in bytes).
 ##
 
-proc br_aes_ct_ctrcbc_init*(ctx: ptr br_aes_ct_ctrcbc_keys; key: pointer; len: csize_t) {.importc.}
+proc br_aes_ct_ctrcbc_init*(ctx: ptr br_aes_ct_ctrcbc_keys; key: pointer; len: csize_t) {.importc, cdecl, gcsafe.}
 ## *
 ##  \brief CBC encryption with AES (`aes_ct` implementation).
 ##
@@ -1233,7 +1233,7 @@ proc br_aes_ct_ctrcbc_init*(ctx: ptr br_aes_ct_ctrcbc_keys; key: pointer; len: c
 ##
 
 proc br_aes_ct_cbcenc_run*(ctx: ptr br_aes_ct_cbcenc_keys; iv: pointer; data: pointer;
-                          len: csize_t) {.importc.}
+                          len: csize_t) {.importc, cdecl, gcsafe.}
 ## *
 ##  \brief CBC decryption with AES (`aes_ct` implementation).
 ##
@@ -1244,7 +1244,7 @@ proc br_aes_ct_cbcenc_run*(ctx: ptr br_aes_ct_cbcenc_keys; iv: pointer; data: po
 ##
 
 proc br_aes_ct_cbcdec_run*(ctx: ptr br_aes_ct_cbcdec_keys; iv: pointer; data: pointer;
-                          len: csize_t) {.importc.}
+                          len: csize_t) {.importc, cdecl, gcsafe.}
 ## *
 ##  \brief CTR encryption and decryption with AES (`aes_ct` implementation).
 ##
@@ -1257,7 +1257,7 @@ proc br_aes_ct_cbcdec_run*(ctx: ptr br_aes_ct_cbcdec_keys; iv: pointer; data: po
 ##
 
 proc br_aes_ct_ctr_run*(ctx: ptr br_aes_ct_ctr_keys; iv: pointer; cc: uint32_t;
-                       data: pointer; len: csize_t): uint32_t {.importc, discardable.}
+                       data: pointer; len: csize_t): uint32_t {.importc, cdecl, gcsafe.}
 ## *
 ##  \brief CTR encryption + CBC-MAC with AES (`aes_ct` implementation).
 ##
@@ -1269,7 +1269,7 @@ proc br_aes_ct_ctr_run*(ctx: ptr br_aes_ct_ctr_keys; iv: pointer; cc: uint32_t;
 ##
 
 proc br_aes_ct_ctrcbc_encrypt*(ctx: ptr br_aes_ct_ctrcbc_keys; ctr: pointer;
-                              cbcmac: pointer; data: pointer; len: csize_t) {.importc.}
+                              cbcmac: pointer; data: pointer; len: csize_t) {.importc, cdecl, gcsafe.}
 ## *
 ##  \brief CTR decryption + CBC-MAC with AES (`aes_ct` implementation).
 ##
@@ -1281,7 +1281,7 @@ proc br_aes_ct_ctrcbc_encrypt*(ctx: ptr br_aes_ct_ctrcbc_keys; ctr: pointer;
 ##
 
 proc br_aes_ct_ctrcbc_decrypt*(ctx: ptr br_aes_ct_ctrcbc_keys; ctr: pointer;
-                              cbcmac: pointer; data: pointer; len: csize_t) {.importc.}
+                              cbcmac: pointer; data: pointer; len: csize_t) {.importc, cdecl, gcsafe.}
 ## *
 ##  \brief CTR encryption/decryption with AES (`aes_ct` implementation).
 ##
@@ -1292,7 +1292,7 @@ proc br_aes_ct_ctrcbc_decrypt*(ctx: ptr br_aes_ct_ctrcbc_keys; ctr: pointer;
 ##
 
 proc br_aes_ct_ctrcbc_ctr*(ctx: ptr br_aes_ct_ctrcbc_keys; ctr: pointer;
-                          data: pointer; len: csize_t) {.importc.}
+                          data: pointer; len: csize_t) {.importc, cdecl, gcsafe.}
 ## *
 ##  \brief CBC-MAC with AES (`aes_ct` implementation).
 ##
@@ -1303,7 +1303,7 @@ proc br_aes_ct_ctrcbc_ctr*(ctx: ptr br_aes_ct_ctrcbc_keys; ctr: pointer;
 ##
 
 proc br_aes_ct_ctrcbc_mac*(ctx: ptr br_aes_ct_ctrcbc_keys; cbcmac: pointer;
-                          data: pointer; len: csize_t) {.importc.}
+                          data: pointer; len: csize_t) {.importc, cdecl, gcsafe.}
 ##
 ##  64-bit constant-time AES implementation. It is similar to 'aes_ct'
 ##  but uses 64-bit registers, making it about twice faster than 'aes_ct'
@@ -1411,7 +1411,7 @@ var br_aes_ct64_ctrcbc_vtable* {.importc.}: br_block_ctrcbc_class
 ##
 
 proc br_aes_ct64_cbcenc_init*(ctx: ptr br_aes_ct64_cbcenc_keys; key: pointer;
-                             len: csize_t) {.importc.}
+                             len: csize_t) {.importc, cdecl, gcsafe.}
 ## *
 ##  \brief Context initialisation (key schedule) for AES CBC decryption
 ##  (`aes_ct64` implementation).
@@ -1422,7 +1422,7 @@ proc br_aes_ct64_cbcenc_init*(ctx: ptr br_aes_ct64_cbcenc_keys; key: pointer;
 ##
 
 proc br_aes_ct64_cbcdec_init*(ctx: ptr br_aes_ct64_cbcdec_keys; key: pointer;
-                             len: csize_t) {.importc.}
+                             len: csize_t) {.importc, cdecl, gcsafe.}
 ## *
 ##  \brief Context initialisation (key schedule) for AES CTR encryption
 ##  and decryption (`aes_ct64` implementation).
@@ -1432,7 +1432,7 @@ proc br_aes_ct64_cbcdec_init*(ctx: ptr br_aes_ct64_cbcdec_keys; key: pointer;
 ##  \param len   secret key length (in bytes).
 ##
 
-proc br_aes_ct64_ctr_init*(ctx: ptr br_aes_ct64_ctr_keys; key: pointer; len: csize_t) {.importc.}
+proc br_aes_ct64_ctr_init*(ctx: ptr br_aes_ct64_ctr_keys; key: pointer; len: csize_t) {.importc, cdecl, gcsafe.}
 ## *
 ##  \brief Context initialisation (key schedule) for AES CTR + CBC-MAC
 ##  (`aes_ct64` implementation).
@@ -1443,7 +1443,7 @@ proc br_aes_ct64_ctr_init*(ctx: ptr br_aes_ct64_ctr_keys; key: pointer; len: csi
 ##
 
 proc br_aes_ct64_ctrcbc_init*(ctx: ptr br_aes_ct64_ctrcbc_keys; key: pointer;
-                             len: csize_t) {.importc.}
+                             len: csize_t) {.importc, cdecl, gcsafe.}
 ## *
 ##  \brief CBC encryption with AES (`aes_ct64` implementation).
 ##
@@ -1454,7 +1454,7 @@ proc br_aes_ct64_ctrcbc_init*(ctx: ptr br_aes_ct64_ctrcbc_keys; key: pointer;
 ##
 
 proc br_aes_ct64_cbcenc_run*(ctx: ptr br_aes_ct64_cbcenc_keys; iv: pointer;
-                            data: pointer; len: csize_t) {.importc.}
+                            data: pointer; len: csize_t) {.importc, cdecl, gcsafe.}
 ## *
 ##  \brief CBC decryption with AES (`aes_ct64` implementation).
 ##
@@ -1465,7 +1465,7 @@ proc br_aes_ct64_cbcenc_run*(ctx: ptr br_aes_ct64_cbcenc_keys; iv: pointer;
 ##
 
 proc br_aes_ct64_cbcdec_run*(ctx: ptr br_aes_ct64_cbcdec_keys; iv: pointer;
-                            data: pointer; len: csize_t) {.importc.}
+                            data: pointer; len: csize_t) {.importc, cdecl, gcsafe.}
 ## *
 ##  \brief CTR encryption and decryption with AES (`aes_ct64` implementation).
 ##
@@ -1478,7 +1478,7 @@ proc br_aes_ct64_cbcdec_run*(ctx: ptr br_aes_ct64_cbcdec_keys; iv: pointer;
 ##
 
 proc br_aes_ct64_ctr_run*(ctx: ptr br_aes_ct64_ctr_keys; iv: pointer; cc: uint32_t;
-                         data: pointer; len: csize_t): uint32_t {.importc, discardable.}
+                         data: pointer; len: csize_t): uint32_t {.importc, cdecl, gcsafe.}
 ## *
 ##  \brief CTR encryption + CBC-MAC with AES (`aes_ct64` implementation).
 ##
@@ -1490,7 +1490,7 @@ proc br_aes_ct64_ctr_run*(ctx: ptr br_aes_ct64_ctr_keys; iv: pointer; cc: uint32
 ##
 
 proc br_aes_ct64_ctrcbc_encrypt*(ctx: ptr br_aes_ct64_ctrcbc_keys; ctr: pointer;
-                                cbcmac: pointer; data: pointer; len: csize_t) {.importc.}
+                                cbcmac: pointer; data: pointer; len: csize_t) {.importc, cdecl, gcsafe.}
 ## *
 ##  \brief CTR decryption + CBC-MAC with AES (`aes_ct64` implementation).
 ##
@@ -1502,7 +1502,7 @@ proc br_aes_ct64_ctrcbc_encrypt*(ctx: ptr br_aes_ct64_ctrcbc_keys; ctr: pointer;
 ##
 
 proc br_aes_ct64_ctrcbc_decrypt*(ctx: ptr br_aes_ct64_ctrcbc_keys; ctr: pointer;
-                                cbcmac: pointer; data: pointer; len: csize_t) {.importc.}
+                                cbcmac: pointer; data: pointer; len: csize_t) {.importc, cdecl, gcsafe.}
 ## *
 ##  \brief CTR encryption/decryption with AES (`aes_ct64` implementation).
 ##
@@ -1513,7 +1513,7 @@ proc br_aes_ct64_ctrcbc_decrypt*(ctx: ptr br_aes_ct64_ctrcbc_keys; ctr: pointer;
 ##
 
 proc br_aes_ct64_ctrcbc_ctr*(ctx: ptr br_aes_ct64_ctrcbc_keys; ctr: pointer;
-                            data: pointer; len: csize_t) {.importc.}
+                            data: pointer; len: csize_t) {.importc, cdecl, gcsafe.}
 ## *
 ##  \brief CBC-MAC with AES (`aes_ct64` implementation).
 ##
@@ -1524,7 +1524,7 @@ proc br_aes_ct64_ctrcbc_ctr*(ctx: ptr br_aes_ct64_ctrcbc_keys; ctr: pointer;
 ##
 
 proc br_aes_ct64_ctrcbc_mac*(ctx: ptr br_aes_ct64_ctrcbc_keys; cbcmac: pointer;
-                            data: pointer; len: csize_t) {.importc.}
+                            data: pointer; len: csize_t) {.importc, cdecl, gcsafe.}
 ##
 ##  AES implementation using AES-NI opcodes (x86 platform).
 ##
@@ -1655,7 +1655,7 @@ var br_aes_x86ni_ctrcbc_vtable* {.importc.}: br_block_ctrcbc_class
 ##
 
 proc br_aes_x86ni_cbcenc_init*(ctx: ptr br_aes_x86ni_cbcenc_keys; key: pointer;
-                              len: csize_t) {.importc.}
+                              len: csize_t) {.importc, cdecl, gcsafe.}
 ## *
 ##  \brief Context initialisation (key schedule) for AES CBC decryption
 ##  (`aes_x86ni` implementation).
@@ -1666,7 +1666,7 @@ proc br_aes_x86ni_cbcenc_init*(ctx: ptr br_aes_x86ni_cbcenc_keys; key: pointer;
 ##
 
 proc br_aes_x86ni_cbcdec_init*(ctx: ptr br_aes_x86ni_cbcdec_keys; key: pointer;
-                              len: csize_t) {.importc.}
+                              len: csize_t) {.importc, cdecl, gcsafe.}
 ## *
 ##  \brief Context initialisation (key schedule) for AES CTR encryption
 ##  and decryption (`aes_x86ni` implementation).
@@ -1676,7 +1676,7 @@ proc br_aes_x86ni_cbcdec_init*(ctx: ptr br_aes_x86ni_cbcdec_keys; key: pointer;
 ##  \param len   secret key length (in bytes).
 ##
 
-proc br_aes_x86ni_ctr_init*(ctx: ptr br_aes_x86ni_ctr_keys; key: pointer; len: csize_t) {.importc.}
+proc br_aes_x86ni_ctr_init*(ctx: ptr br_aes_x86ni_ctr_keys; key: pointer; len: csize_t) {.importc, cdecl, gcsafe.}
 ## *
 ##  \brief Context initialisation (key schedule) for AES CTR + CBC-MAC
 ##  (`aes_x86ni` implementation).
@@ -1687,7 +1687,7 @@ proc br_aes_x86ni_ctr_init*(ctx: ptr br_aes_x86ni_ctr_keys; key: pointer; len: c
 ##
 
 proc br_aes_x86ni_ctrcbc_init*(ctx: ptr br_aes_x86ni_ctrcbc_keys; key: pointer;
-                              len: csize_t) {.importc.}
+                              len: csize_t) {.importc, cdecl, gcsafe.}
 ## *
 ##  \brief CBC encryption with AES (`aes_x86ni` implementation).
 ##
@@ -1698,7 +1698,7 @@ proc br_aes_x86ni_ctrcbc_init*(ctx: ptr br_aes_x86ni_ctrcbc_keys; key: pointer;
 ##
 
 proc br_aes_x86ni_cbcenc_run*(ctx: ptr br_aes_x86ni_cbcenc_keys; iv: pointer;
-                             data: pointer; len: csize_t) {.importc.}
+                             data: pointer; len: csize_t) {.importc, cdecl, gcsafe.}
 ## *
 ##  \brief CBC decryption with AES (`aes_x86ni` implementation).
 ##
@@ -1709,7 +1709,7 @@ proc br_aes_x86ni_cbcenc_run*(ctx: ptr br_aes_x86ni_cbcenc_keys; iv: pointer;
 ##
 
 proc br_aes_x86ni_cbcdec_run*(ctx: ptr br_aes_x86ni_cbcdec_keys; iv: pointer;
-                             data: pointer; len: csize_t) {.importc.}
+                             data: pointer; len: csize_t) {.importc, cdecl, gcsafe.}
 ## *
 ##  \brief CTR encryption and decryption with AES (`aes_x86ni` implementation).
 ##
@@ -1722,7 +1722,7 @@ proc br_aes_x86ni_cbcdec_run*(ctx: ptr br_aes_x86ni_cbcdec_keys; iv: pointer;
 ##
 
 proc br_aes_x86ni_ctr_run*(ctx: ptr br_aes_x86ni_ctr_keys; iv: pointer; cc: uint32_t;
-                          data: pointer; len: csize_t): uint32_t {.importc, discardable.}
+                          data: pointer; len: csize_t): uint32_t {.importc, cdecl, gcsafe.}
 ## *
 ##  \brief CTR encryption + CBC-MAC with AES (`aes_x86ni` implementation).
 ##
@@ -1734,7 +1734,7 @@ proc br_aes_x86ni_ctr_run*(ctx: ptr br_aes_x86ni_ctr_keys; iv: pointer; cc: uint
 ##
 
 proc br_aes_x86ni_ctrcbc_encrypt*(ctx: ptr br_aes_x86ni_ctrcbc_keys; ctr: pointer;
-                                 cbcmac: pointer; data: pointer; len: csize_t) {.importc.}
+                                 cbcmac: pointer; data: pointer; len: csize_t) {.importc, cdecl, gcsafe.}
 ## *
 ##  \brief CTR decryption + CBC-MAC with AES (`aes_x86ni` implementation).
 ##
@@ -1746,7 +1746,7 @@ proc br_aes_x86ni_ctrcbc_encrypt*(ctx: ptr br_aes_x86ni_ctrcbc_keys; ctr: pointe
 ##
 
 proc br_aes_x86ni_ctrcbc_decrypt*(ctx: ptr br_aes_x86ni_ctrcbc_keys; ctr: pointer;
-                                 cbcmac: pointer; data: pointer; len: csize_t) {.importc.}
+                                 cbcmac: pointer; data: pointer; len: csize_t) {.importc, cdecl, gcsafe.}
 ## *
 ##  \brief CTR encryption/decryption with AES (`aes_x86ni` implementation).
 ##
@@ -1757,7 +1757,7 @@ proc br_aes_x86ni_ctrcbc_decrypt*(ctx: ptr br_aes_x86ni_ctrcbc_keys; ctr: pointe
 ##
 
 proc br_aes_x86ni_ctrcbc_ctr*(ctx: ptr br_aes_x86ni_ctrcbc_keys; ctr: pointer;
-                             data: pointer; len: csize_t) {.importc.}
+                             data: pointer; len: csize_t) {.importc, cdecl, gcsafe.}
 ## *
 ##  \brief CBC-MAC with AES (`aes_x86ni` implementation).
 ##
@@ -1768,7 +1768,7 @@ proc br_aes_x86ni_ctrcbc_ctr*(ctx: ptr br_aes_x86ni_ctrcbc_keys; ctr: pointer;
 ##
 
 proc br_aes_x86ni_ctrcbc_mac*(ctx: ptr br_aes_x86ni_ctrcbc_keys; cbcmac: pointer;
-                             data: pointer; len: csize_t) {.importc.}
+                             data: pointer; len: csize_t) {.importc, cdecl, gcsafe.}
 ## *
 ##  \brief Obtain the `aes_x86ni` AES-CBC (encryption) implementation, if
 ##  available.
@@ -1781,7 +1781,7 @@ proc br_aes_x86ni_ctrcbc_mac*(ctx: ptr br_aes_x86ni_ctrcbc_keys; cbcmac: pointer
 ##  \return  the `aes_x86ni` AES-CBC (encryption) implementation, or `NULL`.
 ##
 
-proc br_aes_x86ni_cbcenc_get_vtable*(): ptr br_block_cbcenc_class {.importc.}
+proc br_aes_x86ni_cbcenc_get_vtable*(): ptr br_block_cbcenc_class {.importc, cdecl, gcsafe.}
 ## *
 ##  \brief Obtain the `aes_x86ni` AES-CBC (decryption) implementation, if
 ##  available.
@@ -1794,7 +1794,7 @@ proc br_aes_x86ni_cbcenc_get_vtable*(): ptr br_block_cbcenc_class {.importc.}
 ##  \return  the `aes_x86ni` AES-CBC (decryption) implementation, or `NULL`.
 ##
 
-proc br_aes_x86ni_cbcdec_get_vtable*(): ptr br_block_cbcdec_class {.importc.}
+proc br_aes_x86ni_cbcdec_get_vtable*(): ptr br_block_cbcdec_class {.importc, cdecl, gcsafe.}
 ## *
 ##  \brief Obtain the `aes_x86ni` AES-CTR implementation, if available.
 ##
@@ -1806,7 +1806,7 @@ proc br_aes_x86ni_cbcdec_get_vtable*(): ptr br_block_cbcdec_class {.importc.}
 ##  \return  the `aes_x86ni` AES-CTR implementation, or `NULL`.
 ##
 
-proc br_aes_x86ni_ctr_get_vtable*(): ptr br_block_ctr_class {.importc.}
+proc br_aes_x86ni_ctr_get_vtable*(): ptr br_block_ctr_class {.importc, cdecl, gcsafe.}
 ## *
 ##  \brief Obtain the `aes_x86ni` AES-CTR + CBC-MAC implementation, if
 ##  available.
@@ -1819,7 +1819,7 @@ proc br_aes_x86ni_ctr_get_vtable*(): ptr br_block_ctr_class {.importc.}
 ##  \return  the `aes_x86ni` AES-CTR implementation, or `NULL`.
 ##
 
-proc br_aes_x86ni_ctrcbc_get_vtable*(): ptr br_block_ctrcbc_class {.importc.}
+proc br_aes_x86ni_ctrcbc_get_vtable*(): ptr br_block_ctrcbc_class {.importc, cdecl, gcsafe.}
 ##
 ##  AES implementation using POWER8 opcodes.
 ##
@@ -1950,7 +1950,7 @@ var br_aes_pwr8_ctrcbc_vtable* {.importc.}: br_block_ctrcbc_class
 ##
 
 proc br_aes_pwr8_cbcenc_init*(ctx: ptr br_aes_pwr8_cbcenc_keys; key: pointer;
-                             len: csize_t) {.importc.}
+                             len: csize_t) {.importc, cdecl, gcsafe.}
 ## *
 ##  \brief Context initialisation (key schedule) for AES CBC decryption
 ##  (`aes_pwr8` implementation).
@@ -1961,7 +1961,7 @@ proc br_aes_pwr8_cbcenc_init*(ctx: ptr br_aes_pwr8_cbcenc_keys; key: pointer;
 ##
 
 proc br_aes_pwr8_cbcdec_init*(ctx: ptr br_aes_pwr8_cbcdec_keys; key: pointer;
-                             len: csize_t) {.importc.}
+                             len: csize_t) {.importc, cdecl, gcsafe.}
 ## *
 ##  \brief Context initialisation (key schedule) for AES CTR encryption
 ##  and decryption (`aes_pwr8` implementation).
@@ -1971,7 +1971,7 @@ proc br_aes_pwr8_cbcdec_init*(ctx: ptr br_aes_pwr8_cbcdec_keys; key: pointer;
 ##  \param len   secret key length (in bytes).
 ##
 
-proc br_aes_pwr8_ctr_init*(ctx: ptr br_aes_pwr8_ctr_keys; key: pointer; len: csize_t) {.importc.}
+proc br_aes_pwr8_ctr_init*(ctx: ptr br_aes_pwr8_ctr_keys; key: pointer; len: csize_t) {.importc, cdecl, gcsafe.}
 ## *
 ##  \brief Context initialisation (key schedule) for AES CTR + CBC-MAC
 ##  (`aes_pwr8` implementation).
@@ -1982,7 +1982,7 @@ proc br_aes_pwr8_ctr_init*(ctx: ptr br_aes_pwr8_ctr_keys; key: pointer; len: csi
 ##
 
 proc br_aes_pwr8_ctrcbc_init*(ctx: ptr br_aes_pwr8_ctrcbc_keys; key: pointer;
-                             len: csize_t) {.importc.}
+                             len: csize_t) {.importc, cdecl, gcsafe.}
 ## *
 ##  \brief CBC encryption with AES (`aes_pwr8` implementation).
 ##
@@ -1993,7 +1993,7 @@ proc br_aes_pwr8_ctrcbc_init*(ctx: ptr br_aes_pwr8_ctrcbc_keys; key: pointer;
 ##
 
 proc br_aes_pwr8_cbcenc_run*(ctx: ptr br_aes_pwr8_cbcenc_keys; iv: pointer;
-                            data: pointer; len: csize_t) {.importc.}
+                            data: pointer; len: csize_t) {.importc, cdecl, gcsafe.}
 ## *
 ##  \brief CBC decryption with AES (`aes_pwr8` implementation).
 ##
@@ -2004,7 +2004,7 @@ proc br_aes_pwr8_cbcenc_run*(ctx: ptr br_aes_pwr8_cbcenc_keys; iv: pointer;
 ##
 
 proc br_aes_pwr8_cbcdec_run*(ctx: ptr br_aes_pwr8_cbcdec_keys; iv: pointer;
-                            data: pointer; len: csize_t) {.importc.}
+                            data: pointer; len: csize_t) {.importc, cdecl, gcsafe.}
 ## *
 ##  \brief CTR encryption and decryption with AES (`aes_pwr8` implementation).
 ##
@@ -2017,7 +2017,7 @@ proc br_aes_pwr8_cbcdec_run*(ctx: ptr br_aes_pwr8_cbcdec_keys; iv: pointer;
 ##
 
 proc br_aes_pwr8_ctr_run*(ctx: ptr br_aes_pwr8_ctr_keys; iv: pointer; cc: uint32_t;
-                         data: pointer; len: csize_t): uint32_t {.importc, discardable.}
+                         data: pointer; len: csize_t): uint32_t {.importc, cdecl, gcsafe.}
 ## *
 ##  \brief CTR encryption + CBC-MAC with AES (`aes_pwr8` implementation).
 ##
@@ -2029,7 +2029,7 @@ proc br_aes_pwr8_ctr_run*(ctx: ptr br_aes_pwr8_ctr_keys; iv: pointer; cc: uint32
 ##
 
 proc br_aes_pwr8_ctrcbc_encrypt*(ctx: ptr br_aes_pwr8_ctrcbc_keys; ctr: pointer;
-                                cbcmac: pointer; data: pointer; len: csize_t) {.importc.}
+                                cbcmac: pointer; data: pointer; len: csize_t) {.importc, cdecl, gcsafe.}
 ## *
 ##  \brief CTR decryption + CBC-MAC with AES (`aes_pwr8` implementation).
 ##
@@ -2041,7 +2041,7 @@ proc br_aes_pwr8_ctrcbc_encrypt*(ctx: ptr br_aes_pwr8_ctrcbc_keys; ctr: pointer;
 ##
 
 proc br_aes_pwr8_ctrcbc_decrypt*(ctx: ptr br_aes_pwr8_ctrcbc_keys; ctr: pointer;
-                                cbcmac: pointer; data: pointer; len: csize_t) {.importc.}
+                                cbcmac: pointer; data: pointer; len: csize_t) {.importc, cdecl, gcsafe.}
 ## *
 ##  \brief CTR encryption/decryption with AES (`aes_pwr8` implementation).
 ##
@@ -2052,7 +2052,7 @@ proc br_aes_pwr8_ctrcbc_decrypt*(ctx: ptr br_aes_pwr8_ctrcbc_keys; ctr: pointer;
 ##
 
 proc br_aes_pwr8_ctrcbc_ctr*(ctx: ptr br_aes_pwr8_ctrcbc_keys; ctr: pointer;
-                            data: pointer; len: csize_t) {.importc.}
+                            data: pointer; len: csize_t) {.importc, cdecl, gcsafe.}
 ## *
 ##  \brief CBC-MAC with AES (`aes_pwr8` implementation).
 ##
@@ -2063,7 +2063,7 @@ proc br_aes_pwr8_ctrcbc_ctr*(ctx: ptr br_aes_pwr8_ctrcbc_keys; ctr: pointer;
 ##
 
 proc br_aes_pwr8_ctrcbc_mac*(ctx: ptr br_aes_pwr8_ctrcbc_keys; cbcmac: pointer;
-                            data: pointer; len: csize_t) {.importc.}
+                            data: pointer; len: csize_t) {.importc, cdecl, gcsafe.}
 ## *
 ##  \brief Obtain the `aes_pwr8` AES-CBC (encryption) implementation, if
 ##  available.
@@ -2076,7 +2076,7 @@ proc br_aes_pwr8_ctrcbc_mac*(ctx: ptr br_aes_pwr8_ctrcbc_keys; cbcmac: pointer;
 ##  \return  the `aes_pwr8` AES-CBC (encryption) implementation, or `NULL`.
 ##
 
-proc br_aes_pwr8_cbcenc_get_vtable*(): ptr br_block_cbcenc_class {.importc.}
+proc br_aes_pwr8_cbcenc_get_vtable*(): ptr br_block_cbcenc_class {.importc, cdecl, gcsafe.}
 ## *
 ##  \brief Obtain the `aes_pwr8` AES-CBC (decryption) implementation, if
 ##  available.
@@ -2089,7 +2089,7 @@ proc br_aes_pwr8_cbcenc_get_vtable*(): ptr br_block_cbcenc_class {.importc.}
 ##  \return  the `aes_pwr8` AES-CBC (decryption) implementation, or `NULL`.
 ##
 
-proc br_aes_pwr8_cbcdec_get_vtable*(): ptr br_block_cbcdec_class {.importc.}
+proc br_aes_pwr8_cbcdec_get_vtable*(): ptr br_block_cbcdec_class {.importc, cdecl, gcsafe.}
 ## *
 ##  \brief Obtain the `aes_pwr8` AES-CTR implementation, if available.
 ##
@@ -2101,7 +2101,7 @@ proc br_aes_pwr8_cbcdec_get_vtable*(): ptr br_block_cbcdec_class {.importc.}
 ##  \return  the `aes_pwr8` AES-CTR implementation, or `NULL`.
 ##
 
-proc br_aes_pwr8_ctr_get_vtable*(): ptr br_block_ctr_class {.importc.}
+proc br_aes_pwr8_ctr_get_vtable*(): ptr br_block_ctr_class {.importc, cdecl, gcsafe.}
 ## *
 ##  \brief Obtain the `aes_pwr8` AES-CTR + CBC-MAC implementation, if
 ##  available.
@@ -2114,7 +2114,7 @@ proc br_aes_pwr8_ctr_get_vtable*(): ptr br_block_ctr_class {.importc.}
 ##  \return  the `aes_pwr8` AES-CTR implementation, or `NULL`.
 ##
 
-proc br_aes_pwr8_ctrcbc_get_vtable*(): ptr br_block_ctrcbc_class {.importc.}
+proc br_aes_pwr8_ctrcbc_get_vtable*(): ptr br_block_ctrcbc_class {.importc, cdecl, gcsafe.}
 ## *
 ##  \brief Aggregate structure large enough to be used as context for
 ##  subkeys (CBC encryption) for all AES implementations.
@@ -2238,7 +2238,7 @@ var br_des_tab_cbcdec_vtable* {.importc.}: br_block_cbcdec_class
 ##
 
 proc br_des_tab_cbcenc_init*(ctx: ptr br_des_tab_cbcenc_keys; key: pointer;
-                            len: csize_t) {.importc.}
+                            len: csize_t) {.importc, cdecl, gcsafe.}
 ## *
 ##  \brief Context initialisation (key schedule) for DES CBC decryption
 ##  (`des_tab` implementation).
@@ -2249,7 +2249,7 @@ proc br_des_tab_cbcenc_init*(ctx: ptr br_des_tab_cbcenc_keys; key: pointer;
 ##
 
 proc br_des_tab_cbcdec_init*(ctx: ptr br_des_tab_cbcdec_keys; key: pointer;
-                            len: csize_t) {.importc.}
+                            len: csize_t) {.importc, cdecl, gcsafe.}
 ## *
 ##  \brief CBC encryption with DES (`des_tab` implementation).
 ##
@@ -2260,7 +2260,7 @@ proc br_des_tab_cbcdec_init*(ctx: ptr br_des_tab_cbcdec_keys; key: pointer;
 ##
 
 proc br_des_tab_cbcenc_run*(ctx: ptr br_des_tab_cbcenc_keys; iv: pointer;
-                           data: pointer; len: csize_t) {.importc.}
+                           data: pointer; len: csize_t) {.importc, cdecl, gcsafe.}
 ## *
 ##  \brief CBC decryption with DES (`des_tab` implementation).
 ##
@@ -2271,7 +2271,7 @@ proc br_des_tab_cbcenc_run*(ctx: ptr br_des_tab_cbcenc_keys; iv: pointer;
 ##
 
 proc br_des_tab_cbcdec_run*(ctx: ptr br_des_tab_cbcdec_keys; iv: pointer;
-                           data: pointer; len: csize_t) {.importc.}
+                           data: pointer; len: csize_t) {.importc, cdecl, gcsafe.}
 ##
 ##  Constant-time implementation for DES/3DES. It is substantially slower
 ##  (by a factor of about 4x), but also immune to cache-timing attacks.
@@ -2330,7 +2330,7 @@ var br_des_ct_cbcdec_vtable* {.importc.}: br_block_cbcdec_class
 ##  \param len   secret key length (in bytes).
 ##
 
-proc br_des_ct_cbcenc_init*(ctx: ptr br_des_ct_cbcenc_keys; key: pointer; len: csize_t) {.importc.}
+proc br_des_ct_cbcenc_init*(ctx: ptr br_des_ct_cbcenc_keys; key: pointer; len: csize_t) {.importc, cdecl, gcsafe.}
 ## *
 ##  \brief Context initialisation (key schedule) for DES CBC decryption
 ##  (`des_ct` implementation).
@@ -2340,7 +2340,7 @@ proc br_des_ct_cbcenc_init*(ctx: ptr br_des_ct_cbcenc_keys; key: pointer; len: c
 ##  \param len   secret key length (in bytes).
 ##
 
-proc br_des_ct_cbcdec_init*(ctx: ptr br_des_ct_cbcdec_keys; key: pointer; len: csize_t) {.importc.}
+proc br_des_ct_cbcdec_init*(ctx: ptr br_des_ct_cbcdec_keys; key: pointer; len: csize_t) {.importc, cdecl, gcsafe.}
 ## *
 ##  \brief CBC encryption with DES (`des_ct` implementation).
 ##
@@ -2351,7 +2351,7 @@ proc br_des_ct_cbcdec_init*(ctx: ptr br_des_ct_cbcdec_keys; key: pointer; len: c
 ##
 
 proc br_des_ct_cbcenc_run*(ctx: ptr br_des_ct_cbcenc_keys; iv: pointer; data: pointer;
-                          len: csize_t) {.importc.}
+                          len: csize_t) {.importc, cdecl, gcsafe.}
 ## *
 ##  \brief CBC decryption with DES (`des_ct` implementation).
 ##
@@ -2362,7 +2362,7 @@ proc br_des_ct_cbcenc_run*(ctx: ptr br_des_ct_cbcenc_keys; iv: pointer; data: po
 ##
 
 proc br_des_ct_cbcdec_run*(ctx: ptr br_des_ct_cbcdec_keys; iv: pointer; data: pointer;
-                          len: csize_t) {.importc.}
+                          len: csize_t) {.importc, cdecl, gcsafe.}
 ##
 ##  These structures are large enough to accommodate subkeys for all
 ##  DES/3DES implementations.
@@ -2432,7 +2432,7 @@ type
 ##
 
 proc br_chacha20_ct_run*(key: pointer; iv: pointer; cc: uint32_t; data: pointer;
-                        len: csize_t): uint32_t {.importc, discardable.}
+                        len: csize_t): uint32_t {.importc, cdecl, gcsafe.}
 ## *
 ##  \brief ChaCha20 implementation (SSE2 code, constant-time).
 ##
@@ -2453,7 +2453,7 @@ proc br_chacha20_ct_run*(key: pointer; iv: pointer; cc: uint32_t; data: pointer;
 ##
 
 proc br_chacha20_sse2_run*(key: pointer; iv: pointer; cc: uint32_t; data: pointer;
-                          len: csize_t): uint32_t {.importc, discardable.}
+                          len: csize_t): uint32_t {.importc, cdecl, gcsafe.}
 ## *
 ##  \brief Obtain the `sse2` ChaCha20 implementation, if available.
 ##
@@ -2465,7 +2465,7 @@ proc br_chacha20_sse2_run*(key: pointer; iv: pointer; cc: uint32_t; data: pointe
 ##  \return  the `sse2` ChaCha20 implementation, or `0`.
 ##
 
-proc br_chacha20_sse2_get*(): br_chacha20_run {.importc.}
+proc br_chacha20_sse2_get*(): br_chacha20_run {.importc, cdecl, gcsafe.}
 ## *
 ##  \brief Type for a ChaCha20+Poly1305 AEAD implementation.
 ##
@@ -2511,7 +2511,7 @@ type
 
 proc br_poly1305_ctmul_run*(key: pointer; iv: pointer; data: pointer; len: csize_t;
                            aad: pointer; aad_len: csize_t; tag: pointer;
-                           ichacha: br_chacha20_run; encrypt: cint) {.importc.}
+                           ichacha: br_chacha20_run; encrypt: cint) {.importc, cdecl, gcsafe.}
 ## *
 ##  \brief ChaCha20+Poly1305 AEAD implementation (pure 32-bit multiplications).
 ##
@@ -2530,7 +2530,7 @@ proc br_poly1305_ctmul_run*(key: pointer; iv: pointer; data: pointer; len: csize
 
 proc br_poly1305_ctmul32_run*(key: pointer; iv: pointer; data: pointer; len: csize_t;
                              aad: pointer; aad_len: csize_t; tag: pointer;
-                             ichacha: br_chacha20_run; encrypt: cint) {.importc.}
+                             ichacha: br_chacha20_run; encrypt: cint) {.importc, cdecl, gcsafe.}
 ## *
 ##  \brief ChaCha20+Poly1305 AEAD implementation (i15).
 ##
@@ -2555,7 +2555,7 @@ proc br_poly1305_ctmul32_run*(key: pointer; iv: pointer; data: pointer; len: csi
 
 proc br_poly1305_i15_run*(key: pointer; iv: pointer; data: pointer; len: csize_t;
                          aad: pointer; aad_len: csize_t; tag: pointer;
-                         ichacha: br_chacha20_run; encrypt: cint) {.importc.}
+                         ichacha: br_chacha20_run; encrypt: cint) {.importc, cdecl, gcsafe.}
 ## *
 ##  \brief ChaCha20+Poly1305 AEAD implementation (ctmulq).
 ##
@@ -2579,7 +2579,7 @@ proc br_poly1305_i15_run*(key: pointer; iv: pointer; data: pointer; len: csize_t
 
 proc br_poly1305_ctmulq_run*(key: pointer; iv: pointer; data: pointer; len: csize_t;
                             aad: pointer; aad_len: csize_t; tag: pointer;
-                            ichacha: br_chacha20_run; encrypt: cint) {.importc.}
+                            ichacha: br_chacha20_run; encrypt: cint) {.importc, cdecl, gcsafe.}
 ## *
 ##  \brief Get the ChaCha20+Poly1305 "ctmulq" implementation, if available.
 ##
@@ -2589,4 +2589,4 @@ proc br_poly1305_ctmulq_run*(key: pointer; iv: pointer; data: pointer; len: csiz
 ##  \return  the ctmulq ChaCha20+Poly1305 implementation, or 0.
 ##
 
-proc br_poly1305_ctmulq_get*(): br_poly1305_run {.importc.}
+proc br_poly1305_ctmulq_get*(): br_poly1305_run {.importc, cdecl, gcsafe.}

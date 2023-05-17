@@ -75,7 +75,7 @@ type
 
 proc br_hmac_key_init*(kc: ptr br_hmac_key_context;
                       digest_vtable: ptr br_hash_class; key: pointer;
-                      key_len: csize_t) {.importc.}
+                      key_len: csize_t) {.importc, cdecl, gcsafe.}
 ##
 ##  \brief Get the underlying hash function.
 ##
@@ -125,7 +125,7 @@ type
 ##
 
 proc br_hmac_init*(ctx: ptr br_hmac_context; kc: ptr br_hmac_key_context;
-                  out_len: csize_t) {.importc.}
+                  out_len: csize_t) {.importc, cdecl, gcsafe.}
 ## *
 ##  \brief Get the HMAC output size.
 ##
@@ -167,7 +167,7 @@ proc br_hmac_get_digest*(hc: ptr br_hmac_context): ptr br_hash_class {.inline.} 
 ##  `NULL`) and this function does nothing.
 ##
 
-proc br_hmac_update*(ctx: ptr br_hmac_context; data: pointer; len: csize_t) {.importc.}
+proc br_hmac_update*(ctx: ptr br_hmac_context; data: pointer; len: csize_t) {.importc, cdecl, gcsafe.}
 ## *
 ##  \brief Compute the HMAC output.
 ##
@@ -184,7 +184,7 @@ proc br_hmac_update*(ctx: ptr br_hmac_context; data: pointer; len: csize_t) {.im
 ##  \return  the produced value length (in bytes).
 ##
 
-proc br_hmac_out*(ctx: ptr br_hmac_context; `out`: pointer): csize_t {.importc.}
+proc br_hmac_out*(ctx: ptr br_hmac_context; `out`: pointer): csize_t {.importc, cdecl, gcsafe.}
 ## *
 ##  \brief Constant-time HMAC computation.
 ##
@@ -218,4 +218,4 @@ proc br_hmac_out*(ctx: ptr br_hmac_context; `out`: pointer): csize_t {.importc.}
 ##
 
 proc br_hmac_outCT*(ctx: ptr br_hmac_context; data: pointer; len: csize_t;
-                   min_len: csize_t; max_len: csize_t; `out`: pointer): csize_t {.importc.}
+                   min_len: csize_t; max_len: csize_t; `out`: pointer): csize_t {.importc, cdecl, gcsafe.}

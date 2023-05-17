@@ -79,7 +79,7 @@ type
 ##
 
 proc br_tls10_prf*(dst: pointer; len: csize_t; secret: pointer; secret_len: csize_t;
-                  label: cstring; seed_num: csize_t; seed: ptr br_tls_prf_seed_chunk) {.importc.}
+                  label: cstring; seed_num: csize_t; seed: ptr br_tls_prf_seed_chunk) {.importc, cdecl, gcsafe.}
 ## *
 ##  \brief PRF implementation for TLS 1.2, with SHA-256.
 ##
@@ -97,7 +97,7 @@ proc br_tls10_prf*(dst: pointer; len: csize_t; secret: pointer; secret_len: csiz
 
 proc br_tls12_sha256_prf*(dst: pointer; len: csize_t; secret: pointer;
                          secret_len: csize_t; label: cstring; seed_num: csize_t;
-                         seed: ptr br_tls_prf_seed_chunk) {.importc.}
+                         seed: ptr br_tls_prf_seed_chunk) {.importc, cdecl, gcsafe.}
 ## *
 ##  \brief PRF implementation for TLS 1.2, with SHA-384.
 ##
@@ -115,7 +115,7 @@ proc br_tls12_sha256_prf*(dst: pointer; len: csize_t; secret: pointer;
 
 proc br_tls12_sha384_prf*(dst: pointer; len: csize_t; secret: pointer;
                          secret_len: csize_t; label: cstring; seed_num: csize_t;
-                         seed: ptr br_tls_prf_seed_chunk) {.importc.}
+                         seed: ptr br_tls_prf_seed_chunk) {.importc, cdecl, gcsafe.}
 ## *
 ##  brief A convenient type name for a PRF implementation.
 ##

@@ -556,7 +556,7 @@ var br_x509_knownkey_vtable* {.importc.}: br_x509_class
 ##
 
 proc br_x509_knownkey_init_rsa*(ctx: ptr br_x509_knownkey_context;
-                               pk: ptr br_rsa_public_key; usages: cuint) {.importc.}
+                               pk: ptr br_rsa_public_key; usages: cuint) {.importc, cdecl, gcsafe.}
 ## *
 ##  \brief Initialize a "known key" X.509 engine with a known EC public key.
 ##
@@ -572,7 +572,7 @@ proc br_x509_knownkey_init_rsa*(ctx: ptr br_x509_knownkey_context;
 ##
 
 proc br_x509_knownkey_init_ec*(ctx: ptr br_x509_knownkey_context;
-                              pk: ptr br_ec_public_key; usages: cuint) {.importc.}
+                              pk: ptr br_ec_public_key; usages: cuint) {.importc, cdecl, gcsafe.}
 ##
 ##  The minimal X.509 engine has some state buffers which must be large
 ##  enough to simultaneously accommodate:
@@ -820,7 +820,7 @@ var br_x509_minimal_vtable* {.importc.}: br_x509_class
 proc br_x509_minimal_init*(ctx: ptr br_x509_minimal_context;
                           dn_hash_impl: ptr br_hash_class;
                           trust_anchors: ptr br_x509_trust_anchor;
-                          trust_anchors_num: csize_t) {.importc.}
+                          trust_anchors_num: csize_t) {.importc, cdecl, gcsafe.}
 ## *
 ##  \brief Set a supported hash function in an X.509 "minimal" engine.
 ##
@@ -897,7 +897,7 @@ proc br_x509_minimal_set_ecdsa*(ctx: ptr br_x509_minimal_context;
 
 proc br_x509_minimal_init_full*(ctx: ptr br_x509_minimal_context;
                                trust_anchors: ptr br_x509_trust_anchor;
-                               trust_anchors_num: csize_t) {.importc.}
+                               trust_anchors_num: csize_t) {.importc, cdecl, gcsafe.}
 ## *
 ##  \brief Set the validation time for the X.509 "minimal" engine.
 ##
@@ -1048,7 +1048,7 @@ type
 ##
 
 proc br_x509_decoder_init*(ctx: ptr br_x509_decoder_context; append_dn: proc (
-    ctx: pointer; buf: pointer; len: csize_t); append_dn_ctx: pointer) {.importc.}
+    ctx: pointer; buf: pointer; len: csize_t); append_dn_ctx: pointer) {.importc, cdecl, gcsafe.}
 ## *
 ##  \brief Push some certificate bytes into a decoder context.
 ##
@@ -1061,7 +1061,7 @@ proc br_x509_decoder_init*(ctx: ptr br_x509_decoder_context; append_dn: proc (
 ##
 
 proc br_x509_decoder_push*(ctx: ptr br_x509_decoder_context; data: pointer;
-                          len: csize_t) {.importc.}
+                          len: csize_t) {.importc, cdecl, gcsafe.}
 ## *
 ##  \brief Obtain the decoded public key.
 ##
@@ -1196,7 +1196,7 @@ type
 ##  \param ctx   key decoder context to initialise.
 ##
 
-proc br_skey_decoder_init*(ctx: ptr br_skey_decoder_context) {.importc.}
+proc br_skey_decoder_init*(ctx: ptr br_skey_decoder_context) {.importc, cdecl, gcsafe.}
 ## *
 ##  \brief Push some data bytes into a private key decoder context.
 ##
@@ -1209,7 +1209,7 @@ proc br_skey_decoder_init*(ctx: ptr br_skey_decoder_context) {.importc.}
 ##
 
 proc br_skey_decoder_push*(ctx: ptr br_skey_decoder_context; data: pointer;
-                          len: csize_t) {.importc.}
+                          len: csize_t) {.importc, cdecl, gcsafe.}
 ## *
 ##  \brief Get the decoding status for a private key.
 ##
@@ -1315,7 +1315,7 @@ proc br_skey_decoder_get_ec*(ctx: ptr br_skey_decoder_context): ptr br_ec_privat
 ##
 
 proc br_encode_rsa_raw_der*(dest: pointer; sk: ptr br_rsa_private_key;
-                           pk: ptr br_rsa_public_key; d: pointer; dlen: csize_t): csize_t {.importc.}
+                           pk: ptr br_rsa_public_key; d: pointer; dlen: csize_t): csize_t {.importc, cdecl, gcsafe.}
 ## *
 ##  \brief Encode an RSA private key (PKCS#8 DER format).
 ##
@@ -1349,7 +1349,7 @@ proc br_encode_rsa_raw_der*(dest: pointer; sk: ptr br_rsa_private_key;
 ##
 
 proc br_encode_rsa_pkcs8_der*(dest: pointer; sk: ptr br_rsa_private_key;
-                             pk: ptr br_rsa_public_key; d: pointer; dlen: csize_t): csize_t {.importc.}
+                             pk: ptr br_rsa_public_key; d: pointer; dlen: csize_t): csize_t {.importc, cdecl, gcsafe.}
 ## *
 ##  \brief Encode an EC private key (raw DER format).
 ##
@@ -1375,7 +1375,7 @@ proc br_encode_rsa_pkcs8_der*(dest: pointer; sk: ptr br_rsa_private_key;
 ##
 
 proc br_encode_ec_raw_der*(dest: pointer; sk: ptr br_ec_private_key;
-                          pk: ptr br_ec_public_key): csize_t {.importc.}
+                          pk: ptr br_ec_public_key): csize_t {.importc, cdecl, gcsafe.}
 ## *
 ##  \brief Encode an EC private key (PKCS#8 DER format).
 ##
@@ -1407,7 +1407,7 @@ proc br_encode_ec_raw_der*(dest: pointer; sk: ptr br_ec_private_key;
 ##
 
 proc br_encode_ec_pkcs8_der*(dest: pointer; sk: ptr br_ec_private_key;
-                            pk: ptr br_ec_public_key): csize_t {.importc.}
+                            pk: ptr br_ec_public_key): csize_t {.importc, cdecl, gcsafe.}
 ## *
 ##  \brief PEM banner for RSA private key (raw).
 ##

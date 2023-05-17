@@ -129,7 +129,7 @@ type
 ##  \param ctx   decoder context to initialise.
 ##
 
-proc br_pem_decoder_init*(ctx: ptr br_pem_decoder_context) {.importc.}
+proc br_pem_decoder_init*(ctx: ptr br_pem_decoder_context) {.importc, cdecl, gcsafe.}
 ## *
 ##  \brief Push some bytes into the decoder.
 ##
@@ -144,7 +144,7 @@ proc br_pem_decoder_init*(ctx: ptr br_pem_decoder_context) {.importc.}
 ##  \return  the number of bytes actually received (may be less than `len`).
 ##
 
-proc br_pem_decoder_push*(ctx: ptr br_pem_decoder_context; data: pointer; len: csize_t): csize_t {.importc.}
+proc br_pem_decoder_push*(ctx: ptr br_pem_decoder_context; data: pointer; len: csize_t): csize_t {.importc, cdecl, gcsafe.}
 ## *
 ##  \brief Set the receiver for decoded data.
 ##
@@ -177,7 +177,7 @@ proc br_pem_decoder_setdest*(ctx: ptr br_pem_decoder_context; dest: proc (
 ##  \return  the raised event, or 0.
 ##
 
-proc br_pem_decoder_event*(ctx: ptr br_pem_decoder_context): cint {.importc.}
+proc br_pem_decoder_event*(ctx: ptr br_pem_decoder_context): cint {.importc, cdecl, gcsafe.}
 ## *
 ##  \brief Event: start of object.
 ##
@@ -265,7 +265,7 @@ proc br_pem_decoder_name*(ctx: ptr br_pem_decoder_context): cstring {.inline.} =
 ##
 
 proc br_pem_encode*(dest: pointer; data: pointer; len: csize_t; banner: cstring;
-                   flags: cuint): csize_t {.importc.}
+                   flags: cuint): csize_t {.importc, cdecl, gcsafe.}
 ## *
 ##  \brief PEM encoding flag: split lines at 64 characters.
 ##
