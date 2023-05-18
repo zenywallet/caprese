@@ -173,7 +173,7 @@ when isMainModule:
       url: string
 
   config:
-    sslLib = OpenSSL
+    sslLib = BearSSL
     debugLog = true
 
     httpHeader:
