@@ -2547,7 +2547,7 @@ template serverLib() {.dirty.} =
       br_ssl_engine_set_prf_sha256(addr cc.eng, br_tls12_sha256_prf)
       br_ssl_engine_set_default_chapol(addr cc.eng)
 
-  proc appListenBase(ctx: WorkerThreadCtx, ssl: static bool) {.thread, inline.} =
+  proc appListenBase(ctx: WorkerThreadCtx, sslFlag: static bool) {.thread, inline.} =
     let clientSock = ctx.client.sock.accept4(cast[ptr SockAddr](addr ctx.sockAddress), addr ctx.addrLen, O_NONBLOCK)
     if cast[int](clientSock) > 0:
       when cfg.soKeepalive:
@@ -2563,7 +2563,7 @@ template serverLib() {.dirty.} =
       newClient.sock = clientSock
       newClient.appId = ctx.client.appId + 1
 
-      when ssl and cfg.sslLib == BearSSL:
+      when sslFlag and cfg.sslLib == BearSSL:
         if newClient.sc.isNil:
           newClient.sc = cast[ptr br_ssl_server_context](allocShared0(sizeof(br_ssl_server_context)))
           br_ssl_server_init_caprese(newClient.sc)
