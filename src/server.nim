@@ -189,6 +189,15 @@ template serverInit*() {.dirty.} =
   import epoll
 
   when cfg.sslLib == BearSSL:
+    {.define: USE_BEARSSL.}
+  elif cfg.sslLib == OpenSSL:
+    {.define: USE_OPENSSL.}
+  elif cfg.sslLib == LibreSSL:
+    {.define: USE_LIBRESSL.}
+  elif cfg.sslLib == BoringSSL:
+    {.define: USE_BORINGSSL.}
+
+  when cfg.sslLib == BearSSL:
     debug "SSL: BearSSL"
     import bearssl/bearssl_ssl
     import bearssl/bearssl_x509
@@ -197,6 +206,9 @@ template serverInit*() {.dirty.} =
     import bearssl/bearssl_prf
     import bearssl/chain_ec
     import bearssl/key_ec
+
+  elif cfg.sslLib == OpenSSL or cfg.sslLib == LibreSSL or cfg.sslLib == BoringSSL:
+    import openssl
 
   type
     ClientSendProc = proc (client: Client, data: ptr UncheckedArray[byte], size: int): SendResult {.thread.}
