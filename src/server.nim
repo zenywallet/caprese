@@ -187,6 +187,7 @@ template serverInit*() {.dirty.} =
   import locks
   import ptlock
   import epoll
+  import logs
 
   when cfg.sslLib == BearSSL:
     {.define: USE_BEARSSL.}
