@@ -27,7 +27,6 @@ type
     BoringSSL
 
   Config* = object
-    ssl*: bool
     sslLib*: SslLib
     debugLog*: bool
     sigTermQuit*: bool
@@ -43,7 +42,6 @@ type
     maxFrameSize*: int
 
 proc defaultConfig*(): Config {.compileTime.} =
-  result.ssl = true
   result.sslLib = BearSSL
   result.debugLog = false
   result.sigTermQuit = true
@@ -225,11 +223,11 @@ template serverInit*() {.dirty.} =
       keepAlive: bool
       wsUpgrade: bool
       payloadSize: int
-      when cfg.ssl:
-        ssl: SSL
-        sslErr: int
       when cfg.sslLib == BearSSL:
         sc: ptr br_ssl_server_context
+      elif cfg.sslLib == OpenSSL or cfg.sslLib == LibreSSL or cfg.sslLib == BoringSSL:
+        ssl: SSL
+        sslErr: int
       ip: uint32
       invoke: bool
       lock: Lock
@@ -873,7 +871,7 @@ template serverInitFreeClient() {.dirty.} =
       p[i].keepAlive = true
       p[i].wsUpgrade = false
       p[i].payloadSize = 0
-      when cfg.ssl:
+      when cfg.sslLib == OpenSSL or cfg.sslLib == LibreSSL or cfg.sslLib == BoringSSL:
         p[i].ssl = nil
       p[i].ip = 0
       p[i].invoke = false

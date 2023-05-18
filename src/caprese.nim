@@ -173,7 +173,6 @@ when isMainModule:
       url: string
 
   config:
-    ssl = false
     sslLib = OpenSSL
     debugLog = true
 
