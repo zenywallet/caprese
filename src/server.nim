@@ -189,6 +189,7 @@ template serverInit*() {.dirty.} =
   import epoll
 
   when cfg.sslLib == BearSSL:
+    debug "SSL: BearSSL"
     import bearssl/bearssl_ssl
     import bearssl/bearssl_x509
     import bearssl/bearssl_ec
