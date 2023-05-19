@@ -2557,6 +2557,7 @@ template serverLib() {.dirty.} =
     SSL_load_error_strings()
     SSL_library_init()
     OpenSSL_add_all_algorithms()
+    var sslCtx = newSslCtx(selfSignedCertFallback = true)
 
   proc appListenBase(ctx: WorkerThreadCtx, sslFlag: static bool) {.thread, inline.} =
     let clientSock = ctx.client.sock.accept4(cast[ptr SockAddr](addr ctx.sockAddress), addr ctx.addrLen, O_NONBLOCK)
@@ -2585,6 +2586,17 @@ template serverLib() {.dirty.} =
           newClient.sendProc = sendSslProc
         if br_ssl_server_reset(newClient.sc) == 0:
           errorQuit "error: br_ssl_server_reset"
+
+      elif sslFlag and (cfg.sslLib == OpenSSL or cfg.sslLib == LibreSSL or cfg.sslLib == BoringSSL):
+        var ssl = SSL_new(sslCtx)
+        if SSL_set_fd(ssl, clientSock.cint) != 1:
+          error "error: SSL_set_fd"
+          SSL_free(ssl)
+          clientSock.close()
+          return
+        newClient.ssl = ssl
+        newClient.sendProc = sendSslProc
+
       else:
         newClient.sendProc = sendNativeProc
 
