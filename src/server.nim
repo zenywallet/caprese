@@ -2588,13 +2588,12 @@ template serverLib() {.dirty.} =
           errorQuit "error: br_ssl_server_reset"
 
       elif sslFlag and (cfg.sslLib == OpenSSL or cfg.sslLib == LibreSSL or cfg.sslLib == BoringSSL):
-        var ssl = SSL_new(sslCtx)
-        if SSL_set_fd(ssl, clientSock.cint) != 1:
+        newClient.ssl = SSL_new(sslCtx)
+        if SSL_set_fd(newClient.ssl, clientSock.cint) != 1:
           error "error: SSL_set_fd"
-          SSL_free(ssl)
+          SSL_free(newClient.ssl)
           clientSock.close()
           return
-        newClient.ssl = ssl
         newClient.sendProc = sendSslProc
 
       else:
