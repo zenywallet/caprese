@@ -2087,7 +2087,7 @@ macro getAppId*(): int =
   inc(curAppId)
   newLit(curAppId)
 
-macro addServerMacro*(bindAddress: string, port: uint16, ssl: bool, body: untyped = newEmptyNode()): untyped =
+macro addServerMacro*(bindAddress: string, port: uint16, ssl: bool, sslLib: SslLib, body: untyped = newEmptyNode()): untyped =
   inc(curAppId)
   var appId = curAppId
   serverHandlerList.add(("appListen", ssl, newStmtList()))
@@ -2151,9 +2151,19 @@ macro addServerMacro*(bindAddress: string, port: uint16, ssl: bool, body: untype
     if retCtl != 0:
       errorQuit "error: addServer epoll_ctl ret=", retCtl, " ", getErrnoStr()
 
+
 template addServer*(bindAddress: string, port: uint16, ssl: bool, body: untyped) {.dirty.} =
   initServer()
-  addServerMacro(bindAddress, port, ssl, body)
+  when cfg.sslLib == BearSSL:
+    addServerMacro(bindAddress, port, ssl, BearSSL, body)
+  elif cfg.sslLib == OpenSSL:
+    addServerMacro(bindAddress, port, ssl, OpenSSL, body)
+  elif cfg.sslLib == LibreSSL:
+    addServerMacro(bindAddress, port, ssl, LibreSSL, body)
+  elif cfg.sslLib == BoringSSL:
+    addServerMacro(bindAddress, port, ssl, BoringSSL, body)
+  else:
+    addServerMacro(bindAddress, port, ssl, None, body)
 
 macro serverWorkerInit*(): untyped = serverWorkerInitStmt
 
