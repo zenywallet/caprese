@@ -2606,8 +2606,7 @@ template serverLib() {.dirty.} =
         newClient.ssl = SSL_new(sslCtx)
         if SSL_set_fd(newClient.ssl, clientSock.cint) != 1:
           error "error: SSL_set_fd"
-          SSL_free(newClient.ssl)
-          clientSock.close()
+          newClient.close(ssl = true)
           return
         newClient.sendProc = sendSslProc
 
