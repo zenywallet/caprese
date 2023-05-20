@@ -2094,8 +2094,15 @@ macro addServerMacro*(bindAddress: string, port: uint16, ssl: bool, sslLib: SslL
   inc(curAppId) # reserved
   var appRoutes = curAppId
   serverHandlerList.add(("appRoutes", ssl, newStmtList()))
-  inc(curAppId)
-  serverHandlerList.add(("appRoutesSend", ssl, newStmtList()))
+  if eqIdent("true", ssl) and (eqIdent("OpenSSL", sslLib) or eqIdent("LibreSSL", sslLib) or eqIdent("BoringSSL", sslLib)):
+    inc(curAppId)
+    appRoutes = curAppId
+    serverHandlerList.add(("appRoutesStage1", ssl, newStmtList()))
+    inc(curAppId)
+    serverHandlerList.add(("appRoutesStage2", ssl, newStmtList()))
+  else:
+    inc(curAppId)
+    serverHandlerList.add(("appRoutesSend", ssl, newStmtList()))
   var routesList = newStmtList()
   for s in body:
     if eqIdent(s[0], "routes"):
@@ -3156,6 +3163,16 @@ template serverLib() {.dirty.} =
                   continue
                 client.close()
               break
+
+  macro appRoutesStage1Macro(ssl: bool, body: untyped): untyped =
+    quote do:
+      clientHandlerProcs.add proc (ctx: WorkerThreadCtx) {.thread.} =
+        discard
+
+  macro appRoutesStage2Macro(ssl: bool, body: untyped): untyped =
+    quote do:
+      clientHandlerProcs.add proc (ctx: WorkerThreadCtx) {.thread.} =
+        discard
 
   macro appRoutesSendMacro(ssl: bool, body: untyped): untyped =
     quote do:
