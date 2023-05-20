@@ -917,12 +917,17 @@ template serverInitFreeClient() {.dirty.} =
       deinitLock(client.lock)
     deallocShared(p)
 
-  proc close(client: Client) =
+  proc close(client: Client, ssl: static bool = false) =
     acquire(client.spinLock)
     let sock = client.sock
     if sock != osInvalidSocket:
       client.sock = osInvalidSocket
       release(client.spinLock)
+      when ssl:
+        if not client.ssl.isNil:
+          SSL_free(client.ssl)
+          client.ssl = nil
+          client.sslErr = SSL_ERROR_NONE
       sock.close()
       client.recvCurSize = 0
       client.recvBufSize = 0
