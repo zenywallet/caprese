@@ -3194,7 +3194,144 @@ template serverLib() {.dirty.} =
   macro appRoutesStage1Macro(ssl: bool, body: untyped): untyped =
     quote do:
       clientHandlerProcs.add proc (ctx: WorkerThreadCtx) {.thread.} =
-        discard
+        let client = ctx.client
+        let sock = client.sock
+
+        acquire(client.spinLock)
+        if client.threadId == 0:
+          client.threadId = ctx.threadId
+          release(client.spinLock)
+        else:
+          client.dirty = true
+          release(client.spinLock)
+          return
+
+        routesMainTmpl(`body`)
+
+        when cfg.sslLib == OpenSSL or cfg.sslLib == LibreSSL or cfg.sslLib == BoringSSL:
+          if client.recvCurSize == 0:
+            while true:
+              let recvlen = client.ssl.SSL_read(cast[pointer](ctx.pRecvBuf0), workerRecvBufSize.cint).int
+              if recvlen > 0:
+                var a = ctx.pRecvBuf0.toBytes(recvlen)
+                echo a.toString()
+                if recvlen >= 17 and equalMem(addr ctx.pRecvBuf0[recvlen - 4], "\c\L\c\L".cstring, 4):
+                  var nextPos = 0
+                  var parseSize = recvlen
+                  while true:
+                    ctx.pRecvBuf = cast[ptr UncheckedArray[byte]](addr ctx.recvBuf[nextPos])
+                    let retHeader = parseHeader(ctx.pRecvBuf, parseSize, ctx.targetHeaders)
+                    if retHeader.err == 0:
+                      ctx.header = retHeader.header
+                      let retMain = routesMain(ctx, client, ctx.pRecvBuf, ctx.header)
+                      if retMain == SendResult.Success:
+                        if ctx.header.minorVer == 0 or getHeaderValue(ctx.pRecvBuf, ctx.header,
+                          InternalEssentialHeaderConnection) == "close":
+                          client.close(ssl = true)
+                          break
+                        elif retHeader.next < recvlen:
+                          nextPos = retHeader.next
+                          parseSize = recvlen - nextPos
+                        else:
+                          break
+                      elif retMain == SendResult.Pending:
+                        if retHeader.next < recvlen:
+                          nextPos = retHeader.next
+                          parseSize = recvlen - nextPos
+                        else:
+                          break
+                      else:
+                        client.close(ssl = true)
+                        break
+                    else:
+                      client.close(ssl = true)
+                      break
+
+                else:
+                  client.addRecvBuf(ctx.pRecvBuf0, recvlen)
+
+              elif recvlen == 0:
+                client.close(ssl = true)
+
+              else:
+                client.sslErr = SSL_get_error(client.ssl, recvlen.cint)
+                if client.sslErr == SSL_ERROR_WANT_READ:
+                  client.ev.events = EPOLLIN or EPOLLRDHUP or EPOLLET
+                  var retCtl = epoll_ctl(epfd, EPOLL_CTL_MOD, cast[cint](client.sock), addr client.ev)
+                  if retCtl != 0:
+                    error "error: epoll_ctl ret=", retCtl, " errno=", errno
+                elif client.sslErr == SSL_ERROR_WANT_WRITE:
+                  client.ev.events = EPOLLRDHUP or EPOLLET or EPOLLOUT
+                  var retCtl = epoll_ctl(epfd, EPOLL_CTL_MOD, cast[cint](client.sock), addr client.ev)
+                  if retCtl != 0:
+                    error "error: epoll_ctl ret=", retCtl, " errno=", errno
+                else:
+                  if errno == EINTR:
+                    continue
+              break
+
+          else:
+            while true:
+              client.reserveRecvBuf(workerRecvBufSize)
+              let recvlen = client.ssl.SSL_read(cast[pointer](addr client.recvBuf[client.recvCurSize]), workerRecvBufSize.cint).int
+              if recvlen > 0:
+                client.recvCurSize = client.recvCurSize + recvlen
+                if client.recvCurSize >= 17 and equalMem(addr client.recvBuf[client.recvCurSize - 4], "\c\L\c\L".cstring, 4):
+                  var nextPos = 0
+                  var parseSize = client.recvCurSize
+                  while true:
+                    ctx.pRecvBuf = cast[ptr UncheckedArray[byte]](addr client.recvBuf[nextPos])
+                    let retHeader = parseHeader(ctx.pRecvBuf, parseSize, ctx.targetHeaders)
+                    if retHeader.err == 0:
+                      ctx.header = retHeader.header
+                      let retMain = routesMain(ctx, client, ctx.pRecvBuf, ctx.header)
+                      if retMain == SendResult.Success:
+                        if client.keepAlive == true:
+                          if ctx.header.minorVer == 0 or getHeaderValue(ctx.pRecvBuf, ctx.header,
+                            InternalEssentialHeaderConnection) == "close":
+                            client.keepAlive = false
+                            client.close(ssl = true)
+                            break
+                          elif retHeader.next < parseSize:
+                            nextPos = retHeader.next
+                            parseSize = parseSize - nextPos
+                          else:
+                            client.recvCurSize = 0
+                            break
+                        else:
+                          client.close(ssl = true)
+                          break
+                      elif retMain == SendResult.Pending:
+                        if retHeader.next < parseSize:
+                          nextPos = retHeader.next
+                          parseSize = parseSize - nextPos
+                        else:
+                          client.recvCurSize = 0
+                          break
+                      else:
+                        client.close(ssl = true)
+                        break
+                    else:
+                      client.close()
+                      break
+
+              elif recvlen == 0:
+                client.close(ssl = true)
+
+              else:
+                if errno == EAGAIN or errno == EWOULDBLOCK:
+                  break
+                elif errno == EINTR:
+                  continue
+                client.close(ssl = true)
+              break
+
+        else:
+          raise
+
+        acquire(client.spinLock)
+        client.threadId = 0
+        release(client.spinLock)
 
   macro appRoutesStage2Macro(ssl: bool, body: untyped): untyped =
     quote do:
