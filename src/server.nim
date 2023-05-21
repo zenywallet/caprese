@@ -724,6 +724,40 @@ template serverTagLib*() {.dirty.} =
       client.addSendBuf(cast[ptr UncheckedArray[byte]](addr data[0]), size)
       release(client.lock)
       return SendResult.Pending
+    elif cfg.sslLib == OpenSSL or cfg.sslLib == LibreSSL or cfg.sslLib == BoringSSL:
+      if client.sendCurSize > 0:
+        acquire(client.lock)
+        client.addSendBuf(cast[ptr UncheckedArray[byte]](addr data[0]), size)
+        release(client.lock)
+        return SendResult.Pending
+
+      var pos = 0
+      var size = size
+      while true:
+        let sendRet = client.ssl.SSL_write(cast[pointer](addr data[pos]), size.cint).int
+        if sendRet == size:
+          return SendResult.Success
+        elif sendRet > 0:
+          size = size - sendRet
+          pos = pos + sendRet
+          continue
+        elif sendRet < 0:
+          client.sslErr = SSL_get_error(client.ssl, sendRet.cint)
+          debug "SSL_send err=", client.sslErr, " errno=", errno
+          if client.sslErr == SSL_ERROR_WANT_WRITE or client.sslErr == SSL_ERROR_WANT_READ:
+            acquire(client.lock)
+            client.addSendBuf(cast[ptr UncheckedArray[byte]](addr data[pos]), size)
+            release(client.lock)
+            if client.invokeSendEvent():
+              return SendResult.Pending
+            else:
+              return SendResult.Error
+            return SendResult.Pending
+          elif errno == EINTR:
+            continue
+          return SendResult.Error
+        else:
+          return SendResult.None
 
   proc send(client: Client, data: seq[byte] | string | Array[byte]): SendResult {.inline.} =
     return client.sendProc(client, cast[ptr UncheckedArray[byte]](unsafeAddr data[0]), data.len)
