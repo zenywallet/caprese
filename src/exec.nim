@@ -21,6 +21,12 @@ proc rmFile*(filename: string) {.compileTime.} =
 proc basicExtern*(filename: string): string {.compileTime.} =
   staticExec(execHelperExe & " basicextern " & filename)
 
+proc removeTmpFiles() {.compileTime.} =
+  var tmpFiles = "\"" & srcFileDir / srcFileName & "_tmp" & "\"[[:digit:]]*"
+  var ret = staticExec("rm " & tmpFiles)
+  if ret.len > 0:
+    echo ret
+
 var tmpFileId {.compileTime.}: int = 0
 
 proc execCode*(code: string, rstr: string): string {.compileTime.} =
@@ -30,6 +36,7 @@ proc execCode*(code: string, rstr: string): string {.compileTime.} =
   writeFile(tmpSrcFile, code)
   echo staticExec("nim c " & tmpSrcFile)
   result = staticExec(tmpExeFile)
+  removeTmpFiles()
   rmFile(tmpExeFile)
   rmFile(tmpSrcFile)
 
