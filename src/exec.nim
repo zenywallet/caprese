@@ -5,7 +5,7 @@ import macros
 import strformat
 
 const srcFile = currentSourcePath()
-const (srcFileDir, srcFieName, srcFileExt) = splitFile(srcFile)
+const (srcFileDir, srcFileName, srcFileExt) = splitFile(srcFile)
 const execHelperExe = srcFileDir / "exec_helper"
 const execHelperSrc = execHelperExe & srcFileExt
 
@@ -25,7 +25,7 @@ var tmpFileId {.compileTime.}: int = 0
 
 proc execCode*(code: string, rstr: string): string {.compileTime.} =
   inc(tmpFileId)
-  let tmpExeFile = srcFileDir / srcFieName & "_tmp" & $tmpFileId & rstr
+  let tmpExeFile = srcFileDir / srcFileName & "_tmp" & $tmpFileId & rstr
   let tmpSrcFile = tmpExeFile & srcFileExt
   writeFile(tmpSrcFile, code)
   echo staticExec("nim c " & tmpSrcFile)
@@ -45,7 +45,7 @@ template staticExecCode*(code: string): string =
 
 proc compileJsCode*(srcFileDir: string, code: string, rstr: string): string {.compileTime.} =
   inc(tmpFileId)
-  let tmpNameFile = srcFileDir / srcFieName & "_tmp" & $tmpFileId & rstr
+  let tmpNameFile = srcFileDir / srcFileName & "_tmp" & $tmpFileId & rstr
   let tmpSrcFile = tmpNameFile & srcFileExt
   let tmpJsFile = tmpNameFile & ".js"
   writeFile(tmpSrcFile, code)
@@ -59,7 +59,7 @@ template compileJsCode*(baseDir, code: string): string =
 
 proc minifyJsCode*(srcFileDir: string, code: string, extern: string, rstr: string): string {.compileTime.} =
   inc(tmpFileId)
-  let tmpNameFile = srcFileDir / srcFieName & "_tmp" & $tmpFileId & rstr
+  let tmpNameFile = srcFileDir / srcFileName & "_tmp" & $tmpFileId & rstr
   let tmpSrcFile = tmpNameFile & ".js"
   let tmpExtFile = tmpNameFile & "_extern.js"
   let tmpDstFile = tmpNameFile & "_min.js"
