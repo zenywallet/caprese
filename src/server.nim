@@ -3402,7 +3402,88 @@ template serverLib() {.dirty.} =
   macro appRoutesStage2Macro(ssl: bool, body: untyped): untyped =
     quote do:
       clientHandlerProcs.add proc (ctx: WorkerThreadCtx) {.thread.} =
-        discard
+        when cfg.sslLib == OpenSSL or cfg.sslLib == LibreSSL or cfg.sslLib == BoringSSL:
+          let client = ctx.client
+
+          acquire(client.spinLock)
+          if client.threadId == 0:
+            client.threadId = ctx.threadId
+            release(client.spinLock)
+          else:
+            client.dirty = true
+            release(client.spinLock)
+            return
+
+          while true:
+            client.dirty = false
+            let retFlush = client.sendSslFlush()
+            if retFlush == SendResult.Pending:
+              acquire(client.spinLock)
+              if not client.dirty:
+                client.threadId = 0
+                release(client.spinLock)
+                return
+              else:
+                release(client.spinLock)
+            elif retFlush == SendResult.Error:
+              client.close()
+              acquire(client.spinLock)
+              client.threadId = 0
+              release(client.spinLock)
+              return
+            else:
+              acquire(client.spinLock)
+              if not client.dirty:
+                release(client.spinLock)
+                break
+              else:
+                release(client.spinLock)
+
+          let clientId = client.clientId
+
+          var lastSendErr: SendResult
+          proc taskCallback(task: ClientTask): bool =
+            lastSendErr = client.send(task.data.toSeq().toString())
+            result = (lastSendErr == SendResult.Success)
+
+          while true:
+            client.dirty = false
+            if clientId.getAndPurgeTasks(taskCallback):
+              acquire(client.spinLock)
+              if not client.dirty:
+                if client.appShift:
+                  dec(client.appId)
+                  client.appShift = false
+                client.threadId = 0
+                release(client.spinLock)
+
+                client.ev.events = EPOLLIN or EPOLLRDHUP or EPOLLET
+                var retCtl = epoll_ctl(epfd, EPOLL_CTL_MOD, cast[cint](client.sock), addr client.ev)
+                if retCtl != 0:
+                  errorQuit "error: appRoutesSend epoll_ctl ret=", retCtl, " ", getErrnoStr()
+                return
+              else:
+                release(client.spinLock)
+            else:
+              if lastSendErr != SendResult.Pending:
+                client.close()
+              acquire(client.spinLock)
+              client.threadId = 0
+              release(client.spinLock)
+
+              let client = ctx.client
+              let sock = client.sock
+
+              acquire(client.spinLock)
+              if client.threadId == 0:
+                client.threadId = ctx.threadId
+                release(client.spinLock)
+              else:
+                client.dirty = true
+                release(client.spinLock)
+                return
+        else:
+          raise
 
   macro appRoutesSendMacro(ssl: bool, body: untyped): untyped =
     quote do:
