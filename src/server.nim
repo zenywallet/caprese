@@ -3278,8 +3278,6 @@ template serverLib() {.dirty.} =
             while true:
               let recvlen = client.ssl.SSL_read(cast[pointer](ctx.pRecvBuf0), workerRecvBufSize.cint).int
               if recvlen > 0:
-                var a = ctx.pRecvBuf0.toBytes(recvlen)
-                echo a.toString()
                 if recvlen >= 17 and equalMem(addr ctx.pRecvBuf0[recvlen - 4], "\c\L\c\L".cstring, 4):
                   var nextPos = 0
                   var parseSize = recvlen
