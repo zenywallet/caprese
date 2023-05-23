@@ -792,36 +792,37 @@ template serverTagLib*() {.dirty.} =
       else:
         return SendResult.None
 
-  proc sendSslFlush(client: Client): SendResult =
-    if client.sendCurSize == 0:
-      return SendResult.None
-
-    var pos = 0
-    var size = client.sendCurSize
-    while true:
-      var d = cast[cstring](addr client.sendBuf[pos])
-      let sendRet = client.ssl.SSL_write(d, size.cint).int
-      if sendRet > 0:
-        debug "flush sendRet=", sendRet, " size=", size
-        size = size - sendRet
-        if size > 0:
-          pos = pos + sendRet
-          continue
-        client.sendCurSize = 0
-        deallocShared(cast[pointer](client.sendBuf))
-        client.sendBuf = nil
-        return SendResult.Success
-      elif sendRet < 0:
-        client.sslErr = SSL_get_error(client.ssl, sendRet.cint)
-        if client.sslErr == SSL_ERROR_WANT_WRITE or client.sslErr == SSL_ERROR_WANT_READ:
-          copyMem(addr client.sendBuf[0], d, size)
-          client.sendCurSize = size
-          return SendResult.Pending
-        if errno == EINTR:
-          continue
-        return SendResult.Error
-      else:
+  when cfg.sslLib == OpenSSL or cfg.sslLib == LibreSSL or cfg.sslLib == BoringSSL:
+    proc sendSslFlush(client: Client): SendResult =
+      if client.sendCurSize == 0:
         return SendResult.None
+
+      var pos = 0
+      var size = client.sendCurSize
+      while true:
+        var d = cast[cstring](addr client.sendBuf[pos])
+        let sendRet = client.ssl.SSL_write(d, size.cint).int
+        if sendRet > 0:
+          debug "flush sendRet=", sendRet, " size=", size
+          size = size - sendRet
+          if size > 0:
+            pos = pos + sendRet
+            continue
+          client.sendCurSize = 0
+          deallocShared(cast[pointer](client.sendBuf))
+          client.sendBuf = nil
+          return SendResult.Success
+        elif sendRet < 0:
+          client.sslErr = SSL_get_error(client.ssl, sendRet.cint)
+          if client.sslErr == SSL_ERROR_WANT_WRITE or client.sslErr == SSL_ERROR_WANT_READ:
+            copyMem(addr client.sendBuf[0], d, size)
+            client.sendCurSize = size
+            return SendResult.Pending
+          if errno == EINTR:
+            continue
+          return SendResult.Error
+        else:
+          return SendResult.None
 
   proc wsServerSend*(client: Client, data: seq[byte] | string | Array[byte],
                     opcode: WebSocketOpCode = WebSocketOpCode.Binary): SendResult =
