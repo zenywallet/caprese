@@ -800,7 +800,6 @@ template serverTagLib*() {.dirty.} =
     var size = client.sendCurSize
     while true:
       var d = cast[cstring](addr client.sendBuf[pos])
-      #let sendRet = client.sock.send(d, size.cint, 0'i32)
       let sendRet = client.ssl.SSL_write(d, size.cint).int
       if sendRet > 0:
         debug "flush sendRet=", sendRet, " size=", size
