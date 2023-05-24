@@ -3095,6 +3095,7 @@ template serverLib() {.dirty.} =
                               nextPos = retHeader.next
                               parseSize = parseSize - nextPos
                             else:
+                              client.recvCurSize = 0
                               engine = SendApp
                               break
                           else:
