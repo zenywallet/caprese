@@ -2617,7 +2617,7 @@ template serverLib() {.dirty.} =
       cc.chain_handler.single_ec.iecdsa = cast[br_ecdsa_sign](br_ecdsa_i31_sign_asn1)
       cc.policy_vtable = addr cc.chain_handler.single_ec.vtable
 
-    proc br_ssl_server_init_caprese(cc: ptr br_ssl_server_context) {.gcsafe.} =
+    proc br_ssl_server_init_caprese(cc: ptr br_ssl_server_context) =
       br_ssl_server_zero(cc)
       br_ssl_engine_set_versions(addr cc.eng, BR_TLS12, BR_TLS12)
       br_ssl_engine_set_suites(addr cc.eng, unsafeAddr suites[0], suites.len.csize_t)
