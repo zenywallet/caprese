@@ -2528,14 +2528,103 @@ template serverLib() {.dirty.} =
 
     let suites = [uint16_t BR_TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256]
 
+    proc br_ssl_choose_hash(bf: cuint): cint {.importc, cdecl, gcsafe.}
+
+    proc se_choose(pctx: ptr ptr br_ssl_server_policy_class;
+      cc: ptr br_ssl_server_context; choices: ptr br_ssl_server_choices): cint {.cdecl.} =
+      var pc = cast[ptr br_ssl_server_policy_ec_context](pctx)
+      let st = addr cc.client_suites
+      let st_num = cc.client_suites_num.csize_t
+      var hash_id = br_ssl_choose_hash(br_ssl_server_get_client_hashes(cc).cuint shr 8).cuint
+      if cc.eng.session.version < BR_TLS12:
+        hash_id = br_sha1_ID
+      choices.chain = pc.chain
+      choices.chain_len = pc.chain_len
+      for u in 0..<st_num:
+        var tt = st[u][1]
+        case tt shr 12
+        of BR_SSLKEYX_ECDH_RSA:
+          if (pc.allowed_usages and BR_KEYTYPE_KEYX) != 0 and
+            pc.cert_issuer_key_type == BR_KEYTYPE_RSA:
+            choices.cipher_suite = st[u][0]
+            return 1.cint
+          break
+        of BR_SSLKEYX_ECDH_ECDSA:
+          if (pc.allowed_usages and BR_KEYTYPE_KEYX) != 0 and
+            pc.cert_issuer_key_type == BR_KEYTYPE_EC:
+            choices.cipher_suite = st[u][0]
+            return 1.cint
+          break
+        of BR_SSLKEYX_ECDHE_ECDSA:
+          if (pc.allowed_usages and BR_KEYTYPE_SIGN) != 0 and hash_id != 0:
+            choices.cipher_suite = st[u][0]
+            choices.algo_id = hash_id + 0xFF00
+            return 1.cint
+          break
+        else:
+          continue
+      return 0.cint
+
+    proc se_do_keyx(pctx: ptr ptr br_ssl_server_policy_class; data: ptr uint8;
+                    len: ptr csize_t): uint32 {.cdecl.}  =
+      var pc = cast[ptr br_ssl_server_policy_ec_context](pctx)
+      var r = pc.iec.mul(data, len[], pc.sk.x, pc.sk.xlen, pc.sk.curve)
+      var xlen: csize_t
+      var xoff = pc.iec.xoff(pc.sk.curve, addr xlen)
+      moveMem(data, addr cast[ptr UncheckedArray[uint8]](data)[xoff], xlen)
+      len[] = xlen
+      return r
+
+    proc se_do_sign(pctx: ptr ptr br_ssl_server_policy_class; algo_id: cuint;
+                    data: ptr uint8; hv_len: csize_t; len: csize_t): csize_t {.cdecl.} =
+      var a: array[128, byte]
+      for i in 0..<128:
+        a[i] = 5
+      a[0] = 3
+      var alen: csize_t
+      var hv: array[64, char]
+      var algo_id = (algo_id and 0xff).cint
+      var pc = cast[ptr br_ssl_server_policy_ec_context](pctx)
+      var hc = br_multihash_getimpl(pc.mhash, algo_id)
+      if hc.isNil:
+        return 0.csize_t
+      copyMem(addr hv, data, hv_len.int)
+      if len < 139:
+        return 0
+      return pc.iecdsa(pc.iec, hc, addr hv, pc.sk, data)
+
+    var policy_vtable_obj = br_ssl_server_policy_class(
+      context_size: sizeof(br_ssl_server_policy_ec_context).csize_t,
+      choose: se_choose,
+      do_keyx: se_do_keyx,
+      do_sign: se_do_sign
+    )
+
+    proc br_ssl_server_set_single_ec_caprese*(cc: ptr br_ssl_server_context;
+                                             chain: ptr br_x509_certificate;
+                                             chain_len: csize_t; sk: ptr br_ec_private_key;
+                                             allowed_usages: cuint;
+                                             cert_issuer_key_type: cuint; iec: ptr br_ec_impl;
+                                             iecdsa: br_ecdsa_sign) =
+      cc.chain_handler.single_ec.vtable = addr policy_vtable_obj
+      cc.chain_handler.single_ec.chain = cast[ptr br_x509_certificate](unsafeAddr CHAIN[0])
+      cc.chain_handler.single_ec.chain_len = CHAIN_LEN.csize_t
+      cc.chain_handler.single_ec.sk = cast[ptr br_ec_private_key](unsafeAddr EC)
+      cc.chain_handler.single_ec.allowed_usages = BR_KEYTYPE_SIGN
+      cc.chain_handler.single_ec.cert_issuer_key_type = 0
+      cc.chain_handler.single_ec.mhash = addr cc.eng.mhash
+      cc.chain_handler.single_ec.iec = addr br_ec_all_m15
+      cc.chain_handler.single_ec.iecdsa = cast[br_ecdsa_sign](br_ecdsa_i31_sign_asn1)
+      cc.policy_vtable = addr cc.chain_handler.single_ec.vtable
+
     proc br_ssl_server_init_caprese(cc: ptr br_ssl_server_context) {.gcsafe.} =
       br_ssl_server_zero(cc)
       br_ssl_engine_set_versions(addr cc.eng, BR_TLS12, BR_TLS12)
       br_ssl_engine_set_suites(addr cc.eng, unsafeAddr suites[0], suites.len.csize_t)
       br_ssl_engine_set_ec(addr cc.eng, addr br_ec_all_m15)
-      br_ssl_server_set_single_ec(cc, cast[ptr br_x509_certificate](unsafeAddr CHAIN[0]), CHAIN_LEN.csize_t,
-        cast[ptr br_ec_private_key](unsafeAddr EC), BR_KEYTYPE_SIGN, 0, addr br_ec_all_m15,
-        cast[br_ecdsa_sign](br_ecdsa_i31_sign_asn1))
+      br_ssl_server_set_single_ec_caprese(cc, cast[ptr br_x509_certificate](unsafeAddr CHAIN[0]),
+        CHAIN_LEN.csize_t, cast[ptr br_ec_private_key](unsafeAddr EC), BR_KEYTYPE_SIGN, 0,
+        addr br_ec_all_m15, cast[br_ecdsa_sign](br_ecdsa_i31_sign_asn1))
       br_ssl_engine_set_hash(addr cc.eng, br_sha256_ID, addr br_sha256_vtable)
       br_ssl_engine_set_prf_sha256(addr cc.eng, br_tls12_sha256_prf)
       br_ssl_engine_set_default_chapol(addr cc.eng)
