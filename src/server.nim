@@ -2175,7 +2175,24 @@ macro addServerMacro*(bindAddress: string, port: uint16, ssl: bool, sslLib: SslL
       var routesBase = s.copy()
       var routesBody = newStmtList()
       for s2 in s[s.len - 1]:
-        if eqIdent(s2[0], "stream"):
+        if eqIdent(s2[0], "certificates"):
+          var hostname = ""
+          if eqIdent(s[1][0], "hostname"):
+            hostname = $s[1][1]
+            for i in countdown(hostname.len-1, 0):
+              if hostname[i] == ':':
+                hostname.setLen(i)
+                break
+          if not eqIdent(s2[1][0], "path"):
+            s2.insert(1, nnkExprEqExpr.newTree(
+              newIdentNode("path"),
+              newLit("")
+            ))
+          s2.insert(1, nnkExprEqExpr.newTree(
+            newIdentNode("site"),
+            newLit(hostname)
+          ))
+        elif eqIdent(s2[0], "stream"):
           inc(curAppId)
           var streamAppId = curAppId
           if not eqIdent(s2[1][0], "streamAppId"):
@@ -2255,6 +2272,13 @@ template routes*(hostname: string, body: untyped) =
 
 template routes*(body: untyped) =
   block: body
+
+template certificates*(path: string, body: untyped) = discard # code is added by macro
+
+template certificates*(body: untyped) = discard # code is added by macro
+
+macro certificates*(site: string, path: string, body: untyped): untyped =
+  echo body.astGenRepr
 
 proc acceptKey(key: string): string =
   var sh = secureHash(key & "258EAFA5-E914-47DA-95CA-C5AB0DC85B11")

@@ -235,6 +235,11 @@ when isMainModule:
 
   server(bindAddress = "0.0.0.0", port = 8009):
     routes:
+      certificates(path = "./certs/site_a"):
+        cert: "cert.pem"
+        priv: "privkey.pem"
+        chain: "fullchain.pem"
+
       # client: Client
       # url: string
       # headers: Headers
