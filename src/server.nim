@@ -2273,6 +2273,30 @@ template routes*(hostname: string, body: untyped) =
 template routes*(body: untyped) =
   block: body
 
+var certsTableData {.compileTime.}: seq[tuple[key: string, val: tuple[
+  idx: int, certPath: string, privPath: string, chainPath: string]]]
+
+var certsTableIdx {.compileTime.}: int = 0
+
+proc addCertsTable*(site: string, certPath: string, privPath: string,
+                  chainPath: string) {.compileTime.} =
+  for i, d in certsTableData:
+    if d.key == site:
+      certsTableData[i].val.certPath = certPath
+      certsTableData[i].val.privPath = privPath
+      certsTableData[i].val.chainPath = chainPath
+      return
+  certsTableData.add((site, (certsTableIdx, certPath, privPath, chainPath)))
+  inc(certsTableIdx)
+
+macro createCertsTable*(): untyped =
+  newConstStmt(
+    postfix(newIdentNode("staticCertsTable"), "*"),
+    newCall("toTable",
+      newLit(certsTableData)
+    )
+  )
+
 template certificates*(path: string, body: untyped) = discard # code is added by macro
 
 template certificates*(body: untyped) = discard # code is added by macro
@@ -2360,6 +2384,7 @@ template serverLib() {.dirty.} =
   import ptlock
   import logs
   import std/re
+  import tables
 
   mixin addSafe, popSafe
 
@@ -2546,6 +2571,8 @@ template serverLib() {.dirty.} =
 
   proc appDummy(ctx: WorkerThreadCtx) {.thread.} = discard
 
+  var certsTable: ptr Table[string, tuple[idx: int, certPath: string, privPath: string, chainPath: string]]
+
   when cfg.sslLib == BearSSL:
     type
       uint16_t = uint16
@@ -2680,7 +2707,7 @@ template serverLib() {.dirty.} =
           newLit(certsTable)
         )
       )
-    certFilesTable()
+    #certFilesTable()
 
     proc selfSignedCertificate(ctx: SSL_CTX) =
       var x509: X509 = X509_new()
@@ -2731,6 +2758,8 @@ template serverLib() {.dirty.} =
     proc newSslCtx(site: string = "", selfSignedCertFallback: bool = false): SSL_CTX =
       var ctx = SSL_CTX_new(TLS_server_method())
       try:
+        raise
+        #[
         let certs = certsTable[site]
         var retCert = SSL_CTX_use_certificate_file(ctx, cstring(certs.cert), SSL_FILETYPE_PEM)
         if retCert != 1:
@@ -2744,6 +2773,7 @@ template serverLib() {.dirty.} =
         if retChain != 1:
           logs.error "error: chain file"
           raise newException(ServerSslCertError, "chain file")
+        ]#
       except:
         if not selfSignedCertFallback:
           ctx.SSL_CTX_free()
@@ -3804,6 +3834,9 @@ template serverLib() {.dirty.} =
       result.add(addHandlerProc(s[0], s[1], s[2]))
 
   serverHandlerMacro()
+
+  createCertsTable()
+  certsTable = unsafeAddr staticCertsTable
 
   if cfg.sslLib == OpenSSL or cfg.sslLib == LibreSSL or cfg.sslLib == BoringSSL:
     SSL_load_error_strings()
