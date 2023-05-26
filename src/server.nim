@@ -2755,10 +2755,7 @@ template serverLib() {.dirty.} =
       SSL_CTX_set_mode(ctx, (SSL_MODE_ENABLE_PARTIAL_WRITE or SSL_MODE_ACCEPT_MOVING_WRITE_BUFFER).clong)
       result = ctx
 
-    SSL_load_error_strings()
-    SSL_library_init()
-    OpenSSL_add_all_algorithms()
-    var sslCtx = newSslCtx(selfSignedCertFallback = true)
+    var sslCtx: SSL_CTX
 
   proc appListenBase(ctx: WorkerThreadCtx, sslFlag: static bool) {.thread, inline.} =
     let clientSock = ctx.client.sock.accept4(cast[ptr SockAddr](addr ctx.sockAddress), addr ctx.addrLen, O_NONBLOCK)
@@ -3807,6 +3804,12 @@ template serverLib() {.dirty.} =
       result.add(addHandlerProc(s[0], s[1], s[2]))
 
   serverHandlerMacro()
+
+  if cfg.sslLib == OpenSSL or cfg.sslLib == LibreSSL or cfg.sslLib == BoringSSL:
+    SSL_load_error_strings()
+    SSL_library_init()
+    OpenSSL_add_all_algorithms()
+    sslCtx = newSslCtx(selfSignedCertFallback = true)
 
   proc serverWorker(arg: ThreadArg) {.thread.} =
     var events: array[cfg.epollEventsSize, EpollEvent]
