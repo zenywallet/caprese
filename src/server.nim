@@ -8,6 +8,7 @@ import arraylib
 import std/sha1
 import base64
 import std/cpuinfo
+import os
 
 type
   ClientId* = int
@@ -2302,7 +2303,21 @@ template certificates*(path: string, body: untyped) = discard # code is added by
 template certificates*(body: untyped) = discard # code is added by macro
 
 macro certificates*(site: string, path: string, body: untyped): untyped =
-  echo body.astGenRepr
+  var site = $site
+  var path = $path
+  var cert, priv, chain: string
+  for s in body:
+    if s.kind == nnkCall:
+      if eqIdent(s[0], "cert"):
+        cert = $s[1][0]
+      elif eqIdent(s[0], "priv"):
+        priv = $s[1][0]
+      elif eqIdent(s[0], "chain"):
+        chain = $s[1][0]
+  if cert.len > 0: cert = path / cert
+  if priv.len > 0: priv = path / priv
+  if chain.len > 0: chain = path / chain
+  addCertsTable(site, cert, priv, chain)
 
 proc acceptKey(key: string): string =
   var sh = secureHash(key & "258EAFA5-E914-47DA-95CA-C5AB0DC85B11")
