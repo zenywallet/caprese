@@ -2721,11 +2721,11 @@ template serverLib() {.dirty.} =
 
       var retCert = SSL_CTX_use_certificate(ctx, x509)
       if retCert != 1:
-        error "error: self certificate"
+        logs.error "error: self certificate"
         raise newException(ServerSslCertError, "self certificate")
       var retPriv = SSL_CTX_use_PrivateKey(ctx, pkey)
       if retPriv != 1:
-        error "error: self private key"
+        logs.error "error: self private key"
         raise newException(ServerSslCertError, "self private key")
 
     proc newSslCtx(site: string = "", selfSignedCertFallback: bool = false): SSL_CTX =
@@ -2734,15 +2734,15 @@ template serverLib() {.dirty.} =
         let certs = certsTable[site]
         var retCert = SSL_CTX_use_certificate_file(ctx, cstring(certs.cert), SSL_FILETYPE_PEM)
         if retCert != 1:
-          error "error: certificate file"
+          logs.error "error: certificate file"
           raise newException(ServerSslCertError, "certificate file")
         var retPriv = SSL_CTX_use_PrivateKey_file(ctx, cstring(certs.privkey), SSL_FILETYPE_PEM)
         if retPriv != 1:
-          error "error: private key file"
+          logs.error "error: private key file"
           raise newException(ServerSslCertError, "private key file")
         var retChain = SSL_CTX_use_certificate_chain_file(ctx, cstring(certs.fullchain))
         if retChain != 1:
-          error "error: chain file"
+          logs.error "error: chain file"
           raise newException(ServerSslCertError, "chain file")
       except:
         if not selfSignedCertFallback:
@@ -2791,7 +2791,7 @@ template serverLib() {.dirty.} =
       elif sslFlag and (cfg.sslLib == OpenSSL or cfg.sslLib == LibreSSL or cfg.sslLib == BoringSSL):
         newClient.ssl = SSL_new(sslCtx)
         if SSL_set_fd(newClient.ssl, clientSock.cint) != 1:
-          error "error: SSL_set_fd"
+          logs.error "error: SSL_set_fd"
           newClient.close(ssl = true)
           return
         newClient.sendProc = sendSslProc
@@ -3236,12 +3236,12 @@ template serverLib() {.dirty.} =
                 client.ev.events = EPOLLIN or EPOLLRDHUP or EPOLLET
                 var retCtl = epoll_ctl(epfd, EPOLL_CTL_MOD, cast[cint](client.sock), addr client.ev)
                 if retCtl != 0:
-                  error "error: epoll_ctl ret=", retCtl, " errno=", errno
+                  logs.error "error: epoll_ctl ret=", retCtl, " errno=", errno
               elif client.sslErr == SSL_ERROR_WANT_WRITE:
                 client.ev.events = EPOLLRDHUP or EPOLLET or EPOLLOUT
                 var retCtl = epoll_ctl(epfd, EPOLL_CTL_MOD, cast[cint](client.sock), addr client.ev)
                 if retCtl != 0:
-                  error "error: epoll_ctl ret=", retCtl, " errno=", errno
+                  logs.error "error: epoll_ctl ret=", retCtl, " errno=", errno
               else:
                 client.close(ssl = true)
             elif retSslAccept == 0:
@@ -3251,7 +3251,7 @@ template serverLib() {.dirty.} =
               client.ev.events = EPOLLIN or EPOLLRDHUP or EPOLLET or EPOLLOUT
               var retCtl = epoll_ctl(epfd, EPOLL_CTL_MOD, cast[cint](client.sock), addr client.ev)
               if retCtl != 0:
-                error "error: epoll_ctl ret=", retCtl, " errno=", errno
+                logs.error "error: epoll_ctl ret=", retCtl, " errno=", errno
 
           acquire(client.spinLock)
           client.threadId = 0
@@ -3437,12 +3437,12 @@ template serverLib() {.dirty.} =
                   client.ev.events = EPOLLIN or EPOLLRDHUP or EPOLLET
                   var retCtl = epoll_ctl(epfd, EPOLL_CTL_MOD, cast[cint](client.sock), addr client.ev)
                   if retCtl != 0:
-                    error "error: epoll_ctl ret=", retCtl, " errno=", errno
+                    logs.error "error: epoll_ctl ret=", retCtl, " errno=", errno
                 elif client.sslErr == SSL_ERROR_WANT_WRITE:
                   client.ev.events = EPOLLRDHUP or EPOLLET or EPOLLOUT
                   var retCtl = epoll_ctl(epfd, EPOLL_CTL_MOD, cast[cint](client.sock), addr client.ev)
                   if retCtl != 0:
-                    error "error: epoll_ctl ret=", retCtl, " errno=", errno
+                    logs.error "error: epoll_ctl ret=", retCtl, " errno=", errno
                 else:
                   if errno == EINTR:
                     continue
@@ -3847,7 +3847,7 @@ template serverLib() {.dirty.} =
           cast[ClientHandlerProc](clientHandlerProcs[ctx.client.appId])(ctx)
         except:
           let e = getCurrentException()
-          error e.name, ": ", e.msg
+          logs.error e.name, ": ", e.msg
     return
 
 
@@ -4181,7 +4181,7 @@ template serverStartWithCfg(cfg: static Config) =
   for i in countdown(releaseOnQuitEpfds.high, 0):
     let retEpfdClose = releaseOnQuitEpfds[i].close()
     if retEpfdClose != 0:
-      error "error: close epfd=", epfd, " ret=", retEpfdClose, " ", getErrnoStr()
+      logs.error "error: close epfd=", epfd, " ret=", retEpfdClose, " ", getErrnoStr()
   freeClient(cfg.clientMax)
   joinThread(contents.timeStampThread)
 
@@ -4193,7 +4193,7 @@ template serverStop*() =
   for i in countdown(releaseOnQuitSocks.high, 0):
     let retShutdown = releaseOnQuitSocks[i].shutdown(SHUT_RD)
     if retShutdown != 0:
-      error "error: quit shutdown ret=", retShutdown, " ", getErrnoStr()
+      logs.error "error: quit shutdown ret=", retShutdown, " ", getErrnoStr()
   stopTimeStampUpdater()
 
 
