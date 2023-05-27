@@ -3853,7 +3853,7 @@ template serverLib() {.dirty.} =
   createCertsTable()
   certsTable = unsafeAddr staticCertsTable
 
-  if cfg.sslLib == OpenSSL or cfg.sslLib == LibreSSL or cfg.sslLib == BoringSSL:
+  when cfg.sslLib == OpenSSL or cfg.sslLib == LibreSSL or cfg.sslLib == BoringSSL:
     SSL_load_error_strings()
     SSL_library_init()
     OpenSSL_add_all_algorithms()
