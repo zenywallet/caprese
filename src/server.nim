@@ -2757,7 +2757,7 @@ template serverLib() {.dirty.} =
       checkErr X509_set_pubkey(x509, pkey)
       var name: X509_NAME = X509_get_subject_name(x509)
       checkErr X509_NAME_add_entry_by_txt(name, "C", MBSTRING_ASC, "JP", -1, -1, 0)
-      checkErr X509_NAME_add_entry_by_txt(name, "CN", MBSTRING_ASC, "Blockstor Self-Signed Certificate", -1, -1, 0)
+      checkErr X509_NAME_add_entry_by_txt(name, "CN", MBSTRING_ASC, "Caprese Self-Signed Certificate", -1, -1, 0)
       checkErr X509_set_issuer_name(x509, name)
       checkErr X509_sign(x509, pkey, EVP_sha1())
 
