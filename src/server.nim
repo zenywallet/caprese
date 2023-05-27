@@ -2773,22 +2773,22 @@ template serverLib() {.dirty.} =
     proc newSslCtx(site: string = "", selfSignedCertFallback: bool = false): SSL_CTX =
       var ctx = SSL_CTX_new(TLS_server_method())
       try:
-        raise
-        #[
-        let certs = certsTable[site]
-        var retCert = SSL_CTX_use_certificate_file(ctx, cstring(certs.cert), SSL_FILETYPE_PEM)
-        if retCert != 1:
-          logs.error "error: certificate file"
-          raise newException(ServerSslCertError, "certificate file")
-        var retPriv = SSL_CTX_use_PrivateKey_file(ctx, cstring(certs.privkey), SSL_FILETYPE_PEM)
-        if retPriv != 1:
-          logs.error "error: private key file"
-          raise newException(ServerSslCertError, "private key file")
-        var retChain = SSL_CTX_use_certificate_chain_file(ctx, cstring(certs.fullchain))
-        if retChain != 1:
-          logs.error "error: chain file"
-          raise newException(ServerSslCertError, "chain file")
-        ]#
+        if not certsTable.isNil and site.len > 0:
+          let certs = certsTable[][site]
+          var retCert = SSL_CTX_use_certificate_file(ctx, cstring(certs.certPath), SSL_FILETYPE_PEM)
+          if retCert != 1:
+            logs.error "error: certificate file"
+            raise newException(ServerSslCertError, "certificate file")
+          var retPriv = SSL_CTX_use_PrivateKey_file(ctx, cstring(certs.privPath), SSL_FILETYPE_PEM)
+          if retPriv != 1:
+            logs.error "error: private key file"
+            raise newException(ServerSslCertError, "private key file")
+          var retChain = SSL_CTX_use_certificate_chain_file(ctx, cstring(certs.chainPath))
+          if retChain != 1:
+            logs.error "error: chain file"
+            raise newException(ServerSslCertError, "chain file")
+        else:
+          raise
       except:
         if not selfSignedCertFallback:
           ctx.SSL_CTX_free()
