@@ -389,7 +389,7 @@ proc getErrnoStr*(): string =
   of EADDRINUSE: "errno=EADDRINUSE(" & $errno & ")"
   else: "errno=" & $errno
 
-template serverTagLib*() {.dirty.} =
+template serverTagLib*(cfg: static Config) {.dirty.} =
   import arraylib
   import bytes
   import hashtable
@@ -2391,7 +2391,7 @@ template serverType() {.dirty.} =
       params: array[TargetHeaderParams.len, tuple[cur: int, size: int]]
       minorVer: int
 
-template serverLib() {.dirty.} =
+template serverLib(cfg: static Config) {.dirty.} =
   import posix, epoll
   import arraylib
   import bytes
@@ -4211,7 +4211,7 @@ template serverLib() {.dirty.} =
 
 template serverStartWithCfg(cfg: static Config) =
   serverType()
-  serverLib()
+  serverLib(cfg)
   startTimeStampUpdater()
 
   let cpuCount = countProcessors()

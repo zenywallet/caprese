@@ -68,12 +68,13 @@ macro init(): untyped =
     when cfg.debugLog: {.define: DEBUG_LOG.}
 
     serverInit()
-    serverTagLib()
+    serverTagLib(cfg)
 
     when cfg.maxOpenFiles:
       setMaxRlimitOpenFiles()
     else:
-      setRlimitOpenFiles(cfg.limitOpenFiles)
+      const limitOpenFiles = cfg.limitOpenFiles
+      setRlimitOpenFiles(limitOpenFiles)
     when cfg.sigPipeIgnore: signal(SIGPIPE, SIG_IGN)
     serverlib.abort = proc() {.thread.} =
       serverlib.serverStop()
