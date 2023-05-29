@@ -115,7 +115,7 @@ type
     err*: cint
     hbuf*: ptr cuchar
     hlen*: csize_t
-    dest*: proc (dest_ctx: pointer; src: pointer; len: csize_t)
+    dest*: proc (dest_ctx: pointer; src: pointer; len: csize_t) {.cdecl.}
     dest_ctx*: pointer
     event*: cuchar
     name*: array[128, char]
@@ -161,7 +161,7 @@ proc br_pem_decoder_push*(ctx: ptr br_pem_decoder_context; data: pointer; len: c
 ##
 
 proc br_pem_decoder_setdest*(ctx: ptr br_pem_decoder_context; dest: proc (
-    dest_ctx: pointer; src: pointer; len: csize_t); dest_ctx: pointer) {.inline.} =
+    dest_ctx: pointer; src: pointer; len: csize_t) {.cdecl.}; dest_ctx: pointer) {.inline.} =
   ctx.dest = dest
   ctx.dest_ctx = dest_ctx
 
