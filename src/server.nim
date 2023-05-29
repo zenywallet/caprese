@@ -2673,14 +2673,14 @@ template serverLib(cfg: static Config) {.dirty.} =
                                              cert_issuer_key_type: cuint; iec: ptr br_ec_impl;
                                              iecdsa: br_ecdsa_sign) =
       cc.chain_handler.single_ec.vtable = addr policy_vtable_obj
-      cc.chain_handler.single_ec.chain = cast[ptr br_x509_certificate](unsafeAddr CHAIN[0])
-      cc.chain_handler.single_ec.chain_len = CHAIN_LEN.csize_t
-      cc.chain_handler.single_ec.sk = cast[ptr br_ec_private_key](unsafeAddr EC)
-      cc.chain_handler.single_ec.allowed_usages = BR_KEYTYPE_SIGN
-      cc.chain_handler.single_ec.cert_issuer_key_type = 0
+      cc.chain_handler.single_ec.chain = chain
+      cc.chain_handler.single_ec.chain_len = chain_len
+      cc.chain_handler.single_ec.sk = sk
+      cc.chain_handler.single_ec.allowed_usages = allowed_usages
+      cc.chain_handler.single_ec.cert_issuer_key_type = cert_issuer_key_type
       cc.chain_handler.single_ec.mhash = addr cc.eng.mhash
-      cc.chain_handler.single_ec.iec = addr br_ec_all_m15
-      cc.chain_handler.single_ec.iecdsa = cast[br_ecdsa_sign](br_ecdsa_i31_sign_asn1)
+      cc.chain_handler.single_ec.iec = iec
+      cc.chain_handler.single_ec.iecdsa = iecdsa
       cc.policy_vtable = addr cc.chain_handler.single_ec.vtable
 
     proc br_ssl_server_init_caprese(cc: ptr br_ssl_server_context) =
