@@ -2659,7 +2659,7 @@ template serverLib(cfg: static Config) {.dirty.} =
         return 0
       return pc.iecdsa(pc.iec, hc, addr hv, pc.sk, data)
 
-    var policy_vtable_obj = br_ssl_server_policy_class(
+    var se_policy_vtable_obj = br_ssl_server_policy_class(
       context_size: sizeof(br_ssl_server_policy_ec_context).csize_t,
       choose: se_choose,
       do_keyx: se_do_keyx,
@@ -2672,7 +2672,7 @@ template serverLib(cfg: static Config) {.dirty.} =
                                              allowed_usages: cuint;
                                              cert_issuer_key_type: cuint; iec: ptr br_ec_impl;
                                              iecdsa: br_ecdsa_sign) =
-      cc.chain_handler.single_ec.vtable = addr policy_vtable_obj
+      cc.chain_handler.single_ec.vtable = addr se_policy_vtable_obj
       cc.chain_handler.single_ec.chain = chain
       cc.chain_handler.single_ec.chain_len = chain_len
       cc.chain_handler.single_ec.sk = sk
