@@ -201,6 +201,7 @@ template serverInit*() {.dirty.} =
     debug "SSL: BearSSL"
     import bearssl/bearssl_ssl
     import bearssl/bearssl_x509
+    import bearssl/bearssl_rsa
     import bearssl/bearssl_ec
     import bearssl/bearssl_hash
     import bearssl/bearssl_prf
@@ -2648,9 +2649,104 @@ template serverLib(cfg: static Config) {.dirty.} =
       deallocShared(chains.cert)
       chains.cert = nil
 
-    let suites = [uint16_t BR_TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256]
+    let suites = [uint16_t BR_TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256,
+                  BR_TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256]
 
     proc br_ssl_choose_hash(bf: cuint): cint {.importc, cdecl, gcsafe.}
+
+    proc sr_choose(pctx: ptr ptr br_ssl_server_policy_class;
+      cc: ptr br_ssl_server_context; choices: ptr br_ssl_server_choices): cint {.cdecl.} =
+      var pc = cast[ptr br_ssl_server_policy_rsa_context](pctx)
+      let st = addr cc.client_suites
+      let st_num = cc.client_suites_num.csize_t
+      var hash_id: cuint
+      var fh: bool
+      if cc.eng.session.version < BR_TLS12:
+        hash_id = 0.cuint
+        fh = true
+      else:
+        hash_id = br_ssl_choose_hash(br_ssl_server_get_client_hashes(cc).cuint).cuint
+        fh = (hash_id != 0)
+      choices.chain = pc.chain
+      choices.chain_len = pc.chain_len
+      for u in 0..<st_num:
+        var tt = st[u][1]
+        case tt shr 12
+        of BR_SSLKEYX_RSA:
+          if (pc.allowed_usages and BR_KEYTYPE_KEYX) != 0:
+            choices.cipher_suite = st[u][0]
+            return 1.cint
+          break
+        of BR_SSLKEYX_ECDHE_RSA:
+          if (pc.allowed_usages and BR_KEYTYPE_SIGN) != 0 and fh:
+            choices.cipher_suite = st[u][0]
+            choices.algo_id = hash_id + 0xFF00
+            return 1.cint
+          break
+        else:
+          continue
+      return 0.cint
+
+    proc sr_do_keyx(pctx: ptr ptr br_ssl_server_policy_class; data: ptr uint8;
+                    len: ptr csize_t): uint32 {.cdecl.}  =
+      var pc = cast[ptr br_ssl_server_policy_rsa_context](pctx)
+      return br_rsa_ssl_decrypt(pc.irsacore, pc.sk, data, len[])
+
+    const HASH_OID_SHA1 = @[uint8 0x05, 0x2B, 0x0E, 0x03, 0x02, 0x1A]
+    const HASH_OID_SHA224 = @[uint8 0x09, 0x60, 0x86, 0x48, 0x01, 0x65, 0x03, 0x04, 0x02, 0x04]
+    const HASH_OID_SHA256 = @[uint8 0x09, 0x60, 0x86, 0x48, 0x01, 0x65, 0x03, 0x04, 0x02, 0x01]
+    const HASH_OID_SHA384 = @[uint8 0x09, 0x60, 0x86, 0x48, 0x01, 0x65, 0x03, 0x04, 0x02, 0x02]
+    const HASH_OID_SHA512 = @[uint8 0x09, 0x60, 0x86, 0x48, 0x01, 0x65, 0x03, 0x04, 0x02, 0x03]
+    const HASH_OID = @[
+      HASH_OID_SHA1,
+      HASH_OID_SHA224,
+      HASH_OID_SHA256,
+      HASH_OID_SHA384,
+      HASH_OID_SHA512
+    ]
+
+    proc sr_do_sign(pctx: ptr ptr br_ssl_server_policy_class; algo_id: cuint;
+                    data: ptr uint8; hv_len: csize_t; len: csize_t): csize_t {.cdecl.} =
+      var pc = cast[ptr br_ssl_server_policy_rsa_context](pctx)
+      var hv: array[64, uint8]
+      var hash_oid: ptr uint8
+      copyMem(addr hv, data, hv_len.int)
+      var algo_id = (algo_id and 0xff).cint
+      if algo_id == 0:
+        hash_oid = cast[ptr uint8](nil)
+      elif algo_id >= 2 and algo_id <= 6:
+        hash_oid = cast[ptr uint8](unsafeAddr HASH_OID[algo_id - 2])
+      else:
+        return 0.csize_t
+      var sig_len: csize_t = (pc.sk.n_bitlen + 7) shr 3
+      if len < sig_len:
+        return 0.csize_t
+      if pc.irsasign(hash_oid, cast[ptr uint8](addr hv), hv_len, pc.sk, data) > 0:
+        return sig_len
+      else:
+        return 0.csize_t
+
+    var sr_policy_vtable_obj = br_ssl_server_policy_class(
+      context_size: sizeof(br_ssl_server_policy_rsa_context).csize_t,
+      choose: sr_choose,
+      do_keyx: sr_do_keyx,
+      do_sign: sr_do_sign
+    )
+
+    proc br_ssl_server_set_single_rsa_caprese*(cc: ptr br_ssl_server_context;
+                                               chain: ptr br_x509_certificate;
+                                               chain_len: csize_t; sk: ptr br_rsa_private_key;
+                                               allowed_usages: cuint;
+                                               irsacore: br_rsa_private;
+                                               irsasign: br_rsa_pkcs1_sign) =
+      cc.chain_handler.single_rsa.vtable = addr sr_policy_vtable_obj
+      cc.chain_handler.single_rsa.chain = chain
+      cc.chain_handler.single_rsa.chain_len = chain_len
+      cc.chain_handler.single_rsa.sk = sk
+      cc.chain_handler.single_rsa.allowed_usages = allowed_usages
+      cc.chain_handler.single_rsa.irsacore = irsacore
+      cc.chain_handler.single_rsa.irsasign = irsasign
+      cc.policy_vtable = addr cc.chain_handler.single_rsa.vtable
 
     proc se_choose(pctx: ptr ptr br_ssl_server_policy_class;
       cc: ptr br_ssl_server_context; choices: ptr br_ssl_server_choices): cint {.cdecl.} =
