@@ -204,6 +204,7 @@ template serverInit*() {.dirty.} =
     import bearssl/bearssl_ec
     import bearssl/bearssl_hash
     import bearssl/bearssl_prf
+    import bearssl/bearssl_pem
     import bearssl/chain_ec
     import bearssl/key_ec
 
@@ -2591,6 +2592,61 @@ template serverLib(cfg: static Config) {.dirty.} =
   when cfg.sslLib == BearSSL:
     type
       uint16_t = uint16
+
+    type
+      X509CertificateChains = object
+        cert: ptr UncheckedArray[br_x509_certificate]
+        certLen: csize_t
+
+    proc createChains(pemData: string): X509CertificateChains =
+      var pemData = pemData
+      if pemData[pemData.len - 1] != '\n':
+        pemData.add("\n")
+
+      var pc: br_pem_decoder_context
+      br_pem_decoder_init(addr pc)
+
+      proc dest(dest_ctx: pointer; src: pointer; len: csize_t) {.cdecl.} =
+        let pBuf = cast[ptr seq[byte]](dest_ctx)
+        let srcBytes = cast[ptr UncheckedArray[byte]](src).toBytes(len)
+        pBuf[].add(srcBytes)
+
+      var allBuf: seq[seq[byte]]
+      var buf: seq[byte]
+      br_pem_decoder_setdest(addr pc, dest, cast[pointer](addr buf))
+
+      var len = pemData.len
+      var pos = 0
+
+      while len > 0:
+        var tlen = br_pem_decoder_push(addr pc, addr pemData[pos], len.csize_t).int
+        dec(len, tlen)
+        inc(pos, tlen)
+        case br_pem_decoder_event(addr pc)
+        of BR_PEM_BEGIN_OBJ:
+          buf = @[]
+        of BR_PEM_END_OBJ:
+          allBuf.add(buf)
+        of BR_PEM_ERROR:
+          raise
+        else:
+          raise
+
+      result.cert = cast[ptr UncheckedArray[br_x509_certificate]](allocShared0(sizeof(br_x509_certificate) * allBuf.len))
+      result.certLen = allBuf.len.csize_t
+      for i, b in allBuf:
+        result.cert[i].data = cast[ptr uint8](allocShared0(b.len))
+        result.cert[i].data_len = b.len.csize_t
+        copyMem(result.cert[i].data, unsafeAddr b[0], b.len)
+
+    proc freeChains(chains: var X509CertificateChains) =
+      for i in 0..<chains.certLen:
+        chains.cert[i].data_len = 0
+        deallocShared(chains.cert[i].data)
+        chains.cert[i].data = nil
+      chains.certLen = 0
+      deallocShared(chains.cert)
+      chains.cert = nil
 
     let suites = [uint16_t BR_TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256]
 
