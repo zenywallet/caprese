@@ -2595,6 +2595,63 @@ template serverLib(cfg: static Config) {.dirty.} =
       uint16_t = uint16
 
     type
+      PemObj = object
+        name: string
+        data: seq[byte]
+
+      PemObjs = seq[PemObj]
+
+    proc decodePem(pemData: string): PemObjs =
+      var pemData = pemData
+      if pemData[pemData.len - 1] != '\n':
+        pemData.add("\n")
+
+      var pc: br_pem_decoder_context
+      br_pem_decoder_init(addr pc)
+
+      proc dest(dest_ctx: pointer; src: pointer; len: csize_t) {.cdecl.} =
+        let pBuf = cast[ptr seq[byte]](dest_ctx)
+        let srcBytes = cast[ptr UncheckedArray[byte]](src).toBytes(len)
+        pBuf[].add(srcBytes)
+
+      var buf: seq[byte] = @[]
+      br_pem_decoder_setdest(addr pc, dest, cast[pointer](addr buf))
+
+      var len = pemData.len
+      var pos = 0
+      var pemObj: PemObj
+
+      while len > 0:
+        var tlen = br_pem_decoder_push(addr pc, addr pemData[pos], len.csize_t).int
+        dec(len, tlen)
+        inc(pos, tlen)
+        case br_pem_decoder_event(addr pc)
+        of BR_PEM_BEGIN_OBJ:
+          pemObj.name = $br_pem_decoder_name(addr pc)
+        of BR_PEM_END_OBJ:
+          if buf.len > 0:
+            pemObj.data = buf
+            zeroMem(addr buf[0], buf.len)
+            buf = @[]
+            result.add(pemObj)
+            zeroMem(addr pemObj.name[0], pemObj.name.len)
+            pemObj.name = ""
+            zeroMem(addr pemObj.data[0], pemObj.data.len)
+            pemObj.data = @[]
+        of BR_PEM_ERROR:
+          raise
+        else:
+          raise
+
+    proc clearPemObjs(pemObjs: var PemObjs) =
+      for i in 0..<pemObjs.len:
+        zeroMem(addr pemObjs[i].name[0], pemObjs[i].name.len)
+        pemObjs[i].name = ""
+        zeroMem(addr pemObjs[i].data[0], pemObjs[i].data.len)
+        pemObjs[i].data = @[]
+      pemObjs = @[]
+
+    type
       X509CertificateChains = object
         cert: ptr UncheckedArray[br_x509_certificate]
         certLen: csize_t
