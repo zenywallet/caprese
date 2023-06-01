@@ -383,7 +383,7 @@ type
 ##
 
 type
-  br_rsa_private* = proc (x: ptr uint8; sk: ptr br_rsa_private_key): uint32_t {.cdecl.}
+  br_rsa_private* = proc (x: ptr uint8; sk: ptr br_rsa_private_key): uint32_t {.cdecl, gcsafe.}
 
 ## *
 ##  \brief Type for a RSA signature generation engine (PKCS#1 v1.5).
