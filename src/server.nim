@@ -2770,7 +2770,7 @@ template serverLib(cfg: static Config) {.dirty.} =
       if algo_id == 0:
         hash_oid = cast[ptr uint8](nil)
       elif algo_id >= 2 and algo_id <= 6:
-        hash_oid = cast[ptr uint8](unsafeAddr HASH_OID[algo_id - 2])
+        hash_oid = cast[ptr uint8](unsafeAddr HASH_OID[algo_id - 2][0])
       else:
         return 0.csize_t
       var sig_len: csize_t = (pc.sk.n_bitlen + 7) shr 3
