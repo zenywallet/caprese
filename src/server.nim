@@ -2733,13 +2733,11 @@ template serverLib(cfg: static Config) {.dirty.} =
           if (pc.allowed_usages and BR_KEYTYPE_KEYX) != 0:
             choices.cipher_suite = st[u][0]
             return 1.cint
-          break
         of BR_SSLKEYX_ECDHE_RSA:
           if (pc.allowed_usages and BR_KEYTYPE_SIGN) != 0 and fh:
             choices.cipher_suite = st[u][0]
             choices.algo_id = hash_id + 0xFF00
             return 1.cint
-          break
         else:
           continue
       return 0.cint
@@ -2823,19 +2821,16 @@ template serverLib(cfg: static Config) {.dirty.} =
             pc.cert_issuer_key_type == BR_KEYTYPE_RSA:
             choices.cipher_suite = st[u][0]
             return 1.cint
-          break
         of BR_SSLKEYX_ECDH_ECDSA:
           if (pc.allowed_usages and BR_KEYTYPE_KEYX) != 0 and
             pc.cert_issuer_key_type == BR_KEYTYPE_EC:
             choices.cipher_suite = st[u][0]
             return 1.cint
-          break
         of BR_SSLKEYX_ECDHE_ECDSA:
           if (pc.allowed_usages and BR_KEYTYPE_SIGN) != 0 and hash_id != 0:
             choices.cipher_suite = st[u][0]
             choices.algo_id = hash_id + 0xFF00
             return 1.cint
-          break
         else:
           continue
       return 0.cint
