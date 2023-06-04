@@ -2652,6 +2652,81 @@ template serverLib(cfg: static Config) {.dirty.} =
       pemObjs = @[]
 
     type
+      CertPrivateKeyType* {.pure.} = enum
+        None
+        RSA
+        EC
+
+      CertPrivateKey* = object
+        case type*: CertPrivateKeyType
+        of CertPrivateKeyType.None:
+          discard
+        of CertPrivateKeyType.RSA:
+          rsa*: ptr br_rsa_private_key
+        of CertPrivateKeyType.EC:
+          ec*: ptr br_ec_private_key
+
+    proc decodeCertPrivateKey(data: seq[byte]): CertPrivateKey =
+      var dc: br_skey_decoder_context
+      br_skey_decoder_init(addr dc)
+      br_skey_decoder_push(addr dc, unsafeAddr data[0], data.len.csize_t)
+      let err = br_skey_decoder_last_error(addr dc)
+      if err != 0:
+        return CertPrivateKey(type: CertPrivateKeyType.None)
+
+      let keyType = br_skey_decoder_key_type(addr dc)
+      case keyType
+      of BR_KEYTYPE_RSA:
+        var rk = br_skey_decoder_get_rsa(addr dc)
+        var sk = cast[ptr br_rsa_private_key](allocShared0(sizeof(br_rsa_private_key)))
+        sk.n_bitlen = rk.n_bitlen
+        sk.p = cast[ptr uint8](allocShared0(rk.plen))
+        copyMem(sk.p, rk.p, rk.plen)
+        sk.plen = rk.plen
+        sk.q = cast[ptr uint8](allocShared0(rk.qlen))
+        copyMem(sk.q, rk.q, rk.qlen)
+        sk.qlen = rk.qlen
+        sk.dp = cast[ptr uint8](allocShared0(rk.dplen))
+        copyMem(sk.dp, rk.dp, rk.dplen)
+        sk.dplen = rk.dplen
+        sk.dq = cast[ptr uint8](allocShared0(rk.dqlen))
+        copyMem(sk.dq, rk.dq, rk.dqlen)
+        sk.dqlen = rk.dqlen
+        sk.iq = cast[ptr uint8](allocShared0(rk.iqlen))
+        copyMem(sk.iq, rk.iq, rk.iqlen)
+        sk.iqlen = rk.iqlen
+        return CertPrivateKey(type: CertPrivateKeyType.RSA, rsa: sk)
+
+      of BR_KEYTYPE_EC:
+        var ek = br_skey_decoder_get_ec(addr dc)
+        var sk = cast[ptr br_ec_private_key](allocShared0(sizeof(br_ec_private_key)))
+        sk.curve = ek.curve
+        sk.x = cast[ptr uint8](allocShared0(ek.xlen))
+        copyMem(sk.x, ek.x, ek.xlen)
+        sk.xlen = ek.xlen
+        return CertPrivateKey(type: CertPrivateKeyType.EC, ec: sk)
+
+      else:
+        return CertPrivateKey(type: CertPrivateKeyType.None)
+
+    proc freeCertPrivateKey(certPrivKey: var CertPrivateKey) =
+      case certPrivKey.type
+      of CertPrivateKeyType.RSA:
+        deallocShared(certPrivKey.rsa.iq)
+        deallocShared(certPrivKey.rsa.dq)
+        deallocShared(certPrivKey.rsa.dp)
+        deallocShared(certPrivKey.rsa.q)
+        deallocShared(certPrivKey.rsa.p)
+        deallocShared(certPrivKey.rsa)
+
+      of CertPrivateKeyType.EC:
+        deallocShared(certPrivKey.ec.x)
+        deallocShared(certPrivKey.ec)
+
+      of CertPrivateKeyType.None:
+        discard
+
+    type
       X509CertificateChains = object
         cert: ptr UncheckedArray[br_x509_certificate]
         certLen: csize_t
