@@ -2695,6 +2695,7 @@ template serverLib(cfg: static Config) {.dirty.} =
         sk.iq = cast[ptr uint8](allocShared0(rk.iqlen))
         copyMem(sk.iq, rk.iq, rk.iqlen)
         sk.iqlen = rk.iqlen
+        zeroMem(addr dc, sizeof(br_skey_decoder_context))
         return CertPrivateKey(type: CertPrivateKeyType.RSA, rsa: sk)
 
       of BR_KEYTYPE_EC:
@@ -2704,6 +2705,7 @@ template serverLib(cfg: static Config) {.dirty.} =
         sk.x = cast[ptr uint8](allocShared0(ek.xlen))
         copyMem(sk.x, ek.x, ek.xlen)
         sk.xlen = ek.xlen
+        zeroMem(addr dc, sizeof(br_skey_decoder_context))
         return CertPrivateKey(type: CertPrivateKeyType.EC, ec: sk)
 
       else:
@@ -2712,6 +2714,11 @@ template serverLib(cfg: static Config) {.dirty.} =
     proc freeCertPrivateKey(certPrivKey: var CertPrivateKey) =
       case certPrivKey.type
       of CertPrivateKeyType.RSA:
+        zeroMem(addr certPrivKey.rsa.iq, certPrivKey.rsa.iqlen)
+        zeroMem(addr certPrivKey.rsa.dq, certPrivKey.rsa.dqlen)
+        zeroMem(addr certPrivKey.rsa.dp, certPrivKey.rsa.dplen)
+        zeroMem(addr certPrivKey.rsa.q, certPrivKey.rsa.qlen)
+        zeroMem(addr certPrivKey.rsa.p, certPrivKey.rsa.plen)
         deallocShared(certPrivKey.rsa.iq)
         deallocShared(certPrivKey.rsa.dq)
         deallocShared(certPrivKey.rsa.dp)
@@ -2720,6 +2727,7 @@ template serverLib(cfg: static Config) {.dirty.} =
         deallocShared(certPrivKey.rsa)
 
       of CertPrivateKeyType.EC:
+        zeroMem(addr certPrivKey.ec.x, certPrivKey.ec.xlen)
         deallocShared(certPrivKey.ec.x)
         deallocShared(certPrivKey.ec)
 
