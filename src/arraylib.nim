@@ -252,13 +252,15 @@ else:
       moveMem(addr x[i], addr x[i + 1], last - i)
     x.len = last
 
-  proc `==`*[T](x, y: Array[T]): bool =
+  proc `==`*[T](x: Array[T] or seq[T], y: Array[T]): bool =
     if x.len != y.len:
       return false
     for f in x.low..x.high:
       if x[f] != y[f]:
         return false
     result = true
+
+  template `==`*[T](x: Array[T], y: seq[T]): bool = `==`(y, x)
 
   proc setLen*[T](x: var Array[T], newLen: Natural) =
     if x.cap < newLen:
