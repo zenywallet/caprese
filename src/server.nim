@@ -2300,6 +2300,22 @@ macro createCertsTable*(): untyped =
     )
   )
 
+var certsList: Array[tuple[site: Array[byte], idx: int]]
+
+proc addCertsList*(site: string, idx: int) =
+  var a = cast[seq[byte]](site).toArray
+  certsList.add((a, idx))
+
+proc getCertsList*(): Array[tuple[site: Array[byte], idx: int]] = certsList
+
+proc getCertIdx*(site: string): int =
+  for a in certsList:
+    if cast[seq[byte]](site) == a.site:
+      return a.idx
+  return -1
+
+proc clearCertsList*() = certsList.empty()
+
 template certificates*(path: string, body: untyped) = discard # code is added by macro
 
 template certificates*(body: untyped) = discard # code is added by macro
@@ -4139,6 +4155,8 @@ template serverLib(cfg: static Config) {.dirty.} =
 
   createCertsTable()
   certsTable = unsafeAddr staticCertsTable
+  for c in certsTable[].pairs:
+    addCertsList(c[0], c[1].idx)
 
   when cfg.sslLib == OpenSSL or cfg.sslLib == LibreSSL or cfg.sslLib == BoringSSL:
     SSL_load_error_strings()
