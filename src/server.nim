@@ -206,8 +206,10 @@ template serverInit*() {.dirty.} =
     import bearssl/bearssl_hash
     import bearssl/bearssl_prf
     import bearssl/bearssl_pem
-    import bearssl/chain_ec
-    import bearssl/key_ec
+    import bearssl/chain_rsa
+    import bearssl/key_rsa
+    #import bearssl/chain_ec
+    #import bearssl/key_ec
 
   elif cfg.sslLib == OpenSSL or cfg.sslLib == LibreSSL or cfg.sslLib == BoringSSL:
     import openssl
@@ -2991,9 +2993,12 @@ template serverLib(cfg: static Config) {.dirty.} =
       br_ssl_engine_set_versions(addr cc.eng, BR_TLS12, BR_TLS12)
       br_ssl_engine_set_suites(addr cc.eng, unsafeAddr suites[0], suites.len.csize_t)
       br_ssl_engine_set_ec(addr cc.eng, addr br_ec_all_m15)
-      br_ssl_server_set_single_ec_caprese(cc, cast[ptr br_x509_certificate](unsafeAddr CHAIN[0]),
-        CHAIN_LEN.csize_t, cast[ptr br_ec_private_key](unsafeAddr EC), BR_KEYTYPE_SIGN, 0,
-        addr br_ec_all_m15, cast[br_ecdsa_sign](br_ecdsa_i31_sign_asn1))
+      br_ssl_server_set_single_rsa_caprese(cc, cast[ptr br_x509_certificate](unsafeAddr CHAIN[0]),
+        CHAIN_LEN.csize_t, cast[ptr br_rsa_private_key](unsafeAddr RSA),
+        BR_KEYTYPE_SIGN, cast[br_rsa_private](0), br_rsa_i31_pkcs1_sign)
+      #br_ssl_server_set_single_ec_caprese(cc, cast[ptr br_x509_certificate](unsafeAddr CHAIN[0]),
+      #  CHAIN_LEN.csize_t, cast[ptr br_ec_private_key](unsafeAddr EC), BR_KEYTYPE_SIGN, 0,
+      #  addr br_ec_all_m15, cast[br_ecdsa_sign](br_ecdsa_i31_sign_asn1))
       br_ssl_engine_set_hash(addr cc.eng, br_sha256_ID, addr br_sha256_vtable)
       br_ssl_engine_set_prf_sha256(addr cc.eng, br_tls12_sha256_prf)
       br_ssl_engine_set_default_chapol(addr cc.eng)
