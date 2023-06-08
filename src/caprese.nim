@@ -225,7 +225,7 @@ when isMainModule:
         meta(charset="utf-8")
       body:
         text "websocket test"
-        script verbatim WsTestMinJs
+        script: verbatim WsTestMinJs
 
   worker(num = 2):
     while true:
