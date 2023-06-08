@@ -234,8 +234,8 @@ when isMainModule:
       let clientId = req.cid
       clientId.send(fmt(TestHtml).addHeader())
 
-  server(bindAddress = "0.0.0.0", port = 8009):
-    routes:
+  server(ssl = true, bindAddress = "0.0.0.0", port = 8009):
+    routes(hostname = "localhost:8009"):
       certificates(path = "./certs/site_a"):
         cert: "cert.pem"
         priv: "privkey.pem"

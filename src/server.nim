@@ -2993,9 +2993,21 @@ template serverLib(cfg: static Config) {.dirty.} =
       br_ssl_engine_set_versions(addr cc.eng, BR_TLS12, BR_TLS12)
       br_ssl_engine_set_suites(addr cc.eng, unsafeAddr suites[0], suites.len.csize_t)
       br_ssl_engine_set_ec(addr cc.eng, addr br_ec_all_m15)
-      br_ssl_server_set_single_rsa_caprese(cc, cast[ptr br_x509_certificate](unsafeAddr CHAIN[0]),
-        CHAIN_LEN.csize_t, cast[ptr br_rsa_private_key](unsafeAddr RSA),
+      for c in certsTable[].pairs:
+        echo c
+      var certsPath = certsTable[]["localhost"]
+      var chains = createChains(readFile(certsPath.chainPath))
+      var certData = decodePem(readFile(certsPath.privPath))[0]
+      echo certData.name
+      var certKey = decodeCertPrivateKey(certData.data)
+      echo certKey.type
+      if certKey.type != CertPrivateKeyType.RSA: raise
+      br_ssl_server_set_single_rsa_caprese(cc, cast[ptr br_x509_certificate](chains.cert),
+        chains.certLen, certKey.rsa,
         BR_KEYTYPE_SIGN, cast[br_rsa_private](0), br_rsa_i31_pkcs1_sign)
+      #br_ssl_server_set_single_rsa_caprese(cc, cast[ptr br_x509_certificate](unsafeAddr CHAIN[0]),
+      #  CHAIN_LEN.csize_t, cast[ptr br_rsa_private_key](unsafeAddr RSA),
+      #  BR_KEYTYPE_SIGN, cast[br_rsa_private](0), br_rsa_i31_pkcs1_sign)
       #br_ssl_server_set_single_ec_caprese(cc, cast[ptr br_x509_certificate](unsafeAddr CHAIN[0]),
       #  CHAIN_LEN.csize_t, cast[ptr br_ec_private_key](unsafeAddr EC), BR_KEYTYPE_SIGN, 0,
       #  addr br_ec_all_m15, cast[br_ecdsa_sign](br_ecdsa_i31_sign_asn1))
