@@ -235,7 +235,7 @@ when isMainModule:
       clientId.send(fmt(TestHtml).addHeader())
 
   server(ssl = true, bindAddress = "0.0.0.0", port = 8009):
-    routes(hostname = "localhost:8009"):
+    routes(hostname = "localhost"):
       certificates(path = "./certs/site_a"):
         cert: "cert.pem"
         priv: "privkey.pem"
