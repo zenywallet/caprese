@@ -9,6 +9,7 @@ import std/sha1
 import base64
 import std/cpuinfo
 import os
+import strutils
 
 type
   ClientId* = int
@@ -2180,17 +2181,20 @@ macro addServerMacro*(bindAddress: string, port: uint16, ssl: bool, sslLib: SslL
   var routesList = newStmtList()
   for s in body:
     if eqIdent(s[0], "routes"):
+      var hostname = ""
+      var portInt = intVal(port)
+      if eqIdent(s[1][0], "hostname"):
+        hostname = $s[1][1]
+        if portInt != 80 and portInt != 443 and not hostname.endsWith(":" & $portInt):
+          s[1][1] = newLit(hostname & ":" & $portInt)
+      for i in countdown(hostname.len-1, 0):
+        if hostname[i] == ':':
+          hostname.setLen(i)
+          break
       var routesBase = s.copy()
       var routesBody = newStmtList()
       for s2 in s[s.len - 1]:
         if eqIdent(s2[0], "certificates"):
-          var hostname = ""
-          if eqIdent(s[1][0], "hostname"):
-            hostname = $s[1][1]
-            for i in countdown(hostname.len-1, 0):
-              if hostname[i] == ':':
-                hostname.setLen(i)
-                break
           if not eqIdent(s2[1][0], "path"):
             s2.insert(1, nnkExprEqExpr.newTree(
               newIdentNode("path"),
