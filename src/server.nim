@@ -2278,10 +2278,6 @@ macro mainServerHandlerMacro*(appId: typed): untyped =
   serverWorkerMainStmt
 
 
-template site*(hostname: string, body: untyped) =
-  if reqHost() == hostname:
-    body
-
 template routes*(host: string, body: untyped) =
   if reqHost() == host:
     block: body
