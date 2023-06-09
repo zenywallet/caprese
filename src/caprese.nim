@@ -235,7 +235,7 @@ when isMainModule:
       clientId.send(fmt(TestHtml).addHeader())
 
   server(ssl = true, bindAddress = "0.0.0.0", port = 8009):
-    routes(hostname = "localhost"):
+    routes(host = "localhost"):
       certificates(path = "./certs/site_a"):
         cert: "cert.pem"
         priv: "privkey.pem"
@@ -303,7 +303,7 @@ when isMainModule:
       return send(fmt"Not found: {urlText}".addDocType().addHeader(Status404))
 
   server(bindAddress = "0.0.0.0", port = 8089):
-    routes(hostname = "localhost"):
+    routes(host = "localhost"):
       get "/":
         return send(IndexHtml.addHeader())
 

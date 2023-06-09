@@ -2187,7 +2187,7 @@ macro addServerMacro*(bindAddress: string, port: uint16, ssl: bool, sslLib: SslL
         hostname = $s[1]
         if portInt != 80 and portInt != 443 and not hostname.endsWith(":" & $portInt):
           s[1] = newLit(hostname & ":" & $portInt)
-      elif s[1].kind == nnkExprEqExpr and eqIdent(s[1][0], "hostname"):
+      elif s[1].kind == nnkExprEqExpr and eqIdent(s[1][0], "host"):
         hostname = $s[1][1]
         if portInt != 80 and portInt != 443 and not hostname.endsWith(":" & $portInt):
           s[1][1] = newLit(hostname & ":" & $portInt)
@@ -2282,8 +2282,8 @@ template site*(hostname: string, body: untyped) =
   if reqHost() == hostname:
     body
 
-template routes*(hostname: string, body: untyped) =
-  if reqHost() == hostname:
+template routes*(host: string, body: untyped) =
+  if reqHost() == host:
     block: body
 
 template routes*(body: untyped) =
