@@ -2148,11 +2148,14 @@ var throttleChanged: bool = false
 var highGearThreshold: int
 
 macro initServer*(): untyped =
-  when not initServerFlag:
+  if not initServerFlag:
     initServerFlag = true
     quote do:
       serverInitFreeClient()
       initClient(cfg.clientMax, ClientObj, Client)
+  else:
+    quote do:
+      discard
 
 macro getAppId*(): int =
   inc(curAppId)
