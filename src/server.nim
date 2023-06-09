@@ -2183,7 +2183,11 @@ macro addServerMacro*(bindAddress: string, port: uint16, ssl: bool, sslLib: SslL
     if eqIdent(s[0], "routes"):
       var hostname = ""
       var portInt = intVal(port)
-      if eqIdent(s[1][0], "hostname"):
+      if s[1].kind == nnkStrLit:
+        hostname = $s[1]
+        if portInt != 80 and portInt != 443 and not hostname.endsWith(":" & $portInt):
+          s[1] = newLit(hostname & ":" & $portInt)
+      elif s[1].kind == nnkExprEqExpr and eqIdent(s[1][0], "hostname"):
         hostname = $s[1][1]
         if portInt != 80 and portInt != 443 and not hostname.endsWith(":" & $portInt):
           s[1][1] = newLit(hostname & ":" & $portInt)
