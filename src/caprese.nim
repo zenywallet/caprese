@@ -302,4 +302,12 @@ when isMainModule:
       let urlText = sanitizeHtml(reqUrl)
       return send(fmt"Not found: {urlText}".addDocType().addHeader(Status404))
 
+  server(bindAddress = "0.0.0.0", port = 8089):
+    routes(hostname = "localhost"):
+      get "/":
+        return send(IndexHtml.addHeader())
+
+      let urlText = sanitizeHtml(reqUrl)
+      return send(fmt"Not found: {urlText}".addDocType().addHeader(Status404))
+
   serverStart()
