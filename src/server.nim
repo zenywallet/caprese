@@ -2199,7 +2199,18 @@ macro addServerMacro*(bindAddress: string, port: uint16, ssl: bool, sslLib: SslL
       var routesBody = newStmtList()
       for s2 in s[s.len - 1]:
         if eqIdent(s2[0], "certificates"):
-          if not eqIdent(s2[1][0], "path"):
+          if s2[1].kind == nnkStrLit:
+            s2[1] = nnkExprEqExpr.newTree(
+              newIdentNode("path"),
+              newLit("")
+            )
+          elif s2[1].kind == nnkExprEqExpr:
+            if not eqIdent(s2[1][0], "path"):
+              s2.insert(1, nnkExprEqExpr.newTree(
+                newIdentNode("path"),
+                newLit("")
+              ))
+          else:
             s2.insert(1, nnkExprEqExpr.newTree(
               newIdentNode("path"),
               newLit("")
