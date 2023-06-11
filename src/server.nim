@@ -2439,6 +2439,7 @@ template serverLib(cfg: static Config) {.dirty.} =
   import logs
   import std/re
   import tables
+  import os
 
   mixin addSafe, popSafe
 
@@ -4194,6 +4195,38 @@ template serverLib(cfg: static Config) {.dirty.} =
   for c in certsTable[].pairs:
     addCertsList(c[0], c[1].idx)
 
+  when cfg.sslLib != None:
+    import std/inotify
+
+    var inoty: FileHandle = inotify_init()
+    if inoty == -1:
+      errorQuit "error: inotify_init err=", errno
+
+    var watchdogs: seq[cint]
+    for c in certsTable[].values:
+      let chainFolder = splitPath(c.chainPath).head
+      var wd = inotify_add_watch(inoty, chainFolder.cstring, IN_CLOSE_WRITE)
+      if wd != -1:
+        watchdogs.add(wd)
+
+    proc freeFileWacher() =
+      if inoty != -1:
+        for wd in watchdogs:
+          discard inoty.inotify_rm_watch(wd)
+        discard inoty.close()
+
+    proc fileWatcher(arg: ThreadArg) {.thread.} =
+      var evs = newSeq[byte](sizeof(InotifyEvent) * 512)
+      while active:
+        if inoty == -1:
+          sleep(1000)
+        else:
+          let n = read(inoty, evs[0].addr, evs.len)
+          if n <= 0: break
+          for e in inotify_events(evs[0].addr, n):
+            if e[].len > 0:
+              echo "file updated name=", $cast[cstring](addr e[].name)
+
   when cfg.sslLib == OpenSSL or cfg.sslLib == LibreSSL or cfg.sslLib == BoringSSL:
     SSL_load_error_strings()
     SSL_library_init()
@@ -4554,6 +4587,9 @@ template serverStartWithCfg(cfg: static Config) =
   serverType()
   serverLib(cfg)
   startTimeStampUpdater()
+  when cfg.sslLib != None:
+    var fileWatcherThread: Thread[WrapperThreadArg]
+    createThread(fileWatcherThread, threadWrapper, (fileWatcher, ThreadArg(type: ThreadArgType.Void)))
 
   let cpuCount = countProcessors()
   when cfg.serverWorkerNum < 0:
@@ -4575,6 +4611,9 @@ template serverStartWithCfg(cfg: static Config) =
     if retEpfdClose != 0:
       logs.error "error: close epfd=", epfd, " ret=", retEpfdClose, " ", getErrnoStr()
   freeClient(cfg.clientMax)
+  when cfg.sslLib != None:
+    freeFileWacher()
+    joinThread(fileWatcherThread)
   joinThread(contents.timeStampThread)
 
 template serverStart*() = serverStartWithCfg(cfg)
