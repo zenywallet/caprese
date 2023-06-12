@@ -451,13 +451,13 @@ type
     ##  \param ctx           validation context.
     ##  \param server_name   server name to match (or `NULL`).
     ##
-    start_chain*: proc (ctx: ptr ptr br_x509_class; server_name: cstring) ## *
+    start_chain*: proc (ctx: ptr ptr br_x509_class; server_name: cstring) {.cdecl.} ## *
                                                                   ##  \brief Start a new certificate.
                                                                   ##
                                                                   ##  \param ctx      validation context.
                                                                   ##  \param length   new certificate length (in bytes).
                                                                   ##
-    start_cert*: proc (ctx: ptr ptr br_x509_class; length: uint32_t) ## *
+    start_cert*: proc (ctx: ptr ptr br_x509_class; length: uint32_t) {.cdecl.} ## *
                                                              ##  \brief Receive some bytes for the current certificate.
                                                              ##
                                                              ##  This function may be called several times in succession for
@@ -473,7 +473,7 @@ type
                                                              ##  \param buf   certificate data chunk.
                                                              ##  \param len   certificate data chunk length (in bytes).
                                                              ##
-    append*: proc (ctx: ptr ptr br_x509_class; buf: ptr uint8; len: csize_t) ## *
+    append*: proc (ctx: ptr ptr br_x509_class; buf: ptr uint8; len: csize_t) {.cdecl.} ## *
                                                                    ##  \brief Finish the current certificate.
                                                                    ##
                                                                    ##  This function is called when the end of the current certificate
@@ -481,7 +481,7 @@ type
                                                                    ##
                                                                    ##  \param ctx   validation context.
                                                                    ##
-    end_cert*: proc (ctx: ptr ptr br_x509_class) ## *
+    end_cert*: proc (ctx: ptr ptr br_x509_class) {.cdecl.} ## *
                                            ##  \brief Finish the chain.
                                            ##
                                            ##  This function is called at the end of the chain. It shall
@@ -492,7 +492,7 @@ type
                                            ##  \param ctx   validation context.
                                            ##  \return  0 on success, or a non-zero error code.
                                            ##
-    end_chain*: proc (ctx: ptr ptr br_x509_class): cuint ## *
+    end_chain*: proc (ctx: ptr ptr br_x509_class): cuint {.cdecl.} ## *
                                                   ##  \brief Get the resulting end-entity public key.
                                                   ##
                                                   ##  The decoded public key is returned. The returned pointer
@@ -515,7 +515,7 @@ type
                                                   ##  \param ctx   validation context.
                                                   ##  \return  the end-entity public key, or `NULL`.
                                                   ##
-    get_pkey*: proc (ctx: ptr ptr br_x509_class; usages: ptr cuint): ptr br_x509_pkey
+    get_pkey*: proc (ctx: ptr ptr br_x509_class; usages: ptr cuint): ptr br_x509_pkey {.cdecl.}
 
 
 ## *
@@ -1048,7 +1048,7 @@ type
 ##
 
 proc br_x509_decoder_init*(ctx: ptr br_x509_decoder_context; append_dn: proc (
-    ctx: pointer; buf: pointer; len: csize_t); append_dn_ctx: pointer) {.importc, cdecl, gcsafe.}
+    ctx: pointer; buf: pointer; len: csize_t) {.cdecl.}; append_dn_ctx: pointer) {.importc, cdecl, gcsafe.}
 ## *
 ##  \brief Push some certificate bytes into a decoder context.
 ##
