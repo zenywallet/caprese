@@ -4,11 +4,15 @@ import strutils
 
 {.used.}
 
-template debug*(x: varargs[string, `$`]) =
+template debugBlock*(body: untyped) =
   when defined(DEBUG_LOG):
-    echo join(x)
+    body
   else:
     discard
+
+template debug*(x: varargs[string, `$`]) =
+  debugBlock:
+    echo join(x)
 
 template error*(x: varargs[string, `$`]) = echo join(x)
 
