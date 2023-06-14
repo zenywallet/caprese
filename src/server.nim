@@ -2327,6 +2327,15 @@ macro createCertsTable*(): untyped =
     )
   )
 
+macro createCertsFileNameList*(): untyped =
+  var certsFileNameList: seq[tuple[certFileName, privFileName, chainFileName: string]]
+  for d in certsTableData:
+    certsFileNameList.add((d.val.certFileName, d.val.privFileName, d.val.chainFileName))
+  newConstStmt(
+    postfix(newIdentNode("certsFileNameList"), "*"),
+    newLit(certsFileNameList)
+  )
+
 var certsList: Array[tuple[site: Array[byte], idx: int]]
 
 proc addCertsList*(site: string, idx: int) =
@@ -4202,6 +4211,8 @@ template serverLib(cfg: static Config) {.dirty.} =
   certsTable = unsafeAddr staticCertsTable
   for c in certsTable[].pairs:
     addCertsList(c[0], c[1].idx)
+
+  createCertsFileNameList()
 
   when cfg.sslLib != None:
     import std/inotify
