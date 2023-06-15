@@ -4221,17 +4221,41 @@ template serverLib(cfg: static Config) {.dirty.} =
     if inoty == -1:
       errorQuit "error: inotify_init err=", errno
 
+    var certUpdateFlags: array[staticCertsTable.len, tuple[cert, priv, chain: bool]]
+    for i in 0..<certUpdateFlags.len:
+      certUpdateFlags[i] = (false, false, false)
+
+    var certWatchList: Array[tuple[path: string, wd: cint, idxList: Array[tuple[idx: int, ctype: int]]]]
     var watchdogs: seq[cint]
+    var idx = 0
     for c in certsTable[].values:
       let chainFolder = splitPath(c.chainPath).head
       var wd = inotify_add_watch(inoty, chainFolder.cstring, IN_CLOSE_WRITE)
       if wd != -1:
         watchdogs.add(wd)
+      for ctype, path in [c.certPath, c.privPath, c.chainPath]:
+        block SearchPath:
+          let chainFolder = splitPath(path).head
+          for i, w in certWatchList:
+            if w.path == chainFolder:
+              certWatchList[i].idxList.add((idx, ctype.int))
+              break SearchPath
+          var wd = inotify_add_watch(inoty, chainFolder.cstring, IN_CLOSE_WRITE)
+          if wd == -1:
+            errorQuit "error: inotify_add_watch path=", chainFolder
+          var idxList = @^[(idx, ctype.int)]
+          certWatchList.add((chainFolder, wd, idxList))
+      inc(idx)
+
+    proc getIdxList(wd: cint): Array[tuple[idx: int, ctype: int]] =
+      for w in certWatchList:
+        if w.wd == wd:
+          return w.idxList
 
     proc freeFileWacher() =
       if inoty != -1:
-        for wd in watchdogs:
-          discard inoty.inotify_rm_watch(wd)
+        for w in certWatchList:
+          discard inoty.inotify_rm_watch(w.wd)
         discard inoty.close()
 
     proc fileWatcher(arg: ThreadArg) {.thread.} =
@@ -4244,6 +4268,13 @@ template serverLib(cfg: static Config) {.dirty.} =
           if n <= 0: break
           for e in inotify_events(evs[0].addr, n):
             if e[].len > 0:
+              var ids = getIdxList(e[].wd)
+              for d in ids:
+                case d.ctype
+                of 0: certUpdateFlags[d.idx].cert = true
+                of 1: certUpdateFlags[d.idx].priv = true
+                of 2: certUpdateFlags[d.idx].chain = true
+                else: discard
               echo "file updated name=", $cast[cstring](addr e[].name)
 
   when cfg.sslLib == OpenSSL or cfg.sslLib == LibreSSL or cfg.sslLib == BoringSSL:
