@@ -4268,12 +4268,19 @@ template serverLib(cfg: static Config) {.dirty.} =
           if n <= 0: break
           for e in inotify_events(evs[0].addr, n):
             if e[].len > 0:
+              var filename = $cast[cstring](addr e[].name)
               var ids = getIdxList(e[].wd)
               for d in ids:
                 case d.ctype
-                of 0: certUpdateFlags[d.idx].cert = true
-                of 1: certUpdateFlags[d.idx].priv = true
-                of 2: certUpdateFlags[d.idx].chain = true
+                of 0:
+                  if filename == certsFileNameList[d.idx].certFileName:
+                    certUpdateFlags[d.idx].cert = true
+                of 1:
+                  if filename == certsFileNameList[d.idx].privFileName:
+                    certUpdateFlags[d.idx].priv = true
+                of 2:
+                  if filename == certsFileNameList[d.idx].chainFileName:
+                    certUpdateFlags[d.idx].chain = true
                 else: discard
               echo "file updated name=", $cast[cstring](addr e[].name)
 
