@@ -4221,6 +4221,16 @@ template serverLib(cfg: static Config) {.dirty.} =
     if inoty == -1:
       errorQuit "error: inotify_init err=", errno
 
+    when cfg.sslLib == OpenSSL or cfg.sslLib == LibreSSL or cfg.sslLib == BoringSSL:
+      type
+        SiteCtx = object
+          ctx: SSL_CTX
+
+      var siteCtxs: array[staticCertsTable.len, SiteCtx]
+      for site in certsTable[].keys:
+        var val = certsTable[][site]
+        siteCtxs[val.idx].ctx = newSslCtx(site)
+
     var certUpdateFlags: array[staticCertsTable.len, tuple[cert, priv, chain: bool]]
     for i in 0..<certUpdateFlags.len:
       certUpdateFlags[i] = (false, false, false)
