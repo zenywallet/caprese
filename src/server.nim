@@ -4297,6 +4297,21 @@ template serverLib(cfg: static Config) {.dirty.} =
     OpenSSL_add_all_algorithms()
     sslCtx = newSslCtx(selfSignedCertFallback = true)
 
+    proc serverNameCallback(ssl: SSL; out_alert: ptr cint; arg: pointer): cint {.cdecl.} =
+      try:
+        let sitename = $SSL_get_servername(ssl, TLSEXT_NAMETYPE_host_name)
+        debug "sitename=", sitename
+        let certs = certsTable[][sitename]
+        let ctx = siteCtxs[certs.idx].ctx
+        if SSL_set_SSL_CTX(ssl, ctx).isNil:
+          error "error: SSL_set_SSL_CTX site=", sitename
+          return SSL_TLSEXT_ERR_NOACK
+        return SSL_TLSEXT_ERR_OK
+      except:
+        return SSL_TLSEXT_ERR_OK
+
+    SSL_CTX_set_tlsext_servername_callback(sslCtx, serverNameCallback)
+
   proc serverWorker(arg: ThreadArg) {.thread.} =
     var events: array[cfg.epollEventsSize, EpollEvent]
     var evData: uint64
