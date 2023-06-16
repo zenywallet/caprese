@@ -4247,11 +4247,6 @@ template serverLib(cfg: static Config) {.dirty.} =
           certWatchList.add((chainFolder, wd, idxList))
       inc(idx)
 
-    proc getIdxList(wd: cint): Array[tuple[idx: int, ctype: int]] =
-      for w in certWatchList:
-        if w.wd == wd:
-          return w.idxList
-
     proc freeFileWacher() =
       if inoty != -1:
         for w in certWatchList:
@@ -4269,20 +4264,22 @@ template serverLib(cfg: static Config) {.dirty.} =
           for e in inotify_events(evs[0].addr, n):
             if e[].len > 0:
               var filename = $cast[cstring](addr e[].name)
-              var ids = getIdxList(e[].wd)
-              for d in ids:
-                case d.ctype
-                of 0:
-                  if filename == certsFileNameList[d.idx].certFileName:
-                    certUpdateFlags[d.idx].cert = true
-                of 1:
-                  if filename == certsFileNameList[d.idx].privFileName:
-                    certUpdateFlags[d.idx].priv = true
-                of 2:
-                  if filename == certsFileNameList[d.idx].chainFileName:
-                    certUpdateFlags[d.idx].chain = true
-                else: discard
-              echo "file updated name=", $cast[cstring](addr e[].name)
+              for w in certWatchList:
+                if w.wd == e[].wd:
+                  var ids = w.idxList
+                  debug "certs watch: ", w.path / filename
+                  for d in ids:
+                    case d.ctype
+                    of 0:
+                      if filename == certsFileNameList[d.idx].certFileName:
+                        certUpdateFlags[d.idx].cert = true
+                    of 1:
+                      if filename == certsFileNameList[d.idx].privFileName:
+                        certUpdateFlags[d.idx].priv = true
+                    of 2:
+                      if filename == certsFileNameList[d.idx].chainFileName:
+                        certUpdateFlags[d.idx].chain = true
+                    else: discard
 
   when cfg.sslLib == OpenSSL or cfg.sslLib == LibreSSL or cfg.sslLib == BoringSSL:
     SSL_load_error_strings()
