@@ -247,6 +247,7 @@ template serverInit*() {.dirty.} =
       clientId*: ClientId
       sock*: SocketHandle
       threadId*: int
+      srvId*: int
       appId*: int
       appShift: bool
       listenFlag*: bool
@@ -2115,6 +2116,7 @@ proc stop*() {.inline.} =
 ]#
 
 var initServerFlag {.compileTime.} = false
+var curSrvId {.compileTime.} = 0
 var curAppId {.compileTime.} = 0
 var serverWorkerInitStmt {.compileTime.} = newStmtList()
 var serverWorkerMainStmt {.compileTime.} =
@@ -2163,6 +2165,8 @@ macro getAppId*(): int =
   newLit(curAppId)
 
 macro addServerMacro*(bindAddress: string, port: uint16, ssl: bool, sslLib: SslLib, body: untyped = newEmptyNode()): untyped =
+  inc(curSrvId)
+  var srvId = curSrvId
   inc(curAppId)
   var appId = curAppId
   serverHandlerList.add(("appListen", ssl, newStmtList()))
@@ -2219,6 +2223,10 @@ macro addServerMacro*(bindAddress: string, port: uint16, ssl: bool, sslLib: SslL
             newIdentNode("site"),
             newLit(hostname)
           ))
+          s2.insert(1, nnkExprEqExpr.newTree(
+            newIdentNode("srvId"),
+            newLit(srvId)
+          ))
         elif eqIdent(s2[0], "stream"):
           inc(curAppId)
           var streamAppId = curAppId
@@ -2262,6 +2270,7 @@ macro addServerMacro*(bindAddress: string, port: uint16, ssl: bool, sslLib: SslL
     if newClient.isNil:
       raise newException(ServerError, "no free pool")
     newClient.sock = serverSock
+    newClient.srvId = `srvId`
     newClient.appId = `appId`
     newClient.ev.events = EPOLLIN or EPOLLEXCLUSIVE
     var retCtl = epoll_ctl(epfd, EPOLL_CTL_ADD, serverSock, addr newClient.ev)
@@ -2356,7 +2365,7 @@ template certificates*(path: string, body: untyped) = discard # code is added by
 
 template certificates*(body: untyped) = discard # code is added by macro
 
-macro certificates*(site: string, path: string, body: untyped): untyped =
+macro certificates*(srvId: int, site: string, path: string, body: untyped): untyped =
   var site = $site
   var path = $path
   var cert, priv, chain: string
@@ -3173,6 +3182,7 @@ template serverLib(cfg: static Config) {.dirty.} =
           raise
         newClient = clientFreePool.pop()
       newClient.sock = clientSock
+      newClient.srvId = ctx.client.srvId
       newClient.appId = ctx.client.appId + 1
 
       when sslFlag and cfg.sslLib == BearSSL:
