@@ -4311,6 +4311,8 @@ template serverLib(cfg: static Config) {.dirty.} =
                     siteCtxs[idx].ctx = newSslCtx(site)
                     break
 
+  var workerThreadCtx {.threadvar.}: WorkerThreadCtx
+
   when cfg.sslLib == OpenSSL or cfg.sslLib == LibreSSL or cfg.sslLib == BoringSSL:
     SSL_load_error_strings()
     SSL_library_init()
@@ -4319,6 +4321,7 @@ template serverLib(cfg: static Config) {.dirty.} =
 
     proc serverNameCallback(ssl: SSL; out_alert: ptr cint; arg: pointer): cint {.cdecl.} =
       try:
+        echo "workerThreadCtx.client.srvId=", workerThreadCtx.client.srvId
         let sitename = $SSL_get_servername(ssl, TLSEXT_NAMETYPE_host_name)
         debug "sitename=", sitename
         let certs = certsTable[][sitename]
@@ -4345,6 +4348,7 @@ template serverLib(cfg: static Config) {.dirty.} =
     #var targetHeaders: Array[ptr tuple[id: HeaderParams, val: string]]
 
     var ctxObj: WorkerThreadCtxObj
+    workerThreadCtx = cast[WorkerThreadCtx](addr ctxObj)
     var ctx = cast[WorkerThreadCtx](addr ctxObj)
     ctx.addrLen = sizeof(ctx.sockAddress).SockLen
     ctx.recvBuf = newArray[byte](workerRecvBufSize)
