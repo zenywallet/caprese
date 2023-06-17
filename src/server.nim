@@ -4291,6 +4291,16 @@ template serverLib(cfg: static Config) {.dirty.} =
                         certUpdateFlags[d.idx].chain = true
                     else: discard
 
+          for idx, flag in certUpdateFlags:
+            if flag.cert and flag.priv and flag.chain:
+              certUpdateFlags[idx] = (false, false, false)
+
+              when cfg.sslLib == OpenSSL or cfg.sslLib == LibreSSL or cfg.sslLib == BoringSSL:
+                for site, val in certsTable[].pairs:
+                  if val.idx == idx:
+                    siteCtxs[idx].ctx = newSslCtx(site)
+                    break
+
   when cfg.sslLib == OpenSSL or cfg.sslLib == LibreSSL or cfg.sslLib == BoringSSL:
     SSL_load_error_strings()
     SSL_library_init()
