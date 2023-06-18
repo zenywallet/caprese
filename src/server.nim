@@ -2486,6 +2486,7 @@ template serverLib(cfg: static Config) {.dirty.} =
     WorkerThreadCtx = ptr WorkerThreadCtxObj
     ClientHandlerProc = proc (ctx: WorkerThreadCtx) {.thread.}
 
+  var workerThreadCtx {.threadvar.}: WorkerThreadCtx
   #var clientHandlerProcs: Array[ClientHandlerProc]
 
   proc echoHeader(buf: ptr UncheckedArray[byte], size: int, header: ReqHeader) =
@@ -4312,8 +4313,6 @@ template serverLib(cfg: static Config) {.dirty.} =
                   if val.idx == idx:
                     siteCtxs[idx].ctx = newSslCtx(site)
                     break
-
-  var workerThreadCtx {.threadvar.}: WorkerThreadCtx
 
   when cfg.sslLib == OpenSSL or cfg.sslLib == LibreSSL or cfg.sslLib == BoringSSL:
     SSL_load_error_strings()
