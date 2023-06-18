@@ -2306,12 +2306,12 @@ template routes*(body: untyped) =
   block: body
 
 var certsTableData {.compileTime.}: seq[tuple[key: string, val: tuple[
-  idx: int, certPath: string, privPath: string, chainPath: string,
+  idx: int, srvId: int, certPath: string, privPath: string, chainPath: string,
   certFileName: string, privFileName: string, chainFileName: string]]]
 
 var certsTableIdx {.compileTime.}: int = 0
 
-proc addCertsTable*(site: string, certPath: string, privPath: string,
+proc addCertsTable*(site: string, srvId: int, certPath: string, privPath: string,
                   chainPath: string, certFileName: string,
                   privFileName: string, chainFileName: string) {.compileTime.} =
   for i, d in certsTableData:
@@ -2324,7 +2324,7 @@ proc addCertsTable*(site: string, certPath: string, privPath: string,
       certsTableData[i].val.chainFileName = chainFileName
       macros.error "duplicate certificates for the same hostname are not yet supported"
       return
-  certsTableData.add((site, (certsTableIdx, certPath, privPath, chainPath,
+  certsTableData.add((site, (certsTableIdx, srvId, certPath, privPath, chainPath,
                     certFileName, privFileName, chainFileName)))
   inc(certsTableIdx)
 
@@ -2366,6 +2366,7 @@ template certificates*(path: string, body: untyped) = discard # code is added by
 template certificates*(body: untyped) = discard # code is added by macro
 
 macro certificates*(srvId: int, site: string, path: string, body: untyped): untyped =
+  var srvId = intVal(srvId).int
   var site = $site
   var path = $path
   var cert, priv, chain: string
@@ -2381,7 +2382,7 @@ macro certificates*(srvId: int, site: string, path: string, body: untyped): unty
   if cert.len > 0: certPath = path / cert
   if priv.len > 0: privPath = path / priv
   if chain.len > 0: chainPath = path / chain
-  addCertsTable(site, certPath, privPath, chainPath, cert, priv, chain)
+  addCertsTable(site, srvId, certPath, privPath, chainPath, cert, priv, chain)
 
 proc acceptKey(key: string): string =
   var sh = secureHash(key & "258EAFA5-E914-47DA-95CA-C5AB0DC85B11")
@@ -2651,7 +2652,8 @@ template serverLib(cfg: static Config) {.dirty.} =
 
   proc appDummy(ctx: WorkerThreadCtx) {.thread.} = discard
 
-  var certsTable: ptr Table[string, tuple[idx: int, certPath: string, privPath: string, chainPath: string,
+  var certsTable: ptr Table[string, tuple[idx: int, srvId: int,
+                            certPath: string, privPath: string, chainPath: string,
                             certFileName: string, privFileName: string, chainFileName: string]]
 
   when cfg.sslLib == BearSSL:
