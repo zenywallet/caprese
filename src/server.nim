@@ -4327,6 +4327,8 @@ template serverLib(cfg: static Config) {.dirty.} =
         let sitename = $SSL_get_servername(ssl, TLSEXT_NAMETYPE_host_name)
         debug "sitename=", sitename
         let certs = certsTable[][sitename]
+        if certs.srvId != workerThreadCtx.client.srvId:
+          return SSL_TLSEXT_ERR_NOACK
         let ctx = siteCtxs[certs.idx].ctx
         if SSL_set_SSL_CTX(ssl, ctx).isNil:
           error "error: SSL_set_SSL_CTX site=", sitename
