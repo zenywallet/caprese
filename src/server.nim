@@ -3858,7 +3858,7 @@ template serverLib(cfg: static Config) {.dirty.} =
                 else:
                   if errno == EINTR:
                     continue
-              break
+                break
 
           else:
             while true:
