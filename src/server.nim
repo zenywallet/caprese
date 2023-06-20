@@ -4311,7 +4311,9 @@ template serverLib(cfg: static Config) {.dirty.} =
               when cfg.sslLib == OpenSSL or cfg.sslLib == LibreSSL or cfg.sslLib == BoringSSL:
                 for site, val in certsTable[].pairs:
                   if val.idx == idx:
+                    var oldCtx = siteCtxs[idx].ctx
                     siteCtxs[idx].ctx = newSslCtx(site)
+                    oldCtx.SSL_CTX_free()
                     break
 
   when cfg.sslLib == OpenSSL or cfg.sslLib == LibreSSL or cfg.sslLib == BoringSSL:
@@ -4319,6 +4321,7 @@ template serverLib(cfg: static Config) {.dirty.} =
     SSL_library_init()
     OpenSSL_add_all_algorithms()
     sslCtx = newSslCtx(selfSignedCertFallback = true)
+    # sslCtx.SSL_CTX_free()
 
     proc serverNameCallback(ssl: SSL; out_alert: ptr cint; arg: pointer): cint {.cdecl.} =
       try:
