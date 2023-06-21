@@ -88,15 +88,13 @@ macro init(): untyped =
 macro server*(ssl: bool, bindAddress: string, port: uint16, body: untyped): untyped =
   quote do:
     init()
-    echo "bind address: ", `bindAddress`
-    echo "port: ", `port`
+    echo "server: ", `bindAddress`, ":", `port`, (if `ssl`: " SSL" else: "")
     addServer(`bindAddress`, `port`, `ssl`, `body`)
 
 macro server*(bindAddress: string, port: uint16, body: untyped): untyped =
   quote do:
     init()
-    echo "bind address: ", `bindAddress`
-    echo "port: ", `port`
+    echo "server: ", `bindAddress`, ":", `port`
     addServer(`bindAddress`, `port`, false, `body`)
 
 template serverHttp*(bindAddress: string, port: uint16, body: untyped) =
