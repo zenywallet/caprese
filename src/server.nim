@@ -231,6 +231,7 @@ template serverInit*() {.dirty.} =
       payloadSize: int
       when cfg.sslLib == BearSSL:
         sc: ptr br_ssl_server_context
+        keyType: cint
       elif cfg.sslLib == OpenSSL or cfg.sslLib == LibreSSL or cfg.sslLib == BoringSSL:
         ssl: SSL
         sslErr: int
@@ -3037,23 +3038,175 @@ template serverLib(cfg: static Config) {.dirty.} =
       cc.chain_handler.single_ec.iecdsa = iecdsa
       cc.policy_vtable = addr cc.chain_handler.single_ec.vtable
 
+    proc sa_choose(pctx: ptr ptr br_ssl_server_policy_class;
+      cc: ptr br_ssl_server_context; choices: ptr br_ssl_server_choices): cint {.cdecl.} =
+      let serverName = $br_ssl_engine_get_server_name(addr cc.eng)
+      debug "br_ssl_engine_get_server_name=", serverName
+      var certsPath = certsTable[][serverName]
+      var chains = createChains(readFile(certsPath.chainPath))
+      var certData = decodePem(readFile(certsPath.privPath))[0]
+      echo certData.name
+      var certKey = decodeCertPrivateKey(certData.data)
+
+      case certKey.type
+      of CertPrivateKeyType.EC:
+        workerThreadCtx.client.keyType = BR_KEYTYPE_EC
+        cc.chain_handler.single_ec.chain = cast[ptr br_x509_certificate](chains.cert)
+        cc.chain_handler.single_ec.chain_len = chains.certLen
+        cc.chain_handler.single_ec.sk = certKey.ec
+        cc.chain_handler.single_ec.allowed_usages = BR_KEYTYPE_SIGN
+        cc.chain_handler.single_ec.cert_issuer_key_type = 0.cuint
+        cc.chain_handler.single_ec.mhash = addr cc.eng.mhash
+        cc.chain_handler.single_ec.iec = addr br_ec_all_m15
+        cc.chain_handler.single_ec.iecdsa = cast[br_ecdsa_sign](br_ecdsa_i31_sign_asn1)
+
+        var pc = cast[ptr br_ssl_server_policy_ec_context](pctx)
+        let st = addr cc.client_suites
+        let st_num = cc.client_suites_num.csize_t
+        var hash_id = br_ssl_choose_hash(br_ssl_server_get_client_hashes(cc).cuint shr 8).cuint
+        if cc.eng.session.version < BR_TLS12:
+          hash_id = br_sha1_ID
+        choices.chain = pc.chain
+        choices.chain_len = pc.chain_len
+        for u in 0..<st_num:
+          var tt = st[u][1]
+          case tt shr 12
+          of BR_SSLKEYX_ECDH_RSA:
+            if (pc.allowed_usages and BR_KEYTYPE_KEYX) != 0 and
+              pc.cert_issuer_key_type == BR_KEYTYPE_RSA:
+              choices.cipher_suite = st[u][0]
+              return 1.cint
+          of BR_SSLKEYX_ECDH_ECDSA:
+            if (pc.allowed_usages and BR_KEYTYPE_KEYX) != 0 and
+              pc.cert_issuer_key_type == BR_KEYTYPE_EC:
+              choices.cipher_suite = st[u][0]
+              return 1.cint
+          of BR_SSLKEYX_ECDHE_ECDSA:
+            if (pc.allowed_usages and BR_KEYTYPE_SIGN) != 0 and hash_id != 0:
+              choices.cipher_suite = st[u][0]
+              choices.algo_id = hash_id + 0xFF00
+              return 1.cint
+          else:
+            continue
+        return 0.cint
+
+      of CertPrivateKeyType.RSA:
+        workerThreadCtx.client.keyType = BR_KEYTYPE_RSA
+        cc.chain_handler.single_rsa.chain = cast[ptr br_x509_certificate](chains.cert)
+        cc.chain_handler.single_rsa.chain_len = chains.certLen
+        cc.chain_handler.single_rsa.sk = certKey.rsa
+        cc.chain_handler.single_rsa.allowed_usages = BR_KEYTYPE_SIGN
+        cc.chain_handler.single_rsa.irsacore = cast[br_rsa_private](0)
+        cc.chain_handler.single_rsa.irsasign = br_rsa_i31_pkcs1_sign
+
+        var pc = cast[ptr br_ssl_server_policy_rsa_context](pctx)
+        let st = addr cc.client_suites
+        let st_num = cc.client_suites_num.csize_t
+        var hash_id: cuint
+        var fh: bool
+        if cc.eng.session.version < BR_TLS12:
+          hash_id = 0.cuint
+          fh = true
+        else:
+          hash_id = br_ssl_choose_hash(br_ssl_server_get_client_hashes(cc).cuint).cuint
+          fh = (hash_id != 0)
+        choices.chain = pc.chain
+        choices.chain_len = pc.chain_len
+        for u in 0..<st_num:
+          var tt = st[u][1]
+          case tt shr 12
+          of BR_SSLKEYX_RSA:
+            if (pc.allowed_usages and BR_KEYTYPE_KEYX) != 0:
+              choices.cipher_suite = st[u][0]
+              return 1.cint
+          of BR_SSLKEYX_ECDHE_RSA:
+            if (pc.allowed_usages and BR_KEYTYPE_SIGN) != 0 and fh:
+              choices.cipher_suite = st[u][0]
+              choices.algo_id = hash_id + 0xFF00
+              return 1.cint
+          else:
+            continue
+        return 0.cint
+
+      else:
+        raise
+
+    proc sa_do_keyx(pctx: ptr ptr br_ssl_server_policy_class; data: ptr uint8;
+                    len: ptr csize_t): uint32 {.cdecl.}  =
+      case workerThreadCtx.client.keyType
+      of BR_KEYTYPE_EC:
+        var pc = cast[ptr br_ssl_server_policy_ec_context](pctx)
+        var r = pc.iec.mul(data, len[], pc.sk.x, pc.sk.xlen, pc.sk.curve)
+        var xlen: csize_t
+        var xoff = pc.iec.xoff(pc.sk.curve, addr xlen)
+        moveMem(data, addr cast[ptr UncheckedArray[uint8]](data)[xoff], xlen)
+        len[] = xlen
+        return r
+
+      of BR_KEYTYPE_RSA:
+        var pc = cast[ptr br_ssl_server_policy_rsa_context](pctx)
+        return br_rsa_ssl_decrypt(pc.irsacore, pc.sk, data, len[])
+
+      else:
+        raise
+
+    proc sa_do_sign(pctx: ptr ptr br_ssl_server_policy_class; algo_id: cuint;
+                    data: ptr uint8; hv_len: csize_t; len: csize_t): csize_t {.cdecl.} =
+      case workerThreadCtx.client.keyType
+      of BR_KEYTYPE_EC:
+        var a: array[128, byte]
+        for i in 0..<128:
+          a[i] = 5
+        a[0] = 3
+        var alen: csize_t
+        var hv: array[64, char]
+        var algo_id = (algo_id and 0xff).cint
+        var pc = cast[ptr br_ssl_server_policy_ec_context](pctx)
+        var hc = br_multihash_getimpl(pc.mhash, algo_id)
+        if hc.isNil:
+          return 0.csize_t
+        copyMem(addr hv, data, hv_len.int)
+        if len < 139:
+          return 0
+        return pc.iecdsa(pc.iec, hc, addr hv, pc.sk, data)
+
+      of BR_KEYTYPE_RSA:
+        var pc = cast[ptr br_ssl_server_policy_rsa_context](pctx)
+        var hv: array[64, uint8]
+        var hash_oid: ptr uint8
+        copyMem(addr hv, data, hv_len.int)
+        var algo_id = (algo_id and 0xff).cint
+        if algo_id == 0:
+          hash_oid = cast[ptr uint8](nil)
+        elif algo_id >= 2 and algo_id <= 6:
+          hash_oid = cast[ptr uint8](unsafeAddr HASH_OID[algo_id - 2][0])
+        else:
+          return 0.csize_t
+        var sig_len: csize_t = (pc.sk.n_bitlen + 7) shr 3
+        if len < sig_len:
+          return 0.csize_t
+        if pc.irsasign(hash_oid, cast[ptr uint8](addr hv), hv_len, pc.sk, data) > 0:
+          return sig_len
+        else:
+          return 0.csize_t
+
+      else:
+        raise
+
+    var sa_policy_vtable_obj = br_ssl_server_policy_class(
+      #context_size: 0.csize_t,
+      choose: sa_choose,
+      do_keyx: sa_do_keyx,
+      do_sign: sa_do_sign
+    )
+
     proc br_ssl_server_init_caprese(cc: ptr br_ssl_server_context) =
       br_ssl_server_zero(cc)
       br_ssl_engine_set_versions(addr cc.eng, BR_TLS12, BR_TLS12)
       br_ssl_engine_set_suites(addr cc.eng, unsafeAddr suites[0], suites.len.csize_t)
       br_ssl_engine_set_ec(addr cc.eng, addr br_ec_all_m15)
-      for c in certsTable[].pairs:
-        echo c
-      var certsPath = certsTable[]["localhost"]
-      var chains = createChains(readFile(certsPath.chainPath))
-      var certData = decodePem(readFile(certsPath.privPath))[0]
-      echo certData.name
-      var certKey = decodeCertPrivateKey(certData.data)
-      echo certKey.type
-      if certKey.type != CertPrivateKeyType.RSA: raise
-      br_ssl_server_set_single_rsa_caprese(cc, cast[ptr br_x509_certificate](chains.cert),
-        chains.certLen, certKey.rsa,
-        BR_KEYTYPE_SIGN, cast[br_rsa_private](0), br_rsa_i31_pkcs1_sign)
+      cc.chain_handler.vtable = addr sa_policy_vtable_obj
+      cc.policy_vtable = addr cc.chain_handler.vtable
       #br_ssl_server_set_single_rsa_caprese(cc, cast[ptr br_x509_certificate](unsafeAddr CHAIN[0]),
       #  CHAIN_LEN.csize_t, cast[ptr br_rsa_private_key](unsafeAddr RSA),
       #  BR_KEYTYPE_SIGN, cast[br_rsa_private](0), br_rsa_i31_pkcs1_sign)
