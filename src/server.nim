@@ -2869,6 +2869,8 @@ template serverLib(cfg: static Config) {.dirty.} =
       deallocShared(chains.cert)
       chains.cert = nil
 
+    var certKeyChainsList: Array[tuple[key: CertPrivateKey, chains: X509CertificateChains]]
+
     let suites = [uint16_t BR_TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256,
                   BR_TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256]
 
@@ -3054,12 +3056,17 @@ template serverLib(cfg: static Config) {.dirty.} =
       cc: ptr br_ssl_server_context; choices: ptr br_ssl_server_choices): cint {.cdecl.} =
       let serverName = $br_ssl_engine_get_server_name(addr cc.eng)
       debug "br_ssl_engine_get_server_name=", serverName
-      var certsPath = certsTable[][serverName]
-      var chains = createChains(readFile(certsPath.chainPath))
-      var certData = decodePem(readFile(certsPath.privPath))[0]
-      echo certData.name
-      var certKey = decodeCertPrivateKey(certData.data)
 
+      var idx = certsIdxTable[].getOrDefault(serverName)
+      let certKeyChains = addr certKeyChainsList[idx]
+      if certKeyChains[].key.type == CertPrivateKeyType.None:
+        let certsPath = certsTable[][serverName]
+        certKeyChains[].chains = createChains(readFile(certsPath.chainPath))
+        let certData = decodePem(readFile(certsPath.privPath))[0]
+        echo certData.name
+        certKeyChains[].key = decodeCertPrivateKey(certData.data)
+      let certKey = certKeyChains[].key
+      let chains = certKeyChains[].chains
 
       case certKey.type
       of CertPrivateKeyType.EC:
@@ -4393,6 +4400,9 @@ template serverLib(cfg: static Config) {.dirty.} =
     addCertsList(c[0], c[1].idx)
 
   createCertsFileNameList()
+
+  when cfg.sslLib == BearSSL:
+    certKeyChainsList.setLen(staticCertsTable.len + 1)
 
   when cfg.sslLib != None:
     import std/inotify
