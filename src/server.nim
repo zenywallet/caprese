@@ -2310,7 +2310,7 @@ var certsTableData {.compileTime.}: seq[tuple[key: string, val: tuple[
   idx: int, srvId: int, certPath: string, privPath: string, chainPath: string,
   certFileName: string, privFileName: string, chainFileName: string]]]
 
-var certsTableIdx {.compileTime.}: int = 0
+var certsTableIdx {.compileTime.}: int = 1
 
 proc addCertsTable*(site: string, srvId: int, certPath: string, privPath: string,
                   chainPath: string, certFileName: string,
