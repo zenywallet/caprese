@@ -2310,6 +2310,8 @@ var certsTableData {.compileTime.}: seq[tuple[key: string, val: tuple[
   idx: int, srvId: int, certPath: string, privPath: string, chainPath: string,
   certFileName: string, privFileName: string, chainFileName: string]]]
 
+var certsTableDataIdx {.compileTime.}: seq[tuple[key: string, val: int]]
+
 var certsTableIdx {.compileTime.}: int = 1
 
 proc addCertsTable*(site: string, srvId: int, certPath: string, privPath: string,
@@ -2327,13 +2329,22 @@ proc addCertsTable*(site: string, srvId: int, certPath: string, privPath: string
       return
   certsTableData.add((site, (certsTableIdx, srvId, certPath, privPath, chainPath,
                     certFileName, privFileName, chainFileName)))
+  certsTableDataIdx.add((site, certsTableIdx))
   inc(certsTableIdx)
 
 macro createCertsTable*(): untyped =
-  newConstStmt(
-    postfix(newIdentNode("staticCertsTable"), "*"),
-    newCall("toTable",
-      newLit(certsTableData)
+  newStmtList(
+    newConstStmt(
+      postfix(newIdentNode("staticCertsTable"), "*"),
+      newCall("toTable",
+        newLit(certsTableData)
+      )
+    ),
+    newConstStmt(
+      postfix(newIdentNode("staticCertsIdxTable"), "*"),
+      newCall("toTable",
+        newLit(certsTableDataIdx)
+      )
     )
   )
 
@@ -2657,6 +2668,7 @@ template serverLib(cfg: static Config) {.dirty.} =
   var certsTable: ptr Table[string, tuple[idx: int, srvId: int,
                             certPath: string, privPath: string, chainPath: string,
                             certFileName: string, privFileName: string, chainFileName: string]]
+  var certsIdxTable: ptr Table[string, int]
 
   when cfg.sslLib == BearSSL:
     type
@@ -3047,6 +3059,7 @@ template serverLib(cfg: static Config) {.dirty.} =
       var certData = decodePem(readFile(certsPath.privPath))[0]
       echo certData.name
       var certKey = decodeCertPrivateKey(certData.data)
+
 
       case certKey.type
       of CertPrivateKeyType.EC:
@@ -4375,6 +4388,7 @@ template serverLib(cfg: static Config) {.dirty.} =
 
   createCertsTable()
   certsTable = unsafeAddr staticCertsTable
+  certsIdxTable = unsafeAddr staticCertsIdxTable
   for c in certsTable[].pairs:
     addCertsList(c[0], c[1].idx)
 
