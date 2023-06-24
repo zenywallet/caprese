@@ -289,7 +289,7 @@ type
   #ServerNeedRestartError* = object of CatchableError
   ServerSslCertError* = object of CatchableError
 
-template errorQuit*(x: varargs[string, `$`]) = errorException(x, ServerError)
+template errorRaise*(x: varargs[string, `$`]) = errorException(x, ServerError)
 
 proc toWebSocketOpCode*(opcode: int8): WebSocketOpCode =
   case opcode
@@ -968,7 +968,7 @@ template serverInitFreeClient() {.dirty.} =
         clientFreePool.add(addr clients[i])
     except:
       let e = getCurrentException()
-      errorQuit e.name, ": ", e.msg
+      errorRaise e.name, ": ", e.msg
 
   proc freeClient(clientMax: static int) =
     pendingClients.delete()
@@ -2029,12 +2029,12 @@ proc createServer(bindAddress: string, port: uint16, reusePort: bool = false): S
     sock.setSockOptInt(SOL_SOCKET, SO_REUSEPORT, 1)
   let retBind = sock.bindAddr(aiList.ai_addr, aiList.ai_addrlen.SockLen)
   if retBind < 0:
-    errorQuit "error: bind ret=", retBind, " ", getErrnoStr()
+    errorRaise "error: bind ret=", retBind, " ", getErrnoStr()
   freeaddrinfo(aiList)
 
   let retListen = sock.listen()
   if retListen < 0:
-    errorQuit "error: listen ret=", retListen, " ", getErrnoStr()
+    errorRaise "error: listen ret=", retListen, " ", getErrnoStr()
   result = sock
 
 proc threadWrapper(wrapperArg: WrapperThreadArg) {.thread.} =
@@ -2262,7 +2262,7 @@ macro addServerMacro*(bindAddress: string, port: uint16, ssl: bool, sslLib: SslL
     if epfd < 0:
       epfd = epoll_create1(O_CLOEXEC)
       if epfd < 0:
-        errorQuit "error: epfd=", epfd, " errno=", errno
+        errorRaise "error: epfd=", epfd, " errno=", errno
       addReleaseOnQuit(epfd)
 
     let newClient = clientFreePool.pop()
@@ -2274,7 +2274,7 @@ macro addServerMacro*(bindAddress: string, port: uint16, ssl: bool, sslLib: SslL
     newClient.ev.events = EPOLLIN or EPOLLEXCLUSIVE
     var retCtl = epoll_ctl(epfd, EPOLL_CTL_ADD, serverSock, addr newClient.ev)
     if retCtl != 0:
-      errorQuit "error: addServer epoll_ctl ret=", retCtl, " ", getErrnoStr()
+      errorRaise "error: addServer epoll_ctl ret=", retCtl, " ", getErrnoStr()
 
 
 template addServer*(bindAddress: string, port: uint16, ssl: bool, body: untyped) {.dirty.} =
@@ -3369,7 +3369,7 @@ template serverLib(cfg: static Config) {.dirty.} =
           br_ssl_engine_set_buffer(addr newClient.sc.eng, iobuf, iobufLen, bidi)
           newClient.sendProc = sendSslProc
         if br_ssl_server_reset(newClient.sc) == 0:
-          errorQuit "error: br_ssl_server_reset"
+          errorRaise "error: br_ssl_server_reset"
 
       elif sslFlag and (cfg.sslLib == OpenSSL or cfg.sslLib == LibreSSL or cfg.sslLib == BoringSSL):
         newClient.ssl = SSL_new(sslCtx)
@@ -3385,7 +3385,7 @@ template serverLib(cfg: static Config) {.dirty.} =
       newClient.ev.events = EPOLLIN or EPOLLRDHUP or EPOLLET
       let retCtl = epoll_ctl(epfd, EPOLL_CTL_ADD, cast[cint](clientSock), addr newClient.ev)
       if retCtl < 0:
-        errorQuit "error: epoll_ctl ret=", retCtl, " errno=", errno
+        errorRaise "error: epoll_ctl ret=", retCtl, " errno=", errno
 
   proc appListen(ctx: WorkerThreadCtx) {.thread.} = appListenBase(ctx, false)
 
@@ -3561,7 +3561,7 @@ template serverLib(cfg: static Config) {.dirty.} =
           client.ev.events = EPOLLIN or EPOLLRDHUP or EPOLLET
           var retCtl = epoll_ctl(epfd, EPOLL_CTL_MOD, cast[cint](client.sock), addr client.ev)
           if retCtl != 0:
-            errorQuit "error: appRoutesSend epoll_ctl ret=", retCtl, " ", getErrnoStr()
+            errorRaise "error: appRoutesSend epoll_ctl ret=", retCtl, " ", getErrnoStr()
           return
         else:
           release(client.spinLock)
@@ -4155,7 +4155,7 @@ template serverLib(cfg: static Config) {.dirty.} =
                 client.ev.events = EPOLLIN or EPOLLRDHUP or EPOLLET
                 var retCtl = epoll_ctl(epfd, EPOLL_CTL_MOD, cast[cint](client.sock), addr client.ev)
                 if retCtl != 0:
-                  errorQuit "error: appRoutesSend epoll_ctl ret=", retCtl, " ", getErrnoStr()
+                  errorRaise "error: appRoutesSend epoll_ctl ret=", retCtl, " ", getErrnoStr()
                 return
               else:
                 release(client.spinLock)
@@ -4407,7 +4407,7 @@ template serverLib(cfg: static Config) {.dirty.} =
 
     var inoty: FileHandle = inotify_init()
     if inoty == -1:
-      errorQuit "error: inotify_init err=", errno
+      errorRaise "error: inotify_init err=", errno
 
     when cfg.sslLib == OpenSSL or cfg.sslLib == LibreSSL or cfg.sslLib == BoringSSL:
       type
@@ -4435,7 +4435,7 @@ template serverLib(cfg: static Config) {.dirty.} =
               break SearchPath
           var wd = inotify_add_watch(inoty, watchFolder.cstring, IN_CLOSE_WRITE)
           if wd == -1:
-            errorQuit "error: inotify_add_watch path=", watchFolder
+            errorRaise "error: inotify_add_watch path=", watchFolder
           var idxList = @^[(idx, ctype.int)]
           certWatchList.add((watchFolder, wd, idxList))
       inc(idx)
