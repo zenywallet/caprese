@@ -70,7 +70,7 @@ macro init(): untyped =
     serverInit()
     serverTagLib(cfg)
 
-    when cfg.maxOpenFiles:
+    when cfg.limitOpenFiles < 0:
       setMaxRlimitOpenFiles()
     else:
       const limitOpenFiles = cfg.limitOpenFiles

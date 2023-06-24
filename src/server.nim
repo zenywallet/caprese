@@ -33,7 +33,6 @@ type
     debugLog*: bool
     sigTermQuit*: bool
     sigPipeIgnore*: bool
-    maxOpenFiles*: bool
     limitOpenFiles*: int
     serverWorkerNum*: int
     epollEventsSize*: int
@@ -48,8 +47,7 @@ proc defaultConfig*(): Config {.compileTime.} =
   result.debugLog = false
   result.sigTermQuit = true
   result.sigPipeIgnore = true
-  result.maxOpenFiles = true
-  result.limitOpenFiles = 65536
+  result.limitOpenFiles = -1
   result.serverWorkerNum = -1
   result.epollEventsSize = 10
   result.soKeepalive = false
