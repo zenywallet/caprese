@@ -4433,16 +4433,16 @@ template serverLib(cfg: static Config) {.dirty.} =
         watchdogs.add(wd)
       for ctype, path in [c.certPath, c.privPath, c.chainPath]:
         block SearchPath:
-          let chainFolder = splitPath(path).head
+          let watchFolder = splitPath(path).head
           for i, w in certWatchList:
-            if w.path == chainFolder:
+            if w.path == watchFolder:
               certWatchList[i].idxList.add((idx, ctype.int))
               break SearchPath
-          var wd = inotify_add_watch(inoty, chainFolder.cstring, IN_CLOSE_WRITE)
+          var wd = inotify_add_watch(inoty, watchFolder.cstring, IN_CLOSE_WRITE)
           if wd == -1:
-            errorQuit "error: inotify_add_watch path=", chainFolder
+            errorQuit "error: inotify_add_watch path=", watchFolder
           var idxList = @^[(idx, ctype.int)]
-          certWatchList.add((chainFolder, wd, idxList))
+          certWatchList.add((watchFolder, wd, idxList))
       inc(idx)
 
     proc freeFileWacher() =
