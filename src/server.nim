@@ -4411,7 +4411,7 @@ template serverLib(cfg: static Config) {.dirty.} =
 
     var inoty: FileHandle = inotify_init()
     if inoty == -1:
-      errorRaise "error: inotify_init err=", errno
+      errorQuit "error: inotify_init err=", errno
 
     when cfg.sslLib == OpenSSL or cfg.sslLib == LibreSSL or cfg.sslLib == BoringSSL:
       type
@@ -4439,7 +4439,7 @@ template serverLib(cfg: static Config) {.dirty.} =
               break SearchPath
           var wd = inotify_add_watch(inoty, watchFolder.cstring, IN_CLOSE_WRITE)
           if wd == -1:
-            errorRaise "error: inotify_add_watch path=", watchFolder
+            errorQuit "error: inotify_add_watch path=", watchFolder
           var idxList = @^[(idx, ctype.int)]
           certWatchList.add((watchFolder, wd, idxList))
       inc(idx)
