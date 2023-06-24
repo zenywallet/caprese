@@ -4521,7 +4521,7 @@ template serverLib(cfg: static Config) {.dirty.} =
           return SSL_TLSEXT_ERR_NOACK
         let ctx = siteCtxs[certs.idx].ctx
         if SSL_set_SSL_CTX(ssl, ctx).isNil:
-          error "error: SSL_set_SSL_CTX site=", sitename
+          logs.error "error: SSL_set_SSL_CTX site=", sitename
           return SSL_TLSEXT_ERR_NOACK
         return SSL_TLSEXT_ERR_OK
       except:
