@@ -291,6 +291,10 @@ type
 
 template errorRaise*(x: varargs[string, `$`]) = errorException(x, ServerError)
 
+template errorQuit*(x: varargs[string, `$`]) =
+  logs.error(x)
+  quit(QuitFailure)
+
 proc toWebSocketOpCode*(opcode: int8): WebSocketOpCode =
   case opcode
   of 0x2: WebSocketOpcode.Binary
