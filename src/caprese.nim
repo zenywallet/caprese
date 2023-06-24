@@ -85,23 +85,23 @@ macro init(): untyped =
         serverlib.abort()
         `onSigTermQuitBody`
 
-macro server*(ssl: bool, bindAddress: string, port: uint16, body: untyped): untyped =
+macro server*(ssl: bool, ip: string, port: uint16, body: untyped): untyped =
   quote do:
     init()
-    echo "server: ", `bindAddress`, ":", `port`, (if `ssl`: " SSL" else: "")
-    addServer(`bindAddress`, `port`, `ssl`, `body`)
+    echo "server: ", `ip`, ":", `port`, (if `ssl`: " SSL" else: "")
+    addServer(`ip`, `port`, `ssl`, `body`)
 
-macro server*(bindAddress: string, port: uint16, body: untyped): untyped =
+macro server*(ip: string, port: uint16, body: untyped): untyped =
   quote do:
     init()
-    echo "server: ", `bindAddress`, ":", `port`
-    addServer(`bindAddress`, `port`, false, `body`)
+    echo "server: ", `ip`, ":", `port`
+    addServer(`ip`, `port`, false, `body`)
 
-template serverHttp*(bindAddress: string, port: uint16, body: untyped) =
-  server(false, bindAddress, port, body)
+template serverHttp*(ip: string, port: uint16, body: untyped) =
+  server(false, ip, port, body)
 
-template serverHttps*(bindAddress: string, port: uint16, body: untyped) =
-  server(true, bindAddress, port, body)
+template serverHttps*(ip: string, port: uint16, body: untyped) =
+  server(true, ip, port, body)
 
 macro worker*(num: int, body: untyped): untyped =
   var workerRootBlockBody = nnkStmtList.newTree(
@@ -232,7 +232,7 @@ when isMainModule:
       let clientId = req.cid
       clientId.send(fmt(TestHtml).addHeader())
 
-  server(ssl = true, bindAddress = "0.0.0.0", port = 8009):
+  server(ssl = true, ip = "0.0.0.0", port = 8009):
     routes(host = "localhost"):
       certificates(path = "./certs/site_a"):
         cert: "cert.pem"
@@ -300,7 +300,7 @@ when isMainModule:
       let urlText = sanitizeHtml(reqUrl)
       return send(fmt"Not found: {urlText}".addDocType().addHeader(Status404))
 
-  server(bindAddress = "0.0.0.0", port = 8089):
+  server(ip = "0.0.0.0", port = 8089):
     routes(host = "localhost"):
       get "/":
         return send(IndexHtml.addHeader())
