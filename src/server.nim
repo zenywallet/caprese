@@ -4424,13 +4424,8 @@ template serverLib(cfg: static Config) {.dirty.} =
       certUpdateFlags[i] = (false, false, false)
 
     var certWatchList: Array[tuple[path: string, wd: cint, idxList: Array[tuple[idx: int, ctype: int]]]]
-    var watchdogs: seq[cint]
     var idx = 0
     for c in certsTable[].values:
-      let chainFolder = splitPath(c.chainPath).head
-      var wd = inotify_add_watch(inoty, chainFolder.cstring, IN_CLOSE_WRITE)
-      if wd != -1:
-        watchdogs.add(wd)
       for ctype, path in [c.certPath, c.privPath, c.chainPath]:
         block SearchPath:
           let watchFolder = splitPath(path).head
