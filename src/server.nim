@@ -2796,22 +2796,26 @@ template serverLib(cfg: static Config) {.dirty.} =
     proc freeCertPrivateKey(certPrivKey: var CertPrivateKey) =
       case certPrivKey.type
       of CertPrivateKeyType.RSA:
-        zeroMem(addr certPrivKey.rsa.iq, certPrivKey.rsa.iqlen)
-        zeroMem(addr certPrivKey.rsa.dq, certPrivKey.rsa.dqlen)
-        zeroMem(addr certPrivKey.rsa.dp, certPrivKey.rsa.dplen)
-        zeroMem(addr certPrivKey.rsa.q, certPrivKey.rsa.qlen)
-        zeroMem(addr certPrivKey.rsa.p, certPrivKey.rsa.plen)
+        zeroMem(certPrivKey.rsa.iq, certPrivKey.rsa.iqlen)
+        zeroMem(certPrivKey.rsa.dq, certPrivKey.rsa.dqlen)
+        zeroMem(certPrivKey.rsa.dp, certPrivKey.rsa.dplen)
+        zeroMem(certPrivKey.rsa.q, certPrivKey.rsa.qlen)
+        zeroMem(certPrivKey.rsa.p, certPrivKey.rsa.plen)
         deallocShared(certPrivKey.rsa.iq)
         deallocShared(certPrivKey.rsa.dq)
         deallocShared(certPrivKey.rsa.dp)
         deallocShared(certPrivKey.rsa.q)
         deallocShared(certPrivKey.rsa.p)
+        zeroMem(certPrivKey.rsa, sizeof(br_rsa_private_key))
         deallocShared(certPrivKey.rsa)
+        certPrivKey.rsa = nil
 
       of CertPrivateKeyType.EC:
-        zeroMem(addr certPrivKey.ec.x, certPrivKey.ec.xlen)
+        zeroMem(certPrivKey.ec.x, certPrivKey.ec.xlen)
         deallocShared(certPrivKey.ec.x)
+        zeroMem(certPrivKey.ec, sizeof(br_ec_private_key))
         deallocShared(certPrivKey.ec)
+        certPrivKey.ec = nil
 
       of CertPrivateKeyType.None:
         discard
