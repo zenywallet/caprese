@@ -3062,11 +3062,8 @@ template serverLib(cfg: static Config) {.dirty.} =
       var idx = certsIdxTable[].getOrDefault(serverName)
       let certKeyChains = addr certKeyChainsList[idx]
       if certKeyChains[].key.type == CertPrivateKeyType.None:
-        let certsPath = certsTable[][serverName]
-        certKeyChains[].chains = createChains(readFile(certsPath.chainPath))
-        let certData = decodePem(readFile(certsPath.privPath))[0]
-        echo certData.name
-        certKeyChains[].key = decodeCertPrivateKey(certData.data)
+        debug "CertPrivateKeyType.None serverName=", serverName
+        return 0.cint
       let certKey = certKeyChains[].key
       let chains = certKeyChains[].chains
 
@@ -4412,6 +4409,16 @@ template serverLib(cfg: static Config) {.dirty.} =
     var inoty: FileHandle = inotify_init()
     if inoty == -1:
       errorQuit "error: inotify_init err=", errno
+
+    when cfg.sslLib == BearSSL:
+      for serverName, val in certsTable[].pairs:
+        var certKeyChains = addr certKeyChainsList[val.idx]
+        let certsPath = certsTable[][serverName]
+        certKeyChains[].chains = createChains(readFile(certsPath.chainPath))
+        var certDatas = decodePem(readFile(certsPath.privPath))
+        let certData = certDatas[0]
+        certKeyChains[].key = decodeCertPrivateKey(certData.data)
+        clearPemObjs(certDatas)
 
     when cfg.sslLib == OpenSSL or cfg.sslLib == LibreSSL or cfg.sslLib == BoringSSL:
       type
