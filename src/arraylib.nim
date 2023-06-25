@@ -75,7 +75,7 @@ else:
     if x.cap < newLen:
       x.cap = nextCap(newLen)
       x.data = cast[ptr UncheckedArray[T]](reallocShared(x.data, sizeof(T) * x.cap))
-    x.data[x.len] = y
+    copyMem(addr x.data[x.len], unsafeAddr y, sizeof(T))
     x.len = newLen
 
   proc add*[T](x: var Array[T]; y: sink seq[T]) =
