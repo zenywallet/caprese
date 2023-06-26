@@ -4480,6 +4480,32 @@ template serverLib(cfg: static Config) {.dirty.} =
 
     proc fileWatcher(arg: ThreadArg) {.thread.} =
       var evs = newSeq[byte](sizeof(InotifyEvent) * 512)
+
+      template updateCerts(idx: int) =
+        certUpdateFlags[idx] = (false, false, false)
+
+        when cfg.sslLib == BearSSL:
+          for site, val in certsTable[].pairs:
+            if val.idx == idx:
+              let certKeyChains = addr certKeyChainsList[idx]
+              if certKeyChains[].key.type != CertPrivateKeyType.None:
+                freeCertPrivateKey(certKeyChains[].key)
+                freeChains(certKeyChains[].chains)
+              certKeyChains[].chains = createChains(readFile(val.chainPath))
+              var certDatas = decodePem(readFile(val.privPath))
+              let certData = certDatas[0]
+              certKeyChains[].key = decodeCertPrivateKey(certData.data)
+              clearPemObjs(certDatas)
+              break
+
+        when cfg.sslLib == OpenSSL or cfg.sslLib == LibreSSL or cfg.sslLib == BoringSSL:
+          for site, val in certsTable[].pairs:
+            if val.idx == idx:
+              var oldCtx = siteCtxs[idx].ctx
+              siteCtxs[idx].ctx = newSslCtx(site)
+              oldCtx.SSL_CTX_free()
+              break
+
       while active:
         if inoty == -1:
           sleep(3000)
@@ -4508,29 +4534,7 @@ template serverLib(cfg: static Config) {.dirty.} =
 
           for idx, flag in certUpdateFlags:
             if flag.cert and flag.priv and flag.chain:
-              certUpdateFlags[idx] = (false, false, false)
-
-              when cfg.sslLib == BearSSL:
-                for site, val in certsTable[].pairs:
-                  if val.idx == idx:
-                    let certKeyChains = addr certKeyChainsList[idx]
-                    if certKeyChains[].key.type != CertPrivateKeyType.None:
-                      freeCertPrivateKey(certKeyChains[].key)
-                      freeChains(certKeyChains[].chains)
-                    certKeyChains[].chains = createChains(readFile(val.chainPath))
-                    var certDatas = decodePem(readFile(val.privPath))
-                    let certData = certDatas[0]
-                    certKeyChains[].key = decodeCertPrivateKey(certData.data)
-                    clearPemObjs(certDatas)
-                    break
-
-              when cfg.sslLib == OpenSSL or cfg.sslLib == LibreSSL or cfg.sslLib == BoringSSL:
-                for site, val in certsTable[].pairs:
-                  if val.idx == idx:
-                    var oldCtx = siteCtxs[idx].ctx
-                    siteCtxs[idx].ctx = newSslCtx(site)
-                    oldCtx.SSL_CTX_free()
-                    break
+              updateCerts(idx)
 
   when cfg.sslLib == OpenSSL or cfg.sslLib == LibreSSL or cfg.sslLib == BoringSSL:
     SSL_load_error_strings()
