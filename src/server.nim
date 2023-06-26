@@ -4465,8 +4465,11 @@ template serverLib(cfg: static Config) {.dirty.} =
           var wd = inotify_add_watch(inoty, watchFolder.cstring, IN_CLOSE_WRITE)
           if wd == -1:
             errorQuit "error: inotify_add_watch path=", watchFolder
-          var idxList = @^[(idx, ctype.int)]
-          certWatchList.add((watchFolder.toArray, wd, idxList))
+          var nextPos = certWatchList.len
+          certWatchList.setLen(nextPos + 1)
+          certWatchList[nextPos].path = watchFolder.toArray
+          certWatchList[nextPos].wd = wd
+          certWatchList[nextPos].idxList.add((idx, ctype.int))
       inc(idx)
 
     proc freeFileWacher() =
