@@ -4434,9 +4434,9 @@ template serverLib(cfg: static Config) {.dirty.} =
         var val = certsTable[][site]
         siteCtxs[val.idx].ctx = newSslCtx(site)
 
-    var certUpdateFlags: array[staticCertsTable.len, tuple[cert, priv, chain: bool]]
+    var certUpdateFlags: array[staticCertsTable.len, tuple[cert, priv, chain: bool, checkCount: int]]
     for i in 0..<certUpdateFlags.len:
-      certUpdateFlags[i] = (false, false, false)
+      certUpdateFlags[i] = (false, false, false, 0)
 
     var folderCheck = true
     var checkFolders: seq[string]
@@ -4480,9 +4480,12 @@ template serverLib(cfg: static Config) {.dirty.} =
 
     proc fileWatcher(arg: ThreadArg) {.thread.} =
       var evs = newSeq[byte](sizeof(InotifyEvent) * 512)
+      var fds: array[1, TPollfd]
+      fds[0].events = POLLIN
+      var sec = 0
 
       template updateCerts(idx: int) =
-        certUpdateFlags[idx] = (false, false, false)
+        certUpdateFlags[idx] = (false, false, false, 0)
 
         when cfg.sslLib == BearSSL:
           for site, val in certsTable[].pairs:
@@ -4510,6 +4513,20 @@ template serverLib(cfg: static Config) {.dirty.} =
         if inoty == -1:
           sleep(3000)
         else:
+          fds[0].fd = inoty
+          var pollNum = poll(addr fds[0], 1, 3000)
+          if pollNum <= 0:
+            if errno == EINTR: continue
+            inc(sec, 3)
+            if sec >= 30:
+              sec = 0
+              for idx, flag in certUpdateFlags:
+                if flag.cert or flag.priv or flag.chain:
+                  if certUpdateFlags[idx].checkCount > 0:
+                    updateCerts(idx)
+                  else:
+                    inc(certUpdateFlags[idx].checkCount)
+            continue
           let n = read(inoty, evs[0].addr, evs.len)
           if n <= 0: break
           for e in inotify_events(evs[0].addr, n):
