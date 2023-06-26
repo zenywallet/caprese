@@ -4507,6 +4507,20 @@ template serverLib(cfg: static Config) {.dirty.} =
             if flag.cert and flag.priv and flag.chain:
               certUpdateFlags[idx] = (false, false, false)
 
+              when cfg.sslLib == BearSSL:
+                for site, val in certsTable[].pairs:
+                  if val.idx == idx:
+                    let certKeyChains = addr certKeyChainsList[idx]
+                    if certKeyChains[].key.type != CertPrivateKeyType.None:
+                      freeCertPrivateKey(certKeyChains[].key)
+                      freeChains(certKeyChains[].chains)
+                    certKeyChains[].chains = createChains(readFile(val.chainPath))
+                    var certDatas = decodePem(readFile(val.privPath))
+                    let certData = certDatas[0]
+                    certKeyChains[].key = decodeCertPrivateKey(certData.data)
+                    clearPemObjs(certDatas)
+                    break
+
               when cfg.sslLib == OpenSSL or cfg.sslLib == LibreSSL or cfg.sslLib == BoringSSL:
                 for site, val in certsTable[].pairs:
                   if val.idx == idx:
