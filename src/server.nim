@@ -4452,21 +4452,21 @@ template serverLib(cfg: static Config) {.dirty.} =
     if not folderCheck:
       errorQuit "error: certificates path does not exists"
 
-    var certWatchList: Array[tuple[path: string, wd: cint, idxList: Array[tuple[idx: int, ctype: int]]]]
+    var certWatchList: Array[tuple[path: Array[char], wd: cint, idxList: Array[tuple[idx: int, ctype: int]]]]
     var idx = 0
     for c in certsTable[].values:
       for ctype, path in [c.certPath, c.privPath, c.chainPath]:
         block SearchPath:
           let watchFolder = splitPath(path).head
           for i, w in certWatchList:
-            if w.path == watchFolder:
+            if w.path.toString == watchFolder:
               certWatchList[i].idxList.add((idx, ctype.int))
               break SearchPath
           var wd = inotify_add_watch(inoty, watchFolder.cstring, IN_CLOSE_WRITE)
           if wd == -1:
             errorQuit "error: inotify_add_watch path=", watchFolder
           var idxList = @^[(idx, ctype.int)]
-          certWatchList.add((watchFolder, wd, idxList))
+          certWatchList.add((watchFolder.toArray, wd, idxList))
       inc(idx)
 
     proc freeFileWacher() =
@@ -4489,7 +4489,7 @@ template serverLib(cfg: static Config) {.dirty.} =
               for w in certWatchList:
                 if w.wd == e[].wd:
                   var ids = w.idxList
-                  debug "certs watch: ", w.path / filename
+                  debug "certs watch: ", w.path.toString / filename
                   for d in ids:
                     case d.ctype
                     of 0:
