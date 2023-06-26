@@ -4482,7 +4482,7 @@ template serverLib(cfg: static Config) {.dirty.} =
       var evs = newSeq[byte](sizeof(InotifyEvent) * 512)
       while active:
         if inoty == -1:
-          sleep(1000)
+          sleep(3000)
         else:
           let n = read(inoty, evs[0].addr, evs.len)
           if n <= 0: break
