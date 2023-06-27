@@ -2658,6 +2658,9 @@ template serverLib(cfg: static Config) {.dirty.} =
   template reqHost: string {.dirty.} =
     getHeaderValue(ctx.pRecvBuf, ctx.header, InternalEssentialHeaderHost)
 
+  template reqHeader(paramId: HeaderParams): string {.dirty.} =
+    getHeaderValue(ctx.pRecvBuf, ctx.header, paramId)
+
   template getHeaderValue(paramId: HeaderParams): string {.dirty.} =
     getHeaderValue(ctx.pRecvBuf, ctx.header, paramId)
 
