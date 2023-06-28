@@ -4248,67 +4248,56 @@ template serverLib(cfg: static Config) {.dirty.} =
 
     quote do:
       clientHandlerProcs.add proc (ctx: WorkerThreadCtx) {.thread.} =
-        let client = ctx.client
-
-        acquire(client.spinLock)
-        if client.threadId == 0:
-          client.threadId = ctx.threadId
-          release(client.spinLock)
+        when `ssl`:
+          when cfg.sslLib == BearSSL:
+            echo "stream bearssl"
+          elif cfg.sslLib == OpenSSL or cfg.sslLib == LibreSSL or cfg.sslLib == BoringSSL:
+            echo "stream openssl"
         else:
-          client.dirty = true
-          release(client.spinLock)
-          return
+          let client = ctx.client
 
-        let sock = client.sock
+          acquire(client.spinLock)
+          if client.threadId == 0:
+            client.threadId = ctx.threadId
+            release(client.spinLock)
+          else:
+            client.dirty = true
+            release(client.spinLock)
+            return
 
-        `callStreamMainTmplStmt`
+          let sock = client.sock
 
-        if client.recvCurSize == 0:
-          while true:
-            client.dirty = false
-            let recvlen = sock.recv(ctx.pRecvBuf0, workerRecvBufSize, 0.cint)
-            if recvlen > 0:
-              var (find, fin, opcode, payload, payloadSize,
-                  next, size) = getFrame(ctx.pRecvBuf0, recvlen)
-              while find:
-                if fin:
-                  var retStream = client.streamMain(opcode.toWebSocketOpCode, payload, payloadSize)
-                  case retStream
-                  of SendResult.Success:
-                    discard
-                  of SendResult.Pending:
-                    discard
-                  of SendResult.None, SendResult.Error, SendResult.Invalid:
-                    client.close()
-                else:
-                  if not payload.isNil and payloadSize > 0:
-                    client.addRecvBuf(payload, payloadSize)
-                    client.payloadSize = payloadSize
-                  break
-                (find, fin, opcode, payload, payloadSize, next, size) = getFrame(next, size)
+          `callStreamMainTmplStmt`
 
-              if not next.isNil and size > 0:
-                client.addRecvBuf(next, size)
-                if recvlen == workerRecvBufSize:
-                  break
+          if client.recvCurSize == 0:
+            while true:
+              client.dirty = false
+              let recvlen = sock.recv(ctx.pRecvBuf0, workerRecvBufSize, 0.cint)
+              if recvlen > 0:
+                var (find, fin, opcode, payload, payloadSize,
+                    next, size) = getFrame(ctx.pRecvBuf0, recvlen)
+                while find:
+                  if fin:
+                    var retStream = client.streamMain(opcode.toWebSocketOpCode, payload, payloadSize)
+                    case retStream
+                    of SendResult.Success:
+                      discard
+                    of SendResult.Pending:
+                      discard
+                    of SendResult.None, SendResult.Error, SendResult.Invalid:
+                      client.close()
+                  else:
+                    if not payload.isNil and payloadSize > 0:
+                      client.addRecvBuf(payload, payloadSize)
+                      client.payloadSize = payloadSize
+                    break
+                  (find, fin, opcode, payload, payloadSize, next, size) = getFrame(next, size)
 
-              acquire(client.spinLock)
-              if not client.dirty:
-                client.threadId = 0
-                release(client.spinLock)
-                return
-              else:
-                release(client.spinLock)
-                break
+                if not next.isNil and size > 0:
+                  client.addRecvBuf(next, size)
+                  if recvlen == workerRecvBufSize:
+                    break
 
-            elif recvlen == 0:
-              client.close()
-              acquire(client.spinLock)
-              client.threadId = 0
-              release(client.spinLock)
-              return
-            else:
-              if errno == EAGAIN or errno == EWOULDBLOCK:
                 acquire(client.spinLock)
                 if not client.dirty:
                   client.threadId = 0
@@ -4317,73 +4306,90 @@ template serverLib(cfg: static Config) {.dirty.} =
                 else:
                   release(client.spinLock)
                   break
+
+              elif recvlen == 0:
+                client.close()
+                acquire(client.spinLock)
+                client.threadId = 0
+                release(client.spinLock)
+                return
+              else:
+                if errno == EAGAIN or errno == EWOULDBLOCK:
+                  acquire(client.spinLock)
+                  if not client.dirty:
+                    client.threadId = 0
+                    release(client.spinLock)
+                    return
+                  else:
+                    release(client.spinLock)
+                    break
+                elif errno == EINTR:
+                  continue
+                client.close()
+                acquire(client.spinLock)
+                client.threadId = 0
+                release(client.spinLock)
+                return
+
+          while true:
+            client.reserveRecvBuf(workerRecvBufSize)
+            client.dirty = false
+            var recvlen = sock.recv(addr client.recvBuf[client.recvCurSize], workerRecvBufSize.cint, 0.cint)
+            if recvlen > 0:
+              client.recvCurSize = client.recvCurSize + recvlen
+              var p = cast[ptr UncheckedArray[byte]](addr client.recvBuf[client.payloadSize])
+              var (find, fin, opcode, payload, payloadSize,
+                  next, size) = getFrame(p, client.recvCurSize - client.payloadSize)
+              while find:
+                if not payload.isNil and payloadSize > 0:
+                  copyMem(p, payload, payloadSize)
+                  client.payloadSize = client.payloadSize + payloadSize
+                  p = cast[ptr UncheckedArray[byte]](addr client.recvBuf[client.payloadSize])
+                if fin:
+                  var retStream = client.streamMain(opcode.toWebSocketOpCode,
+                                                    cast[ptr UncheckedArray[byte]](addr client.recvBuf[0]),
+                                                    client.payloadSize)
+                  case retStream
+                  of SendResult.Success:
+                    discard
+                  of SendResult.Pending:
+                    discard
+                  of SendResult.None, SendResult.Error, SendResult.Invalid:
+                    client.close()
+                  client.payloadSize = 0
+                  client.recvCurSize = 0
+                (find, fin, opcode, payload, payloadSize, next, size) = getFrame(next, size)
+
+              if not next.isNil and size > 0:
+                copyMem(p, next, size)
+                client.recvCurSize = client.payloadSize + size
+                if recvlen == workerRecvBufSize:
+                  continue
+              else:
+                client.recvCurSize = client.payloadSize
+
+              #break
+
+            elif recvlen == 0:
+              client.close()
+              break
+            else:
+              if errno == EAGAIN or errno == EWOULDBLOCK:
+                acquire(client.spinLock)
+                if not client.dirty:
+                  release(client.spinLock)
+                  break
+                else:
+                  release(client.spinLock)
+                  continue
               elif errno == EINTR:
                 continue
               client.close()
-              acquire(client.spinLock)
-              client.threadId = 0
-              release(client.spinLock)
-              return
+              break
 
-        while true:
-          client.reserveRecvBuf(workerRecvBufSize)
-          client.dirty = false
-          var recvlen = sock.recv(addr client.recvBuf[client.recvCurSize], workerRecvBufSize.cint, 0.cint)
-          if recvlen > 0:
-            client.recvCurSize = client.recvCurSize + recvlen
-            var p = cast[ptr UncheckedArray[byte]](addr client.recvBuf[client.payloadSize])
-            var (find, fin, opcode, payload, payloadSize,
-                next, size) = getFrame(p, client.recvCurSize - client.payloadSize)
-            while find:
-              if not payload.isNil and payloadSize > 0:
-                copyMem(p, payload, payloadSize)
-                client.payloadSize = client.payloadSize + payloadSize
-                p = cast[ptr UncheckedArray[byte]](addr client.recvBuf[client.payloadSize])
-              if fin:
-                var retStream = client.streamMain(opcode.toWebSocketOpCode,
-                                                  cast[ptr UncheckedArray[byte]](addr client.recvBuf[0]),
-                                                  client.payloadSize)
-                case retStream
-                of SendResult.Success:
-                  discard
-                of SendResult.Pending:
-                  discard
-                of SendResult.None, SendResult.Error, SendResult.Invalid:
-                  client.close()
-                client.payloadSize = 0
-                client.recvCurSize = 0
-              (find, fin, opcode, payload, payloadSize, next, size) = getFrame(next, size)
-
-            if not next.isNil and size > 0:
-              copyMem(p, next, size)
-              client.recvCurSize = client.payloadSize + size
-              if recvlen == workerRecvBufSize:
-                continue
-            else:
-              client.recvCurSize = client.payloadSize
-
-            #break
-
-          elif recvlen == 0:
-            client.close()
-            break
-          else:
-            if errno == EAGAIN or errno == EWOULDBLOCK:
-              acquire(client.spinLock)
-              if not client.dirty:
-                release(client.spinLock)
-                break
-              else:
-                release(client.spinLock)
-                continue
-            elif errno == EINTR:
-              continue
-            client.close()
-            break
-
-        acquire(client.spinLock)
-        client.threadId = 0
-        release(client.spinLock)
+          acquire(client.spinLock)
+          client.threadId = 0
+          release(client.spinLock)
 
   macro appStreamSendMacro(ssl: bool, body: untyped): untyped =
     quote do:
