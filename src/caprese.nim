@@ -209,7 +209,8 @@ when isMainModule:
       testDataBase = testDataBase & "[testdata]"
     for i in 0..<100:
       testData = testData & testDataBase
-    var ws = newWebSocket("ws://localhost:8009/ws", "caprese-0.1")
+    var prot = if window.location.protocol == "https:".toJs: "wss:".cstring else: "ws:".cstring
+    var ws = newWebSocket(prot & "//localhost:8009/ws".cstring, "caprese-0.1")
     proc testSend() =
       if ws.readyState == WebSocket.OPEN:
         ws.send(testData)
