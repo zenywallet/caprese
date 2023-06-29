@@ -236,8 +236,8 @@ when isMainModule:
   server(ssl = true, ip = "0.0.0.0", port = 8009):
     routes(host = "localhost"):
       certificates(path = "./certs/site_a"):
-        priv: "privkey.pem"
-        chain: "fullchain.pem"
+        privKey: "privkey.pem"
+        fullChain: "fullchain.pem"
 
       # client: Client
       # url: string

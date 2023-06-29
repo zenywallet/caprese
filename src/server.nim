@@ -2384,9 +2384,9 @@ macro certificates*(srvId: int, site: string, path: string, body: untyped): unty
   var privPath, chainPath: string
   for s in body:
     if s.kind == nnkCall:
-      if eqIdent(s[0], "priv"):
+      if eqIdent(s[0], "privKey"):
         priv = $s[1][0]
-      elif eqIdent(s[0], "chain"):
+      elif eqIdent(s[0], "fullChain"):
         chain = $s[1][0]
   if priv.len > 0: privPath = path / priv
   if chain.len > 0: chainPath = path / chain
