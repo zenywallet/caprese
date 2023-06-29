@@ -4438,12 +4438,12 @@ template serverLib(cfg: static Config) {.dirty.} =
         SiteCtx = object
           ctx: SSL_CTX
 
-      var siteCtxs: array[staticCertsTable.len, SiteCtx]
+      var siteCtxs: array[staticCertsTable.len + 1, SiteCtx]
       for site in certsTable[].keys:
         var val = certsTable[][site]
         siteCtxs[val.idx].ctx = newSslCtx(site)
 
-    var certUpdateFlags: array[staticCertsTable.len, tuple[cert, priv, chain: bool, checkCount: int]]
+    var certUpdateFlags: array[staticCertsTable.len + 1, tuple[cert, priv, chain: bool, checkCount: int]]
     for i in 0..<certUpdateFlags.len:
       certUpdateFlags[i] = (false, false, false, 0)
 
