@@ -2309,28 +2309,25 @@ template routes*(body: untyped) =
   block: body
 
 var certsTableData {.compileTime.}: seq[tuple[key: string, val: tuple[
-  idx: int, srvId: int, certPath: string, privPath: string, chainPath: string,
-  certFileName: string, privFileName: string, chainFileName: string]]]
+  idx: int, srvId: int, privPath: string, chainPath: string,
+  privFileName: string, chainFileName: string]]]
 
 var certsTableDataIdx {.compileTime.}: seq[tuple[key: string, val: int]]
 
 var certsTableIdx {.compileTime.}: int = 1
 
-proc addCertsTable*(site: string, srvId: int, certPath: string, privPath: string,
-                  chainPath: string, certFileName: string,
-                  privFileName: string, chainFileName: string) {.compileTime.} =
+proc addCertsTable*(site: string, srvId: int, privPath: string, chainPath: string,
+                    privFileName: string, chainFileName: string) {.compileTime.} =
   for i, d in certsTableData:
     if d.key == site:
-      certsTableData[i].val.certPath = certPath
       certsTableData[i].val.privPath = privPath
       certsTableData[i].val.chainPath = chainPath
-      certsTableData[i].val.certFileName = certFileName
       certsTableData[i].val.privFileName = privFileName
       certsTableData[i].val.chainFileName = chainFileName
       macros.error "duplicate certificates for the same hostname are not yet supported"
       return
-  certsTableData.add((site, (certsTableIdx, srvId, certPath, privPath, chainPath,
-                    certFileName, privFileName, chainFileName)))
+  certsTableData.add((site, (certsTableIdx, srvId, privPath, chainPath,
+                    privFileName, chainFileName)))
   certsTableDataIdx.add((site, certsTableIdx))
   inc(certsTableIdx)
 
@@ -2351,9 +2348,9 @@ macro createCertsTable*(): untyped =
   )
 
 macro createCertsFileNameList*(): untyped =
-  var certsFileNameList: seq[tuple[certFileName, privFileName, chainFileName: string]]
+  var certsFileNameList: seq[tuple[privFileName, chainFileName: string]]
   for d in certsTableData:
-    certsFileNameList.add((d.val.certFileName, d.val.privFileName, d.val.chainFileName))
+    certsFileNameList.add((d.val.privFileName, d.val.chainFileName))
   newConstStmt(
     postfix(newIdentNode("certsFileNameList"), "*"),
     newLit(certsFileNameList)
@@ -2383,20 +2380,17 @@ macro certificates*(srvId: int, site: string, path: string, body: untyped): unty
   var srvId = intVal(srvId).int
   var site = $site
   var path = $path
-  var cert, priv, chain: string
-  var certPath, privPath, chainPath: string
+  var priv, chain: string
+  var privPath, chainPath: string
   for s in body:
     if s.kind == nnkCall:
-      if eqIdent(s[0], "cert"):
-        cert = $s[1][0]
-      elif eqIdent(s[0], "priv"):
+      if eqIdent(s[0], "priv"):
         priv = $s[1][0]
       elif eqIdent(s[0], "chain"):
         chain = $s[1][0]
-  if cert.len > 0: certPath = path / cert
   if priv.len > 0: privPath = path / priv
   if chain.len > 0: chainPath = path / chain
-  addCertsTable(site, srvId, certPath, privPath, chainPath, cert, priv, chain)
+  addCertsTable(site, srvId, privPath, chainPath, priv, chain)
 
 proc acceptKey(key: string): string =
   var sh = secureHash(key & "258EAFA5-E914-47DA-95CA-C5AB0DC85B11")
@@ -2671,8 +2665,8 @@ template serverLib(cfg: static Config) {.dirty.} =
   proc appDummy(ctx: WorkerThreadCtx) {.thread.} = discard
 
   var certsTable: ptr Table[string, tuple[idx: int, srvId: int,
-                            certPath: string, privPath: string, chainPath: string,
-                            certFileName: string, privFileName: string, chainFileName: string]]
+                            privPath: string, chainPath: string,
+                            privFileName: string, chainFileName: string]]
   var certsIdxTable: ptr Table[string, int]
 
   when cfg.sslLib == BearSSL:
@@ -3323,10 +3317,6 @@ template serverLib(cfg: static Config) {.dirty.} =
       try:
         if not certsTable.isNil and site.len > 0:
           let certs = certsTable[][site]
-          var retCert = SSL_CTX_use_certificate_file(ctx, cstring(certs.certPath), SSL_FILETYPE_PEM)
-          if retCert != 1:
-            logs.error "error: certificate file"
-            raise newException(ServerSslCertError, "certificate file")
           var retPriv = SSL_CTX_use_PrivateKey_file(ctx, cstring(certs.privPath), SSL_FILETYPE_PEM)
           if retPriv != 1:
             logs.error "error: private key file"
@@ -4443,14 +4433,14 @@ template serverLib(cfg: static Config) {.dirty.} =
         var val = certsTable[][site]
         siteCtxs[val.idx].ctx = newSslCtx(site)
 
-    var certUpdateFlags: array[staticCertsTable.len + 1, tuple[cert, priv, chain: bool, checkCount: int]]
+    var certUpdateFlags: array[staticCertsTable.len + 1, tuple[priv, chain: bool, checkCount: int]]
     for i in 0..<certUpdateFlags.len:
-      certUpdateFlags[i] = (false, false, false, 0)
+      certUpdateFlags[i] = (false, false, 0)
 
     var folderCheck = true
     var checkFolders: seq[string]
     for c in certsTable[].values:
-      for _, path in [c.certPath, c.privPath, c.chainPath]:
+      for _, path in [c.privPath, c.chainPath]:
         let folder = splitPath(path).head
         if not (folder in checkFolders):
           checkFolders.add(folder)
@@ -4464,7 +4454,7 @@ template serverLib(cfg: static Config) {.dirty.} =
     var certWatchList: Array[tuple[path: Array[char], wd: cint, idxList: Array[tuple[idx: int, ctype: int]]]]
     var idx = 0
     for c in certsTable[].values:
-      for ctype, path in [c.certPath, c.privPath, c.chainPath]:
+      for ctype, path in [c.privPath, c.chainPath]:
         block SearchPath:
           let watchFolder = splitPath(path).head
           for i, w in certWatchList:
@@ -4494,7 +4484,7 @@ template serverLib(cfg: static Config) {.dirty.} =
       var sec = 0
 
       template updateCerts(idx: int) =
-        certUpdateFlags[idx] = (false, false, false, 0)
+        certUpdateFlags[idx] = (false, false, 0)
 
         when cfg.sslLib == BearSSL:
           for site, val in certsTable[].pairs:
@@ -4530,7 +4520,7 @@ template serverLib(cfg: static Config) {.dirty.} =
             if sec >= 30:
               sec = 0
               for idx, flag in certUpdateFlags:
-                if flag.cert or flag.priv or flag.chain:
+                if flag.priv or flag.chain:
                   if certUpdateFlags[idx].checkCount > 0:
                     updateCerts(idx)
                   else:
@@ -4548,18 +4538,15 @@ template serverLib(cfg: static Config) {.dirty.} =
                   for d in ids:
                     case d.ctype
                     of 0:
-                      if filename == certsFileNameList[d.idx].certFileName:
-                        certUpdateFlags[d.idx].cert = true
-                    of 1:
                       if filename == certsFileNameList[d.idx].privFileName:
                         certUpdateFlags[d.idx].priv = true
-                    of 2:
+                    of 1:
                       if filename == certsFileNameList[d.idx].chainFileName:
                         certUpdateFlags[d.idx].chain = true
                     else: discard
 
           for idx, flag in certUpdateFlags:
-            if flag.cert and flag.priv and flag.chain:
+            if flag.priv and flag.chain:
               updateCerts(idx)
 
   when cfg.sslLib == OpenSSL or cfg.sslLib == LibreSSL or cfg.sslLib == BoringSSL:
