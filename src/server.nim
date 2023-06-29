@@ -2376,28 +2376,6 @@ template certificates*(path: string, body: untyped) = discard # code is added by
 
 template certificates*(body: untyped) = discard # code is added by macro
 
-macro certificates*(srvId: int, site: string, path: string, body: untyped): untyped =
-  var srvId = intVal(srvId).int
-  var site = $site
-  var path = $path
-  var priv, chain: string
-  var privPath, chainPath: string
-  for s in body:
-    if s.kind == nnkCall:
-      if eqIdent(s[0], "privKey"):
-        priv = $s[1][0]
-      elif eqIdent(s[0], "fullChain"):
-        chain = $s[1][0]
-  if path.len > 0:
-    if priv.len > 0: privPath = path / priv
-    if chain.len > 0: chainPath = path / chain
-  else:
-    privPath = priv
-    chainPath = chain
-    priv = splitPath(privPath).tail
-    chain = splitPath(chainPath).tail
-  addCertsTable(site, srvId, privPath, chainPath, priv, chain)
-
 proc acceptKey(key: string): string =
   var sh = secureHash(key & "258EAFA5-E914-47DA-95CA-C5AB0DC85B11")
   return base64.encode(sh.Sha1Digest)
@@ -2502,6 +2480,28 @@ template serverLib(cfg: static Config) {.dirty.} =
 
   var workerThreadCtx {.threadvar.}: WorkerThreadCtx
   #var clientHandlerProcs: Array[ClientHandlerProc]
+
+  macro certificates*(srvId: int, site: string, path: string, body: untyped): untyped =
+    var srvId = intVal(srvId).int
+    var site = $site
+    var path = $path
+    var priv, chain: string
+    var privPath, chainPath: string
+    for s in body:
+      if s.kind == nnkCall:
+        if eqIdent(s[0], "privKey"):
+          priv = $s[1][0]
+        elif eqIdent(s[0], "fullChain"):
+          chain = $s[1][0]
+    if path.len > 0:
+      if priv.len > 0: privPath = path / priv
+      if chain.len > 0: chainPath = path / chain
+    else:
+      privPath = priv
+      chainPath = chain
+      priv = splitPath(privPath).tail
+      chain = splitPath(chainPath).tail
+    addCertsTable(site, srvId, privPath, chainPath, priv, chain)
 
   proc echoHeader(buf: ptr UncheckedArray[byte], size: int, header: ReqHeader) =
     echo "url: ", header.url
