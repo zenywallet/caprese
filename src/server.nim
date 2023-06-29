@@ -3242,30 +3242,6 @@ template serverLib(cfg: static Config) {.dirty.} =
     import tables
     import strutils
 
-    const CERT_SITES = @["localhost"]
-    const CERT_PATH = "./certs"
-    const CERT_FILE = "cert.pem"
-    const PRIVKEY_FILE = "privkey.pem"
-    const CHAIN_FILE = "fullchain.pem"
-
-    macro certFilesTable(): untyped =
-      var certsTable: seq[tuple[key: string, val: tuple[
-        idx: int, cert: string, privkey: string, fullchain: string]]]
-
-      for idx, site in CERT_SITES:
-        let certPath = CERT_PATH / site / CERT_FILE
-        let privkeyPath = CERT_PATH / site / PRIVKEY_FILE
-        let fullchainPath = CERT_PATH / site / CHAIN_FILE
-        certsTable.add((site, (idx, certPath, privkeyPath, fullchainPath)))
-
-      newConstStmt(
-        postfix(newIdentNode("certsTable"), "*"),
-        newCall("toTable",
-          newLit(certsTable)
-        )
-      )
-    #certFilesTable()
-
     proc selfSignedCertificate(ctx: SSL_CTX) =
       var x509: X509 = X509_new()
       var pkey: EVP_PKEY = EVP_PKEY_new()
