@@ -2388,8 +2388,14 @@ macro certificates*(srvId: int, site: string, path: string, body: untyped): unty
         priv = $s[1][0]
       elif eqIdent(s[0], "fullChain"):
         chain = $s[1][0]
-  if priv.len > 0: privPath = path / priv
-  if chain.len > 0: chainPath = path / chain
+  if path.len > 0:
+    if priv.len > 0: privPath = path / priv
+    if chain.len > 0: chainPath = path / chain
+  else:
+    privPath = priv
+    chainPath = chain
+    priv = splitPath(privPath).tail
+    chain = splitPath(chainPath).tail
   addCertsTable(site, srvId, privPath, chainPath, priv, chain)
 
 proc acceptKey(key: string): string =
