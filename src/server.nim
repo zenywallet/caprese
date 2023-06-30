@@ -2401,7 +2401,7 @@ template stream*(streamAppId: int, path: string, protocol: string, body: untyped
     let key = getHeaderValue(InternalSecWebSocketKey)
     let ver = getHeaderValue(InternalSecWebSocketVersion)
     if ver.len > 0 and key.len > 0:
-      if protocol.len > 0:
+      when protocol.len > 0:
         let prot = getHeaderValue(InternalSecWebSocketProtocol)
         if prot == protocol:
           reqClient()[].appId = streamAppId
