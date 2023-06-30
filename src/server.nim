@@ -41,6 +41,8 @@ type
     clientMax*: int
     recvBufExpandBreakSize*: int
     maxFrameSize*: int
+    privKeyFile*: string
+    fullChainFile*: string
 
 proc defaultConfig*(): Config {.compileTime.} =
   result.sslLib = BearSSL
@@ -55,6 +57,8 @@ proc defaultConfig*(): Config {.compileTime.} =
   result.clientMax = 32000
   result.recvBufExpandBreakSize = 131072 * 5
   result.maxFrameSize = 131072 * 5
+  result.privKeyFile = "privkey.pem"
+  result.fullChainFile = "fullchain.pem"
 
 macro HttpTargetHeader(idEnumName, valListName, targetHeaders, body: untyped): untyped =
   var enumParams = nnkEnumTy.newTree(newEmptyNode())
@@ -2481,7 +2485,7 @@ template serverLib(cfg: static Config) {.dirty.} =
   var workerThreadCtx {.threadvar.}: WorkerThreadCtx
   #var clientHandlerProcs: Array[ClientHandlerProc]
 
-  macro certificates*(srvId: int, site: string, path: string, body: untyped): untyped =
+  macro certificates*(srvId: int, site: string, path: string, body: untyped = newEmptyNode()): untyped =
     var srvId = intVal(srvId).int
     var site = $site
     var path = $path
@@ -2493,9 +2497,13 @@ template serverLib(cfg: static Config) {.dirty.} =
           priv = $s[1][0]
         elif eqIdent(s[0], "fullChain"):
           chain = $s[1][0]
+    if priv.len == 0:
+      priv = cfg.privKeyFile
+    if chain.len == 0:
+      chain = cfg.fullChainFile
     if path.len > 0:
-      if priv.len > 0: privPath = path / priv
-      if chain.len > 0: chainPath = path / chain
+      privPath = path / priv
+      chainPath = path / chain
     else:
       privPath = priv
       chainPath = chain
