@@ -2384,6 +2384,21 @@ proc acceptKey(key: string): string =
   var sh = secureHash(key & "258EAFA5-E914-47DA-95CA-C5AB0DC85B11")
   return base64.encode(sh.Sha1Digest)
 
+macro onProtocolBodyExists(body: untyped): untyped =
+  for s in body:
+    if eqIdent(s[0], "onProtocol"):
+      return newLit(true)
+  return newLit(false)
+
+macro getOnProtocolBody(body: untyped): untyped =
+  var onProtocolStmt = newStmtList()
+  for s in body:
+    if eqIdent(s[0], "onProtocol"):
+      onProtocolStmt.add(s[1])
+  quote do:
+    proc protocolCheck(): tuple[flag: bool, resProtocol: string] =
+      `onProtocolStmt`
+
 macro getOnOpenBody(body: untyped): untyped =
   var onOpenStmt = newStmtList()
   for s in body:
@@ -2401,29 +2416,55 @@ template stream*(streamAppId: int, path: string, protocol: string, body: untyped
     let key = getHeaderValue(InternalSecWebSocketKey)
     let ver = getHeaderValue(InternalSecWebSocketVersion)
     if ver.len > 0 and key.len > 0:
-      when protocol.len > 0:
-        let prot = getHeaderValue(InternalSecWebSocketProtocol)
-        if prot == protocol:
+      when onProtocolBodyExists(body):
+        getOnProtocolBody(body)
+        var resProt = protocolCheck()
+        if resProt.flag:
+          if resProt.resProtocol.len > 0:
+            reqClient()[].appId = streamAppId
+            let ret = send("HTTP/1.1 " & $Status101 & "\c\L" &
+                          "Upgrade: websocket\c\L" &
+                          "Connection: Upgrade\c\L" &
+                          "Sec-WebSocket-Accept: " & acceptKey(key) & "\c\L" &
+                          "Sec-WebSocket-Protocol: " & resProt.resProtocol & "\c\L" &
+                          "Sec-WebSocket-Version: 13\c\L\c\L")
+            getOnOpenBody(body)
+            return ret
+          else:
+            reqClient()[].appId = streamAppId
+            let ret = send("HTTP/1.1 " & $Status101 & "\c\L" &
+                          "Upgrade: websocket\c\L" &
+                          "Connection: Upgrade\c\L" &
+                          "Sec-WebSocket-Accept: " & acceptKey(key) & "\c\L" &
+                          "Sec-WebSocket-Version: 13\c\L\c\L")
+            getOnOpenBody(body)
+            return ret
+        else:
+          return SendResult.Error
+      else:
+        when protocol.len > 0:
+          let prot = getHeaderValue(InternalSecWebSocketProtocol)
+          if prot == protocol:
+            reqClient()[].appId = streamAppId
+            let ret = send("HTTP/1.1 " & $Status101 & "\c\L" &
+                          "Upgrade: websocket\c\L" &
+                          "Connection: Upgrade\c\L" &
+                          "Sec-WebSocket-Accept: " & acceptKey(key) & "\c\L" &
+                          "Sec-WebSocket-Protocol: " & protocol & "\c\L" &
+                          "Sec-WebSocket-Version: 13\c\L\c\L")
+            getOnOpenBody(body)
+            return ret
+          else:
+            return SendResult.Error
+        else:
           reqClient()[].appId = streamAppId
           let ret = send("HTTP/1.1 " & $Status101 & "\c\L" &
                         "Upgrade: websocket\c\L" &
                         "Connection: Upgrade\c\L" &
                         "Sec-WebSocket-Accept: " & acceptKey(key) & "\c\L" &
-                        "Sec-WebSocket-Protocol: " & protocol & "\c\L" &
                         "Sec-WebSocket-Version: 13\c\L\c\L")
           getOnOpenBody(body)
           return ret
-        else:
-          return SendResult.Error
-      else:
-        reqClient()[].appId = streamAppId
-        let ret = send("HTTP/1.1 " & $Status101 & "\c\L" &
-                      "Upgrade: websocket\c\L" &
-                      "Connection: Upgrade\c\L" &
-                      "Sec-WebSocket-Accept: " & acceptKey(key) & "\c\L" &
-                      "Sec-WebSocket-Version: 13\c\L\c\L")
-        getOnOpenBody(body)
-        return ret
 
 #[
 var clientSocketLocks: array[WORKER_THREAD_NUM, cint]
@@ -2665,6 +2706,9 @@ template serverLib(cfg: static Config) {.dirty.} =
 
   template reqHost: string {.dirty.} =
     getHeaderValue(ctx.pRecvBuf, ctx.header, InternalEssentialHeaderHost)
+
+  template reqProtocol: string {.dirty.} =
+    getHeaderValue(ctx.pRecvBuf, ctx.header, InternalSecWebSocketProtocol)
 
   template reqHeader(paramId: HeaderParams): string {.dirty.} =
     getHeaderValue(ctx.pRecvBuf, ctx.header, paramId)
@@ -4195,6 +4239,7 @@ template serverLib(cfg: static Config) {.dirty.} =
         closeBody
         return SendResult.None
 
+  template onProtocol(body: untyped) = discard
   template onOpen(body: untyped) = discard
   template onMessage(body: untyped) = discard
   template onClose(body: untyped) = discard
@@ -4205,7 +4250,9 @@ template serverLib(cfg: static Config) {.dirty.} =
     var rawStmt = newStmtList()
 
     for s in body:
-      if eqIdent(s[0], "onOpen"):
+      if eqIdent(s[0], "onProtocol"):
+        continue
+      elif eqIdent(s[0], "onOpen"):
         continue
       elif eqIdent(s[0], "onMessage"):
         onMessageStmt.add(s[1])
