@@ -4200,7 +4200,6 @@ template serverLib(cfg: static Config) {.dirty.} =
   template onClose(body: untyped) = discard
 
   macro appStreamMacro(ssl: bool, body: untyped): untyped =
-    var onOpenStmt = newStmtList()
     var onMessageStmt = newStmtList()
     var onCloseStmt = newStmtList()
     var rawStmt = newStmtList()
