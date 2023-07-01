@@ -4105,7 +4105,7 @@ template serverLib(cfg: static Config) {.dirty.} =
                         client.close(ssl = true)
                         break
                     else:
-                      client.close()
+                      client.close(ssl = true)
                       break
 
               elif recvlen == 0:
