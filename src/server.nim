@@ -4393,9 +4393,6 @@ template serverLib(cfg: static Config) {.dirty.} =
                   continue
               else:
                 client.recvCurSize = client.payloadSize
-
-              #break
-
             elif recvlen == 0:
               client.close()
               break
