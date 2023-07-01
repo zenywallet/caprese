@@ -4006,6 +4006,7 @@ template serverLib(cfg: static Config) {.dirty.} =
         when cfg.sslLib == OpenSSL or cfg.sslLib == LibreSSL or cfg.sslLib == BoringSSL:
           if client.recvCurSize == 0:
             while true:
+              client.dirty = false
               let recvlen = client.ssl.SSL_read(cast[pointer](ctx.pRecvBuf0), workerRecvBufSize.cint).int
               if recvlen > 0:
                 if recvlen >= 17 and equalMem(addr ctx.pRecvBuf0[recvlen - 4], "\c\L\c\L".cstring, 4):
@@ -4048,20 +4049,33 @@ template serverLib(cfg: static Config) {.dirty.} =
               else:
                 client.sslErr = SSL_get_error(client.ssl, recvlen.cint)
                 if client.sslErr == SSL_ERROR_WANT_READ:
-                  client.ev.events = EPOLLIN or EPOLLRDHUP or EPOLLET
-                  var retCtl = epoll_ctl(epfd, EPOLL_CTL_MOD, cast[cint](client.sock), addr client.ev)
-                  if retCtl != 0:
-                    logs.error "error: epoll_ctl ret=", retCtl, " errno=", errno
+                  acquire(client.spinLock)
+                  if not client.dirty:
+                    client.threadId = 0
+                    release(client.spinLock)
+                    client.ev.events = EPOLLIN or EPOLLRDHUP or EPOLLET
+                    var retCtl = epoll_ctl(epfd, EPOLL_CTL_MOD, cast[cint](client.sock), addr client.ev)
+                    if retCtl != 0:
+                      logs.error "error: epoll_ctl ret=", retCtl, " errno=", errno
+                    return
+                  else:
+                    release(client.spinLock)
                 elif client.sslErr == SSL_ERROR_WANT_WRITE:
-                  client.ev.events = EPOLLRDHUP or EPOLLET or EPOLLOUT
-                  var retCtl = epoll_ctl(epfd, EPOLL_CTL_MOD, cast[cint](client.sock), addr client.ev)
-                  if retCtl != 0:
-                    logs.error "error: epoll_ctl ret=", retCtl, " errno=", errno
+                  if not client.dirty:
+                    client.threadId = 0
+                    release(client.spinLock)
+                    client.ev.events = EPOLLRDHUP or EPOLLET or EPOLLOUT
+                    var retCtl = epoll_ctl(epfd, EPOLL_CTL_MOD, cast[cint](client.sock), addr client.ev)
+                    if retCtl != 0:
+                      logs.error "error: epoll_ctl ret=", retCtl, " errno=", errno
+                    return
+                  else:
+                    release(client.spinLock)
                 else:
                   if errno == EINTR:
                     continue
                   client.close(ssl = true)
-                break
+                  break
 
           else:
             while true:
