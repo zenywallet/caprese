@@ -4039,7 +4039,6 @@ template serverLib(cfg: static Config) {.dirty.} =
                     else:
                       client.close(ssl = true)
                       break
-
                 else:
                   client.addRecvBuf(ctx.pRecvBuf0, recvlen)
 
