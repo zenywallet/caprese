@@ -4060,6 +4060,7 @@ template serverLib(cfg: static Config) {.dirty.} =
                 else:
                   if errno == EINTR:
                     continue
+                  client.close(ssl = true)
                 break
 
           else:
