@@ -35,9 +35,16 @@ elif paramCount() == 2:
     for s in d.findIter(re"[a-zA-Z_][\w]*: "):
       var t = s.match.strip(chars = {' ', ':'})
       list[t] = t
+      #if list.hasKey(t):
+      #  resList[t] = t
 
     for s in d.findIter(re"\.[a-zA-Z_][\w]*"):
       var t = s.match.strip(chars = {'.'})
+      if list.hasKey(t):
+        resList[t] = t
+
+    for s in d.findIter(re"\[""[a-zA-Z_][\w]*""\]"):
+      var t = s.match.strip(chars = {'[', ']', '"'})
       if list.hasKey(t):
         resList[t] = t
 
