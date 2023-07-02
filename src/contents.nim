@@ -155,6 +155,8 @@ proc generateExternCode(externKeyword: seq[string]): string {.compileTime.} =
   inc(externKeywordId)
   result = "var externKeyword" & $externKeywordId & " = {\n"
   for i, s in externKeyword:
+    if s.len == 0:
+      error "scriptMinifier extern keyword length = 0"
     if i == externKeyword.len - 1:
       result.add("  " & s & ": 0\n")
     else:
