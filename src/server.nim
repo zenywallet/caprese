@@ -3882,15 +3882,9 @@ template serverLib(cfg: static Config) {.dirty.} =
                 else:
                   if errno == EINTR:
                     continue
-                  acquire(client.spinLock)
-                  client.threadId = 0
-                  release(client.spinLock)
                   client.close(ssl = true)
                   break
               elif retSslAccept == 0:
-                acquire(client.spinLock)
-                client.threadId = 0
-                release(client.spinLock)
                 client.close(ssl = true)
                 break
               else:
