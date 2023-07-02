@@ -1002,6 +1002,7 @@ template serverInitFreeClient() {.dirty.} =
     let sock = client.sock
     if sock != osInvalidSocket:
       client.sock = osInvalidSocket
+      client.threadId = 0
       release(client.spinLock)
       when ssl:
         if not client.ssl.isNil:
