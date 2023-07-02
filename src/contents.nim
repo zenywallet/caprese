@@ -149,6 +149,30 @@ template scriptMinifier*(code, extern: string): string =
       )
     scriptMinifierMacro()
 
+var externKeywordId {.compileTime.}: int
+
+proc generateExternCode(externKeyword: seq[string]): string {.compileTime.} =
+  inc(externKeywordId)
+  result = "var externKeyword" & $externKeywordId & " = {\n"
+  for i, s in externKeyword:
+    if i == externKeyword.len - 1:
+      result.add("  " & s & ": 0\n")
+    else:
+      result.add("  " & s & ": 0,\n")
+  result.add("};\n")
+
+template scriptMinifier*(code: string, extern: seq[string]): string =
+  block:
+    const srcFile = instantiationInfo(-1, true).filename
+    const (srcFileDir, srcFieName, srcFileExt) = splitFile(srcFile)
+    const externCode = generateExternCode(extern)
+
+    macro scriptMinifierMacro(): string =
+      return nnkStmtList.newTree(
+        newLit(minifyJsCode(srcFileDir, code, externCode))
+      )
+    scriptMinifierMacro()
+
 proc sanitizeHtml*(s: string): string =
   for c in s:
     case c
