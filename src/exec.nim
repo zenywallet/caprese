@@ -3,6 +3,7 @@
 import os
 import macros
 import strformat
+import strutils
 
 const srcFile = currentSourcePath()
 const (srcFileDir, srcFileName, srcFileExt) = splitFile(srcFile)
@@ -50,6 +51,19 @@ template staticExecCode*(code: string): string =
       )
     execCodeResult()
 
+proc removeThreadVarPatch(code: string): string {.compileTime.} =
+  var stage = 0
+  for line in splitLines(code):
+    if stage == 0 and line.startsWith("if (globalThis.") and line.endsWith(" === undefined) {"):
+      stage = 1
+    elif stage == 1:
+      result.add(line.replace("  globalThis.", "var ") & "\n")
+      stage = 2
+    elif stage == 2:
+      stage = 0
+    else:
+      result.add(line & "\n")
+
 proc compileJsCode*(srcFileDir: string, code: string, rstr: string): string {.compileTime.} =
   inc(tmpFileId)
   let tmpNameFile = srcFileDir / srcFileName & "_tmp" & $tmpFileId & rstr
@@ -58,6 +72,7 @@ proc compileJsCode*(srcFileDir: string, code: string, rstr: string): string {.co
   writeFile(tmpSrcFile, code)
   echo staticExec("nim js -d:release --mm:orc -o:" & tmpJsFile & " " & tmpSrcFile)
   result = readFile(tmpJsFile)
+  result = removeThreadVarPatch(result)
   rmFile(tmpJsFile)
   rmFile(tmpSrcFile)
 
