@@ -3725,6 +3725,7 @@ template serverLib(cfg: static Config) {.dirty.} =
                                   engine = RecvApp
                                   break
                                 else:
+                                  client.threadId = 0
                                   release(client.spinLock)
                                   break engineBlock
                             else:
@@ -3753,6 +3754,9 @@ template serverLib(cfg: static Config) {.dirty.} =
                       client.ev.events = EPOLLIN or EPOLLRDHUP or EPOLLET
                       var retCtl = epoll_ctl(epfd, EPOLL_CTL_MOD, cast[cint](client.sock), addr client.ev)
                       if retCtl != 0:
+                        acquire(client.spinLock)
+                        client.threadId = 0
+                        release(client.spinLock)
                         break
                   else:
                     let sendlen = sock.send(buf, bufLen.int, 0.cint)
@@ -3767,6 +3771,9 @@ template serverLib(cfg: static Config) {.dirty.} =
                         client.ev.events = EPOLLIN or EPOLLRDHUP or EPOLLET or EPOLLOUT
                         var retCtl = epoll_ctl(epfd, EPOLL_CTL_MOD, cast[cint](client.sock), addr client.ev)
                         if retCtl != 0:
+                          acquire(client.spinLock)
+                          client.threadId = 0
+                          release(client.spinLock)
                           break
                         acquire(client.spinLock)
                         if client.dirty:
@@ -3774,6 +3781,7 @@ template serverLib(cfg: static Config) {.dirty.} =
                           release(client.spinLock)
                           engine = RecvApp
                         else:
+                          client.threadId = 0
                           release(client.spinLock)
                           break
                       elif errno == EINTR:
@@ -3802,6 +3810,7 @@ template serverLib(cfg: static Config) {.dirty.} =
                           release(client.spinLock)
                           engine = RecvApp
                         else:
+                          client.threadId = 0
                           release(client.spinLock)
                           break
                       elif errno == EINTR:
@@ -3819,6 +3828,7 @@ template serverLib(cfg: static Config) {.dirty.} =
                       release(client.spinLock)
                       engine = RecvApp
                     else:
+                      client.threadId = 0
                       release(client.spinLock)
                       break
                   else:
@@ -3841,10 +3851,6 @@ template serverLib(cfg: static Config) {.dirty.} =
                     else:
                       release(client.lock)
                     engine = SendRec
-
-            acquire(client.spinLock)
-            client.threadId = 0
-            release(client.spinLock)
 
           elif cfg.sslLib == OpenSSL or cfg.sslLib == LibreSSL or cfg.sslLib == BoringSSL:
             while true:
