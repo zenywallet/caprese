@@ -706,6 +706,11 @@ template serverTagLib*(cfg: static Config) {.dirty.} =
     copyMem(addr client.recvBuf[client.recvCurSize], addr data[0], size)
     client.recvCurSize = client.recvCurSize + size
 
+  proc addRecvBuf(client: Client, data: ptr UncheckedArray[byte], size: int, reserveSize: int) =
+    client.reserveRecvBuf(reserveSize)
+    copyMem(addr client.recvBuf[client.recvCurSize], addr data[0], size)
+    client.recvCurSize = client.recvCurSize + size
+
   proc sendNativeProc(client: Client, data: ptr UncheckedArray[byte], size: int): SendResult {.thread.} =
     var pos = 0
     var size = size
@@ -3692,8 +3697,7 @@ template serverLib(cfg: static Config) {.dirty.} =
                   if buf.isNil:
                     engine = SendRec
                   else:
-                    client.reserveRecvBuf(workerRecvBufSize)
-                    client.addRecvBuf(buf, bufLen.int)
+                    client.addRecvBuf(buf, bufLen.int, workerRecvBufSize)
                     br_ssl_engine_recvapp_ack(ec, bufLen.csize_t)
 
                     if client.recvCurSize >= 17 and equalMem(addr client.recvBuf[client.recvCurSize - 4], "\c\L\c\L".cstring, 4):
