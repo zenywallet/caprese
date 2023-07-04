@@ -3786,7 +3786,10 @@ template serverLib(cfg: static Config) {.dirty.} =
                         if client.dirty:
                           client.dirty = false
                           release(client.spinLock)
-                          engine = RecvApp
+                          if client.sendCurSize > 0:
+                            engine = SendApp
+                          else:
+                            engine = RecvApp
                         else:
                           client.threadId = 0
                           release(client.spinLock)
