@@ -4508,6 +4508,170 @@ template serverLib(cfg: static Config) {.dirty.} =
 
           elif cfg.sslLib == OpenSSL or cfg.sslLib == LibreSSL or cfg.sslLib == BoringSSL:
             echo "stream openssl"
+            let client = ctx.client
+
+            acquire(client.spinLock)
+            if client.threadId == 0:
+              client.threadId = ctx.threadId
+              release(client.spinLock)
+            else:
+              client.dirty = true
+              release(client.spinLock)
+              return
+
+            let sock = client.sock
+
+            `callStreamMainTmplStmt`
+
+            if client.recvCurSize == 0:
+              while true:
+                client.dirty = false
+                let recvlen = client.ssl.SSL_read(cast[pointer](ctx.pRecvBuf0), workerRecvBufSize.cint).int
+                if recvlen > 0:
+                  var (find, fin, opcode, payload, payloadSize,
+                      next, size) = getFrame(ctx.pRecvBuf0, recvlen)
+                  while find:
+                    if fin:
+                      var retStream = client.streamMain(opcode.toWebSocketOpCode, payload, payloadSize)
+                      case retStream
+                      of SendResult.Success:
+                        discard
+                      of SendResult.Pending:
+                        discard
+                      of SendResult.None, SendResult.Error, SendResult.Invalid:
+                        client.close(ssl = true)
+                    else:
+                      if not payload.isNil and payloadSize > 0:
+                        client.addRecvBuf(payload, payloadSize)
+                        client.payloadSize = payloadSize
+                      break
+                    (find, fin, opcode, payload, payloadSize, next, size) = getFrame(next, size)
+
+                  if not next.isNil and size > 0:
+                    client.addRecvBuf(next, size)
+                    if recvlen == workerRecvBufSize:
+                      break
+
+                  acquire(client.spinLock)
+                  if not client.dirty:
+                    client.threadId = 0
+                    release(client.spinLock)
+                    return
+                  else:
+                    release(client.spinLock)
+                    break
+
+                elif recvlen == 0:
+                  client.close(ssl = true)
+                  acquire(client.spinLock)
+                  client.threadId = 0
+                  release(client.spinLock)
+                  return
+                else:
+                  client.sslErr = SSL_get_error(client.ssl, recvlen.cint)
+                  if client.sslErr == SSL_ERROR_WANT_READ:
+                    acquire(client.spinLock)
+                    if not client.dirty:
+                      client.threadId = 0
+                      release(client.spinLock)
+                      client.ev.events = EPOLLIN or EPOLLRDHUP or EPOLLET
+                      var retCtl = epoll_ctl(epfd, EPOLL_CTL_MOD, cast[cint](client.sock), addr client.ev)
+                      if retCtl != 0:
+                        logs.error "error: epoll_ctl ret=", retCtl, " errno=", errno
+                      return
+                    else:
+                      release(client.spinLock)
+                  elif client.sslErr == SSL_ERROR_WANT_WRITE:
+                    if not client.dirty:
+                      client.threadId = 0
+                      release(client.spinLock)
+                      client.ev.events = EPOLLRDHUP or EPOLLET or EPOLLOUT
+                      var retCtl = epoll_ctl(epfd, EPOLL_CTL_MOD, cast[cint](client.sock), addr client.ev)
+                      if retCtl != 0:
+                        logs.error "error: epoll_ctl ret=", retCtl, " errno=", errno
+                      return
+                    else:
+                      release(client.spinLock)
+                  else:
+                    if errno == EINTR:
+                      continue
+                    client.close(ssl = true)
+                    break
+
+            while true:
+              client.reserveRecvBuf(workerRecvBufSize)
+              client.dirty = false
+              var recvlen = client.ssl.SSL_read(cast[pointer](addr client.recvBuf[client.recvCurSize]), workerRecvBufSize.cint).int
+              if recvlen > 0:
+                client.recvCurSize = client.recvCurSize + recvlen
+                var p = cast[ptr UncheckedArray[byte]](addr client.recvBuf[client.payloadSize])
+                var (find, fin, opcode, payload, payloadSize,
+                    next, size) = getFrame(p, client.recvCurSize - client.payloadSize)
+                while find:
+                  if not payload.isNil and payloadSize > 0:
+                    copyMem(p, payload, payloadSize)
+                    client.payloadSize = client.payloadSize + payloadSize
+                    p = cast[ptr UncheckedArray[byte]](addr client.recvBuf[client.payloadSize])
+                  if fin:
+                    var retStream = client.streamMain(opcode.toWebSocketOpCode,
+                                                      cast[ptr UncheckedArray[byte]](addr client.recvBuf[0]),
+                                                      client.payloadSize)
+                    case retStream
+                    of SendResult.Success:
+                      discard
+                    of SendResult.Pending:
+                      discard
+                    of SendResult.None, SendResult.Error, SendResult.Invalid:
+                      client.close(ssl = true)
+                    client.payloadSize = 0
+                    client.recvCurSize = 0
+                  (find, fin, opcode, payload, payloadSize, next, size) = getFrame(next, size)
+
+                if not next.isNil and size > 0:
+                  copyMem(p, next, size)
+                  client.recvCurSize = client.payloadSize + size
+                  if recvlen == workerRecvBufSize:
+                    continue
+                else:
+                  client.recvCurSize = client.payloadSize
+              elif recvlen == 0:
+                client.close(ssl = true)
+                break
+              else:
+                client.sslErr = SSL_get_error(client.ssl, recvlen.cint)
+                if client.sslErr == SSL_ERROR_WANT_READ:
+                  acquire(client.spinLock)
+                  if not client.dirty:
+                    client.threadId = 0
+                    release(client.spinLock)
+                    client.ev.events = EPOLLIN or EPOLLRDHUP or EPOLLET
+                    var retCtl = epoll_ctl(epfd, EPOLL_CTL_MOD, cast[cint](client.sock), addr client.ev)
+                    if retCtl != 0:
+                      logs.error "error: epoll_ctl ret=", retCtl, " errno=", errno
+                    return
+                  else:
+                    release(client.spinLock)
+                elif client.sslErr == SSL_ERROR_WANT_WRITE:
+                  if not client.dirty:
+                    client.threadId = 0
+                    release(client.spinLock)
+                    client.ev.events = EPOLLRDHUP or EPOLLET or EPOLLOUT
+                    var retCtl = epoll_ctl(epfd, EPOLL_CTL_MOD, cast[cint](client.sock), addr client.ev)
+                    if retCtl != 0:
+                      logs.error "error: epoll_ctl ret=", retCtl, " errno=", errno
+                    return
+                  else:
+                    release(client.spinLock)
+                else:
+                  if errno == EINTR:
+                    continue
+                  client.close(ssl = true)
+                  break
+
+            acquire(client.spinLock)
+            client.threadId = 0
+            release(client.spinLock)
+
         else:
           let client = ctx.client
 
