@@ -1,15 +1,15 @@
 # Copyright (c) 2021 zenywallet
 
-import macros
-import nativesockets
-import posix
+import std/macros
+import std/nativesockets
+import std/posix
+import std/sha1
+import std/base64
+import std/cpuinfo
+import std/os
+import std/strutils
 import logs
 import arraylib
-import std/sha1
-import base64
-import std/cpuinfo
-import os
-import strutils
 
 type
   ClientId* = int
