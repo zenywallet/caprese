@@ -147,41 +147,6 @@ macro HttpTargetHeader*(body: untyped): untyped =
   quote do:
     HttpTargetHeader(HeaderParams, TargetHeaderParams, TargetHeaders, `body`)
 
-
-#const RLIMIT_OPEN_FILES* = 65536
-#const CLIENT_MAX = 32000
-#const CLIENT_SEARCH_LIMIT = 30000
-#const WORKER_THREAD_NUM {.intdefine.} = 16
-#const EPOLL_EVENTS_SIZE = 10
-#const CLCL = 168626701'u32 # "\c\L\c\L"
-#const RECVBUF_EXPAND_BREAK_SIZE* = 131072 * 5
-#const MAX_FRAME_SIZE* = 131072 * 5
-#const WORKER_QUEUE_LIMIT = 10000
-#const WEBSOCKET_PROTOCOL = "deoxy-0.1"
-#const WEBSOCKET_ENTRY_POINT = "/ws"
-#const REQ_LIMIT_DISPATCH_PERIOD = 60
-#const REQ_LIMIT_DISPATCH_MAX = 1200
-#const REQ_LIMIT_HTTPS_ACCEPT_PERIOD = 60
-#const REQ_LIMIT_HTTPS_ACCEPT_MAX = 120
-#const REQ_LIMIT_HTTP_ACCEPT_PERIOD = 60
-#const REQ_LIMIT_HTTP_ACCEPT_MAX = 120
-#const ENABLE_KEEPALIVE = false
-#const ENABLE_TCP_NODELAY = true
-
-#[
-const ENABLE_SSL = defined(ENABLE_SSL)
-when ENABLE_SSL:
-  import openssl
-  import nimcrypto except toHex
-]#
-
-#[
-when (compiles do: include config):
-  include config
-else:
-  include config_default
-]#
-
 {.passC: "-flto".}
 {.passL: "-flto".}
 
