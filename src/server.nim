@@ -3766,7 +3766,10 @@ template serverLib(cfg: static Config) {.dirty.} =
                     let sendlen = sock.send(buf, bufLen.int, 0.cint)
                     if sendlen > 0:
                       br_ssl_engine_sendrec_ack(ec, sendlen.csize_t)
-                      engine = RecvApp
+                      if client.sendCurSize > 0:
+                        engine = SendApp
+                      else:
+                        engine = RecvApp
                     elif sendlen == 0:
                       client.close()
                       break
