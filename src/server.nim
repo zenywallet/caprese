@@ -4333,6 +4333,179 @@ template serverLib(cfg: static Config) {.dirty.} =
         when `ssl`:
           when cfg.sslLib == BearSSL:
             echo "stream bearssl"
+            let client = ctx.client
+            let sock = client.sock
+
+            acquire(client.spinLock)
+            if client.threadId == 0:
+              client.threadId = ctx.threadId
+              release(client.spinLock)
+            else:
+              client.dirty = true
+              release(client.spinLock)
+              return
+
+            `callStreamMainTmplStmt`
+
+            let sc = client.sc
+            let ec = addr client.sc.eng
+            var bufLen: csize_t
+            var buf: ptr UncheckedArray[byte]
+
+            var engine = if client.sendCurSize > 0: SendApp else: RecvApp
+
+            block engineBlock:
+              while true:
+                {.computedGoto.}
+                case engine
+                of RecvApp:
+                  buf = cast[ptr UncheckedArray[byte]](br_ssl_engine_recvapp_buf(ec, addr bufLen))
+                  if buf.isNil:
+                    engine = SendRec
+                  else:
+                    if client.recvCurSize == 0:
+                      client.payloadSize = 0
+                    client.addRecvBuf(buf, bufLen.int, if bufLen.int > workerRecvBufSize: bufLen.int else: workerRecvBufSize)
+                    br_ssl_engine_recvapp_ack(ec, bufLen.csize_t)
+                    var p = cast[ptr UncheckedArray[byte]](addr client.recvBuf[client.payloadSize])
+                    var (find, fin, opcode, payload, payloadSize,
+                        next, size) = getFrame(p, client.recvCurSize - client.payloadSize)
+                    while find:
+                      if not payload.isNil and payloadSize > 0:
+                        copyMem(p, payload, payloadSize)
+                        client.payloadSize = client.payloadSize + payloadSize
+                        p = cast[ptr UncheckedArray[byte]](addr client.recvBuf[client.payloadSize])
+                      if fin:
+                        var retStream = client.streamMain(opcode.toWebSocketOpCode,
+                                                          cast[ptr UncheckedArray[byte]](addr client.recvBuf[0]),
+                                                          client.payloadSize)
+                        case retStream
+                        of SendResult.Success, SendResult.Pending:
+                          engine = SendApp
+                        of SendResult.None, SendResult.Error, SendResult.Invalid:
+                          client.close()
+                          break engineBlock
+                        client.payloadSize = 0
+                      (find, fin, opcode, payload, payloadSize, next, size) = getFrame(next, size)
+
+                    if not next.isNil and size > 0:
+                      copyMem(p, next, size)
+                      client.recvCurSize = client.payloadSize + size
+                    else:
+                      client.recvCurSize = client.payloadSize
+
+                of SendRec:
+                  buf = cast[ptr UncheckedArray[byte]](br_ssl_engine_sendrec_buf(ec, addr bufLen))
+                  if buf.isNil:
+                    engine = RecvRec
+                    if client.ev.events == (EPOLLIN or EPOLLRDHUP or EPOLLET or EPOLLOUT):
+                      client.ev.events = EPOLLIN or EPOLLRDHUP or EPOLLET
+                      var retCtl = epoll_ctl(epfd, EPOLL_CTL_MOD, cast[cint](client.sock), addr client.ev)
+                      if retCtl != 0:
+                        acquire(client.spinLock)
+                        client.threadId = 0
+                        release(client.spinLock)
+                        break
+                  else:
+                    let sendlen = sock.send(buf, bufLen.int, 0.cint)
+                    if sendlen > 0:
+                      br_ssl_engine_sendrec_ack(ec, sendlen.csize_t)
+                      if client.sendCurSize > 0:
+                        engine = SendApp
+                      else:
+                        engine = RecvApp
+                    elif sendlen == 0:
+                      client.close()
+                      break
+                    else:
+                      if errno == EAGAIN or errno == EWOULDBLOCK:
+                        client.ev.events = EPOLLIN or EPOLLRDHUP or EPOLLET or EPOLLOUT
+                        var retCtl = epoll_ctl(epfd, EPOLL_CTL_MOD, cast[cint](client.sock), addr client.ev)
+                        if retCtl != 0:
+                          acquire(client.spinLock)
+                          client.threadId = 0
+                          release(client.spinLock)
+                          break
+                        acquire(client.spinLock)
+                        if client.dirty:
+                          client.dirty = false
+                          release(client.spinLock)
+                          if client.sendCurSize > 0:
+                            engine = SendApp
+                          else:
+                            engine = RecvApp
+                        else:
+                          client.threadId = 0
+                          release(client.spinLock)
+                          break
+                      elif errno == EINTR:
+                        continue
+                      else:
+                        client.close()
+                        break
+
+                of RecvRec:
+                  buf = cast[ptr UncheckedArray[byte]](br_ssl_engine_recvrec_buf(ec, addr bufLen))
+                  if buf.isNil:
+                    engine = SendApp
+                  else:
+                    let recvlen = sock.recv(buf, bufLen.int, 0.cint)
+                    if recvlen > 0:
+                      br_ssl_engine_recvrec_ack(ec, recvlen.csize_t)
+                      engine = RecvApp
+                    elif recvlen == 0:
+                      client.close()
+                      break
+                    else:
+                      if errno == EAGAIN or errno == EWOULDBLOCK:
+                        acquire(client.spinLock)
+                        if client.dirty:
+                          client.dirty = false
+                          release(client.spinLock)
+                          engine = RecvApp
+                        else:
+                          client.threadId = 0
+                          release(client.spinLock)
+                          break
+                      elif errno == EINTR:
+                        continue
+                      else:
+                        client.close()
+                        break
+
+                of SendApp:
+                  buf = cast[ptr UncheckedArray[byte]](br_ssl_engine_sendapp_buf(ec, addr bufLen))
+                  if buf.isNil:
+                    acquire(client.spinLock)
+                    if client.dirty:
+                      client.dirty = false
+                      release(client.spinLock)
+                      engine = RecvApp
+                    else:
+                      client.threadId = 0
+                      release(client.spinLock)
+                      break
+                  else:
+                    var sendSize = client.sendCurSize
+                    acquire(client.lock)
+                    if client.sendCurSize > 0:
+                      if bufLen.int >= client.sendCurSize:
+                        copyMem(buf, addr client.sendBuf[0], client.sendCurSize)
+                        client.sendCurSize = 0
+                        release(client.lock)
+                        br_ssl_engine_sendapp_ack(ec, sendSize.csize_t)
+                        br_ssl_engine_flush(ec, 0)
+                      else:
+                        copyMem(buf, client.sendBuf, bufLen.int)
+                        client.sendCurSize = client.sendCurSize - bufLen.int
+                        copyMem(addr client.sendBuf[0], addr client.sendBuf[bufLen], client.sendCurSize)
+                        release(client.lock)
+                        br_ssl_engine_sendapp_ack(ec, bufLen)
+                        br_ssl_engine_flush(ec, 0)
+                    else:
+                      release(client.lock)
+                    engine = SendRec
+
           elif cfg.sslLib == OpenSSL or cfg.sslLib == LibreSSL or cfg.sslLib == BoringSSL:
             echo "stream openssl"
         else:
