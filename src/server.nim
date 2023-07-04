@@ -3697,7 +3697,7 @@ template serverLib(cfg: static Config) {.dirty.} =
                   if buf.isNil:
                     engine = SendRec
                   else:
-                    client.addRecvBuf(buf, bufLen.int, workerRecvBufSize)
+                    client.addRecvBuf(buf, bufLen.int, if bufLen.int > workerRecvBufSize: bufLen.int else: workerRecvBufSize)
                     br_ssl_engine_recvapp_ack(ec, bufLen.csize_t)
 
                     if client.recvCurSize >= 17 and equalMem(addr client.recvBuf[client.recvCurSize - 4], "\c\L\c\L".cstring, 4):
