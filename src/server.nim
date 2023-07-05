@@ -5316,7 +5316,13 @@ template serverLib(cfg: static Config) {.dirty.} =
     discard sem_post(addr throttleBody)
     ]#
 
+template httpTargetHeaderDefault() {.dirty.} =
+  when not declared(TargetHeaderParams):
+    HttpTargetHeader:
+      HeaderHost: "Host"
+
 template serverStartWithCfg(cfg: static Config) =
+  httpTargetHeaderDefault()
   serverType()
   serverLib(cfg)
   startTimeStampUpdater()
