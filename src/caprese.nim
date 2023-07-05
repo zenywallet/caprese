@@ -60,11 +60,16 @@ template config*(body: untyped) {.dirty.} =
   addCfg()
   configCalls(body)
 
+template cfgDefault() {.dirty.} =
+  when not declared(cfg):
+    var cfg* {.compileTime.}: Config = defaultConfig()
+
 var initFlag {.compileTime.}: bool
 macro init(): untyped =
   if initFlag: return
   initFlag = true
   quote do:
+    cfgDefault()
     when cfg.debugLog: {.define: DEBUG_LOG.}
 
     serverInit()
