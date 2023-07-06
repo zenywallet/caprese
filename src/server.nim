@@ -174,10 +174,12 @@ template serverInit*() {.dirty.} =
     import bearssl/bearssl_hash
     import bearssl/bearssl_prf
     import bearssl/bearssl_pem
-    import bearssl/chain_rsa
-    import bearssl/key_rsa
-    #import bearssl/chain_ec
-    #import bearssl/key_ec
+    when defined(BEARSSL_DEFAULT_EC):
+      import bearssl/chain_ec
+      import bearssl/key_ec
+    else:
+      import bearssl/chain_rsa
+      import bearssl/key_rsa
 
   elif cfg.sslLib == OpenSSL or cfg.sslLib == LibreSSL or cfg.sslLib == BoringSSL:
     import openssl
@@ -4800,9 +4802,14 @@ template serverLib(cfg: static Config) {.dirty.} =
       errorQuit "error: inotify_init err=", errno
 
     when cfg.sslLib == BearSSL:
-      certKeyChainsList[0].key = CertPrivateKey(
-        type: CertPrivateKeyType.RSA,
-        rsa: cast[ptr br_rsa_private_key](unsafeAddr RSA))
+      when defined(BEARSSL_DEFAULT_EC):
+        certKeyChainsList[0].key = CertPrivateKey(
+          type: CertPrivateKeyType.EC,
+          ec: cast[ptr br_ec_private_key](unsafeAddr EC))
+      else:
+        certKeyChainsList[0].key = CertPrivateKey(
+          type: CertPrivateKeyType.RSA,
+          rsa: cast[ptr br_rsa_private_key](unsafeAddr RSA))
       certKeyChainsList[0].chains = X509CertificateChains(
         cert: cast[ptr UncheckedArray[br_x509_certificate]](unsafeAddr CHAIN[0]),
         certLen: CHAIN_LEN.csize_t)
