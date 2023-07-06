@@ -151,9 +151,9 @@ macro HttpTargetHeader*(body: untyped): untyped =
 {.passL: "-flto".}
 
 template serverInit*() {.dirty.} =
-  import locks
+  import std/epoll
+  import std/locks
   import ptlock
-  import epoll
   import logs
 
   when cfg.sslLib == BearSSL:
@@ -365,10 +365,11 @@ proc getErrnoStr*(): string =
   else: "errno=" & $errno
 
 template serverTagLib*(cfg: static Config) {.dirty.} =
+  import std/nativesockets
+  import std/posix
   import arraylib
   import bytes
   import hashtable
-  import nativesockets, posix
   import logs
 
   type
@@ -896,8 +897,8 @@ var abort*: proc() {.thread.} = proc() {.thread.} = active = false
 #  include stream
 
 template serverInitFreeClient() {.dirty.} =
+  import std/locks
   import queue2
-  import locks
   import ptlock
   import arraylib
   import logs
@@ -2457,16 +2458,17 @@ template serverType() {.dirty.} =
       minorVer: int
 
 template serverLib(cfg: static Config) {.dirty.} =
-  import posix, epoll
+  import std/posix
+  import std/epoll
+  import std/tables
+  import std/os
+  import std/sha1
+  import std/re
   import arraylib
   import bytes
   import queue2
   import ptlock
   import logs
-  import std/re
-  import tables
-  import os
-  import std/sha1
 
   mixin addSafe, popSafe
 
@@ -3260,9 +3262,9 @@ template serverLib(cfg: static Config) {.dirty.} =
       br_ssl_engine_set_default_chapol(addr cc.eng)
 
   elif cfg.sslLib == OpenSSL or cfg.sslLib == LibreSSL or cfg.sslLib == BoringSSL:
-    import os
-    import tables
-    import strutils
+    import std/os
+    import std/tables
+    import std/strutils
 
     proc selfSignedCertificate(ctx: SSL_CTX) =
       var x509: X509 = X509_new()
