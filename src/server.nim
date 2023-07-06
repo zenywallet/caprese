@@ -2376,6 +2376,21 @@ template stream*(path: string, protocol: string, body: untyped) = discard # code
 
 template stream*(path: string, body: untyped) = discard # code is added by macro
 
+template webSocketMessageProtocol(key, protocol: string): string =
+  "HTTP/1.1 " & $Status101 & "\c\L" &
+  "Upgrade: websocket\c\L" &
+  "Connection: Upgrade\c\L" &
+  "Sec-WebSocket-Accept: " & acceptKey(key) & "\c\L" &
+  "Sec-WebSocket-Protocol: " & protocol & "\c\L" &
+  "Sec-WebSocket-Version: 13\c\L\c\L"
+
+template webSocketMessage(key: string): string =
+  "HTTP/1.1 " & $Status101 & "\c\L" &
+  "Upgrade: websocket\c\L" &
+  "Connection: Upgrade\c\L" &
+  "Sec-WebSocket-Accept: " & acceptKey(key) & "\c\L" &
+  "Sec-WebSocket-Version: 13\c\L\c\L"
+
 # internal use only
 template stream*(streamAppId: int, path: string, protocol: string, body: untyped) =
   if reqUrl() == path:
@@ -2388,21 +2403,12 @@ template stream*(streamAppId: int, path: string, protocol: string, body: untyped
         if resProt.flag:
           if resProt.resProtocol.len > 0:
             reqClient()[].appId = streamAppId
-            let ret = send("HTTP/1.1 " & $Status101 & "\c\L" &
-                          "Upgrade: websocket\c\L" &
-                          "Connection: Upgrade\c\L" &
-                          "Sec-WebSocket-Accept: " & acceptKey(key) & "\c\L" &
-                          "Sec-WebSocket-Protocol: " & resProt.resProtocol & "\c\L" &
-                          "Sec-WebSocket-Version: 13\c\L\c\L")
+            let ret = send(webSocketMessageProtocol(key, resProt.resProtocol))
             getOnOpenBody(body)
             return ret
           else:
             reqClient()[].appId = streamAppId
-            let ret = send("HTTP/1.1 " & $Status101 & "\c\L" &
-                          "Upgrade: websocket\c\L" &
-                          "Connection: Upgrade\c\L" &
-                          "Sec-WebSocket-Accept: " & acceptKey(key) & "\c\L" &
-                          "Sec-WebSocket-Version: 13\c\L\c\L")
+            let ret = send(webSocketMessageProtocol(key))
             getOnOpenBody(body)
             return ret
         else:
@@ -2412,23 +2418,14 @@ template stream*(streamAppId: int, path: string, protocol: string, body: untyped
           let prot = getHeaderValue(InternalSecWebSocketProtocol)
           if prot == protocol:
             reqClient()[].appId = streamAppId
-            let ret = send("HTTP/1.1 " & $Status101 & "\c\L" &
-                          "Upgrade: websocket\c\L" &
-                          "Connection: Upgrade\c\L" &
-                          "Sec-WebSocket-Accept: " & acceptKey(key) & "\c\L" &
-                          "Sec-WebSocket-Protocol: " & protocol & "\c\L" &
-                          "Sec-WebSocket-Version: 13\c\L\c\L")
+            let ret = send(webSocketMessageProtocol(key, protocol))
             getOnOpenBody(body)
             return ret
           else:
             return SendResult.Error
         else:
           reqClient()[].appId = streamAppId
-          let ret = send("HTTP/1.1 " & $Status101 & "\c\L" &
-                        "Upgrade: websocket\c\L" &
-                        "Connection: Upgrade\c\L" &
-                        "Sec-WebSocket-Accept: " & acceptKey(key) & "\c\L" &
-                        "Sec-WebSocket-Version: 13\c\L\c\L")
+          let ret = send(webSocketMessageProtocol(key))
           getOnOpenBody(body)
           return ret
 
