@@ -182,6 +182,8 @@ template serverInit*() {.dirty.} =
       import bearssl/key_rsa
 
   elif cfg.sslLib == OpenSSL or cfg.sslLib == LibreSSL or cfg.sslLib == BoringSSL:
+    const sslLib = $cfg.sslLib
+    debug "SSL: " & sslLib
     import openssl
 
   type
