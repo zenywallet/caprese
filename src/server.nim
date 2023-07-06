@@ -3090,10 +3090,10 @@ template serverLib(cfg: static Config) {.dirty.} =
       debug "br_ssl_engine_get_server_name=", serverName
 
       var idx = certsIdxTable[].getOrDefault(serverName)
-      let certKeyChains = addr certKeyChainsList[idx]
+      var certKeyChains = addr certKeyChainsList[idx]
       if certKeyChains[].key.type == CertPrivateKeyType.None:
         debug "CertPrivateKeyType.None serverName=", serverName
-        return 0.cint
+        certKeyChains = addr certKeyChainsList[0]
       let certKey = certKeyChains[].key
       let chains = certKeyChains[].chains
 
@@ -4805,6 +4805,12 @@ template serverLib(cfg: static Config) {.dirty.} =
       errorQuit "error: inotify_init err=", errno
 
     when cfg.sslLib == BearSSL:
+      certKeyChainsList[0].key = CertPrivateKey(
+        type: CertPrivateKeyType.RSA,
+        rsa: cast[ptr br_rsa_private_key](unsafeAddr RSA))
+      certKeyChainsList[0].chains = X509CertificateChains(
+        cert: cast[ptr UncheckedArray[br_x509_certificate]](unsafeAddr CHAIN[0]),
+        certLen: CHAIN_LEN.csize_t)
       for serverName, val in certsTable[].pairs:
         var certKeyChains = addr certKeyChainsList[val.idx]
         let certsPath = certsTable[][serverName]
