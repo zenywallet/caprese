@@ -186,22 +186,13 @@ template serverInit*() {.dirty.} =
     ClientSendProc = proc (client: Client, data: ptr UncheckedArray[byte], size: int): SendResult {.thread.}
 
     ClientBase* = ref object of RootObj
-      idx: int
-      fd: int
+      sock*: SocketHandle
       recvBuf: ptr UncheckedArray[byte]
       recvBufSize: int
       recvCurSize: int
       sendBuf: ptr UncheckedArray[byte]
       sendCurSize: int
       keepAlive: bool
-      wsUpgrade: bool
-      payloadSize: int
-      when cfg.sslLib == BearSSL:
-        sc: ptr br_ssl_server_context
-        keyType: cint
-      elif cfg.sslLib == OpenSSL or cfg.sslLib == LibreSSL or cfg.sslLib == BoringSSL:
-        ssl: SSL
-        sslErr: int
       ip: uint32
       invoke: bool
       lock: Lock
@@ -209,17 +200,23 @@ template serverInit*() {.dirty.} =
       whackaMole: bool
       sendProc: ClientSendProc
       ev: EpollEvent
-
-    ClientObj* = object of ClientBase
-      pStream*: pointer
       clientId*: ClientId
-      sock*: SocketHandle
       threadId*: int
       srvId*: int
       appId*: int
       appShift: bool
       listenFlag*: bool
       dirty: bool
+
+    ClientObj* = object of ClientBase
+      payloadSize: int
+      when cfg.sslLib == BearSSL:
+        sc: ptr br_ssl_server_context
+        keyType: cint
+      elif cfg.sslLib == OpenSSL or cfg.sslLib == LibreSSL or cfg.sslLib == BoringSSL:
+        ssl: SSL
+        sslErr: int
+      pStream*: pointer
 
     Client* = ptr ClientObj
 
@@ -911,15 +908,13 @@ template serverInitFreeClient() {.dirty.} =
   proc initClient(clientMax: static int, ClientObj, Client: typedesc) =
     var p = cast[ptr UncheckedArray[ClientObj]](allocShared0(sizeof(ClientObj) * clientMax))
     for i in 0..<clientMax:
-      p[i].idx = i
-      p[i].fd = osInvalidSocket.int
+      p[i].sock = osInvalidSocket
       p[i].recvBuf = nil
       p[i].recvBufSize = 0
       p[i].recvCurSize = 0
       p[i].sendBuf = nil
       p[i].sendCurSize = 0
       p[i].keepAlive = true
-      p[i].wsUpgrade = false
       p[i].payloadSize = 0
       when cfg.sslLib == OpenSSL or cfg.sslLib == LibreSSL or cfg.sslLib == BoringSSL:
         p[i].ssl = nil
