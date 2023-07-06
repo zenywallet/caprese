@@ -2346,9 +2346,9 @@ template certificates*(path: string, body: untyped) = discard # code is added by
 
 template certificates*(body: untyped) = discard # code is added by macro
 
-proc acceptKey(key: string): string =
-  var sh = secureHash(key & "258EAFA5-E914-47DA-95CA-C5AB0DC85B11")
-  return base64.encode(sh.Sha1Digest)
+template acceptKey(key: string): string =
+  var sh = sha1.secureHash(key & "258EAFA5-E914-47DA-95CA-C5AB0DC85B11")
+  base64.encode(sh.Sha1Digest)
 
 macro onProtocolBodyExists(body: untyped): untyped =
   for s in body:
@@ -2469,6 +2469,7 @@ template serverLib(cfg: static Config) {.dirty.} =
   import std/re
   import tables
   import os
+  import std/sha1
 
   mixin addSafe, popSafe
 
