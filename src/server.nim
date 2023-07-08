@@ -147,9 +147,6 @@ macro HttpTargetHeader*(body: untyped): untyped =
   quote do:
     HttpTargetHeader(HeaderParams, TargetHeaderParams, TargetHeaders, `body`)
 
-{.passC: "-flto".}
-{.passL: "-flto".}
-
 template serverInit*() {.dirty.} =
   import std/epoll
   import std/locks
@@ -5376,6 +5373,8 @@ template serverStop*() =
       logs.error "error: quit shutdown ret=", retShutdown, " ", getErrnoStr()
   stopTimeStampUpdater()
 
+{.passC: "-flto".}
+{.passL: "-flto".}
 
 #[
 when isMainModule:
