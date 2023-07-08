@@ -221,10 +221,6 @@ template serverInit*() {.dirty.} =
 
     Client* = ptr ClientObj
 
-  #ClientArray = array[CLIENT_MAX, ClientObj]
-
-  #Headers* = Table[string, string]
-
 type
   WebSocketOpCode* = enum
     Continue = 0x0
