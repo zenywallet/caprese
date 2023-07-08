@@ -3386,6 +3386,7 @@ template serverLib(cfg: static Config) {.dirty.} =
 
   proc appListenSsl(ctx: WorkerThreadCtx) {.thread.} = appListenBase(ctx, true)
 
+  #[
   proc appRoutes(ctx: WorkerThreadCtx) {.thread.} =
     let client = ctx.client
     let sock = client.sock
@@ -3496,6 +3497,7 @@ template serverLib(cfg: static Config) {.dirty.} =
             continue
           client.close()
         break
+  ]#
 
   proc appRoutesSend(ctx: WorkerThreadCtx) {.thread.} =
     echo "appRoutesSend"
