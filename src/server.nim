@@ -2108,7 +2108,7 @@ var freePoolServerUsedCount* {.compileTime.} = 0
 var sockTmp = createNativeSocket()
 var workerRecvBufSize*: int = sockTmp.getSockOptInt(SOL_SOCKET, SO_RCVBUF)
 sockTmp.close()
-var serverWorkerNum: int
+var serverWorkerNum*: int
 var highGear* = false
 
 macro initServer*(): untyped =
