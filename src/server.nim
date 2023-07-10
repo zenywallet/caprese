@@ -2109,17 +2109,7 @@ var sockTmp = createNativeSocket()
 var workerRecvBufSize*: int = sockTmp.getSockOptInt(SOL_SOCKET, SO_RCVBUF)
 sockTmp.close()
 var serverWorkerNum: int
-#var clientQueue = queue2.newQueue[Client](0x10000)
 var highGear = false
-var highGearManagerAssinged: int = 0
-var highGearSemaphore: Sem
-discard sem_init(addr highGearSemaphore, 0, 0)
-#discard sem_destroy(addr highGearSemaphore)
-var throttleBody: Sem
-discard sem_init(addr throttleBody, 0, 0)
-#discard sem_destroy(addr throttleBody)
-var throttleChanged: bool = false
-var highGearThreshold: int
 
 macro initServer*(): untyped =
   if not initServerFlag:
@@ -2488,6 +2478,17 @@ template serverLib(cfg: static Config) {.dirty.} =
 
   var workerThreadCtx {.threadvar.}: WorkerThreadCtx
   #var clientHandlerProcs: Array[ClientHandlerProc]
+
+  #var clientQueue = queue2.newQueue[Client](0x10000)
+  var highGearManagerAssinged: int = 0
+  var highGearSemaphore: Sem
+  discard sem_init(addr highGearSemaphore, 0, 0)
+  #discard sem_destroy(addr highGearSemaphore)
+  var throttleBody: Sem
+  discard sem_init(addr throttleBody, 0, 0)
+  #discard sem_destroy(addr throttleBody)
+  var throttleChanged: bool = false
+  var highGearThreshold: int
 
   macro certificates*(srvId: int, site: string, path: string, body: untyped = newEmptyNode()): untyped =
     var srvId = intVal(srvId).int
