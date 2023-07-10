@@ -2109,7 +2109,7 @@ var sockTmp = createNativeSocket()
 var workerRecvBufSize*: int = sockTmp.getSockOptInt(SOL_SOCKET, SO_RCVBUF)
 sockTmp.close()
 var serverWorkerNum: int
-var highGear = false
+var highGear* = false
 
 macro initServer*(): untyped =
   if not initServerFlag:
