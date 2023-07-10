@@ -3593,9 +3593,7 @@ template serverLib(cfg: static Config) {.dirty.} =
         clientHandlerProcs.add appListen
 
   template routesMainTmpl(body: untyped) {.dirty.} =
-    proc routesMain(ctx: WorkerThreadCtx, client: Client,
-      pRecvBuf: ptr UncheckedArray[byte],
-      header: ReqHeader): SendResult {.inline.} =
+    proc routesMain(ctx: WorkerThreadCtx, client: Client): SendResult {.inline.} =
       body
 
   when cfg.sslLib == BearSSL:
@@ -3667,7 +3665,7 @@ template serverLib(cfg: static Config) {.dirty.} =
                         let retHeader = parseHeader(ctx.pRecvBuf, parseSize, ctx.targetHeaders)
                         if retHeader.err == 0:
                           ctx.header = retHeader.header
-                          let retMain = routesMain(ctx, client, ctx.pRecvBuf, ctx.header)
+                          let retMain = routesMain(ctx, client)
                           engine = SendRec
                           if retMain == SendResult.Success:
                             if client.keepAlive == true:
@@ -3891,7 +3889,7 @@ template serverLib(cfg: static Config) {.dirty.} =
                     let retHeader = parseHeader(ctx.pRecvBuf, parseSize, ctx.targetHeaders)
                     if retHeader.err == 0:
                       ctx.header = retHeader.header
-                      let retMain = routesMain(ctx, client, ctx.pRecvBuf, ctx.header)
+                      let retMain = routesMain(ctx, client)
                       if retMain == SendResult.Success:
                         if ctx.header.minorVer == 0 or getHeaderValue(ctx.pRecvBuf, ctx.header,
                           InternalEssentialHeaderConnection) == "close":
@@ -3944,7 +3942,7 @@ template serverLib(cfg: static Config) {.dirty.} =
                     let retHeader = parseHeader(ctx.pRecvBuf, parseSize, ctx.targetHeaders)
                     if retHeader.err == 0:
                       ctx.header = retHeader.header
-                      let retMain = routesMain(ctx, client, ctx.pRecvBuf, ctx.header)
+                      let retMain = routesMain(ctx, client)
                       if retMain == SendResult.Success:
                         if client.keepAlive == true:
                           if ctx.header.minorVer == 0 or getHeaderValue(ctx.pRecvBuf, ctx.header,
@@ -4018,7 +4016,7 @@ template serverLib(cfg: static Config) {.dirty.} =
                     let retHeader = parseHeader(ctx.pRecvBuf, parseSize, ctx.targetHeaders)
                     if retHeader.err == 0:
                       ctx.header = retHeader.header
-                      let retMain = routesMain(ctx, client, ctx.pRecvBuf, ctx.header)
+                      let retMain = routesMain(ctx, client)
                       if retMain == SendResult.Success:
                         if ctx.header.minorVer == 0 or getHeaderValue(ctx.pRecvBuf, ctx.header,
                           InternalEssentialHeaderConnection) == "close":
@@ -4092,7 +4090,7 @@ template serverLib(cfg: static Config) {.dirty.} =
                     let retHeader = parseHeader(ctx.pRecvBuf, parseSize, ctx.targetHeaders)
                     if retHeader.err == 0:
                       ctx.header = retHeader.header
-                      let retMain = routesMain(ctx, client, ctx.pRecvBuf, ctx.header)
+                      let retMain = routesMain(ctx, client)
                       if retMain == SendResult.Success:
                         if client.keepAlive == true:
                           if ctx.header.minorVer == 0 or getHeaderValue(ctx.pRecvBuf, ctx.header,
