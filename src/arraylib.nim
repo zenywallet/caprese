@@ -162,10 +162,16 @@ else:
 
   proc `$`*[T](a: Array[T]): string =
     if a.len > 0:
-      result = "@^[" & $a[0]
-      for i in 1..<a.len:
-        result.add(", " & $a[i])
-      result.add("]")
+      when T is string:
+        result = "@^[\"" & $a[0]
+        for i in 1..<a.len:
+          result.add("\", \"" & $a[i])
+        result.add("\"]")
+      else:
+        result = "@^[" & $a[0]
+        for i in 1..<a.len:
+          result.add(", " & $a[i])
+        result.add("]")
     else:
       result = "@^[]"
 
