@@ -995,16 +995,6 @@ template serverInitFreeClient() {.dirty.} =
     else:
       release(client.spinLock)
 
-proc atomic_compare_exchange_n(p: ptr int, expected: ptr int, desired: int, weak: bool,
-                              success_memmodel: int, failure_memmodel: int): bool
-                              {.importc: "__atomic_compare_exchange_n", nodecl, discardable.}
-
-proc atomic_fetch_add(p: ptr int, val: int, memmodel: int): int
-                        {.importc: "__atomic_fetch_add", nodecl, discardable.}
-
-proc atomic_fetch_sub(p: ptr int, val: int, memmodel: int): int
-                        {.importc: "__atomic_fetch_sub", nodecl, discardable.}
-
 #[
 proc setClient(fd: int): int =
   var usedCount = 0
@@ -2489,6 +2479,16 @@ template serverLib(cfg: static Config) {.dirty.} =
   #discard sem_destroy(addr throttleBody)
   var throttleChanged: bool = false
   var highGearThreshold: int
+
+  proc atomic_compare_exchange_n(p: ptr int, expected: ptr int, desired: int, weak: bool,
+                                success_memmodel: int, failure_memmodel: int): bool
+                                {.importc: "__atomic_compare_exchange_n", nodecl, discardable.}
+
+  proc atomic_fetch_add(p: ptr int, val: int, memmodel: int): int
+                          {.importc: "__atomic_fetch_add", nodecl, discardable.}
+
+  proc atomic_fetch_sub(p: ptr int, val: int, memmodel: int): int
+                          {.importc: "__atomic_fetch_sub", nodecl, discardable.}
 
   macro certificates*(srvId: int, site: string, path: string, body: untyped = newEmptyNode()): untyped =
     var srvId = intVal(srvId).int
