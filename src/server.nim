@@ -984,6 +984,8 @@ template serverInitFreeClient() {.dirty.} =
       client.keepAlive = true
       client.payloadSize = 0
       client.appShift = false
+      when cfg.sslLib == None:
+        client.listenFlag = false
       acquire(client.lock)
       let clientId = client.clientId
       if clientId != INVALID_CLIENT_ID:
@@ -2223,6 +2225,8 @@ macro addServerMacro*(bindAddress: string, port: uint16, ssl: bool, sslLib: SslL
     newClient.sock = serverSock
     newClient.srvId = `srvId`
     newClient.appId = `appId`
+    when cfg.sslLib == None:
+      newClient.listenFlag = true
     newClient.ev.events = EPOLLIN or EPOLLEXCLUSIVE
     var retCtl = epoll_ctl(epfd, EPOLL_CTL_ADD, serverSock, addr newClient.ev)
     if retCtl != 0:
@@ -2469,7 +2473,7 @@ template serverLib(cfg: static Config) {.dirty.} =
   var workerThreadCtx {.threadvar.}: WorkerThreadCtx
   #var clientHandlerProcs: Array[ClientHandlerProc]
 
-  #var clientQueue = queue2.newQueue[Client](0x10000)
+  var clientQueue = queue2.newQueue[Client](0x10000)
   var highGearManagerAssinged: int = 0
   var highGearSemaphore: Sem
   discard sem_init(addr highGearSemaphore, 0, 0)
@@ -3382,6 +3386,13 @@ template serverLib(cfg: static Config) {.dirty.} =
       let retCtl = epoll_ctl(epfd, EPOLL_CTL_ADD, cast[cint](clientSock), addr newClient.ev)
       if retCtl < 0:
         errorRaise "error: epoll_ctl ret=", retCtl, " errno=", errno
+
+      when cfg.sslLib == None:
+        if (cfg.clientMax - FreePoolServerUsedCount) - clientFreePool.count >= highGearThreshold:
+          if highGearManagerAssinged == 0:
+            highGear = true
+            for i in 0..<serverWorkerNum:
+              discard sem_post(addr throttleBody)
 
   proc appListen(ctx: WorkerThreadCtx) {.thread.} = appListenBase(ctx, false)
 
@@ -5000,18 +5011,100 @@ template serverLib(cfg: static Config) {.dirty.} =
 
     ctx.pRecvBuf0 = pRecvBuf0
 
-    while active:
-      nfd = epoll_wait(epfd, cast[ptr EpollEvent](addr events),
-                      cfg.epollEventsSize.cint, -1.cint)
-      for i in 0..<nfd:
-        try:
-          ctx.client = cast[Client](pevents[i].data)
-          cast[ClientHandlerProc](clientHandlerProcs[ctx.client.appId])(ctx)
-        except:
-          let e = getCurrentException()
-          logs.error e.name, ": ", e.msg
-    return
+    when cfg.sslLib != None:
+      while active:
+        nfd = epoll_wait(epfd, cast[ptr EpollEvent](addr events),
+                        cfg.epollEventsSize.cint, -1.cint)
+        for i in 0..<nfd:
+          try:
+            ctx.client = cast[Client](pevents[i].data)
+            cast[ClientHandlerProc](clientHandlerProcs[ctx.client.appId])(ctx)
+          except:
+            let e = getCurrentException()
+            logs.error e.name, ": ", e.msg
 
+    else:
+      while active:
+        if ctx.threadId == 1:
+          nfd = epoll_wait(epfd, cast[ptr EpollEvent](addr events),
+                          cfg.epollEventsSize.cint, -1.cint)
+          if not throttleChanged and nfd >= 7:
+            throttleChanged = true
+            discard sem_post(addr throttleBody)
+        else:
+          if skip:
+            nfd = epoll_wait(epfd, cast[ptr EpollEvent](addr events),
+                            cfg.epollEventsSize.cint, 10.cint)
+          else:
+            discard sem_wait(addr throttleBody)
+            if highGear:
+              nfd = 0
+            else:
+              skip = true
+              nfd = epoll_wait(epfd, cast[ptr EpollEvent](addr events),
+                              cfg.epollEventsSize.cint, 0.cint)
+              throttleChanged = false
+          if nfd == 0 and not highGear:
+            skip = false
+            continue
+
+        for i in 0..<nfd:
+          try:
+            ctx.client = cast[Client](pevents[i].data)
+            cast[ClientHandlerProc](clientHandlerProcs[ctx.client.appId])(ctx)
+          except:
+            let e = getCurrentException()
+            logs.error e.name, ": ", e.msg
+
+        if highGear:
+          var assinged = atomic_fetch_add(addr highGearManagerAssinged, 1, 0)
+          if assinged == 0:
+            while highGear:
+              var nfd = epoll_wait(epfd, cast[ptr EpollEvent](addr events),
+                                  cfg.epollEventsSize.cint, 1000.cint)
+              if nfd > 0:
+                var i = 0
+                while true:
+                  ctx.client = cast[Client](pevents[i].data)
+                  if ctx.client.listenFlag:
+                    cast[ClientHandlerProc](clientHandlerProcs[ctx.client.appId])(ctx)
+                    if highGear and (cfg.clientMax - FreePoolServerUsedCount) - clientFreePool.count < highGearThreshold:
+                      highGear = false
+                  else:
+                    clientQueue.send(ctx.client)
+                  inc(i)
+                  if i >= nfd: break
+              else:
+                if clientQueue.count > 0:
+                  for i in 0..<serverWorkerNum:
+                    clientQueue.sendFlush()
+
+            if clientQueue.count > 0:
+              for i in 0..<serverWorkerNum:
+                clientQueue.sendFlush()
+            while true:
+              ctx.client = clientQueue.popSafe()
+              if ctx.client.isNil:
+                break
+              cast[ClientHandlerProc](clientHandlerProcs[ctx.client.appId])(ctx)
+
+            for i in 0..<serverWorkerNum:
+              clientQueue.sendFlush()
+            while true:
+              if highGearManagerAssinged == 1:
+                atomic_fetch_sub(addr highGearManagerAssinged, 1, 0)
+                break
+              sleep(10)
+              clientQueue.sendFlush()
+
+          else:
+            while true:
+              ctx.client = clientQueue.recv(highGear)
+              if ctx.client.isNil: break
+              cast[ClientHandlerProc](clientHandlerProcs[ctx.client.appId])(ctx)
+            atomic_fetch_sub(addr highGearManagerAssinged, 1, 0)
+
+      discard sem_post(addr throttleBody)
 
     #[
     while active:
