@@ -2450,6 +2450,7 @@ template serverLib(cfg: static Config) {.dirty.} =
   import queue2
   import ptlock
   import logs
+  import files
 
   mixin addSafe, popSafe
 
@@ -2667,6 +2668,19 @@ template serverLib(cfg: static Config) {.dirty.} =
   template get(path: Regex, body: untyped) {.dirty.} =
     if headerUrl() =~ path:
       body
+
+  template acme(body: untyped) {.dirty.} =
+    block:
+      var (content, mine) = getAcmeChallenge(ctx.header.url)
+      body
+      if content.len > 0:
+        return send(content.addHeader(Status200, mine))
+
+  template acmeDefault() {.dirty.} =
+    block:
+      var (content, mine) = getAcmeChallenge(ctx.header.url)
+      if content.len > 0:
+        return send(content.addHeader(Status200, mine))
 
   template reqUrl: string {.dirty.} = ctx.header.url
 
