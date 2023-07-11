@@ -1191,7 +1191,7 @@ proc workerMain(client: Client, buf: ptr UncheckedArray[byte], size: int, appId:
   var retMain = SendResult.None
   var headers = initTable[string, string]()
 
-  while i  < size - 3:
+  while i < size - 3:
     if equalMem(addr buf[i], "\c\L".cstring, 2):
       var reqdata = (cast[ptr UncheckedArray[byte]](addr buf[cur])).toString(i - cur)
       if first:
@@ -5293,7 +5293,7 @@ template serverLib(cfg: static Config) {.dirty.} =
           if flag:
             sock.close()
             clientFreePool.addSafe(pClient)
-            if highGear and (CLIENT_MAX - FreePoolServerUsedCount) - clientFreePool.count  < highGearThreshold:
+            if highGear and (CLIENT_MAX - FreePoolServerUsedCount) - clientFreePool.count < highGearThreshold:
               highGear = false
 
         template highGearMain() =
