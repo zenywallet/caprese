@@ -2669,16 +2669,16 @@ template serverLib(cfg: static Config) {.dirty.} =
     if headerUrl() =~ path:
       body
 
-  template acme(body: untyped) {.dirty.} =
+  template acme(path: static string, body: untyped) {.dirty.} =
     block:
-      var (content, mine) = getAcmeChallenge(ctx.header.url)
+      var (content, mine) = getAcmeChallenge(path, ctx.header.url)
       body
       if content.len > 0:
         return send(content.addHeader(Status200, mine))
 
-  template acmeDefault() {.dirty.} =
+  template acme(path: static string) {.dirty.} =
     block:
-      var (content, mine) = getAcmeChallenge(ctx.header.url)
+      var (content, mine) = getAcmeChallenge(path, ctx.header.url)
       if content.len > 0:
         return send(content.addHeader(Status200, mine))
 

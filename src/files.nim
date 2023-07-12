@@ -106,13 +106,12 @@ when not DYNAMIC_FILES:
     except KeyError:
       result = FileContentResult(err: FileContentNotFound)
 
-  proc getAcmeChallenge*(file: string): tuple[content: string, mime: string] =
+  proc getAcmeChallenge*(path, file: string): tuple[content: string, mime: string] =
     try:
       if file.startsWith("/.well-known/acme-challenge/"):
         let fileSplit = splitFile(file)
         if fileSplit.dir == "/.well-known/acme-challenge":
-          let challengeFile = getCurrentDir() /
-                              "public/.well-known/acme-challenge" / fileSplit.name
+          let challengeFile = path / ".well-known/acme-challenge" / fileSplit.name
           let data = readFile(challengeFile)
           let mime = "text/plain"
           result = (data, mime)
