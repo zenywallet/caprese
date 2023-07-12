@@ -152,8 +152,8 @@ else:
           let mime = mimes.getMimeType(ext)
           let md5 = base64.encode(data.toMD5())
           result = FileContentResult(err: FileContentSuccess, data: FileContent(content: data,
-            deflate: cast[string](nil), brotli: cast[string](nil), mime: mime,
-            sha256: cast[string](nil), md5: md5))
+            deflate: cast[string](""), brotli: cast[string](""), mime: mime,
+            sha256: cast[string](""), md5: md5))
       except:
         result = FileContentResult(err: FileContentNotFound)
 
