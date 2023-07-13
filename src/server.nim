@@ -4842,7 +4842,7 @@ template serverLib(cfg: static Config) {.dirty.} =
         cert: cast[ptr UncheckedArray[br_x509_certificate]](unsafeAddr CHAIN[0]),
         certLen: CHAIN_LEN.csize_t)
       for serverName, val in certsTable[].pairs:
-        var certKeyChains = addr certKeyChainsList[val.idx]
+        let certKeyChains = addr certKeyChainsList[val.idx]
         let certsPath = certsTable[][serverName]
         certKeyChains[].chains = createChains(readFile(certsPath.chainPath))
         var certDatas = decodePem(readFile(certsPath.privPath))
