@@ -2671,14 +2671,15 @@ template serverLib(cfg: static Config) {.dirty.} =
 
   template acme(path: static string, body: untyped) {.dirty.} =
     block:
-      var (content, mime) = getAcmeChallenge(path, ctx.header.url)
-      body
-      if content.len > 0:
-        return send(content.addHeader(Status200, mime))
+      var (acmeFlag, content, mime) = getAcmeChallenge(path, ctx.header.url)
+      if acmeFlag:
+        body
+        if content.len > 0:
+          return send(content.addHeader(Status200, mime))
 
   template acme(path: static string) {.dirty.} =
     block:
-      var (content, mime) = getAcmeChallenge(path, ctx.header.url)
+      var (acmeFlag, content, mime) = getAcmeChallenge(path, ctx.header.url)
       if content.len > 0:
         return send(content.addHeader(Status200, mime))
 
