@@ -2907,11 +2907,13 @@ template serverLib(cfg: static Config) {.dirty.} =
     proc freeChains(chains: var X509CertificateChains) =
       for i in 0..<chains.certLen:
         chains.cert[i].data_len = 0
-        deallocShared(chains.cert[i].data)
-        chains.cert[i].data = nil
+        if not chains.cert[i].data.isNil:
+          deallocShared(chains.cert[i].data)
+          chains.cert[i].data = nil
       chains.certLen = 0
-      deallocShared(chains.cert)
-      chains.cert = nil
+      if not chains.cert.isNil:
+        deallocShared(chains.cert)
+        chains.cert = nil
 
     var certKeyChainsList: Array[tuple[key: CertPrivateKey, chains: X509CertificateChains]]
 
