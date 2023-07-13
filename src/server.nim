@@ -4918,8 +4918,8 @@ template serverLib(cfg: static Config) {.dirty.} =
             if val.idx == idx:
               let certKeyChains = addr certKeyChainsList[idx]
               if certKeyChains[].key.type != CertPrivateKeyType.None:
-                freeCertPrivateKey(certKeyChains[].key)
-                freeChains(certKeyChains[].chains)
+                freeCertPrivateKey(certKeyChainsList[idx].key)
+                freeChains(certKeyChainsList[idx].chains)
               certKeyChains[].chains = createChains(readFile(val.chainPath))
               var certDatas = decodePem(readFile(val.privPath))
               let certData = certDatas[0]
