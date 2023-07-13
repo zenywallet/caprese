@@ -2848,6 +2848,7 @@ template serverLib(cfg: static Config) {.dirty.} =
           zeroMem(certPrivKey.rsa, sizeof(br_rsa_private_key))
           deallocShared(certPrivKey.rsa)
           certPrivKey.rsa = nil
+          certPrivKey = CertPrivateKey(type: CertPrivateKeyType.None)
 
       of CertPrivateKeyType.EC:
         if not certPrivKey.ec.isNil:
@@ -2856,6 +2857,7 @@ template serverLib(cfg: static Config) {.dirty.} =
           zeroMem(certPrivKey.ec, sizeof(br_ec_private_key))
           deallocShared(certPrivKey.ec)
           certPrivKey.ec = nil
+          certPrivKey = CertPrivateKey(type: CertPrivateKeyType.None)
 
       of CertPrivateKeyType.None:
         discard
