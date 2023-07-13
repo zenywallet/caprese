@@ -4856,7 +4856,7 @@ template serverLib(cfg: static Config) {.dirty.} =
       var siteCtxs: array[staticCertsTable.len + 1, SiteCtx]
       for site in certsTable[].keys:
         var val = certsTable[][site]
-        siteCtxs[val.idx].ctx = newSslCtx(site)
+        siteCtxs[val.idx].ctx = newSslCtx(selfSignedCertFallback = true)
 
     var certUpdateFlags: array[staticCertsTable.len + 1, tuple[priv, chain: bool, checkCount: int]]
     for i in 0..<certUpdateFlags.len:
@@ -4929,7 +4929,7 @@ template serverLib(cfg: static Config) {.dirty.} =
           for site, val in certsTable[].pairs:
             if val.idx == idx:
               var oldCtx = siteCtxs[idx].ctx
-              siteCtxs[idx].ctx = newSslCtx(site)
+              siteCtxs[idx].ctx = newSslCtx(selfSignedCertFallback = true)
               oldCtx.SSL_CTX_free()
               break
 
