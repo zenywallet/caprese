@@ -2301,6 +2301,7 @@ macro createCertsTable*(): untyped =
 
 macro createCertsFileNameList*(): untyped =
   var certsFileNameList: seq[tuple[privFileName, chainFileName: string]]
+  certsFileNameList.add(("", ""))
   for d in certsTableData:
     certsFileNameList.add((d.val.privFileName, d.val.chainFileName))
   newConstStmt(
@@ -4879,7 +4880,7 @@ template serverLib(cfg: static Config) {.dirty.} =
       errorQuit "error: certificates path does not exists"
 
     var certWatchList: Array[tuple[path: Array[char], wd: cint, idxList: Array[tuple[idx: int, ctype: int]]]]
-    var idx = 0
+    var idx = 1
     for c in certsTable[].values:
       for ctype, path in [c.privPath, c.chainPath]:
         block SearchPath:
