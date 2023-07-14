@@ -160,6 +160,49 @@ else:
         result = FileContentResult(err: FileContentNotFound)
 
 
+var buildToolFlag {.compileTime.} = false
+macro buildCompressTools() =
+  if not buildToolFlag:
+    buildToolFlag = true
+    echo staticExec("nim c -d:release " & (srcDir / "zopfli.nim"))
+    echo staticExec("nim c -d:release " & (srcDir / "brotli.nim"))
+
+macro createStaticFilesTable*(importPath: string): untyped =
+  buildCompressTools()
+  var path = getProjectPath() / $importPath
+  echo "createStaticFilesTable: ", path
+  let pathLen = path.len
+  let mimes = newMimetypes()
+  var filesTable: seq[tuple[key: string, val: FileContent]]
+  for f in walkDirRec(path):
+    let filename = f[pathLen..^1]
+    let fileSplit = splitFile(filename)
+    let data = readFile(f)
+    var ext = ""
+    if fileSplit.ext.len > 1:
+      ext = fileSplit.ext[1..^1]
+    let mime = mimes.getMimeType(ext)
+    let hash = base64.encode(sha256.digest(data).data)
+    let md5 = base64.encode(data.getMD5().toBytesFromHex)
+
+    var zopfliComp, brotliComp: string
+    if data.len > 0:
+      discard staticExec((srcDir / "zopfli") & " " & f & " " & (srcDir / "zopfli_tmp"))
+      zopfliComp = readFile(srcDir / "zopfli_tmp")
+      discard staticExec("rm " & (srcDir / "zopfli_tmp"))
+
+      discard staticExec((srcDir / "brotli") & " " & f & " " & (srcDir / "brotli_tmp"))
+      brotliComp = readFile(srcDir / "brotli_tmp")
+      discard staticExec("rm " & (srcDir / "brotli_tmp"))
+
+      filesTable.add((filename, FileContent(content: data,
+                      deflate: zopfliComp, brotli: brotliComp,
+                      mime: mime, sha256: hash, md5: md5)))
+      echo filename, " ", mime, " ", data.len, " ", zopfliComp.len, " ", brotliComp.len
+
+  newCall("toTable", newLit(filesTable))
+
+
 when isMainModule:
   when not DYNAMIC_FILES:
     echo getConstFile("/")
@@ -170,3 +213,6 @@ when isMainModule:
     echo getDynamicFile("/")
     echo getDynamicFile("/index.html")
     echo getDynamicFile("/index")
+
+  const filesTable1 = createStaticFilesTable(importPath = "../www/YOUR_DOMAIN_1")
+  const filesTable2 = createStaticFilesTable(importPath = "../www/YOUR_DOMAIN_2")
