@@ -4845,11 +4845,29 @@ template serverLib(cfg: static Config) {.dirty.} =
       for serverName, val in certsTable[].pairs:
         let certKeyChains = addr certKeyChainsList[val.idx]
         let certsPath = certsTable[][serverName]
-        certKeyChains[].chains = createChains(readFile(certsPath.chainPath))
-        var certDatas = decodePem(readFile(certsPath.privPath))
-        let certData = certDatas[0]
-        certKeyChains[].key = decodeCertPrivateKey(certData.data)
-        clearPemObjs(certDatas)
+        var noFile = false
+        if not fileExists(certsPath.privPath):
+          logs.error "not found ", certsPath.privPath
+          noFile = true
+        if not fileExists(certsPath.chainPath):
+          logs.error "not found ", certsPath.chainPath
+          noFile = true
+        if noFile:
+          continue
+        try:
+          certKeyChains[].chains = createChains(readFile(certsPath.chainPath))
+          try:
+            var certDatas = decodePem(readFile(certsPath.privPath))
+            let certData = certDatas[0]
+            certKeyChains[].key = decodeCertPrivateKey(certData.data)
+            clearPemObjs(certDatas)
+          except:
+            freeChains(certKeyChainsList[val.idx].chains)
+            let e = getCurrentException()
+            logs.error e.name, " ", e.msg
+        except:
+          let e = getCurrentException()
+          logs.error e.name, " ", e.msg
 
     when cfg.sslLib == OpenSSL or cfg.sslLib == LibreSSL or cfg.sslLib == BoringSSL:
       type
@@ -4917,15 +4935,33 @@ template serverLib(cfg: static Config) {.dirty.} =
         when cfg.sslLib == BearSSL:
           for site, val in certsTable[].pairs:
             if val.idx == idx:
+              var noFile = false
+              if not fileExists(val.privPath):
+                logs.debug "not found ", val.privPath
+                noFile = true
+              if not fileExists(val.chainPath):
+                logs.debug "not found ", val.chainPath
+                noFile = true
+              if noFile:
+                break
               let certKeyChains = addr certKeyChainsList[idx]
               if certKeyChains[].key.type != CertPrivateKeyType.None:
                 freeCertPrivateKey(certKeyChainsList[idx].key)
                 freeChains(certKeyChainsList[idx].chains)
-              certKeyChains[].chains = createChains(readFile(val.chainPath))
-              var certDatas = decodePem(readFile(val.privPath))
-              let certData = certDatas[0]
-              certKeyChains[].key = decodeCertPrivateKey(certData.data)
-              clearPemObjs(certDatas)
+              try:
+                certKeyChains[].chains = createChains(readFile(val.chainPath))
+                try:
+                  var certDatas = decodePem(readFile(val.privPath))
+                  let certData = certDatas[0]
+                  certKeyChains[].key = decodeCertPrivateKey(certData.data)
+                  clearPemObjs(certDatas)
+                except:
+                  freeChains(certKeyChainsList[idx].chains)
+                  let e = getCurrentException()
+                  logs.error e.name, " ", e.msg
+              except:
+                let e = getCurrentException()
+                logs.error e.name, " ", e.msg
               break
 
         when cfg.sslLib == OpenSSL or cfg.sslLib == LibreSSL or cfg.sslLib == BoringSSL:
