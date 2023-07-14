@@ -2921,6 +2921,9 @@ template serverLib(cfg: static Config) {.dirty.} =
         chains.cert = nil
 
     var certKeyChainsList: Array[tuple[key: CertPrivateKey, chains: X509CertificateChains]]
+    var certKeyChainsListLock: Lock
+    initLock(certKeyChainsListLock)
+    #deinitLock(certKeyChainsListLock)
 
     let suites = [uint16_t BR_TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256,
                   BR_TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256]
@@ -3113,8 +3116,10 @@ template serverLib(cfg: static Config) {.dirty.} =
       if certKeyChains[].key.type == CertPrivateKeyType.None:
         debug "CertPrivateKeyType.None serverName=", serverName
         certKeyChains = addr certKeyChainsList[0]
+      acquire(certKeyChainsListLock)
       let certKey = certKeyChains[].key
       let chains = certKeyChains[].chains
+      release(certKeyChainsListLock)
 
       case certKey.type
       of CertPrivateKeyType.EC:
@@ -4946,8 +4951,11 @@ template serverLib(cfg: static Config) {.dirty.} =
                 break
               let certKeyChains = addr certKeyChainsList[idx]
               if certKeyChains[].key.type != CertPrivateKeyType.None:
+                acquire(certKeyChainsListLock)
                 freeCertPrivateKey(certKeyChainsList[idx].key)
                 freeChains(certKeyChainsList[idx].chains)
+              else:
+                acquire(certKeyChainsListLock)
               try:
                 certKeyChains[].chains = createChains(readFile(val.chainPath))
                 try:
@@ -4955,11 +4963,14 @@ template serverLib(cfg: static Config) {.dirty.} =
                   let certData = certDatas[0]
                   certKeyChains[].key = decodeCertPrivateKey(certData.data)
                   clearPemObjs(certDatas)
+                  release(certKeyChainsListLock)
                 except:
                   freeChains(certKeyChainsList[idx].chains)
+                  release(certKeyChainsListLock)
                   let e = getCurrentException()
                   logs.error e.name, " ", e.msg
               except:
+                release(certKeyChainsListLock)
                 let e = getCurrentException()
                 logs.error e.name, " ", e.msg
               break
