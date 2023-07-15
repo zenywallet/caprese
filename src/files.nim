@@ -195,6 +195,15 @@ macro createStaticFilesTable*(importPath: string): untyped =
       itemId = 0
   newCall("toTable", newLit(filesTable))
 
+proc getStaticFile*(filesTable: Table[string, FileContent], file: string): FileContentResult =
+  try:
+    if file.endsWith("/"):
+      result = FileContentResult(err: FileContentSuccess, data: filesTable[file & "index.html"])
+    else:
+      result = FileContentResult(err: FileContentSuccess, data: filesTable[file])
+  except KeyError:
+    result = FileContentResult(err: FileContentNotFound)
+
 
 when isMainModule:
   when not DYNAMIC_FILES:
