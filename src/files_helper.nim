@@ -51,8 +51,16 @@ if paramCount() == 2:
       let mime = mimes.getMimeType(ext)
       let hash = base64.encode(sha256.digest(content).data)
       let md5 = base64.encode(content.getMD5().toBytesFromHex)
-      let zopfliComp = zopfli.comp(content)
-      let brotliComp = brotli.comp(content)
+      var zopfliComp, brotliComp: seq[byte]
+      if content.len > 0:
+        try:
+          zopfliComp = zopfli.comp(content)
+        except:
+          echo "error: zopfli comp"
+        try:
+          brotliComp = brotli.comp(content)
+        except:
+          echo "error: brotli comp"
       let dump = (filename.len, filename,
                   content.len, content,
                   zopfliComp.len, zopfliComp,
