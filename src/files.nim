@@ -164,42 +164,35 @@ var buildToolFlag {.compileTime.} = false
 macro buildCompressTools() =
   if not buildToolFlag:
     buildToolFlag = true
-    echo staticExec("nim c -d:release " & (srcDir / "zopfli.nim"))
-    echo staticExec("nim c -d:release " & (srcDir / "brotli.nim"))
+    echo staticExec("nim c -d:release --threads:on " & (srcDir / "files_helper.nim"))
 
 macro createStaticFilesTable*(importPath: string): untyped =
   buildCompressTools()
   var path = getProjectPath() / $importPath
   echo "createStaticFilesTable: ", path
-  let pathLen = path.len
-  let mimes = newMimetypes()
+  let tmpFile = srcDir / "files_helper_tmp"
+  discard staticExec((srcDir / "files_helper") & " " & path& " " & tmpFile)
+  var dump = readFile(tmpFile)
+  discard staticExec("rm " & tmpFile)
+  var last = dump.len
+  var pos = 0
   var filesTable: seq[tuple[key: string, val: FileContent]]
-  for f in walkDirRec(path):
-    let filename = f[pathLen..^1]
-    let fileSplit = splitFile(filename)
-    let data = readFile(f)
-    var ext = ""
-    if fileSplit.ext.len > 1:
-      ext = fileSplit.ext[1..^1]
-    let mime = mimes.getMimeType(ext)
-    let hash = base64.encode(sha256.digest(data).data)
-    let md5 = base64.encode(data.getMD5().toBytesFromHex)
-
-    var zopfliComp, brotliComp: string
-    if data.len > 0:
-      discard staticExec((srcDir / "zopfli") & " " & f & " " & (srcDir / "zopfli_tmp"))
-      zopfliComp = readFile(srcDir / "zopfli_tmp")
-      discard staticExec("rm " & (srcDir / "zopfli_tmp"))
-
-      discard staticExec((srcDir / "brotli") & " " & f & " " & (srcDir / "brotli_tmp"))
-      brotliComp = readFile(srcDir / "brotli_tmp")
-      discard staticExec("rm " & (srcDir / "brotli_tmp"))
-
-      filesTable.add((filename, FileContent(content: data,
-                      deflate: zopfliComp, brotli: brotliComp,
-                      mime: mime, sha256: hash, md5: md5)))
-      echo filename, " ", mime, " ", data.len, " ", zopfliComp.len, " ", brotliComp.len
-
+  var datas: array[7, string]
+  var itemId = 0
+  while pos + 8 < last:
+    var size = 0
+    for i in 0..7:
+      size = dump[pos + 7 - i].int + (size shl 8)
+    pos = pos + 8
+    datas[itemId] = dump[pos..<pos+size]
+    pos = pos + size
+    inc(itemId)
+    if itemId > 6:
+      filesTable.add((datas[0], FileContent(content: datas[1],
+                      deflate: datas[2], brotli: datas[3],
+                      mime: datas[4], sha256: datas[5], md5: datas[6])))
+      echo datas[0], " ", datas[4], " ", datas[1].len, " ", datas[2].len, " ", datas[3].len
+      itemId = 0
   newCall("toTable", newLit(filesTable))
 
 
