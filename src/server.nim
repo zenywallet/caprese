@@ -68,7 +68,9 @@ macro HttpTargetHeader(idEnumName, valListName, targetHeaders, body: untyped): u
                                   ("InternalEssentialHeaderConnection", "Connection"),
                                   ("InternalSecWebSocketKey", "Sec-WebSocket-Key"),
                                   ("InternalSecWebSocketProtocol", "Sec-WebSocket-Protocol"),
-                                  ("InternalSecWebSocketVersion", "Sec-WebSocket-Version")]
+                                  ("InternalSecWebSocketVersion", "Sec-WebSocket-Version"),
+                                  ("InternalAcceptEncoding", "Accept-Encoding"),
+                                  ("InternalIfNoneMatch", "If-None-Match")]
   var internalEssentialConst = nnkStmtList.newTree()
 
   for a in body:
@@ -2081,6 +2083,7 @@ proc stop*() {.inline.} =
 var initServerFlag {.compileTime.} = false
 var curSrvId {.compileTime.} = 0
 var curAppId {.compileTime.} = 0
+var curResId {.compileTime.} = 0
 var serverWorkerInitStmt {.compileTime.} = newStmtList()
 var serverWorkerMainStmt {.compileTime.} =
   nnkStmtList.newTree(
@@ -2135,6 +2138,7 @@ macro addServerMacro*(bindAddress: string, port: uint16, ssl: bool, sslLib: SslL
   else:
     inc(curAppId)
     serverHandlerList.add(("appRoutesSend", ssl, newStmtList()))
+  var serverResources = newStmtList()
   var routesList = newStmtList()
   for s in body:
     if eqIdent(s[0], "routes"):
@@ -2196,6 +2200,25 @@ macro addServerMacro*(bindAddress: string, port: uint16, ssl: bool, sslLib: SslL
           serverHandlerList.add(("appStream", ssl, s2[s2.len - 1]))
           inc(curAppId)
           serverHandlerList.add(("appStreamSend", ssl, newStmtList()))
+        elif eqIdent(s2[0], "public"):
+          var importPath = s2[1]
+          inc(curResId)
+          var filesTableName = newIdentNode("staticFilesTable" & $curResId)
+          var bodyEmpty = false
+          if s2.len < 3:
+            bodyEmpty = true
+            s2.add(newStmtList())
+          s2[2].insert 0, quote do:
+            template getFile(url: string): FileContentResult =
+              `filesTableName`.getStaticFile(url)
+          if bodyEmpty:
+            s2[2].add quote do:
+              block:
+                var retFile = getFile(reqUrl)
+                if retFile.err == FileContentSuccess:
+                  return response(retFile.data)
+          serverResources.add quote do:
+            const `filesTableName` = createStaticFilesTable(`importPath`)
         routesBody.add(s2)
 
       routesBase[routesBase.len - 1] = routesBody
@@ -2208,6 +2231,8 @@ macro addServerMacro*(bindAddress: string, port: uint16, ssl: bool, sslLib: SslL
 
   quote do:
     from nativesockets import setBlocking, getSockOptInt, setSockOptInt
+
+    `serverResources`
 
     var serverSock = createServer(`bindAddress`, `port`)
     addReleaseOnQuit(serverSock)
@@ -2412,6 +2437,8 @@ template stream*(streamAppId: int, path: string, protocol: string, body: untyped
           getOnOpenBody(body)
           return ret
 
+template public*(importPath: string, body: untyped) = body
+
 #[
 var clientSocketLocks: array[WORKER_THREAD_NUM, cint]
 for i in 0..<WORKER_THREAD_NUM:
@@ -2446,6 +2473,8 @@ template serverLib(cfg: static Config) {.dirty.} =
   import std/os
   import std/sha1
   import std/re
+  import std/strutils
+  import std/sequtils
   import arraylib
   import bytes
   import queue2
@@ -2699,6 +2728,19 @@ template serverLib(cfg: static Config) {.dirty.} =
 
   template getHeaderValue(paramId: HeaderParams): string {.dirty.} =
     getHeaderValue(ctx.pRecvBuf, ctx.header, paramId)
+
+  template response(file: FileContent): SendResult =
+    if reqHeader(InternalIfNoneMatch) == file.md5:
+      send(Empty.addHeader(Status304))
+    else:
+      var acceptEnc = reqHeader(InternalAcceptEncoding).split(",")
+      acceptEnc.apply(proc(x: string): string = x.strip)
+      if acceptEnc.contains("br"):
+        send(file.brotli.addHeaderBrotli(file.md5, Status200, file.mime))
+      elif acceptEnc.contains("deflate"):
+        send(file.deflate.addHeaderDeflate(file.md5, Status200, file.mime))
+      else:
+        send(file.content.addHeader(file.md5, Status200, file.mime))
 
   proc mainServerHandler(ctx: WorkerThreadCtx, client: Client, pRecvBuf: ptr UncheckedArray[byte], header: ReqHeader): SendResult {.inline.} =
     let appId = client.appId - 1
