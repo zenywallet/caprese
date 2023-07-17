@@ -3,6 +3,7 @@
 
 import os, strutils, mimetypes
 import md5, base64
+import macros, tables
 
 const DYNAMIC_FILES* = defined(DYNAMIC_FILES)
 const DYNAMIC_COMPRESS* = false
@@ -36,10 +37,7 @@ type FileContentResult* = object
 
 const srcDir = currentSourcePath().parentDir()
 
-when not DYNAMIC_FILES:
-  import macros, tables
-
-else:
+when DYNAMIC_FILES:
   var currentPublicDir {.threadvar.}: string
   var mimes {.threadvar.}: MimeDB
 
