@@ -39,20 +39,6 @@ when not DYNAMIC_FILES:
 
   const srcDir = currentSourcePath().parentDir()
 
-  proc getAcmeChallenge*(path, file: string): tuple[acmeFlag: bool, content: string, mime: string] =
-    if file.startsWith("/.well-known/acme-challenge/"):
-      let fileSplit = splitFile(file)
-      if fileSplit.dir == "/.well-known/acme-challenge":
-        let challengeFile = path / ".well-known/acme-challenge" / fileSplit.name
-        try:
-          let data = readFile(challengeFile)
-          let mime = "text/plain"
-          result = (true, data, mime)
-        except:
-          result = (true, "", "")
-      else:
-        result = (true, "", "")
-
 else:
   var currentPublicDir {.threadvar.}: string
   var mimes {.threadvar.}: MimeDB
@@ -92,6 +78,19 @@ else:
       except:
         result = FileContentResult(err: FileContentNotFound)
 
+proc getAcmeChallenge*(path, file: string): tuple[acmeFlag: bool, content: string, mime: string] =
+  if file.startsWith("/.well-known/acme-challenge/"):
+    let fileSplit = splitFile(file)
+    if fileSplit.dir == "/.well-known/acme-challenge":
+      let challengeFile = path / ".well-known/acme-challenge" / fileSplit.name
+      try:
+        let data = readFile(challengeFile)
+        let mime = "text/plain"
+        result = (true, data, mime)
+      except:
+        result = (true, "", "")
+    else:
+      result = (true, "", "")
 
 var buildToolFlag {.compileTime.} = false
 macro buildCompressTools() =
