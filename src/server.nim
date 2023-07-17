@@ -2437,7 +2437,9 @@ template stream*(streamAppId: int, path: string, protocol: string, body: untyped
           getOnOpenBody(body)
           return ret
 
-template public*(importPath: string, body: untyped) = body
+template public*(importPath: string, body: untyped) =
+  block:
+    body
 
 #[
 var clientSocketLocks: array[WORKER_THREAD_NUM, cint]
