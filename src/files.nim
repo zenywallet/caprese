@@ -4,17 +4,11 @@
 import os, strutils, mimetypes
 import md5, base64
 import macros, tables
+import nimcrypto
+import bytes
 
 const DYNAMIC_FILES* = defined(DYNAMIC_FILES)
 const DYNAMIC_COMPRESS* = false
-
-when not DYNAMIC_FILES or DYNAMIC_COMPRESS:
-  import nimcrypto
-  import bytes
-
-when DYNAMIC_COMPRESS:
-  import zip/zlib
-  import brotli
 
 type FileContent* = object
   content*: string
@@ -38,6 +32,10 @@ type FileContentResult* = object
 const srcDir = currentSourcePath().parentDir()
 
 when DYNAMIC_FILES:
+  when DYNAMIC_COMPRESS:
+    import zip/zlib
+    import brotli
+
   var currentPublicDir {.threadvar.}: string
   var mimes {.threadvar.}: MimeDB
 
