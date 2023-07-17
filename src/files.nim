@@ -34,10 +34,10 @@ type FileContentResult* = object
   of FileContentNotFound:
     discard
 
+const srcDir = currentSourcePath().parentDir()
+
 when not DYNAMIC_FILES:
   import macros, tables
-
-  const srcDir = currentSourcePath().parentDir()
 
 else:
   var currentPublicDir {.threadvar.}: string
