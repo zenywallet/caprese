@@ -4944,7 +4944,7 @@ template serverLib(cfg: static Config) {.dirty.} =
         logs.error "error: not found path=", folder
         folderCheck = false
     if not folderCheck:
-      errorQuit "error: certificates path does not exists"
+      logs.error "error: certificates path does not exists"
 
     var certWatchList: Array[tuple[path: Array[char], wd: cint, idxList: Array[tuple[idx: int, ctype: int]]]]
     var idx = 1
@@ -4958,7 +4958,7 @@ template serverLib(cfg: static Config) {.dirty.} =
               break SearchPath
           var wd = inotify_add_watch(inoty, watchFolder.cstring, IN_CLOSE_WRITE)
           if wd == -1:
-            errorQuit "error: inotify_add_watch path=", watchFolder
+            logs.error "error: inotify_add_watch path=", watchFolder
           var nextPos = certWatchList.len
           certWatchList.setLen(nextPos + 1)
           certWatchList[nextPos].path = watchFolder.toArray
