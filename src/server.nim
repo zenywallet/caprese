@@ -4966,7 +4966,7 @@ template serverLib(cfg: static Config) {.dirty.} =
           certWatchList[nextPos].idxList.add((idx, ctype.int))
       inc(idx)
 
-    proc freeFileWacher() =
+    proc freeFileWatcher() =
       if inoty != -1:
         for w in certWatchList:
           discard inoty.inotify_rm_watch(w.wd)
@@ -5254,7 +5254,7 @@ template serverStartWithCfg(cfg: static Config) =
       logs.error "error: close epfd=", epfd, " ret=", retEpfdClose, " ", getErrnoStr()
   freeClient(cfg.clientMax)
   when cfg.sslLib != None:
-    freeFileWacher()
+    freeFileWatcher()
     joinThread(fileWatcherThread)
   joinThread(contents.timeStampThread)
 
