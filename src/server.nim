@@ -4969,8 +4969,10 @@ template serverLib(cfg: static Config) {.dirty.} =
     proc freeFileWatcher() =
       if inoty != -1:
         for w in certWatchList:
-          discard inoty.inotify_rm_watch(w.wd)
+          if w.wd >= 0:
+            discard inoty.inotify_rm_watch(w.wd)
         discard inoty.close()
+        inoty = -1
 
     proc fileWatcher(arg: ThreadArg) {.thread.} =
       var evs = newSeq[byte](sizeof(InotifyEvent) * 512)
