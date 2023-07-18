@@ -2207,12 +2207,14 @@ macro addServerMacro*(bindAddress: string, port: uint16, ssl: bool, sslLib: SslL
           var bodyEmpty = false
           if s2.len < 3:
             bodyEmpty = true
-            s2.add(newStmtList())
-          s2[2].insert 0, quote do:
+            s2.add(newBlockStmt(newStmtList()))
+          else:
+            s2[2] = newBlockStmt(s2[2])
+          s2[2][1].insert 0, quote do:
             template getFile(url: string): FileContentResult =
               `filesTableName`.getStaticFile(url)
           if bodyEmpty:
-            s2[2].add quote do:
+            s2[2][1].add quote do:
               block:
                 var retFile = getFile(reqUrl)
                 if retFile.err == FileContentSuccess:
@@ -2437,9 +2439,7 @@ template stream*(streamAppId: int, path: string, protocol: string, body: untyped
           getOnOpenBody(body)
           return ret
 
-template public*(importPath: string, body: untyped) =
-  block:
-    body
+template public*(importPath: string, body: untyped) = body
 
 #[
 var clientSocketLocks: array[WORKER_THREAD_NUM, cint]
