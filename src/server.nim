@@ -41,6 +41,7 @@ type
     clientMax*: int
     recvBufExpandBreakSize*: int
     maxFrameSize*: int
+    certsPath*: string
     privKeyFile*: string
     fullChainFile*: string
 
@@ -57,6 +58,7 @@ proc defaultConfig*(): Config {.compileTime.} =
   result.clientMax = 32000
   result.recvBufExpandBreakSize = 131072 * 5
   result.maxFrameSize = 131072 * 5
+  result.certsPath = "./certs"
   result.privKeyFile = "privkey.pem"
   result.fullChainFile = "fullchain.pem"
 
@@ -2539,6 +2541,8 @@ template serverLib(cfg: static Config) {.dirty.} =
           priv = $s[1][0]
         elif eqIdent(s[0], "fullChain"):
           chain = $s[1][0]
+    if path.len == 0:
+      path = cfg.certsPath / site
     if priv.len == 0:
       priv = cfg.privKeyFile
     if chain.len == 0:
