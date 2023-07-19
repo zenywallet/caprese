@@ -4993,8 +4993,6 @@ template serverLib(cfg: static Config) {.dirty.} =
               if not fileExists(val.chainPath):
                 logs.debug "not found ", val.chainPath
                 noFile = true
-              if noFile:
-                break
               let certKeyChains = addr certKeyChainsList[idx]
               if certKeyChains[].key.type != CertPrivateKeyType.None:
                 acquire(certKeyChainsListLock)
@@ -5002,6 +5000,9 @@ template serverLib(cfg: static Config) {.dirty.} =
                 freeChains(certKeyChainsList[idx].chains)
               else:
                 acquire(certKeyChainsListLock)
+              if noFile:
+                release(certKeyChainsListLock)
+                break
               try:
                 certKeyChains[].chains = createChains(readFile(val.chainPath))
                 try:
@@ -5046,16 +5047,25 @@ template serverLib(cfg: static Config) {.dirty.} =
                     updateCerts(idx)
                   else:
                     inc(certUpdateFlags[idx].checkCount)
+              for i, w in certWatchList:
+                if w.wd == -1:
+                  let watchFolder = w.path.toString()
+                  certWatchList[i].wd = inotify_add_watch(inoty, watchFolder.cstring, IN_CLOSE_WRITE)
+                  if certWatchList[i].wd >= 0:
+                    logs.debug "certs watch add: ", watchFolder
+                    for d in w.idxList:
+                      var idx = d.idx
+                      updateCerts(idx)
             continue
           let n = read(inoty, evs[0].addr, evs.len)
           if n <= 0: break
           for e in inotify_events(evs[0].addr, n):
             if e[].len > 0:
-              var filename = $cast[cstring](addr e[].name)
-              for w in certWatchList:
+              for i, w in certWatchList:
                 if w.wd == e[].wd:
                   var ids = w.idxList
-                  debug "certs watch: ", w.path.toString / filename
+                  var filename = $cast[cstring](addr e[].name)
+                  logs.debug "certs watch: ", w.path.toString / filename
                   for d in ids:
                     case d.ctype
                     of 0:
@@ -5065,6 +5075,18 @@ template serverLib(cfg: static Config) {.dirty.} =
                       if filename == certsFileNameList[d.idx].chainFileName:
                         certUpdateFlags[d.idx].chain = true
                     else: discard
+                  break
+            else:
+              for i, w in certWatchList:
+                if w.wd == e[].wd:
+                  if (e[].mask and IN_IGNORED) > 0:
+                    if w.wd >= 0:
+                      certWatchList[i].wd = -1
+                      discard inoty.inotify_rm_watch(w.wd)
+                      logs.debug "certs watch remove: ", w.path.toString()
+                      for d in w.idxList:
+                        certUpdateFlags[d.idx].priv = true
+                        certUpdateFlags[d.idx].chain = true
 
           for idx, flag in certUpdateFlags:
             if flag.priv and flag.chain:
