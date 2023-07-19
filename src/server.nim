@@ -2160,8 +2160,10 @@ macro addServerMacro*(bindAddress: string, port: uint16, ssl: bool, sslLib: SslL
           break
       var routesBase = s.copy()
       var routesBody = newStmtList()
+      var certsBlockFlag = false
       for s2 in s[s.len - 1]:
         if eqIdent(s2[0], "certificates"):
+          certsBlockFlag = true
           if s2.len > 1:
             if s2[1].kind == nnkStrLit:
               s2[1] = nnkExprEqExpr.newTree(
@@ -2230,6 +2232,10 @@ macro addServerMacro*(bindAddress: string, port: uint16, ssl: bool, sslLib: SslL
           serverResources.add quote do:
             const `filesTableName` = createStaticFilesTable(`importPath`)
         routesBody.add(s2)
+
+      if not certsBlockFlag and ssl == newLit(true):
+        routesBody.insert 0, quote do:
+          certificates(`srvId`, `hostname`, "")
 
       routesBase[routesBase.len - 1] = routesBody
       routesList.add(routesBase)
