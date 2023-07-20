@@ -2560,8 +2560,14 @@ template serverLib(cfg: static Config) {.dirty.} =
     if chain.len == 0:
       chain = cfg.fullChainFile
     if path.len > 0:
-      privPath = path / priv
-      chainPath = path / chain
+      if priv == splitPath(priv).tail:
+        privPath = path / priv
+      else:
+        privPath = priv
+      if chain == splitPath(chain).tail:
+        chainPath = path / chain
+      else:
+        chainPath = chain
     else:
       privPath = priv
       chainPath = chain
