@@ -5,3 +5,4 @@ htmldocs/
 !*/
 !*.*
 src/lib/
+src/zopfli/

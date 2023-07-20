@@ -2,17 +2,17 @@
 
 import os
 
-const zopfliPath = currentSourcePath().parentDir() / "../deps/zopfli"
+const zopfliPath = currentSourcePath().parentDir() / "zopfli"
 
-{.passC: "-I\"" & zopfliPath / "src/zopfli" & "\"".}
-{.compile: zopfliPath / "src/zopfli/deflate.c".}
-{.compile: zopfliPath / "src/zopfli/blocksplitter.c".}
-{.compile: zopfliPath / "src/zopfli/squeeze.c".}
-{.compile: zopfliPath / "src/zopfli/tree.c".}
-{.compile: zopfliPath / "src/zopfli/lz77.c".}
-{.compile: zopfliPath / "src/zopfli/hash.c".}
-{.compile: zopfliPath / "src/zopfli/katajainen.c".}
-{.compile: zopfliPath / "src/zopfli/cache.c".}
+{.passC: "-I\"" & zopfliPath  & "\"".}
+{.compile: zopfliPath / "deflate.c".}
+{.compile: zopfliPath / "blocksplitter.c".}
+{.compile: zopfliPath / "squeeze.c".}
+{.compile: zopfliPath / "tree.c".}
+{.compile: zopfliPath / "lz77.c".}
+{.compile: zopfliPath / "hash.c".}
+{.compile: zopfliPath / "katajainen.c".}
+{.compile: zopfliPath / "cache.c".}
 
 {.emit: """
 #include "deflate.h"
