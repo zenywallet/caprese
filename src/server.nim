@@ -415,16 +415,19 @@ template serverTagLib*(cfg: static Config) {.dirty.} =
 
   proc markPending*(client: Client): ClientId {.discardable.} =
     withWriteLock clientsLock:
-      while true:
-        inc(curClientId)
-        if curClientId >= int.high:
-          curClientId = 1
-        let cur = pendingClients.get(curClientId)
-        if cur.isNil:
-          break
-      client.clientId = curClientId
-      pendingClients.set(curClientId, client)
-      result = curClientId
+      if client.clientId == INVALID_CLIENT_ID:
+        while true:
+          inc(curClientId)
+          if curClientId >= int.high:
+            curClientId = 1
+          let cur = pendingClients.get(curClientId)
+          if cur.isNil:
+            break
+        client.clientId = curClientId
+        pendingClients.set(curClientId, client)
+        result = curClientId
+      else:
+        result = client.clientId
 
   proc unmarkPending*(clientId: ClientId) =
     withWriteLock clientsLock:
