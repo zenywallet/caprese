@@ -5,7 +5,7 @@ author        = "zenywallet"
 description   = "A front-end web server specialized for real-time message exchange"
 license       = "MIT"
 srcDir        = "src"
-installExt    = @["nim", "a"]
+installExt    = @["nim", "a", "jar"]
 bin           = @["caprese"]
 
 
