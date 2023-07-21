@@ -60,6 +60,11 @@ task zopfli, "Copy zopfli":
     exec "mkdir -p ../../src/zopfli"
     exec "cp src/zopfli/* ../../src/zopfli/"
 
+task brotli, "Copy brotli":
+  withDir "deps/brotli":
+    exec "mkdir -p ../../src/brotli"
+    exec "cp -r c ../../src/brotli/"
+
 task deps, "Build deps":
   exec "git submodule update --init"
   bearsslTask()
@@ -67,6 +72,7 @@ task deps, "Build deps":
   libresslTask()
   boringsslTask()
   zopfliTask()
+  brotliTask()
 
 before build:
   exec "git submodule update --init"
@@ -79,3 +85,4 @@ before build:
   if not fileExists("src/lib/boringssl/libssl.a") or not fileExists("src/lib/boringssl/libcrypto.a"):
     boringsslTask()
   zopfliTask()
+  brotliTask()

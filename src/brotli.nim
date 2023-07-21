@@ -2,7 +2,7 @@
 
 import os
 
-const brotliPath = currentSourcePath().parentDir() / "../deps/brotli"
+const brotliPath = currentSourcePath().parentDir() / "brotli"
 
 {.passC: "-I\"" & brotliPath / "c/include" & "\"".}
 {.passL: "-lm".}
