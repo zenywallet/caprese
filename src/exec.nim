@@ -7,11 +7,13 @@ import strutils
 
 const srcFile = currentSourcePath()
 const (srcFileDir, srcFileName, srcFileExt) = splitFile(srcFile)
-const execHelperExe = srcFileDir / "exec_helper"
-const execHelperSrc = execHelperExe & srcFileExt
+const binDir = srcFileDir / "bin"
+const execHelperExe = binDir / "exec_helper"
+const execHelperSrc = srcFileDir / "exec_helper" & srcFileExt
 
 macro buildExecHelper() =
-  echo staticExec("nim c " & execHelperSrc)
+  echo "--buildExecHelperbuildExecHelperbuildExecHelper"
+  echo staticExec("nim c -o:bin/ " & execHelperSrc)
 buildExecHelper()
 
 proc randomStr*(): string {.compileTime.} = staticExec(execHelperExe & " randomstr")
@@ -23,7 +25,7 @@ proc basicExtern*(filename: string): string {.compileTime.} =
   staticExec(execHelperExe & " basicextern " & filename)
 
 proc removeTmpFiles() {.compileTime.} =
-  var tmpFiles = "\"" & srcFileDir / srcFileName & "_tmp" & "\"[[:digit:]]*"
+  var tmpFiles = "\"" & binDir / srcFileName & "_tmp" & "\"[[:digit:]]*"
   var ret = staticExec("rm " & tmpFiles)
   if ret.len > 0:
     echo ret
@@ -32,7 +34,7 @@ var tmpFileId {.compileTime.}: int = 0
 
 proc execCode*(code: string, rstr: string): string {.compileTime.} =
   inc(tmpFileId)
-  let tmpExeFile = srcFileDir / srcFileName & "_tmp" & $tmpFileId & rstr
+  let tmpExeFile = binDir / srcFileName & "_tmp" & $tmpFileId & rstr
   let tmpSrcFile = tmpExeFile & srcFileExt
   writeFile(tmpSrcFile, code)
   echo staticExec("nim c " & tmpSrcFile)
@@ -64,9 +66,9 @@ proc removeThreadVarPatch(code: string): string {.compileTime.} =
     else:
       result.add(line & "\n")
 
-proc compileJsCode*(srcFileDir: string, code: string, rstr: string): string {.compileTime.} =
+proc compileJsCode*(binDir: string, code: string, rstr: string): string {.compileTime.} =
   inc(tmpFileId)
-  let tmpNameFile = srcFileDir / srcFileName & "_tmp" & $tmpFileId & rstr
+  let tmpNameFile = binDir / srcFileName & "_tmp" & $tmpFileId & rstr
   let tmpSrcFile = tmpNameFile & srcFileExt
   let tmpJsFile = tmpNameFile & ".js"
   writeFile(tmpSrcFile, code)
@@ -79,9 +81,9 @@ proc compileJsCode*(srcFileDir: string, code: string, rstr: string): string {.co
 template compileJsCode*(baseDir, code: string): string =
   compileJsCode(baseDir, code, randomStr())
 
-proc minifyJsCode*(srcFileDir: string, code: string, extern: string, rstr: string): string {.compileTime.} =
+proc minifyJsCode*(binDir: string, code: string, extern: string, rstr: string): string {.compileTime.} =
   inc(tmpFileId)
-  let tmpNameFile = srcFileDir / srcFileName & "_tmp" & $tmpFileId & rstr
+  let tmpNameFile = binDir / srcFileName & "_tmp" & $tmpFileId & rstr
   let tmpSrcFile = tmpNameFile & ".js"
   let tmpExtFile = tmpNameFile & "_extern.js"
   let tmpDstFile = tmpNameFile & "_min.js"
@@ -133,6 +135,6 @@ echo "hello"
   echo staticExecCode("""
 echo "hello!"
 """)
-  echo compileJsCode(srcFileDir, """
+  echo compileJsCode(binDir, """
 echo "hello!"
 """)

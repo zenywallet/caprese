@@ -92,14 +92,14 @@ var buildToolFlag {.compileTime.} = false
 macro buildCompressTools() =
   if not buildToolFlag:
     buildToolFlag = true
-    echo staticExec("nim c -d:release --threads:on " & (srcDir / "files_helper.nim"))
+    echo staticExec("nim c -d:release --threads:on -o:bin/ " & (srcDir / "files_helper.nim"))
 
 macro createStaticFilesTable*(importPath: string): untyped =
   buildCompressTools()
   var path = getProjectPath() / $importPath
   echo "createStaticFilesTable: ", path
-  let tmpFile = srcDir / "files_helper_tmp"
-  discard staticExec((srcDir / "files_helper") & " " & path & " " & tmpFile)
+  let tmpFile = srcDir / "bin/files_helper_tmp"
+  discard staticExec((srcDir / "bin/files_helper") & " " & path & " " & tmpFile)
   var dump = readFile(tmpFile)
   discard staticExec("rm " & tmpFile)
   var last = dump.len
