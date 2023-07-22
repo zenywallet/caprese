@@ -6,6 +6,7 @@ import md5, base64
 import macros, tables
 import nimcrypto
 import bytes
+import exec
 
 const DYNAMIC_FILES* = defined(DYNAMIC_FILES)
 const DYNAMIC_COMPRESS* = false
@@ -98,7 +99,7 @@ macro createStaticFilesTable*(importPath: string): untyped =
   buildCompressTools()
   var path = getProjectPath() / $importPath
   echo "createStaticFilesTable: ", path
-  let tmpFile = srcDir / "bin/files_helper_tmp"
+  let tmpFile = srcDir / "bin/files_helper_tmp1" & randomStr()
   discard staticExec((srcDir / "bin/files_helper") & " " & path & " " & tmpFile)
   var dump = readFile(tmpFile)
   discard staticExec("rm " & tmpFile)
