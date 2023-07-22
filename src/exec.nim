@@ -24,8 +24,8 @@ proc rmFile*(filename: string) {.compileTime.} =
 proc basicExtern*(filename: string): string {.compileTime.} =
   staticExec(execHelperExe & " basicextern " & filename)
 
-proc removeTmpFiles() {.compileTime.} =
-  var tmpFiles = binDir / srcFileName & "_tmp" & "[[:digit:]]*"
+proc removeTmpFiles(removeDir: string) {.compileTime.} =
+  var tmpFiles = removeDir / srcFileName & "_tmp" & "[[:digit:]]*"
   var ret = staticExec("find " & tmpFiles & " -type f -mmin +60 2> /dev/null | xargs -r rm")
   if ret.len > 0:
     echo ret
@@ -39,7 +39,7 @@ proc execCode*(code: string, rstr: string): string {.compileTime.} =
   writeFile(tmpSrcFile, code)
   echo staticExec("nim c " & tmpSrcFile)
   result = staticExec(tmpExeFile)
-  removeTmpFiles()
+  removeTmpFiles(binDir)
   rmFile(tmpExeFile)
   rmFile(tmpSrcFile)
 
@@ -75,6 +75,7 @@ proc compileJsCode*(srcFileDir: string, code: string, rstr: string): string {.co
   echo staticExec("nim js -d:release --mm:orc -o:" & tmpJsFile & " " & tmpSrcFile)
   result = readFile(tmpJsFile)
   result = removeThreadVarPatch(result)
+  removeTmpFiles(srcFileDir)
   rmFile(tmpJsFile)
   rmFile(tmpSrcFile)
 
@@ -121,6 +122,7 @@ echo $closure_compiler
   else:
     echo "closure compiler: not found - skip"
     result = code
+  removeTmpFiles(srcFileDir)
   rmFile(tmpExtFile)
   rmFile(tmpSrcFile)
 
