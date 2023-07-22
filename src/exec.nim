@@ -25,8 +25,8 @@ proc basicExtern*(filename: string): string {.compileTime.} =
   staticExec(execHelperExe & " basicextern " & filename)
 
 proc removeTmpFiles() {.compileTime.} =
-  var tmpFiles = "\"" & binDir / srcFileName & "_tmp" & "\"[[:digit:]]*"
-  var ret = staticExec("rm " & tmpFiles)
+  var tmpFiles = binDir / srcFileName & "_tmp" & "[[:digit:]]*"
+  var ret = staticExec("find " & tmpFiles & " -type f -mmin +60 2> /dev/null | xargs -r rm")
   if ret.len > 0:
     echo ret
 
