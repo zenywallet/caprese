@@ -6,6 +6,7 @@ description   = "A front-end web server specialized for real-time message exchan
 license       = "MIT"
 srcDir        = "src"
 installExt    = @["nim", "a", "jar"]
+installDirs   = @["bin", "brotli", "zopfli"]
 bin           = @["caprese"]
 
 
@@ -73,6 +74,19 @@ task deps, "Build deps":
   boringsslTask()
   zopfliTask()
   brotliTask()
+
+task missingFileWorkaround, "Missing File Workaround":
+  withDir "src":
+    exec "mkdir -p src/bin"
+    exec "mkdir -p src/brotli"
+    exec "mkdir -p src/zopfli"
+    exec "touch src/bin/empty.a"
+    exec "touch src/brotli/empty.a"
+    exec "touch src/zopfli/empty.a"
+    exec "touch src/THIS_FOLDER_FOR_MISSING_FILE_WORKAROUND.a"
+
+before install:
+  missingFileWorkaroundTask()
 
 before build:
   exec "git submodule update --init"
