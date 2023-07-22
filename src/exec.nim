@@ -66,9 +66,9 @@ proc removeThreadVarPatch(code: string): string {.compileTime.} =
     else:
       result.add(line & "\n")
 
-proc compileJsCode*(binDir: string, code: string, rstr: string): string {.compileTime.} =
+proc compileJsCode*(srcFileDir: string, code: string, rstr: string): string {.compileTime.} =
   inc(tmpFileId)
-  let tmpNameFile = binDir / srcFileName & "_tmp" & $tmpFileId & rstr
+  let tmpNameFile = srcFileDir / srcFileName & "_tmp" & $tmpFileId & rstr
   let tmpSrcFile = tmpNameFile & srcFileExt
   let tmpJsFile = tmpNameFile & ".js"
   writeFile(tmpSrcFile, code)
@@ -81,9 +81,9 @@ proc compileJsCode*(binDir: string, code: string, rstr: string): string {.compil
 template compileJsCode*(baseDir, code: string): string =
   compileJsCode(baseDir, code, randomStr())
 
-proc minifyJsCode*(binDir: string, code: string, extern: string, rstr: string): string {.compileTime.} =
+proc minifyJsCode*(srcFileDir: string, code: string, extern: string, rstr: string): string {.compileTime.} =
   inc(tmpFileId)
-  let tmpNameFile = binDir / srcFileName & "_tmp" & $tmpFileId & rstr
+  let tmpNameFile = srcFileDir / srcFileName & "_tmp" & $tmpFileId & rstr
   let tmpSrcFile = tmpNameFile & ".js"
   let tmpExtFile = tmpNameFile & "_extern.js"
   let tmpDstFile = tmpNameFile & "_min.js"
