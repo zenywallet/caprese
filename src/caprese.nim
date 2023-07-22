@@ -6,6 +6,7 @@ when not compileOption("threads"):
 import nativesockets
 import server as serverlib
 import contents
+import files
 import statuscode
 import queue
 import macros
@@ -13,6 +14,7 @@ import rlimit
 export nativesockets
 export serverlib
 export contents
+export files
 export statuscode
 export queue
 
