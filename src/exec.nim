@@ -12,7 +12,6 @@ const execHelperExe = binDir / "exec_helper"
 const execHelperSrc = srcFileDir / "exec_helper" & srcFileExt
 
 macro buildExecHelper() =
-  echo "--buildExecHelperbuildExecHelperbuildExecHelper"
   echo staticExec("nim c -o:bin/ " & execHelperSrc)
 buildExecHelper()
 
