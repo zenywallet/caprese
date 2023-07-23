@@ -37,6 +37,9 @@ proc execCode*(code: string, rstr: string): string {.compileTime.} =
   let tmpSrcFile = tmpExeFile & srcFileExt
   writeFile(tmpSrcFile, code)
   echo staticExec("nim c " & tmpSrcFile)
+  if not fileExists(tmpExeFile):
+    rmFile(tmpSrcFile)
+    macros.error "nim c failed"
   result = staticExec(tmpExeFile)
   removeTmpFiles(binDir)
   rmFile(tmpExeFile)
@@ -72,6 +75,9 @@ proc compileJsCode*(srcFileDir: string, code: string, rstr: string): string {.co
   let tmpJsFile = tmpNameFile & ".js"
   writeFile(tmpSrcFile, code)
   echo staticExec("nim js -d:release --mm:orc -o:" & tmpJsFile & " " & tmpSrcFile)
+  if not fileExists(tmpJsFile):
+    rmFile(tmpSrcFile)
+    macros.error "nim js failed"
   result = readFile(tmpJsFile)
   result = removeThreadVarPatch(result)
   removeTmpFiles(srcFileDir)
