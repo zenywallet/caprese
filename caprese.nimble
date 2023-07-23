@@ -85,15 +85,6 @@ task missingFileWorkaround, "Missing File Workaround":
     exec "touch src/zopfli/empty.a"
     exec "touch src/THIS_FOLDER_FOR_MISSING_FILE_WORKAROUND.a"
 
-if dirExists("src"):
-  withDir "src":
-    if not dirExists("bin"):
-      exec "mkdir bin"
-    if not dirExists("brotli"):
-      exec "mkdir brotli"
-    if not dirExists("zopfli"):
-      exec "mkdir zopfli"
-
 before install:
   missingFileWorkaroundTask()
 
