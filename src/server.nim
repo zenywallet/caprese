@@ -2115,6 +2115,7 @@ macro initServer*(): untyped =
   if not initServerFlag:
     initServerFlag = true
     quote do:
+      import std/tables
       serverInitFreeClient()
       initClient(cfg.clientMax, ClientObj, Client)
   else:
