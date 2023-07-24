@@ -85,3 +85,49 @@ if paramCount() == 3:
     if writeError:
       echo "error: write ", outFileName
       quit(QuitFailure)
+
+elif paramCount() == 4:
+  if paramStr(1) == "single":
+    let inFileName = paramStr(2)
+    let filename = splitPath(inFileName).tail
+    let mimeType = paramStr(3)
+    let outFileName = paramStr(4)
+    var content = readFile(inFileName)
+    let mimes = newMimetypes()
+    var mime = mimes.getMimeType(mimeType, "")
+    if mime.len == 0:
+      mime = mimes.getExt(mimeType, "")
+    if mime.len == 0:
+      echo "error: unknown mime ", mimeType
+      quit(QuitFailure)
+    else:
+      mime = mimeType
+    let hash = base64.encode(sha256.digest(content).data)
+    let md5 = base64.encode(content.getMD5().toBytesFromHex)
+    var zopfliComp, brotliComp: seq[byte]
+    if content.len > 0:
+      try:
+        zopfliComp = zopfli.comp(content)
+      except:
+        echo "error: zopfli comp"
+      try:
+        brotliComp = brotli.comp(content)
+      except:
+        echo "error: brotli comp"
+    let dump = (filename.len, filename,
+                content.len, content,
+                zopfliComp.len, zopfliComp,
+                brotliComp.len, brotliComp,
+                mime.len, mime,
+                hash.len, hash,
+                md5.len, md5).toBytes
+    var outFile: File
+    var ret = open(outFile, outFileName, FileMode.fmWrite)
+    if not ret:
+      echo "error: open ", outFileName
+      quit(QuitFailure)
+    let retLen = outFile.writeBuffer(unsafeAddr dump[0], dump.len)
+    if retLen != dump.len:
+      echo "error: write ", outFileName
+      quit(QuitFailure)
+    outFile.close()

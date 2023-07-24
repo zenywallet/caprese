@@ -133,6 +133,36 @@ proc getStaticFile*(filesTable: Table[string, FileContent], file: string): FileC
   except KeyError:
     result = FileContentResult(err: FileContentNotFound)
 
+proc createStaticFile*(content: string, ext: string): FileContent {.compileTime.} =
+  buildCompressTools()
+  let tmpInFile = srcDir / "bin/files_helper_tmp3" & randomStr()
+  let tmpOutFile = srcDir / "bin/files_helper_tmp4" & randomStr()
+  writeFile(tmpInFile, content)
+  discard staticExec((srcDir / "bin/files_helper") & " single " & tmpInFile & " " & ext & " " & tmpOutFile)
+  var dump = readFile(tmpOutFile)
+  discard staticExec("rm " & tmpOutFile)
+  discard staticExec("rm " & tmpInFile)
+  var last = dump.len
+  var pos = 0
+  var filesTable: seq[tuple[key: string, val: FileContent]]
+  var datas: array[7, string]
+  var itemId = 0
+  while pos + 8 < last:
+    var size = 0
+    for i in 0..7:
+      size = dump[pos + 7 - i].int + (size shl 8)
+    pos = pos + 8
+    datas[itemId] = dump[pos..<pos+size]
+    pos = pos + size
+    inc(itemId)
+    if itemId > 6:
+      filesTable.add((datas[0], FileContent(content: datas[1],
+                      deflate: datas[2], brotli: datas[3],
+                      mime: datas[4], sha256: datas[5], md5: datas[6])))
+      echo datas[0], " ", datas[4], " ", datas[1].len, " ", datas[2].len, " ", datas[3].len
+      itemId = 0
+  filesTable[0].val
+
 
 when isMainModule:
   when not DYNAMIC_FILES:
