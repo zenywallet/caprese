@@ -10,6 +10,7 @@ import std/os
 import std/strutils
 import logs
 import arraylib
+import files
 
 type
   ClientId* = int
@@ -2458,6 +2459,9 @@ template stream*(streamAppId: int, path: string, protocol: string, body: untyped
           return ret
 
 template public*(importPath: string, body: untyped) = body
+
+template content*(content, mime: string): FileContent =
+  createStaticFile(content, mime)
 
 #[
 var clientSocketLocks: array[WORKER_THREAD_NUM, cint]
