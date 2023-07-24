@@ -170,11 +170,7 @@ proc createStaticFile*(content: string, ext: string): FileContent {.compileTime.
 
 
 when isMainModule:
-  when not DYNAMIC_FILES:
-    echo getConstFile("/")
-    echo getConstFile("/index.html")
-    echo getConstFile("/index")
-  else:
+  when DYNAMIC_FILES:
     initDynamicFile()
     echo getDynamicFile("/")
     echo getDynamicFile("/index.html")
