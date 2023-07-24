@@ -100,7 +100,7 @@ macro createStaticFilesTable*(importPath: string): untyped =
   var path = getProjectPath() / $importPath
   echo "createStaticFilesTable: ", path
   let tmpFile = srcDir / "bin/files_helper_tmp1" & randomStr()
-  discard staticExec((srcDir / "bin/files_helper") & " " & path & " " & tmpFile)
+  discard staticExec((srcDir / "bin/files_helper") & " import " & path & " " & tmpFile)
   var dump = readFile(tmpFile)
   discard staticExec("rm " & tmpFile)
   var last = dump.len
