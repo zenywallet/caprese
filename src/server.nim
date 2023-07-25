@@ -544,18 +544,20 @@ template serverTagLib*(cfg: static Config) {.dirty.} =
           result.add(t.tag[])
 
   iterator getClientIds*(tag: Tag): ClientId =
+    var clientIds: HashTableData[Tag, Array[ClientId]]
     withReadLock clientsLock:
-      let clientIds = tag2ClientIds.get(tag)
-      if not clientIds.isNil:
-        for c in clientIds.val:
-          yield c
+      clientIds = tag2ClientIds.get(tag)
+    if not clientIds.isNil:
+      for c in clientIds.val:
+        yield c
 
   iterator getTags*(clientId: ClientId): Tag =
+    var tagRefs: HashTableData[ClientId, Array[TagRef]]
     withReadLock clientsLock:
-      let tagRefs = clientId2Tags.get(clientId)
-      if not tagRefs.isNil:
-        for t in tagRefs.val:
-          yield t.tag[]
+      tagRefs = clientId2Tags.get(clientId)
+    if not tagRefs.isNil:
+      for t in tagRefs.val:
+        yield t.tag[]
 
   proc addTask*(clientId: ClientId, task: ClientTask) =
     withWriteLock clientsLock:
