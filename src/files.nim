@@ -103,7 +103,7 @@ macro createStaticFilesTable*(importPath: string): untyped =
   echo "createStaticFilesTable: ", path
   inc(tmpFileId)
   let tmpFile = srcDir / "bin/files_helper_tmp" & $tmpFileId & randomStr()
-  discard staticExec((srcDir / "bin/files_helper") & " import " & path & " " & tmpFile)
+  echo staticExec((srcDir / "bin/files_helper") & " import " & path & " " & tmpFile)
   var dump = readFile(tmpFile)
   discard staticExec("rm " & tmpFile)
   var last = dump.len
@@ -143,7 +143,7 @@ proc createStaticFile*(content: string, ext: string): FileContent {.compileTime.
   inc(tmpFileId)
   let tmpOutFile = srcDir / "bin/files_helper_tmp" & $tmpFileId & randomStr()
   writeFile(tmpInFile, content)
-  discard staticExec((srcDir / "bin/files_helper") & " single " & tmpInFile & " " & ext & " " & tmpOutFile)
+  echo staticExec((srcDir / "bin/files_helper") & " single " & tmpInFile & " " & ext & " " & tmpOutFile)
   var dump = readFile(tmpOutFile)
   discard staticExec("rm " & tmpOutFile)
   discard staticExec("rm " & tmpInFile)
