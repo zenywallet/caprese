@@ -857,14 +857,14 @@ template serverTagLib*(cfg: static Config) {.dirty.} =
                 opcode: WebSocketOpCode = WebSocketOpCode.Binary): SendResult =
     result = SendResult.Success
     for cid in tag.getClientIds():
-      ret = cid.wsServerSend(data, opcode)
+      let ret = cid.wsServerSend(data, opcode)
       if ret == SendResult.Pending:
         result = SendResult.Pending
 
   proc wsSendTag(tag: Tag, data: seq[byte] | string | Array[byte],
                 opcode: WebSocketOpCode = WebSocketOpCode.Binary): int =
     for cid in tag.getClientIds():
-      ret = cid.wsServerSend(data, opcode)
+      let ret = cid.wsServerSend(data, opcode)
       if ret == SendResult.Pending or ret == SendResult.Success:
         inc(result)
 
