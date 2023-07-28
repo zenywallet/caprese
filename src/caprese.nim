@@ -216,8 +216,14 @@ when isMainModule:
       testDataBase = testDataBase & "[testdata]"
     for i in 0..<100:
       testData = testData & testDataBase
-    var prot = if window.location.protocol == "https:".toJs: "wss:".cstring else: "ws:".cstring
-    var ws = newWebSocket(prot & "//localhost:8009/ws".cstring, "caprese-0.1")
+
+    proc wsUrl(domain, path: cstring): cstring =
+      var prot = if window.location.protocol == "https:".toJs: "wss:".cstring else: "ws:".cstring
+      var port = window.location.port
+      var sport = if port == 80.toJs or port == 443.toJs: "".cstring else: ":".cstring & port.to(cstring)
+      result = prot & "//".cstring & domain & sport & "/".cstring & path
+
+    var ws = newWebSocket(wsUrl("localhost", "ws"), "caprese-0.1")
     proc testSend() =
       if ws.readyState == WebSocket.OPEN:
         ws.send(testData)
