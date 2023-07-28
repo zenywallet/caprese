@@ -18,8 +18,8 @@ I heard you like Ubuntu, so I will explain for it.
 
 ##### Install Nim
     curl https://nim-lang.org/choosenim/init.sh -sSf | sh
-    echo 'export PATH='$HOME'/.nimble/bin:$PATH' >> .bashrc
-    . .bashrc
+    echo 'export PATH='$HOME'/.nimble/bin:$PATH' >> ~/.bashrc
+    . ~/.bashrc
 
 See [Nim](https://nim-lang.org/) for installation details.
 
@@ -485,7 +485,7 @@ server(ssl = true, ip = "0.0.0.0", port = 8009):
 ```
 
 ### Tag-based Message Exchange
-Let me explain one of the unique features of the Caprese that is not implemented in common web servers. Tags can be attached to client connections. To control the tags, you need the *ClientId*, so you need to call `markPending()` to get the *ClientId*. It is possible to send some data to the tag. That data will be sent to all tagged clients. Tags can be any data, but must be hashed data. It is assumed that the data is hashed originally, and no internal hashing of tags is performed. Hashing would be easy with Nim's `converter`.
+Let me explain one of the unique features of the Caprese that is not implemented in common web servers. Tags can be attached to client connections. It is possible to send some data to the tag. That data will be sent to all tagged clients. Tags can be any data, but must be hashed data. It is assumed that the data is hashed originally, and no internal hashing of tags is performed. Hashing would be easy with Nim's `converter`. To control the tags, you need the *ClientId*, so you need to call `markPending()` to get the *ClientId*.
 
 ##### The tag control functions
 ```nim
