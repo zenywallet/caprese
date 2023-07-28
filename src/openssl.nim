@@ -102,51 +102,51 @@ const OPENSSL_INIT_ADD_ALL_CIPHERS* = 0x00000004'u64
 const OPENSSL_INIT_ADD_ALL_DIGESTS* = 0x00000008'u64
 
 # include/openssl/ssl.h
-proc TLS_server_method*(): SSL_METHOD {.importc.}
+proc TLS_server_method*(): SSL_METHOD {.importc, cdecl.}
 proc SSLv23_server_method*(): SSL_METHOD {.inline.} = TLS_server_method()
-proc SSL_CTX_new*(meth: SSL_METHOD): SSL_CTX {.importc.}
-proc SSL_CTX_free*(ctx: SSL_CTX) {.importc.}
-proc SSL_new*(ctx: SSL_CTX): SSL {.importc.}
+proc SSL_CTX_new*(meth: SSL_METHOD): SSL_CTX {.importc, cdecl.}
+proc SSL_CTX_free*(ctx: SSL_CTX) {.importc, cdecl.}
+proc SSL_new*(ctx: SSL_CTX): SSL {.importc, cdecl.}
 
-proc OPENSSL_init_ssl*(opts: uint64, settings: OPENSSL_INIT_SETTINGS): cint {.importc.}
+proc OPENSSL_init_ssl*(opts: uint64, settings: OPENSSL_INIT_SETTINGS): cint {.importc, cdecl.}
 proc SSL_library_init*(): cint {.inline, discardable.} = OPENSSL_init_ssl(0'u64, nil)
 proc SSL_load_error_strings*(): cint {.inline, discardable.} =
   OPENSSL_init_ssl(OPENSSL_INIT_LOAD_SSL_STRINGS or OPENSSL_INIT_LOAD_CRYPTO_STRINGS, nil)
 
-proc SSL_CTX_use_PrivateKey_file*(ctx: SSL_CTX, file: cstring, fileType: cint): cint {.importc.}
-proc SSL_CTX_use_certificate_file*(ctx: SSL_CTX, file: cstring, fileType: cint): cint {.importc.}
-proc SSL_CTX_use_certificate_chain_file*(ctx: SSL_CTX, file: cstring): cint {.importc.}
+proc SSL_CTX_use_PrivateKey_file*(ctx: SSL_CTX, file: cstring, fileType: cint): cint {.importc, cdecl.}
+proc SSL_CTX_use_certificate_file*(ctx: SSL_CTX, file: cstring, fileType: cint): cint {.importc, cdecl.}
+proc SSL_CTX_use_certificate_chain_file*(ctx: SSL_CTX, file: cstring): cint {.importc, cdecl.}
 
-proc SSL_set_fd*(s: SSL, fd: cint): cint {.importc.}
-proc SSL_free*(ssl: SSL) {.importc.}
-proc SSL_accept*(ssl: SSL): cint {.importc.}
-proc SSL_stateless*(s: SSL): cint {.importc.}
-proc SSL_connect*(ssl: SSL): cint {.importc.}
-proc SSL_read*(ssl: SSL, buf: pointer, num: cint): cint {.importc.}
-proc SSL_read_ex*(ssl: SSL, buf: pointer, num: csize_t, readbytes: csize_t): cint {.importc.}
+proc SSL_set_fd*(s: SSL, fd: cint): cint {.importc, cdecl.}
+proc SSL_free*(ssl: SSL) {.importc, cdecl.}
+proc SSL_accept*(ssl: SSL): cint {.importc, cdecl.}
+proc SSL_stateless*(s: SSL): cint {.importc, cdecl.}
+proc SSL_connect*(ssl: SSL): cint {.importc, cdecl.}
+proc SSL_read*(ssl: SSL, buf: pointer, num: cint): cint {.importc, cdecl.}
+proc SSL_read_ex*(ssl: SSL, buf: pointer, num: csize_t, readbytes: csize_t): cint {.importc, cdecl.}
 
-proc SSL_write*(ssl: SSL, buf: pointer, num: cint): cint {.importc.}
-proc SSL_write_ex*(s: SSL, buf: pointer, num: csize_t, written: csize_t): cint {.importc.}
-proc SSL_write_early_data*(s: SSL, buf: pointer, num: csize_t, written: csize_t): cint {.importc.}
+proc SSL_write*(ssl: SSL, buf: pointer, num: cint): cint {.importc, cdecl.}
+proc SSL_write_ex*(s: SSL, buf: pointer, num: csize_t, written: csize_t): cint {.importc, cdecl.}
+proc SSL_write_early_data*(s: SSL, buf: pointer, num: csize_t, written: csize_t): cint {.importc, cdecl.}
 
 when not USE_BORINGSSL:
-  proc SSL_ctrl*(ssl: SSL, cmd: cint, larg: clong, parg: pointer): clong {.importc, discardable.}
-  proc SSL_CTX_ctrl*(ctx: SSL_CTX, cmd: cint, larg: clong, parg: pointer): clong {.importc, discardable.}
+  proc SSL_ctrl*(ssl: SSL, cmd: cint, larg: clong, parg: pointer): clong {.importc, cdecl, discardable.}
+  proc SSL_CTX_ctrl*(ctx: SSL_CTX, cmd: cint, larg: clong, parg: pointer): clong {.importc, cdecl, discardable.}
 
 when USE_LIBRESSL:
   const SSL_CTRL_OPTIONS* = 32
   template SSL_CTX_set_options*(ctx, op: untyped): untyped =
     SSL_CTX_ctrl((ctx), SSL_CTRL_OPTIONS, (op), nil)
 else:
-  proc SSL_CTX_set_options*(ctx: SSL_CTX, op: clong): clong {.importc, discardable.}
+  proc SSL_CTX_set_options*(ctx: SSL_CTX, op: clong): clong {.importc, cdecl, discardable.}
 
 when USE_BORINGSSL:
-  proc SSL_CTX_set_mode*(ctx: SSL_CTX, mode: clong): clong {.importc, discardable.}
-  proc SSL_CTX_clear_mode*(ctx: SSL_CTX; mode: clong): clong {.importc, discardable.}
-  proc SSL_CTX_get_mode*(ctx: SSL_CTX): clong {.importc.}
-  proc SSL_set_mode*(ssl: SSL, mode: clong): clong {.importc, discardable.}
-  proc SSL_clear_mode*(ssl: SSL; mode: clong): clong {.importc, discardable.}
-  proc SSL_get_mode*(ssl: SSL): clong {.importc.}
+  proc SSL_CTX_set_mode*(ctx: SSL_CTX, mode: clong): clong {.importc, cdecl, discardable.}
+  proc SSL_CTX_clear_mode*(ctx: SSL_CTX; mode: clong): clong {.importc, cdecl, discardable.}
+  proc SSL_CTX_get_mode*(ctx: SSL_CTX): clong {.importc, cdecl.}
+  proc SSL_set_mode*(ssl: SSL, mode: clong): clong {.importc, cdecl, discardable.}
+  proc SSL_clear_mode*(ssl: SSL; mode: clong): clong {.importc, cdecl, discardable.}
+  proc SSL_get_mode*(ssl: SSL): clong {.importc, cdecl.}
 else:
   proc SSL_CTX_set_mode*(ctx: SSL_CTX, mode: clong): clong {.inline, discardable.} =
     SSL_CTX_ctrl(ctx, SSL_CTRL_MODE, mode, nil)
@@ -161,12 +161,12 @@ else:
   proc SSL_get_mode*(ssl: SSL): clong {.inline.} =
     SSL_ctrl(ssl, SSL_CTRL_MODE, 0, nil)
 
-proc SSL_get_error*(s: SSL, ret_code: cint): cint {.importc.}
-proc SSL_get_version*(s: SSL): cstring {.importc.}
+proc SSL_get_error*(s: SSL, ret_code: cint): cint {.importc, cdecl.}
+proc SSL_get_version*(s: SSL): cstring {.importc, cdecl.}
 
 # include/openssl/crypto.h
-proc OpenSSL_version*(t: cint): cstring {.importc.}
-proc OPENSSL_init_crypto*(opts: uint64, settings: OPENSSL_INIT_SETTINGS): cint {.importc.}
+proc OpenSSL_version*(t: cint): cstring {.importc, cdecl.}
+proc OPENSSL_init_crypto*(opts: uint64, settings: OPENSSL_INIT_SETTINGS): cint {.importc, cdecl.}
 
 # include/openssl/evp.h
 proc OPENSSL_add_all_algorithms_noconf*(): cint {.inline.} =
@@ -174,27 +174,27 @@ proc OPENSSL_add_all_algorithms_noconf*(): cint {.inline.} =
 proc OpenSSL_add_all_algorithms*(): cint {.inline, discardable.} = OPENSSL_add_all_algorithms_noconf()
 
 # include/openssl/err.h
-proc ERR_get_error*(): culong {.importc.}
-proc ERR_peek_error*(): culong {.importc.}
-proc ERR_clear_error*() {.importc.}
+proc ERR_get_error*(): culong {.importc, cdecl.}
+proc ERR_peek_error*(): culong {.importc, cdecl.}
+proc ERR_clear_error*() {.importc, cdecl.}
 
 
 # SNI
 # include/openssl/ssl.h
 when not USE_BORINGSSL:
   const SSL_CTRL_SET_TLSEXT_SERVERNAME_CB* = 53
-  proc SSL_callback_ctrl*(a1: SSL; a2: cint; a3: proc () {.cdecl.}): clong {.importc, discardable.}
-  proc SSL_CTX_callback_ctrl*(a1: SSL_CTX; a2: cint; a3: proc () {.cdecl.}): clong {.importc, discardable.}
+  proc SSL_callback_ctrl*(a1: SSL; a2: cint; a3: proc () {.cdecl.}): clong {.importc, cdecl, discardable.}
+  proc SSL_CTX_callback_ctrl*(a1: SSL_CTX; a2: cint; a3: proc () {.cdecl.}): clong {.importc, cdecl, discardable.}
 
-proc SSL_set_SSL_CTX*(ssl: SSL; ctx: SSL_CTX): SSL_CTX {.importc.}
+proc SSL_set_SSL_CTX*(ssl: SSL; ctx: SSL_CTX): SSL_CTX {.importc, cdecl.}
 
 # include/openssl/tls1.h
 const TLSEXT_NAMETYPE_host_name* = 0
-proc SSL_get_servername*(s: SSL; `type`: cint): cstring {.importc.}
+proc SSL_get_servername*(s: SSL; `type`: cint): cstring {.importc, cdecl.}
 
 when USE_BORINGSSL:
   proc SSL_CTX_set_tlsext_servername_callback*(ctx: SSL_CTX;
-    callback: proc (ssl: SSL; out_alert: ptr cint; arg: pointer): cint {.cdecl.}): cint {.importc, discardable.}
+    callback: proc (ssl: SSL; out_alert: ptr cint; arg: pointer): cint {.cdecl.}): cint {.importc, cdecl, discardable.}
 else:
   proc SSL_CTX_set_tlsext_servername_callback*(ctx: SSL_CTX;
     cb: proc (ssl: SSL; out_alert: ptr cint; arg: pointer): cint {.cdecl.}): clong {.inline, discardable.} =
@@ -221,8 +221,8 @@ type
   EVP_MD* = ptr object
 
 # include/openssl/ssl.h
-proc SSL_CTX_use_PrivateKey*(ctx: SSL_CTX, pkey: EVP_PKEY): cint {.importc.}
-proc SSL_CTX_use_certificate*(ctx: SSL_CTX, x: X509): cint {.importc.}
+proc SSL_CTX_use_PrivateKey*(ctx: SSL_CTX, pkey: EVP_PKEY): cint {.importc, cdecl.}
+proc SSL_CTX_use_certificate*(ctx: SSL_CTX, x: X509): cint {.importc, cdecl.}
 
 # include/openssl/rsa.h
 type
@@ -230,20 +230,20 @@ type
 
 const RSA_F4* = 0x10001.culong
 
-proc RSA_new*(): RSA {.importc.}
-proc RSA_free*(rsa: RSA) {.importc.}
-proc RSA_generate_key_ex*(rsa: RSA, bits: cint, e: BIGNUM, cb: BN_GENCB): cint {.importc.}
-proc RSA_generate_multi_prime_key*(rsa: RSA, bits: cint, primes: cint, e: BIGNUM, cb: BN_GENCB): cint {.importc.}
+proc RSA_new*(): RSA {.importc, cdecl.}
+proc RSA_free*(rsa: RSA) {.importc, cdecl.}
+proc RSA_generate_key_ex*(rsa: RSA, bits: cint, e: BIGNUM, cb: BN_GENCB): cint {.importc, cdecl.}
+proc RSA_generate_multi_prime_key*(rsa: RSA, bits: cint, primes: cint, e: BIGNUM, cb: BN_GENCB): cint {.importc, cdecl.}
 
 # include/openssl/evp.h
 const EVP_PKEY_RSA* = 6.cint
 
-proc EVP_PKEY_new*(): EVP_PKEY {.importc.}
-proc EVP_PKEY_free*(key: EVP_PKEY) {.importc.}
-proc EVP_PKEY_assign*(pkey: EVP_PKEY, keytype: cint, key: RSA): cint {.importc.}
+proc EVP_PKEY_new*(): EVP_PKEY {.importc, cdecl.}
+proc EVP_PKEY_free*(key: EVP_PKEY) {.importc, cdecl.}
+proc EVP_PKEY_assign*(pkey: EVP_PKEY, keytype: cint, key: RSA): cint {.importc, cdecl.}
 proc EVP_PKEY_assign_RSA*(pkey: EVP_PKEY, key: RSA): cint {.inline.} = EVP_PKEY_assign(pkey, EVP_PKEY_RSA, key)
-proc EVP_PKEY_set1_RSA*(pkey: EVP_PKEY, key: RSA): cint {.importc.}
-proc EVP_sha1*(): EVP_MD {.importc.}
+proc EVP_PKEY_set1_RSA*(pkey: EVP_PKEY, key: RSA): cint {.importc, cdecl.}
+proc EVP_sha1*(): EVP_MD {.importc, cdecl.}
 
 # include/openssl/asn1.h
 const MBSTRING_FLAG* = 0x1000.cint
@@ -252,74 +252,74 @@ const MBSTRING_ASC* = MBSTRING_FLAG or 1.cint
 const MBSTRING_BMP* = MBSTRING_FLAG or 2.cint
 const MBSTRING_UNIV* = MBSTRING_FLAG or 4.cint
 
-proc ASN1_INTEGER_new*(): ASN1_INTEGER {.importc.}
-proc ASN1_INTEGER_free*(a: ASN1_INTEGER) {.importc.}
+proc ASN1_INTEGER_new*(): ASN1_INTEGER {.importc, cdecl.}
+proc ASN1_INTEGER_free*(a: ASN1_INTEGER) {.importc, cdecl.}
 
-proc ASN1_INTEGER_set_int64*(a: ASN1_INTEGER, r: int64): cint {.importc.}
-proc ASN1_INTEGER_set_uint64*(a: ASN1_INTEGER, r: uint64): cint {.importc.}
-proc ASN1_INTEGER_set*(a: ASN1_INTEGER, v: clong): cint {.importc.}
+proc ASN1_INTEGER_set_int64*(a: ASN1_INTEGER, r: int64): cint {.importc, cdecl.}
+proc ASN1_INTEGER_set_uint64*(a: ASN1_INTEGER, r: uint64): cint {.importc, cdecl.}
+proc ASN1_INTEGER_set*(a: ASN1_INTEGER, v: clong): cint {.importc, cdecl.}
 
-proc ASN1_INTEGER_get_int64*(pr: var int64, a: ASN1_INTEGER): cint {.importc.}
-proc ASN1_INTEGER_get_uint64*(pr: var uint64, a: ASN1_INTEGER): cint {.importc.}
-proc ASN1_INTEGER_get*(a: ASN1_INTEGER): clong {.importc.}
-proc BN_to_ASN1_INTEGER*(bn: BIGNUM, ai: ASN1_INTEGER): ASN1_INTEGER {.importc, discardable.}
-proc ASN1_INTEGER_to_BN*(ai: ASN1_INTEGER, bn: BIGNUM): BIGNUM {.importc, discardable.}
+proc ASN1_INTEGER_get_int64*(pr: var int64, a: ASN1_INTEGER): cint {.importc, cdecl.}
+proc ASN1_INTEGER_get_uint64*(pr: var uint64, a: ASN1_INTEGER): cint {.importc, cdecl.}
+proc ASN1_INTEGER_get*(a: ASN1_INTEGER): clong {.importc, cdecl.}
+proc BN_to_ASN1_INTEGER*(bn: BIGNUM, ai: ASN1_INTEGER): ASN1_INTEGER {.importc, cdecl, discardable.}
+proc ASN1_INTEGER_to_BN*(ai: ASN1_INTEGER, bn: BIGNUM): BIGNUM {.importc, cdecl, discardable.}
 
 # include/openssl/bn.h
 type
   BN_ULONG* = uint64
 
-proc BN_new*(): BIGNUM {.importc.}
-proc BN_secure_new*(): BIGNUM {.importc.}
-proc BN_clear*(a: BIGNUM) {.importc.}
-proc BN_free*(a: BIGNUM) {.importc.}
-proc BN_clear_free*(a: BIGNUM) {.importc.}
+proc BN_new*(): BIGNUM {.importc, cdecl.}
+proc BN_secure_new*(): BIGNUM {.importc, cdecl.}
+proc BN_clear*(a: BIGNUM) {.importc, cdecl.}
+proc BN_free*(a: BIGNUM) {.importc, cdecl.}
+proc BN_clear_free*(a: BIGNUM) {.importc, cdecl.}
 
-proc BN_zero*(a: BIGNUM) {.importc.}
-proc BN_one*(a: BIGNUM): cint {.importc.}
-proc BN_value_one*(): BIGNUM {.importc.}
-proc BN_set_word*(a: BIGNUM, w: BN_ULONG): cint {.importc.}
-proc BN_get_word*(a: BIGNUM): BN_ULONG {.importc.}
+proc BN_zero*(a: BIGNUM) {.importc, cdecl.}
+proc BN_one*(a: BIGNUM): cint {.importc, cdecl.}
+proc BN_value_one*(): BIGNUM {.importc, cdecl.}
+proc BN_set_word*(a: BIGNUM, w: BN_ULONG): cint {.importc, cdecl.}
+proc BN_get_word*(a: BIGNUM): BN_ULONG {.importc, cdecl.}
 
-proc BN_rand*(rnd: BIGNUM, bits: cint, top: cint, bottom: cint): cint {.importc.}
-proc BN_priv_rand*(rnd: BIGNUM, bits: cint, top: cint, bottom: cint): cint {.importc.}
-proc BN_pseudo_rand*(rnd: BIGNUM, bits: cint, top: cint, bottom: cint): cint {.importc.}
-proc BN_rand_range*(rnd: BIGNUM, range: BIGNUM): cint {.importc.}
-proc BN_priv_rand_range*(rnd: BIGNUM, range: BIGNUM): cint {.importc.}
-proc BN_pseudo_rand_range*(rnd: BIGNUM, range: BIGNUM): cint {.importc.}
+proc BN_rand*(rnd: BIGNUM, bits: cint, top: cint, bottom: cint): cint {.importc, cdecl.}
+proc BN_priv_rand*(rnd: BIGNUM, bits: cint, top: cint, bottom: cint): cint {.importc, cdecl.}
+proc BN_pseudo_rand*(rnd: BIGNUM, bits: cint, top: cint, bottom: cint): cint {.importc, cdecl.}
+proc BN_rand_range*(rnd: BIGNUM, range: BIGNUM): cint {.importc, cdecl.}
+proc BN_priv_rand_range*(rnd: BIGNUM, range: BIGNUM): cint {.importc, cdecl.}
+proc BN_pseudo_rand_range*(rnd: BIGNUM, range: BIGNUM): cint {.importc, cdecl.}
 
 # include/openssl/x509.h
 type
   X509_REQ* = ptr object
 
-proc X509_new*(): X509 {.importc.}
-proc X509_free*(a: X509) {.importc.}
-proc X509_get_subject_name*(x: X509): X509_NAME {.importc.}
-proc X509_set_subject_name*(x: X509, name: X509_NAME): cint {.importc.}
-proc X509_get_issuer_name*(x: X509): X509_NAME {.importc.}
-proc X509_set_issuer_name*(x: X509, name: X509_NAME): cint {.importc.}
-proc X509_REQ_get_subject_name*(x: X509_REQ): X509_NAME {.importc.}
-proc X509_REQ_set_subject_name*(x: X509_REQ, name: X509_NAME): cint {.importc.}
-proc X509_CRL_get_issuer*(x: X509_CRL): X509_NAME {.importc.}
-proc X509_CRL_set_issuer_name*(x: X509_CRL, name: X509_NAME): cint {.importc.}
+proc X509_new*(): X509 {.importc, cdecl.}
+proc X509_free*(a: X509) {.importc, cdecl.}
+proc X509_get_subject_name*(x: X509): X509_NAME {.importc, cdecl.}
+proc X509_set_subject_name*(x: X509, name: X509_NAME): cint {.importc, cdecl.}
+proc X509_get_issuer_name*(x: X509): X509_NAME {.importc, cdecl.}
+proc X509_set_issuer_name*(x: X509, name: X509_NAME): cint {.importc, cdecl.}
+proc X509_REQ_get_subject_name*(x: X509_REQ): X509_NAME {.importc, cdecl.}
+proc X509_REQ_set_subject_name*(x: X509_REQ, name: X509_NAME): cint {.importc, cdecl.}
+proc X509_CRL_get_issuer*(x: X509_CRL): X509_NAME {.importc, cdecl.}
+proc X509_CRL_set_issuer_name*(x: X509_CRL, name: X509_NAME): cint {.importc, cdecl.}
 
-proc X509_get_serialNumber*(x: X509): ASN1_INTEGER {.importc.}
-proc X509_get0_serialNumber*(x: X509): ASN1_INTEGER {.importc.}
-proc X509_set_serialNumber*(x: X509, serial: ASN1_INTEGER): cint {.importc.}
+proc X509_get_serialNumber*(x: X509): ASN1_INTEGER {.importc, cdecl.}
+proc X509_get0_serialNumber*(x: X509): ASN1_INTEGER {.importc, cdecl.}
+proc X509_set_serialNumber*(x: X509, serial: ASN1_INTEGER): cint {.importc, cdecl.}
 
-proc X509_get_version*(x: X509): clong {.importc.}
-proc X509_set_version*(x: X509, version: clong): cint {.importc.}
+proc X509_get_version*(x: X509): clong {.importc, cdecl.}
+proc X509_set_version*(x: X509, version: clong): cint {.importc, cdecl.}
 
-proc X509_gmtime_adj*(s: ASN1_TIME, adj: clong): ASN1_TIME {.importc, discardable.}
-proc X509_get_notBefore*(x: X509): ASN1_TIME {.importc: "X509_getm_notBefore".}
-proc X509_get_notAfter*(x: X509): ASN1_TIME {.importc: "X509_getm_notAfter".}
+proc X509_gmtime_adj*(s: ASN1_TIME, adj: clong): ASN1_TIME {.importc, cdecl, discardable.}
+proc X509_get_notBefore*(x: X509): ASN1_TIME {.importc: "X509_getm_notBefore", cdecl.}
+proc X509_get_notAfter*(x: X509): ASN1_TIME {.importc: "X509_getm_notAfter", cdecl.}
 
-proc X509_set_pubkey*(x: X509, pkey: EVP_PKEY): cint {.importc.}
+proc X509_set_pubkey*(x: X509, pkey: EVP_PKEY): cint {.importc, cdecl.}
 
 proc X509_NAME_add_entry_by_txt*(name: X509_NAME , field: cstring, stype: cint,
                                bytes: cstring, len: cint, loc: cint,
-                               set: cint): cint {.importc.}
-proc X509_sign*(x: X509, pkey: EVP_PKEY, md: EVP_MD): cint {.importc.}
+                               set: cint): cint {.importc, cdecl.}
+proc X509_sign*(x: X509, pkey: EVP_PKEY, md: EVP_MD): cint {.importc, cdecl.}
 
 
 when isMainModule:
