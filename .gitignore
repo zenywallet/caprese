@@ -8,3 +8,5 @@ src/lib/
 src/zopfli/
 src/brotli/
 src/src/
+certs/
+public/
