@@ -4623,6 +4623,7 @@ template serverLib(cfg: static Config) {.dirty.} =
                         discard
                       of SendResult.None, SendResult.Error, SendResult.Invalid:
                         client.close(ssl = true)
+                        return
                     else:
                       if not payload.isNil and payloadSize > 0:
                         client.addRecvBuf(payload, payloadSize)
@@ -4679,7 +4680,7 @@ template serverLib(cfg: static Config) {.dirty.} =
                     if errno == EINTR:
                       continue
                     client.close(ssl = true)
-                    break
+                    return
 
             while true:
               client.reserveRecvBuf(workerRecvBufSize)
@@ -4706,6 +4707,7 @@ template serverLib(cfg: static Config) {.dirty.} =
                       discard
                     of SendResult.None, SendResult.Error, SendResult.Invalid:
                       client.close(ssl = true)
+                      return
                     client.payloadSize = 0
                     client.recvCurSize = 0
                   (find, fin, opcode, payload, payloadSize, next, size) = getFrame(next, size)
@@ -4719,7 +4721,7 @@ template serverLib(cfg: static Config) {.dirty.} =
                   client.recvCurSize = client.payloadSize
               elif recvlen == 0:
                 client.close(ssl = true)
-                break
+                return
               else:
                 client.sslErr = SSL_get_error(client.ssl, recvlen.cint)
                 if client.sslErr == SSL_ERROR_WANT_READ:
@@ -4749,11 +4751,7 @@ template serverLib(cfg: static Config) {.dirty.} =
                   if errno == EINTR:
                     continue
                   client.close(ssl = true)
-                  break
-
-            acquire(client.spinLock)
-            client.threadId = 0
-            release(client.spinLock)
+                  return
 
         else:
           let client = ctx.client
@@ -4788,6 +4786,7 @@ template serverLib(cfg: static Config) {.dirty.} =
                       discard
                     of SendResult.None, SendResult.Error, SendResult.Invalid:
                       client.close()
+                      return
                   else:
                     if not payload.isNil and payloadSize > 0:
                       client.addRecvBuf(payload, payloadSize)
@@ -4858,6 +4857,7 @@ template serverLib(cfg: static Config) {.dirty.} =
                     discard
                   of SendResult.None, SendResult.Error, SendResult.Invalid:
                     client.close()
+                    return
                   client.payloadSize = 0
                   client.recvCurSize = 0
                 (find, fin, opcode, payload, payloadSize, next, size) = getFrame(next, size)
@@ -4871,7 +4871,7 @@ template serverLib(cfg: static Config) {.dirty.} =
                 client.recvCurSize = client.payloadSize
             elif recvlen == 0:
               client.close()
-              break
+              return
             else:
               if errno == EAGAIN or errno == EWOULDBLOCK:
                 acquire(client.spinLock)
@@ -4885,11 +4885,7 @@ template serverLib(cfg: static Config) {.dirty.} =
               elif errno == EINTR:
                 continue
               client.close()
-              break
-
-          acquire(client.spinLock)
-          client.threadId = 0
-          release(client.spinLock)
+              return
 
   macro appStreamSendMacro(ssl: bool, body: untyped): untyped =
     quote do:
