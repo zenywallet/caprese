@@ -4023,7 +4023,7 @@ template serverLib(cfg: static Config) {.dirty.} =
                         if ctx.header.minorVer == 0 or getHeaderValue(ctx.pRecvBuf, ctx.header,
                           InternalEssentialHeaderConnection) == "close":
                           client.close()
-                          break
+                          return
                         elif retHeader.next < recvlen:
                           nextPos = retHeader.next
                           parseSize = recvlen - nextPos
@@ -4037,11 +4037,11 @@ template serverLib(cfg: static Config) {.dirty.} =
                           break
                       else:
                         client.close()
-                        break
+                        return
                     else:
                       echo "retHeader err=", retHeader.err
                       client.close()
-                      break
+                      return
 
                 else:
                   client.addRecvBuf(ctx.pRecvBuf0, recvlen)
@@ -4055,7 +4055,7 @@ template serverLib(cfg: static Config) {.dirty.} =
                 elif errno == EINTR:
                   continue
                 client.close()
-              break
+              return
 
           else:
             while true:
@@ -4078,7 +4078,7 @@ template serverLib(cfg: static Config) {.dirty.} =
                             InternalEssentialHeaderConnection) == "close":
                             client.keepAlive = false
                             client.close()
-                            break
+                            return
                           elif retHeader.next < parseSize:
                             nextPos = retHeader.next
                             parseSize = parseSize - nextPos
@@ -4087,7 +4087,7 @@ template serverLib(cfg: static Config) {.dirty.} =
                             break
                         else:
                           client.close()
-                          break
+                          return
                       elif retMain == SendResult.Pending:
                         if retHeader.next < parseSize:
                           nextPos = retHeader.next
@@ -4097,11 +4097,11 @@ template serverLib(cfg: static Config) {.dirty.} =
                           break
                       else:
                         client.close()
-                        break
+                        return
                     else:
                       echo "retHeader err=", retHeader.err
                       client.close()
-                      break
+                      return
 
               elif recvlen == 0:
                 client.close()
@@ -4112,7 +4112,7 @@ template serverLib(cfg: static Config) {.dirty.} =
                 elif errno == EINTR:
                   continue
                 client.close()
-              break
+              return
 
   macro appRoutesStage1Macro(ssl: bool, body: untyped): untyped =
     quote do:
