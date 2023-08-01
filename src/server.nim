@@ -4865,8 +4865,6 @@ template serverLib(cfg: static Config) {.dirty.} =
               if not next.isNil and size > 0:
                 copyMem(p, next, size)
                 client.recvCurSize = client.payloadSize + size
-                if recvlen == workerRecvBufSize:
-                  continue
               else:
                 client.recvCurSize = client.payloadSize
             elif recvlen == 0:
