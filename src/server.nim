@@ -926,7 +926,7 @@ template serverInitFreeClient() {.dirty.} =
   import logs
 
   var clients: ptr UncheckedArray[ClientObj] = nil
-  var clientFreePool*: queue2.Queue[Client]
+  var clientFreePool* = queue2.newQueue[Client]()
 
   proc initClient(clientMax: static int, ClientObj, Client: typedesc) =
     var p = cast[ptr UncheckedArray[ClientObj]](allocShared0(sizeof(ClientObj) * clientMax))
@@ -958,7 +958,6 @@ template serverInitFreeClient() {.dirty.} =
     clientId2Tasks = newHashTable[ClientId, Array[ClientTask]](clientMax * 3 div 2)
 
     try:
-      clientFreePool.init(clientMax)
       for i in 0..<clientMax:
         clients[i].sock = osInvalidSocket
         clientFreePool.add(addr clients[i])
