@@ -2102,6 +2102,17 @@ proc stop*() {.inline.} =
     quitServer()
 ]#
 
+type
+  AppType* = enum
+    AppDummy
+    AppListen
+    AppRoutes
+    AppRoutesStage1
+    AppRoutesStage2
+    AppRoutesSend
+    AppStream
+    AppStreamSend
+
 var initServerFlag {.compileTime.} = false
 var curSrvId {.compileTime.} = 0
 var curAppId {.compileTime.} = 0
@@ -2121,6 +2132,7 @@ var serverWorkerMainStmt {.compileTime.} =
     )
   )
 var serverHandlerList* {.compileTime.} = @[("appDummy", ident("false"), newStmtList())]
+var appIdTypeList* {.compileTime.} = @[AppDummy]
 var freePoolServerUsedCount* {.compileTime.} = 0
 var sockTmp = createNativeSocket()
 var workerRecvBufSize*: int = sockTmp.getSockOptInt(SOL_SOCKET, SO_RCVBUF)
@@ -2149,18 +2161,23 @@ macro addServerMacro*(bindAddress: string, port: uint16, ssl: bool, sslLib: SslL
   inc(curAppId)
   var appId = curAppId
   serverHandlerList.add(("appListen", ssl, newStmtList()))
+  appIdTypeList.add(AppListen)
   inc(curAppId) # reserved
   var appRoutes = curAppId
   serverHandlerList.add(("appRoutes", ssl, newStmtList()))
+  appIdTypeList.add(AppRoutes)
   if eqIdent("true", ssl) and (eqIdent("OpenSSL", sslLib) or eqIdent("LibreSSL", sslLib) or eqIdent("BoringSSL", sslLib)):
     inc(curAppId)
     appRoutes = curAppId
     serverHandlerList.add(("appRoutesStage1", ssl, newStmtList()))
+    appIdTypeList.add(AppRoutesStage1)
     inc(curAppId)
     serverHandlerList.add(("appRoutesStage2", ssl, newStmtList()))
+    appIdTypeList.add(AppRoutesStage2)
   else:
     inc(curAppId)
     serverHandlerList.add(("appRoutesSend", ssl, newStmtList()))
+    appIdTypeList.add(AppRoutesSend)
   var serverResources = newStmtList()
   var routesList = newStmtList()
   for s in body:
@@ -2229,8 +2246,10 @@ macro addServerMacro*(bindAddress: string, port: uint16, ssl: bool, sslLib: SslL
               newLit("")
             ))
           serverHandlerList.add(("appStream", ssl, s2[s2.len - 1]))
+          appIdTypeList.add(AppStream)
           inc(curAppId)
           serverHandlerList.add(("appStreamSend", ssl, newStmtList()))
+          appIdTypeList.add(AppStreamSend)
         elif eqIdent(s2[0], "public"):
           var importPath = s2[1]
           inc(curResId)
@@ -4898,6 +4917,21 @@ template serverLib(cfg: static Config) {.dirty.} =
       result.add(addHandlerProc(s[0], s[1], s[2]))
 
   serverHandlerMacro()
+
+  macro constAppIdTypeMapMacro(): untyped =
+    var bracket = nnkBracket.newTree()
+    for t in appIdTypeList:
+      bracket.add(newIdentNode($t))
+    nnkStmtList.newTree(
+      nnkConstSection.newTree(
+        nnkConstDef.newTree(
+          newIdentNode("appIdTypeMap"),
+          newEmptyNode(),
+          bracket
+        )
+      )
+    )
+  constAppIdTypeMapMacro()
 
   createCertsTable()
   certsTable = unsafeAddr staticCertsTable
