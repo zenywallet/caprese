@@ -2544,7 +2544,7 @@ template serverLib(cfg: static Config) {.dirty.} =
   var workerThreadCtx {.threadvar.}: WorkerThreadCtx
   #var clientHandlerProcs: Array[ClientHandlerProc]
 
-  var clientQueue = queue2.newQueue[Client](0x10000)
+  var clientQueue = queue2.newQueue[Client]()
   var highGearManagerAssinged: int = 0
   var highGearSemaphore: Sem
   discard sem_init(addr highGearSemaphore, 0, 0)

@@ -53,7 +53,7 @@ proc init*[T](queue: var Queue[T], limit: int) {.inline.} =
   queue.bufLen = limit
   queue.clear()
 
-proc newQueue*[T](limit: int = 0x10000): Queue[T] = result.init(0x10000)
+proc newQueue*[T](): Queue[T] = result.init(0x10000)
 
 proc add*[T](queue: var Queue[T], data: T): bool {.discardable, inline.} =
   if cast[uint16](queue.next + 1) == cast[uint16](queue.pos):
