@@ -4150,7 +4150,7 @@ template serverLib(cfg: static Config) {.dirty.} =
                         if ctx.header.minorVer == 0 or getHeaderValue(ctx.pRecvBuf, ctx.header,
                           InternalEssentialHeaderConnection) == "close":
                           client.close(ssl = true)
-                          break
+                          return
                         elif retHeader.next < recvlen:
                           nextPos = retHeader.next
                           parseSize = recvlen - nextPos
@@ -4164,15 +4164,16 @@ template serverLib(cfg: static Config) {.dirty.} =
                           break
                       else:
                         client.close(ssl = true)
-                        break
+                        return
                     else:
                       client.close(ssl = true)
-                      break
+                      return
                 else:
                   client.addRecvBuf(ctx.pRecvBuf0, recvlen)
 
               elif recvlen == 0:
                 client.close(ssl = true)
+                return
 
               else:
                 client.sslErr = SSL_get_error(client.ssl, recvlen.cint)
@@ -4203,7 +4204,7 @@ template serverLib(cfg: static Config) {.dirty.} =
                   if errno == EINTR:
                     continue
                   client.close(ssl = true)
-                  break
+                  return
 
           else:
             while true:
@@ -4226,7 +4227,7 @@ template serverLib(cfg: static Config) {.dirty.} =
                             InternalEssentialHeaderConnection) == "close":
                             client.keepAlive = false
                             client.close(ssl = true)
-                            break
+                            return
                           elif retHeader.next < parseSize:
                             nextPos = retHeader.next
                             parseSize = parseSize - nextPos
@@ -4235,7 +4236,7 @@ template serverLib(cfg: static Config) {.dirty.} =
                             break
                         else:
                           client.close(ssl = true)
-                          break
+                          return
                       elif retMain == SendResult.Pending:
                         if retHeader.next < parseSize:
                           nextPos = retHeader.next
@@ -4245,10 +4246,10 @@ template serverLib(cfg: static Config) {.dirty.} =
                           break
                       else:
                         client.close(ssl = true)
-                        break
+                        return
                     else:
                       client.close(ssl = true)
-                      break
+                      return
 
               elif recvlen == 0:
                 client.close(ssl = true)
@@ -4259,14 +4260,10 @@ template serverLib(cfg: static Config) {.dirty.} =
                 elif errno == EINTR:
                   continue
                 client.close(ssl = true)
-              break
+              return
 
         else:
           raise
-
-        acquire(client.spinLock)
-        client.threadId = 0
-        release(client.spinLock)
 
   macro appRoutesStage2Macro(ssl: bool, body: untyped): untyped =
     quote do:
