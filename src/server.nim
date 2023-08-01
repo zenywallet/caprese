@@ -4876,8 +4876,9 @@ template serverLib(cfg: static Config) {.dirty.} =
               if errno == EAGAIN or errno == EWOULDBLOCK:
                 acquire(client.spinLock)
                 if not client.dirty:
+                  client.threadId = 0
                   release(client.spinLock)
-                  break
+                  return
                 else:
                   release(client.spinLock)
                   continue
