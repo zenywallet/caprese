@@ -40,6 +40,7 @@ type
     soKeepalive*: bool
     tcpNodelay*: bool
     clientMax*: int
+    connectionTimeout*: int
     recvBufExpandBreakSize*: int
     maxFrameSize*: int
     certsPath*: string
@@ -57,6 +58,7 @@ proc defaultConfig*(): Config {.compileTime.} =
   result.soKeepalive = false
   result.tcpNodelay = true
   result.clientMax = 32000
+  result.connectionTimeout = 120
   result.recvBufExpandBreakSize = 131072 * 5
   result.maxFrameSize = 131072 * 5
   result.certsPath = "./certs"
@@ -995,7 +997,7 @@ template serverInitFreeClient() {.dirty.} =
       client.sock = osInvalidSocket
       client.threadId = 0
       release(client.spinLock)
-      when ssl:
+      when ssl and (cfg.sslLib == OpenSSL or cfg.sslLib == LibreSSL or cfg.sslLib == BoringSSL):
         if not client.ssl.isNil:
           SSL_free(client.ssl)
           client.ssl = nil
@@ -4937,6 +4939,32 @@ template serverLib(cfg: static Config) {.dirty.} =
     )
   constAppIdTypeMapMacro()
 
+  when cfg.connectionTimeout >= 0:
+    proc calcClientConnectionSearchCount(): int {.compileTime.} =
+      var countSec = cfg.connectionTimeout div 3
+      if countSec == 0:
+        countSec = 1
+      result = cfg.clientMax div countSec
+      if result == 0:
+        result = 1
+
+    const clientConnectionSearchCount = calcClientConnectionSearchCount()
+    var clientConnectionCheckPos = 0
+
+    proc clientConnectionWhackAMole() =
+      for i in 0..clientConnectionSearchCount:
+        var client: Client = addr clients[clientConnectionCheckPos]
+        if client.sock != osInvalidSocket:
+          let appTypeInt = appIdTypeMap[client.appId].int
+          if appTypeInt >= AppRoutes.int and appTypeInt <= AppRoutesSend.int:
+            if client.dirty == ClientDirtyMole:
+              client.close(ssl = true)
+            else:
+              client.dirty = ClientDirtyMole
+        inc(clientConnectionCheckPos)
+        if clientConnectionCheckPos >= cfg.clientMax:
+          clientConnectionCheckPos = 0
+
   createCertsTable()
   certsTable = unsafeAddr staticCertsTable
   certsIdxTable = unsafeAddr staticCertsIdxTable
@@ -5107,6 +5135,8 @@ template serverLib(cfg: static Config) {.dirty.} =
               break
 
       while active:
+        when cfg.connectionTimeout >= 0:
+          clientConnectionWhackAMole()
         if inoty == -1:
           sleep(3000)
         else:
