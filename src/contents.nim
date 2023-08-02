@@ -19,8 +19,12 @@ var pTimeStrArray: ptr Array[byte]
 var timeStampThread*: Thread[void]
 var active = false
 
+for i in 0..1:
+  timeStrArrays[i] = newArray[byte](29)
+
 proc updateTimeStamp() {.inline.} =
-  timeStrArrays[shiftTimeStrArray] = cast[Array[byte]](now().utc().format("ddd, dd MMM yyyy HH:mm:ss 'GMT'").toArray)
+  var timeStr = now().utc().format("ddd, dd MMM yyyy HH:mm:ss 'GMT'")
+  copyMem(timeStrArrays[shiftTimeStrArray].data, addr timeStr[0], 29)
   pTimeStrArray = addr timeStrArrays[shiftTimeStrArray]
   if shiftTimeStrArray == 0:
     shiftTimeStrArray = 1
