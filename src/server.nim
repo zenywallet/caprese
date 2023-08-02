@@ -212,7 +212,7 @@ template serverInit*() {.dirty.} =
       appId*: int
       appShift: bool
       listenFlag*: bool
-      dirty: bool
+      dirty: int
 
     ClientObj* = object of ClientBase
       payloadSize: int
@@ -225,6 +225,10 @@ template serverInit*() {.dirty.} =
       pStream*: pointer
 
     Client* = ptr ClientObj
+
+  const ClientDirtyNone = 0
+  const ClientDirtyTrue = 1
+  const ClientDirtyMole = 2
 
 type
   WebSocketOpCode* = enum
@@ -3656,16 +3660,16 @@ template serverLib(cfg: static Config) {.dirty.} =
       client.threadId = ctx.threadId
       release(client.spinLock)
     else:
-      client.dirty = true
+      client.dirty = ClientDirtyTrue
       release(client.spinLock)
       return
 
     while true:
-      client.dirty = false
+      client.dirty = ClientDirtyNone
       let retFlush = client.sendFlush()
       if retFlush == SendResult.Pending:
         acquire(client.spinLock)
-        if not client.dirty:
+        if client.dirty == ClientDirtyNone:
           client.threadId = 0
           release(client.spinLock)
           return
@@ -3679,7 +3683,7 @@ template serverLib(cfg: static Config) {.dirty.} =
         return
       else:
         acquire(client.spinLock)
-        if not client.dirty:
+        if client.dirty == ClientDirtyNone:
           release(client.spinLock)
           break
         else:
@@ -3693,10 +3697,10 @@ template serverLib(cfg: static Config) {.dirty.} =
       result = (lastSendErr == SendResult.Success)
 
     while true:
-      client.dirty = false
+      client.dirty = ClientDirtyNone
       if clientId.getAndPurgeTasks(taskCallback):
         acquire(client.spinLock)
-        if not client.dirty:
+        if client.dirty == ClientDirtyNone:
           if client.appShift:
             dec(client.appId)
             client.appShift = false
@@ -3779,7 +3783,7 @@ template serverLib(cfg: static Config) {.dirty.} =
             client.threadId = ctx.threadId
             release(client.spinLock)
           else:
-            client.dirty = true
+            client.dirty = ClientDirtyTrue
             release(client.spinLock)
             return
 
@@ -3828,8 +3832,8 @@ template serverLib(cfg: static Config) {.dirty.} =
                               else:
                                 client.recvCurSize = 0
                                 acquire(client.spinLock)
-                                if client.dirty:
-                                  client.dirty = false
+                                if client.dirty != ClientDirtyNone:
+                                  client.dirty = ClientDirtyNone
                                   release(client.spinLock)
                                   engine = RecvApp
                                   break
@@ -3888,8 +3892,8 @@ template serverLib(cfg: static Config) {.dirty.} =
                           release(client.spinLock)
                           break
                         acquire(client.spinLock)
-                        if client.dirty:
-                          client.dirty = false
+                        if client.dirty != ClientDirtyNone:
+                          client.dirty = ClientDirtyNone
                           release(client.spinLock)
                           if client.sendCurSize > 0:
                             engine = SendApp
@@ -3920,8 +3924,8 @@ template serverLib(cfg: static Config) {.dirty.} =
                     else:
                       if errno == EAGAIN or errno == EWOULDBLOCK:
                         acquire(client.spinLock)
-                        if client.dirty:
-                          client.dirty = false
+                        if client.dirty != ClientDirtyNone:
+                          client.dirty = ClientDirtyNone
                           release(client.spinLock)
                           engine = RecvApp
                         else:
@@ -3938,8 +3942,8 @@ template serverLib(cfg: static Config) {.dirty.} =
                   buf = cast[ptr UncheckedArray[byte]](br_ssl_engine_sendapp_buf(ec, addr bufLen))
                   if buf.isNil:
                     acquire(client.spinLock)
-                    if client.dirty:
-                      client.dirty = false
+                    if client.dirty != ClientDirtyNone:
+                      client.dirty = ClientDirtyNone
                       release(client.spinLock)
                       engine = RecvApp
                     else:
@@ -3976,7 +3980,7 @@ template serverLib(cfg: static Config) {.dirty.} =
                 debug "SSL_accept err=", client.sslErr, " errno=", errno
                 if client.sslErr == SSL_ERROR_WANT_READ:
                   acquire(client.spinLock)
-                  if not client.dirty:
+                  if client.dirty == ClientDirtyNone:
                     client.threadId = 0
                     release(client.spinLock)
                     client.ev.events = EPOLLIN or EPOLLRDHUP or EPOLLET
@@ -3985,11 +3989,11 @@ template serverLib(cfg: static Config) {.dirty.} =
                       logs.error "error: epoll_ctl ret=", retCtl, " errno=", errno
                     break
                   else:
-                    client.dirty = false
+                    client.dirty = ClientDirtyNone
                     release(client.spinLock)
                 elif client.sslErr == SSL_ERROR_WANT_WRITE:
                   acquire(client.spinLock)
-                  if not client.dirty:
+                  if client.dirty == ClientDirtyNone:
                     client.threadId = 0
                     release(client.spinLock)
                     client.ev.events = EPOLLRDHUP or EPOLLET or EPOLLOUT
@@ -3998,7 +4002,7 @@ template serverLib(cfg: static Config) {.dirty.} =
                       logs.error "error: epoll_ctl ret=", retCtl, " errno=", errno
                     break
                   else:
-                    client.dirty = false
+                    client.dirty = ClientDirtyNone
                     release(client.spinLock)
                 else:
                   if errno == EINTR:
@@ -4144,7 +4148,7 @@ template serverLib(cfg: static Config) {.dirty.} =
           client.threadId = ctx.threadId
           release(client.spinLock)
         else:
-          client.dirty = true
+          client.dirty = ClientDirtyTrue
           release(client.spinLock)
           return
 
@@ -4153,7 +4157,7 @@ template serverLib(cfg: static Config) {.dirty.} =
         when cfg.sslLib == OpenSSL or cfg.sslLib == LibreSSL or cfg.sslLib == BoringSSL:
           if client.recvCurSize == 0:
             while true:
-              client.dirty = false
+              client.dirty = ClientDirtyNone
               let recvlen = client.ssl.SSL_read(cast[pointer](ctx.pRecvBuf0), workerRecvBufSize.cint).int
               if recvlen > 0:
                 if recvlen >= 17 and equalMem(addr ctx.pRecvBuf0[recvlen - 4], "\c\L\c\L".cstring, 4):
@@ -4198,7 +4202,7 @@ template serverLib(cfg: static Config) {.dirty.} =
                 client.sslErr = SSL_get_error(client.ssl, recvlen.cint)
                 if client.sslErr == SSL_ERROR_WANT_READ:
                   acquire(client.spinLock)
-                  if not client.dirty:
+                  if client.dirty == ClientDirtyNone:
                     client.threadId = 0
                     release(client.spinLock)
                     client.ev.events = EPOLLIN or EPOLLRDHUP or EPOLLET
@@ -4209,7 +4213,7 @@ template serverLib(cfg: static Config) {.dirty.} =
                   else:
                     release(client.spinLock)
                 elif client.sslErr == SSL_ERROR_WANT_WRITE:
-                  if not client.dirty:
+                  if client.dirty == ClientDirtyNone:
                     client.threadId = 0
                     release(client.spinLock)
                     client.ev.events = EPOLLRDHUP or EPOLLET or EPOLLOUT
@@ -4295,16 +4299,16 @@ template serverLib(cfg: static Config) {.dirty.} =
             client.threadId = ctx.threadId
             release(client.spinLock)
           else:
-            client.dirty = true
+            client.dirty = ClientDirtyTrue
             release(client.spinLock)
             return
 
           while true:
-            client.dirty = false
+            client.dirty = ClientDirtyNone
             let retFlush = client.sendSslFlush()
             if retFlush == SendResult.Pending:
               acquire(client.spinLock)
-              if not client.dirty:
+              if client.dirty == ClientDirtyNone:
                 client.threadId = 0
                 release(client.spinLock)
                 return
@@ -4318,7 +4322,7 @@ template serverLib(cfg: static Config) {.dirty.} =
               return
             else:
               acquire(client.spinLock)
-              if not client.dirty:
+              if client.dirty == ClientDirtyNone:
                 release(client.spinLock)
                 break
               else:
@@ -4332,10 +4336,10 @@ template serverLib(cfg: static Config) {.dirty.} =
             result = (lastSendErr == SendResult.Success)
 
           while true:
-            client.dirty = false
+            client.dirty = ClientDirtyNone
             if clientId.getAndPurgeTasks(taskCallback):
               acquire(client.spinLock)
-              if not client.dirty:
+              if client.dirty == ClientDirtyNone:
                 if client.appShift:
                   dec(client.appId)
                   client.appShift = false
@@ -4364,7 +4368,7 @@ template serverLib(cfg: static Config) {.dirty.} =
                 client.threadId = ctx.threadId
                 release(client.spinLock)
               else:
-                client.dirty = true
+                client.dirty = ClientDirtyTrue
                 release(client.spinLock)
                 return
         else:
@@ -4443,7 +4447,7 @@ template serverLib(cfg: static Config) {.dirty.} =
               client.threadId = ctx.threadId
               release(client.spinLock)
             else:
-              client.dirty = true
+              client.dirty = ClientDirtyTrue
               release(client.spinLock)
               return
 
@@ -4529,8 +4533,8 @@ template serverLib(cfg: static Config) {.dirty.} =
                           release(client.spinLock)
                           break
                         acquire(client.spinLock)
-                        if client.dirty:
-                          client.dirty = false
+                        if client.dirty != ClientDirtyNone:
+                          client.dirty = ClientDirtyNone
                           release(client.spinLock)
                           if client.sendCurSize > 0:
                             engine = SendApp
@@ -4561,8 +4565,8 @@ template serverLib(cfg: static Config) {.dirty.} =
                     else:
                       if errno == EAGAIN or errno == EWOULDBLOCK:
                         acquire(client.spinLock)
-                        if client.dirty:
-                          client.dirty = false
+                        if client.dirty != ClientDirtyNone:
+                          client.dirty = ClientDirtyNone
                           release(client.spinLock)
                           engine = RecvApp
                         else:
@@ -4579,8 +4583,8 @@ template serverLib(cfg: static Config) {.dirty.} =
                   buf = cast[ptr UncheckedArray[byte]](br_ssl_engine_sendapp_buf(ec, addr bufLen))
                   if buf.isNil:
                     acquire(client.spinLock)
-                    if client.dirty:
-                      client.dirty = false
+                    if client.dirty != ClientDirtyNone:
+                      client.dirty = ClientDirtyNone
                       release(client.spinLock)
                       engine = RecvApp
                     else:
@@ -4617,7 +4621,7 @@ template serverLib(cfg: static Config) {.dirty.} =
               client.threadId = ctx.threadId
               release(client.spinLock)
             else:
-              client.dirty = true
+              client.dirty = ClientDirtyTrue
               release(client.spinLock)
               return
 
@@ -4627,7 +4631,7 @@ template serverLib(cfg: static Config) {.dirty.} =
 
             if client.recvCurSize == 0:
               while true:
-                client.dirty = false
+                client.dirty = ClientDirtyNone
                 let recvlen = client.ssl.SSL_read(cast[pointer](ctx.pRecvBuf0), workerRecvBufSize.cint).int
                 if recvlen > 0:
                   var (find, fin, opcode, payload, payloadSize,
@@ -4656,7 +4660,7 @@ template serverLib(cfg: static Config) {.dirty.} =
                       break
 
                   acquire(client.spinLock)
-                  if not client.dirty:
+                  if client.dirty == ClientDirtyNone:
                     client.threadId = 0
                     release(client.spinLock)
                     return
@@ -4674,7 +4678,7 @@ template serverLib(cfg: static Config) {.dirty.} =
                   client.sslErr = SSL_get_error(client.ssl, recvlen.cint)
                   if client.sslErr == SSL_ERROR_WANT_READ:
                     acquire(client.spinLock)
-                    if not client.dirty:
+                    if client.dirty == ClientDirtyNone:
                       client.threadId = 0
                       release(client.spinLock)
                       client.ev.events = EPOLLIN or EPOLLRDHUP or EPOLLET
@@ -4685,7 +4689,7 @@ template serverLib(cfg: static Config) {.dirty.} =
                     else:
                       release(client.spinLock)
                   elif client.sslErr == SSL_ERROR_WANT_WRITE:
-                    if not client.dirty:
+                    if client.dirty == ClientDirtyNone:
                       client.threadId = 0
                       release(client.spinLock)
                       client.ev.events = EPOLLRDHUP or EPOLLET or EPOLLOUT
@@ -4703,7 +4707,7 @@ template serverLib(cfg: static Config) {.dirty.} =
 
             while true:
               client.reserveRecvBuf(workerRecvBufSize)
-              client.dirty = false
+              client.dirty = ClientDirtyNone
               var recvlen = client.ssl.SSL_read(cast[pointer](addr client.recvBuf[client.recvCurSize]), workerRecvBufSize.cint).int
               if recvlen > 0:
                 client.recvCurSize = client.recvCurSize + recvlen
@@ -4745,7 +4749,7 @@ template serverLib(cfg: static Config) {.dirty.} =
                 client.sslErr = SSL_get_error(client.ssl, recvlen.cint)
                 if client.sslErr == SSL_ERROR_WANT_READ:
                   acquire(client.spinLock)
-                  if not client.dirty:
+                  if client.dirty == ClientDirtyNone:
                     client.threadId = 0
                     release(client.spinLock)
                     client.ev.events = EPOLLIN or EPOLLRDHUP or EPOLLET
@@ -4756,7 +4760,7 @@ template serverLib(cfg: static Config) {.dirty.} =
                   else:
                     release(client.spinLock)
                 elif client.sslErr == SSL_ERROR_WANT_WRITE:
-                  if not client.dirty:
+                  if client.dirty == ClientDirtyNone:
                     client.threadId = 0
                     release(client.spinLock)
                     client.ev.events = EPOLLRDHUP or EPOLLET or EPOLLOUT
@@ -4780,7 +4784,7 @@ template serverLib(cfg: static Config) {.dirty.} =
             client.threadId = ctx.threadId
             release(client.spinLock)
           else:
-            client.dirty = true
+            client.dirty = ClientDirtyTrue
             release(client.spinLock)
             return
 
@@ -4790,7 +4794,7 @@ template serverLib(cfg: static Config) {.dirty.} =
 
           if client.recvCurSize == 0:
             while true:
-              client.dirty = false
+              client.dirty = ClientDirtyNone
               let recvlen = sock.recv(ctx.pRecvBuf0, workerRecvBufSize, 0.cint)
               if recvlen > 0:
                 var (find, fin, opcode, payload, payloadSize,
@@ -4819,7 +4823,7 @@ template serverLib(cfg: static Config) {.dirty.} =
                     break
 
                 acquire(client.spinLock)
-                if not client.dirty:
+                if client.dirty == ClientDirtyNone:
                   client.threadId = 0
                   release(client.spinLock)
                   return
@@ -4836,7 +4840,7 @@ template serverLib(cfg: static Config) {.dirty.} =
               else:
                 if errno == EAGAIN or errno == EWOULDBLOCK:
                   acquire(client.spinLock)
-                  if not client.dirty:
+                  if client.dirty == ClientDirtyNone:
                     client.threadId = 0
                     release(client.spinLock)
                     return
@@ -4853,7 +4857,7 @@ template serverLib(cfg: static Config) {.dirty.} =
 
           while true:
             client.reserveRecvBuf(workerRecvBufSize)
-            client.dirty = false
+            client.dirty = ClientDirtyNone
             var recvlen = sock.recv(addr client.recvBuf[client.recvCurSize], workerRecvBufSize.cint, 0.cint)
             if recvlen > 0:
               client.recvCurSize = client.recvCurSize + recvlen
@@ -4892,7 +4896,7 @@ template serverLib(cfg: static Config) {.dirty.} =
             else:
               if errno == EAGAIN or errno == EWOULDBLOCK:
                 acquire(client.spinLock)
-                if not client.dirty:
+                if client.dirty == ClientDirtyNone:
                   client.threadId = 0
                   release(client.spinLock)
                   return
