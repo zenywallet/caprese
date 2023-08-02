@@ -20,7 +20,7 @@ var timeStampThread*: Thread[void]
 var active = false
 
 for i in 0..1:
-  timeStrArrays[i] = newArray[byte](29)
+  timeStrArrays[i] = newArray[byte](30)
 
 proc updateTimeStamp() {.inline.} =
   var timeStr = now().utc().format("ddd, dd MMM yyyy HH:mm:ss 'GMT'")
@@ -33,7 +33,7 @@ proc updateTimeStamp() {.inline.} =
 
 updateTimeStamp()
 
-proc getCurTimeStr*(): string {.inline.} = pTimeStrArray[].toString()
+proc getCurTimeStr*(): string {.inline.} = $cast[cstring](pTimeStrArray[].data)
 
 proc writeTimeStamp*(buf: ptr UncheckedArray[byte]) {.inline.} =
   copyMem(buf, addr pTimeStrArray[].data[0], 25)
