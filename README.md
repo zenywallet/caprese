@@ -11,19 +11,19 @@ A front-end web server specialized for real-time message exchange
 *Caprese will be the base of that system. It would be a decentralized web server with server-to-server connections that could verify the reliability of contents and applications.*
 
 ### Quick Trial
-##### Install Dependencies
+#### Install Dependencies
 I heard you like Ubuntu, so I will explain for it.
 
     sudo apt install build-essential git curl
 
-##### Install Nim
+#### Install Nim
     curl https://nim-lang.org/choosenim/init.sh -sSf | sh
     echo 'export PATH='$HOME'/.nimble/bin:$PATH' >> ~/.bashrc
     . ~/.bashrc
 
 See [Nim](https://nim-lang.org/) for installation details.
 
-##### Build Caprese and Launch
+#### Build Caprese and Launch
     git clone https://github.com/zenywallet/caprese
     cd caprese
     nimble install -d
@@ -32,7 +32,7 @@ See [Nim](https://nim-lang.org/) for installation details.
 
 Open [https://localhost:8009/](https://localhost:8009/) in your browser. You'll probably get a SSL certificate warning, but make sure it's a local server and proceed.
 
-##### Build Your Custom Web Server
+#### Build Your Custom Web Server
 Install Caprese package.
 
     nimble install https://github.com/zenywallet/caprese
@@ -124,6 +124,7 @@ config:
   soKeepalive = false
   tcpNodelay = true
   clientMax = 32000
+  connectionTimeout = 120
   recvBufExpandBreakSize = 131072 * 5
   maxFrameSize = 131072 * 5
   certsPath = "./certs"
@@ -139,9 +140,10 @@ If SSL is not required, it is recommended set to *None*. This will enable the ex
 * **sigPipeIgnore:** Whether to ignore SIGPIPE. Caprese requires SIGPIPE to be ignored, but can be set to *false* if duplicated in other libraries.
 * **limitOpenFiles:** *[Number of open files]*, *-1*(default, automatically set the maximum number of open files)
 * **serverWorkerNum:** *[Number of processing threads]*, *-1*(default, automatically set the number of CPUs in the system)
+* **connectionTimeout:** *[Client connection timeout in seconds]*, *-1*(disabled). The time to disconnect is not exact. Disconnection occurs between a specified second and twice the time.
 
 ### Server Routes
-##### Example of a simple `server:` block
+#### Example of a simple `server:` block
 
 ```nim
 server(ip = "0.0.0.0", port = 8089):
@@ -152,7 +154,7 @@ server(ip = "0.0.0.0", port = 8089):
 serverStart()
 ```
 
-##### Multiple URL paths
+#### Multiple URL paths
 
 ```nim
     get "/home":
@@ -167,14 +169,14 @@ serverStart()
       return send(MainHtml.addHeader())
 ```
 
-##### URL path handling using Regular expression
+#### URL path handling using Regular expression
 
 ```nim
     get re"/([a-z]+)(\d+)":
       return send(sanitizeHtml(matches[0] & "|" & matches[1]).addHeader())
 ```
 
-##### 404 Not Found
+#### 404 Not Found
 ```nim
   routes:
     get "/":
@@ -184,7 +186,7 @@ serverStart()
     return send(fmt"Not found: {urlText}".addDocType().addHeader(Status404))
 ```
 
-##### SSL website and multiple ports with no SSL website
+#### SSL website and multiple ports with no SSL website
 
 ```nim
 server(ssl = true, ip = "0.0.0.0", port = 8009):
@@ -206,14 +208,14 @@ serverStart()
 
 The `host` value of the `routes:` block is actually set to your domain name.
 
-##### Set the certificate path for each
+#### Set the certificate path for each
 
 ```nim
     certificates:
       privKey: "./certs/priv/privkey.pem"
       fullChain: "./certs/chain/fullchain.pem"
 ```
-##### Specify default certificate file names and omit them
+#### Specify default certificate file names and omit them
 
 ```nim
 config:
@@ -229,7 +231,7 @@ server(ssl = true, ip = "0.0.0.0", port = 8009):
       return send(WebSite1Html.addHeader())
 ```
 
-##### Specify default certificate path and omit `certificates:` block
+#### Specify default certificate path and omit `certificates:` block
 
 ```nim
 config:
@@ -253,7 +255,7 @@ The `host` value of the `routes:` block is used for the file location.
 
     <certsPath>/<routes host>/{<privKeyFile>,<fullChainFile>}
 
-##### Multi-website configuration on the same port with SSL
+#### Multi-website configuration on the same port with SSL
 
 ```nim
 server(ssl = true, ip = "0.0.0.0", port = 8089):
@@ -276,7 +278,7 @@ server(ssl = true, ip = "0.0.0.0", port = 8089):
 serverStart()
 ```
 
-##### Pending and worker
+#### Pending and worker
 Inside the `server:` block is called the server dispatch-level. Inside this block is called by multiple threads, it must not call wait and must return results immediately. If the response cannot be returned immediately, return pending first and then process it in another worker thread.
 
 ```nim
@@ -311,7 +313,7 @@ The send commands executed by another worker thread invoke a dispatch-level thre
 
 One of the reasons for creating Caprese is stream encryption. The common method of stream encryption using a web proxy server in a separate process seems inefficient. To reduce context switches, it would be better to handle stream encryption in the same thread context as the SSL process, like the `server:` block in the Caprese.
 
-##### Thread context variables
+#### Thread context variables
 Put before the `routes:` block in the `server:` block. Um, how do I access it?
 
 ```nim
@@ -322,7 +324,7 @@ server(ip = "0.0.0.0", port = 8089):
     ...
 ```
 
-##### Web pages and WebSocket use the same port
+#### Web pages and WebSocket use the same port
 To use WebSocket, add a `stream:` block in the `routes:` block. When a WebSocket connection is established, the `onOpen:` block is called. When a message is received, the `onMessage:` block is called. When the connection is closed, the `onClose:` block is called.
 Although a bit tricky to use, WebSockets and web pages can also use the same url path like `"/"`. In that case, the `get:` path to the web page should be after the `stream:`.
 
@@ -354,7 +356,7 @@ server(ssl = true, ip = "0.0.0.0", port = 8009):
         echo "onClose"
 ```
 
-##### Custom WebSocket handling such as ping and pong
+#### Custom WebSocket handling such as ping and pong
 
 ```nim
     stream(path = "/ws", protocol = "caprese-0.1"):
@@ -380,7 +382,7 @@ server(ssl = true, ip = "0.0.0.0", port = 8009):
         return SendResult.None
 ```
 
-##### WebSocket without protocol check
+#### WebSocket without protocol check
 
 ```nim
   routes:
@@ -391,7 +393,7 @@ server(ssl = true, ip = "0.0.0.0", port = 8009):
       ...
 ```
 
-##### Check multiple protocols of the WebSocket
+#### Check multiple protocols of the WebSocket
 Use `onProtocol:` block.
 
 ```nim
@@ -412,7 +414,7 @@ Use `onProtocol:` block.
         ...
 ```
 
-##### Routes helper APIs
+#### Routes helper APIs
 * **reqUrl:** URL requested from client, always starts `/`. Caprese will reject requests that do not begin with `/`. This means that when concatenating URL strings in a request, it is guaranteed that there will always be a `/` between the strings.
 * **reqHost:** Hostname requested in the header from client. It may be different from the hostname negotiated by SSL. Incorrect hostnames should be rejected. If the `host` of `routes:` is specified, unmatched hosts will be ignored and will not be processed within that `routes:` block. You may use `reqHost` for custom handling without `host` of `routes:`.
 * **reqProtocol:** WebSocket protocol requested by the client. See [Check multiple protocols of the WebSocket](#check-multiple-protocols-of-the-websocket) for details.
@@ -485,9 +487,9 @@ server(ssl = true, ip = "0.0.0.0", port = 8009):
 ```
 
 ### Tag-based Message Exchange
-Let me explain one of the unique features of the Caprese that is not implemented in common web servers. Tags can be attached to client connections. It is possible to send some data to the tag. That data will be sent to all tagged clients. Tags can be any data, but must be hashed data. It is assumed that the data is hashed originally, and no internal hashing of tags is performed. Hashing would be easy with Nim's `converter`. To control the tags, you need the *ClientId*, so you need to call `markPending()` to get the *ClientId*.
+Let me explain one of the unique features of the Caprese that is not implemented in common web servers. Tags can be attached to client connections. It is possible to send some data to the tag. That data will be sent to all tagged clients. Tags can be any data, but must be hashed data. It is assumed that the data is hashed originally, and no internal hashing of tags is performed. Hashing would be easy with Nim's `converter`. To control the tags, you need the *ClientId*, which you can get with `markPending()`.
 
-##### The tag control functions
+#### The tag control functions
 ```nim
 proc markPending(client: Client): ClientId
 proc unmarkPending(clientId: ClientId)
@@ -502,7 +504,7 @@ iterator getClientIds(tag: Tag): ClientId
 iterator getTags(clientId: ClientId): Tag
 ```
 
-##### Send to tag, WebSocket only
+#### Send to tag, WebSocket only
 ```nim
 proc wsSend(tag: Tag, data: seq[byte] | string | Array[byte],
             opcode: WebSocketOpCode = WebSocketOpCode.Binary): SendResult
