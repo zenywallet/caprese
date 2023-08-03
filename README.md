@@ -12,9 +12,17 @@ A front-end web server specialized for real-time message exchange
 
 ### Quick Trial
 #### Install Dependencies
-I heard you like Ubuntu, so I will explain for it.
+I heard you like Ubuntu, so I will explain for it. The following are required to install [Nim](https://nim-lang.org/).
 
-    sudo apt install build-essential git curl
+    sudo apt install build-essential curl
+
+Do you have git installed?
+
+    sudo apt install git
+
+you also require the following installation to build the SSL libraries, *golang* is required to build *BoringSSL*. The version of *golang* installed by the Ubuntu package tool might be old, so you might want to download and install the latest version from [The Go Programming Language](https://go.dev/), you can choose either.
+
+    sudo apt install autoconf libtool cmake pkg-config golang
 
 #### Install Nim
     curl https://nim-lang.org/choosenim/init.sh -sSf | sh
@@ -578,7 +586,7 @@ These files should be copied to the *certs* folder. Caprese monitors the files i
 
 Create *caprese_certs_udpate.sh*, in the following, user and group is assumed to be *caprese*.
 
-```
+```bash
 #!/bin/bash
 mkdir -p /path/to/certs/YOUR_DOMAIN
 cp /etc/letsencrypt/live/YOUR_DOMAIN/{privkey.pem,fullchain.pem} /path/to/certs/YOUR_DOMAIN
@@ -587,15 +595,11 @@ chown -R caprese:caprese /path/to/certs
 
 Copy *caprese_certs_udpate.sh* to letsencrypt post hook.
 
-```
-cp caprese_certs_udpate.sh /etc/letsencrypt/renewal-hooks/post
-```
+    cp caprese_certs_udpate.sh /etc/letsencrypt/renewal-hooks/post
 
 First copy of certificate files, also for testing.
 
-```
-certbot renew --dry-run
-```
+    certbot renew --dry-run
 
 Now open [http://YOUR_DOMAIN/](http://YOUR_DOMAIN/) in your browser. If the URL http redirects to https and there is no certificate warning, it is successful.
 
