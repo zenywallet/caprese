@@ -117,3 +117,10 @@ proc sleep_async*(ms: int): Future[void] {.discardable.} =
     setTimeout(resolve, ms)
 
 template sleep*(ms: int) = await sleep_async(ms)
+
+template withStack*(body: untyped) =
+  block stackBlock:
+    var stack = Module.stackSave()
+    defer:
+      Module.stackRestore(stack)
+    body
