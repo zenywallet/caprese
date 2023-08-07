@@ -11,7 +11,7 @@ const ENABLE_TCP_NODELAY = true
 const EPOLL_EVENTS_SIZE = 10
 
 type
-  ClientId = uint64
+  ClientId = int
 
   RecvCallback* = proc(originalClientId: ClientId, buf: ptr UncheckedArray[byte], size: int) {.gcsafe.}
 
@@ -252,7 +252,7 @@ when isMainModule:
   try:
     var proxy = newProxy("localhost", 8000.Port)
     try:
-      proxy.originalClientId = 1.uint64
+      proxy.originalClientId = 1
 
       proc proxyRecvCallback(originalClientId: ClientId, buf: ptr UncheckedArray[byte], size: int) =
         echo "recvCallback originalClientId=", originalClientId, " size=", size
