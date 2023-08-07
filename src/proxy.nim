@@ -5,14 +5,13 @@ import strutils
 import bytes
 import queue
 import ptlock
+import server_types
 
 const ENABLE_KEEPALIVE = false
 const ENABLE_TCP_NODELAY = true
 const EPOLL_EVENTS_SIZE = 10
 
 type
-  ClientId = int
-
   RecvCallback* = proc(originalClientId: ClientId, buf: ptr UncheckedArray[byte], size: int) {.gcsafe.}
 
   AbortCallback* = proc() {.gcsafe.}
@@ -31,13 +30,6 @@ type
   Proxy* = ptr ProxyObj
 
   ProxyError* = object of CatchableError
-
-  SendResult* {.pure.} = enum
-    Error = -1
-    None = 0
-    Success = 1
-    Pending = 2
-    Invalid = 3
 
 var active = true
 var epfd: cint = -1

@@ -11,17 +11,10 @@ import std/strutils
 import logs
 import arraylib
 import files
+import server_types
+export server_types
 
 type
-  ClientId* = int
-
-  SendResult* {.pure.} = enum
-    Error = -1
-    None = 0
-    Success = 1
-    Pending = 2
-    Invalid = 3
-
   SslLib* = enum
     None
     BearSSL
