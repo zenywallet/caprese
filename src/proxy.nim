@@ -174,17 +174,24 @@ proc sendFlush(proxy: var Proxy): SendResult =
       else:
         return SendResult.None
 
+var abortSock: SocketHandle = osInvalidSocket
+
 proc proxyDispatcher(params: ProxyParams) {.thread.} =
   try:
-    var sockTmp = createNativeSocket()
-    var tcp_rmem = sockTmp.getSockOptInt(SOL_SOCKET, SO_RCVBUF)
-    sockTmp.close()
+    abortSock = createNativeSocket()
+    var tcp_rmem = abortSock.getSockOptInt(SOL_SOCKET, SO_RCVBUF)
 
     var buf = newSeq[byte](tcp_rmem)
 
     epfd = epoll_create1(O_CLOEXEC)
     if epfd < 0:
       errorException "error: epfd=", epfd, " errno=", errno
+
+    var ev: EpollEvent
+    ev.events = EPOLLRDHUP
+    var ret = epoll_ctl(epfd, EPOLL_CTL_ADD, abortSock.cint, addr ev)
+    if ret < 0:
+      errorException "error: EPOLL_CTL_ADD epfd=", ret, " errno=", errno
 
     var epollEvents: array[EPOLL_EVENTS_SIZE, EpollEvent]
     while true:
@@ -231,6 +238,7 @@ proc waitProxyManagerThread*() =
 
 proc QuitProxyManager*() =
   active = false
+  abortSock.close()
   waitProxyManagerThread()
 
 
