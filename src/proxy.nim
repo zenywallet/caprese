@@ -1,7 +1,9 @@
 # Copyright (c) 2022 zenywallet
 
-import nativesockets, posix, epoll
-import strutils
+import std/nativesockets
+import std/posix
+import std/epoll
+import std/strutils
 import bytes
 import queue
 import ptlock
