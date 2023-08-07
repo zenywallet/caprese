@@ -11,9 +11,9 @@ const ENABLE_TCP_NODELAY = true
 const EPOLL_EVENTS_SIZE = 10
 
 type
-  StreamId = uint64
+  ClientId = uint64
 
-  RecvCallback* = proc(originalStreamId: StreamId, buf: ptr UncheckedArray[byte], size: int) {.gcsafe.}
+  RecvCallback* = proc(originalClientId: ClientId, buf: ptr UncheckedArray[byte], size: int) {.gcsafe.}
 
   AbortCallback* = proc() {.gcsafe.}
 
@@ -22,7 +22,7 @@ type
 
   ProxyObj* = object
     sock*: SocketHandle
-    originalStreamId*: StreamId
+    originalClientId*: ClientId
     recvCallback*: RecvCallback
     sendBuf*: ptr UncheckedArray[byte]
     sendBufSize*: int
@@ -210,19 +210,19 @@ proc proxyDispatcher(params: ProxyParams) {.thread.} =
           ev.data.u64 = cast[uint64](proxy)
           var ret = epoll_ctl(epfd, EPOLL_CTL_MOD, proxy.sock.cint, addr ev)
           if ret < 0:
-            proxy.recvCallback(proxy.originalStreamId, nil, 0)
+            proxy.recvCallback(proxy.originalClientId, nil, 0)
             echo "error: EPOLL_CTL_MOD epfd=", ret, " errno=", errno
             continue
 
         if (epollEvents[i].events.int and EPOLLIN.int) > 0:
           var retLen = proxy.sock.recv(addr buf[0], buf.len, 0'i32)
           if retLen > 0:
-            proxy.recvCallback(proxy.originalStreamId, buf.at(0), retLen)
+            proxy.recvCallback(proxy.originalClientId, buf.at(0), retLen)
           elif retLen == 0:
-            proxy.recvCallback(proxy.originalStreamId, nil, retLen)
+            proxy.recvCallback(proxy.originalClientId, nil, retLen)
           else: # retLen < 0
             if errno != EAGAIN and errno != EWOULDBLOCK and errno != EINTR:
-              proxy.recvCallback(proxy.originalStreamId, nil, retLen)
+              proxy.recvCallback(proxy.originalClientId, nil, retLen)
   except:
     let e = getCurrentException()
     echo e.name, ": ", e.msg
@@ -252,10 +252,10 @@ when isMainModule:
   try:
     var proxy = newProxy("localhost", 8000.Port)
     try:
-      proxy.originalStreamId = 1.uint64
+      proxy.originalClientId = 1.uint64
 
-      proc proxyRecvCallback(originalStreamId: StreamId, buf: ptr UncheckedArray[byte], size: int) =
-        echo "recvCallback originalStreamId=", originalStreamId, " size=", size
+      proc proxyRecvCallback(originalClientId: ClientId, buf: ptr UncheckedArray[byte], size: int) =
+        echo "recvCallback originalClientId=", originalClientId, " size=", size
         echo buf.toString(size)
         if size <= 0:
           proxy.free()
