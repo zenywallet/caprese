@@ -2554,6 +2554,7 @@ template serverLib(cfg: static Config) {.dirty.} =
       header: ReqHeader
       targetHeaders: Array[ptr tuple[id: HeaderParams, val: string]]
       pRecvBuf0: ptr UncheckedArray[byte]
+      recvDataSize: int
       threadId: int
 
     WorkerThreadCtx = ptr WorkerThreadCtxObj
@@ -4031,6 +4032,7 @@ template serverLib(cfg: static Config) {.dirty.} =
                 if recvlen >= 17 and equalMem(addr ctx.pRecvBuf0[recvlen - 4], "\c\L\c\L".cstring, 4):
                   var nextPos = 0
                   var parseSize = recvlen
+                  ctx.recvDataSize = recvlen
                   while true:
                     ctx.pRecvBuf = cast[ptr UncheckedArray[byte]](addr ctx.recvBuf[nextPos])
                     let retHeader = parseHeader(ctx.pRecvBuf, parseSize, ctx.targetHeaders)
@@ -4158,6 +4160,7 @@ template serverLib(cfg: static Config) {.dirty.} =
                 if recvlen >= 17 and equalMem(addr ctx.pRecvBuf0[recvlen - 4], "\c\L\c\L".cstring, 4):
                   var nextPos = 0
                   var parseSize = recvlen
+                  ctx.recvDataSize = recvlen
                   while true:
                     ctx.pRecvBuf = cast[ptr UncheckedArray[byte]](addr ctx.recvBuf[nextPos])
                     let retHeader = parseHeader(ctx.pRecvBuf, parseSize, ctx.targetHeaders)
