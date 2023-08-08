@@ -10,3 +10,4 @@ src/brotli/
 src/src/
 certs/
 public/
+src/nimcache/
