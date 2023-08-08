@@ -8,6 +8,7 @@ import strutils
 const srcFile = currentSourcePath()
 const (srcFileDir, srcFileName, srcFileExt) = splitFile(srcFile)
 const binDir = srcFileDir / "bin"
+const cacheDir = srcFileDir / "nimcache"
 const execHelperExe = binDir / "exec_helper"
 const execHelperSrc = srcFileDir / "exec_helper" & srcFileExt
 
@@ -29,21 +30,33 @@ proc removeTmpFiles(removeDir: string) {.compileTime.} =
   if ret.len > 0:
     echo ret
 
+proc removeCacheDirs(removeDir: string) {.compileTime.} =
+  var tmpFiles = removeDir / srcFileName & "_tmp" & "[[:digit:]]*"
+  var ret = staticExec("find \"" & tmpFiles & "\" -type d -mmin +5 2> /dev/null | xargs -r rm -rf")
+  if ret.len > 0:
+    echo ret
+
 var tmpFileId {.compileTime.}: int = 0
 
 proc execCode*(code: string, rstr: string): string {.compileTime.} =
   inc(tmpFileId)
-  let tmpExeFile = binDir / srcFileName & "_tmp" & $tmpFileId & rstr
+  let exeFileName = srcFileName & "_tmp" & $tmpFileId & rstr
+  let tmpExeFile = binDir / exeFileName
   let tmpSrcFile = tmpExeFile & srcFileExt
+  let tmpCacheDir = cacheDir / exeFileName
   writeFile(tmpSrcFile, code)
-  echo staticExec("nim c " & tmpSrcFile)
+  echo staticExec("nim c --nimcache:" & tmpCacheDir & " " & tmpSrcFile)
   if not fileExists(tmpExeFile):
     rmFile(tmpSrcFile)
+    echo staticExec("rm -rf \"" & tmpCacheDir & "\"")
     macros.error "nim c failed"
   result = staticExec(tmpExeFile)
   removeTmpFiles(binDir)
+  removeCacheDirs(cacheDir)
   rmFile(tmpExeFile)
   rmFile(tmpSrcFile)
+  echo staticExec("rm -rf \"" & tmpCacheDir & "\"")
+  discard staticExec("rmdir \"" & cacheDir & "\"")
 
 template execCode*(code: string): string = execCode(code, randomStr())
 
