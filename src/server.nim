@@ -152,6 +152,7 @@ template serverInit*() {.dirty.} =
   import std/locks
   import ptlock
   import logs
+  import proxy
 
   when cfg.sslLib == BearSSL:
     {.define: USE_BEARSSL.}
@@ -218,6 +219,7 @@ template serverInit*() {.dirty.} =
         ssl: SSL
         sslErr: int
       pStream*: pointer
+      proxy: Proxy
 
     Client* = ptr ClientObj
 
@@ -1004,6 +1006,9 @@ template serverInitFreeClient() {.dirty.} =
       sock.close()
       client.recvCurSize = 0
       client.recvBufSize = 0
+      if not client.proxy.isNil:
+        client.proxy.free()
+        client.proxy = nil
       if not client.recvBuf.isNil:
         deallocShared(cast[pointer](client.recvBuf))
         client.recvBuf = nil
@@ -2117,6 +2122,8 @@ type
     AppRoutesSend
     AppStream
     AppStreamSend
+    AppProxy
+    AppProxySend
 
 var initServerFlag {.compileTime.} = false
 var curSrvId {.compileTime.} = 0
@@ -2276,6 +2283,21 @@ macro addServerMacro*(bindAddress: string, port: uint16, ssl: bool, sslLib: SslL
                   return response(retFile.data)
           serverResources.add quote do:
             const `filesTableName` = createStaticFilesTable(`importPath`)
+        elif eqIdent(s2[0], "proxy"):
+          inc(curAppId)
+          var proxyAppId = curAppId
+          if s2[1].len != 2 or not eqIdent(s2[1][0], "proxyAppId"):
+            s2.insert(1, nnkExprEqExpr.newTree(
+              newIdentNode("proxyAppId"),
+              newLit(proxyAppId)
+            ))
+            if s2.len == 5:
+              s2.add(newBlockStmt(newStmtList()))
+          serverHandlerList.add(("appProxy", ssl, newStmtList()))
+          appIdTypeList.add(AppProxy)
+          inc(curAppId)
+          serverHandlerList.add(("appProxySend", ssl, newStmtList()))
+          appIdTypeList.add(AppProxySend)
         routesBody.add(s2)
 
       if not certsBlockFlag and ssl == newLit(true):
@@ -2502,6 +2524,28 @@ template public*(importPath: string, body: untyped) = body
 
 template content*(content, mime: string): FileContent =
   createStaticFile(content, mime)
+
+template proxy*(path, host: string, port: uint16) = discard
+
+template proxy*(path, host: string, port: uint16, body: untyped) = discard
+
+template proxy*(proxyAppId: int, path, host: string, port: uint16, body: untyped) =
+  if startsWith(headerUrl(), path):
+    body
+    let client = ctx.client
+    if client.proxy.isNil:
+      client.proxy = newProxy(host, port.Port)
+      client.proxy.originalClientId = client.markPending()
+      client.proxy.setRecvCallback(proxyRecvCallback)
+
+    let sendRet = if client.recvCurSize > 0:
+      client.proxy.send(cast[ptr UncheckedArray[byte]](addr client.recvBuf[0]), client.recvCurSize)
+    else:
+      client.proxy.send(ctx.pRecvBuf0, ctx.recvDataSize)
+    if sendRet == SendResult.None or sendRet == SendResult.Error:
+      return sendRet
+    client.appId = proxyAppId
+    return SendResult.Pending
 
 #[
 var clientSocketLocks: array[WORKER_THREAD_NUM, cint]
@@ -2785,6 +2829,14 @@ template serverLib(cfg: static Config) {.dirty.} =
       var (acmeFlag, content, mime) = getAcmeChallenge(path, ctx.header.url)
       if content.len > 0:
         return send(content.addHeader(Status200, mime))
+
+  proc proxyRecvCallback(originalClientId: ClientId, buf: ptr UncheckedArray[byte], size: int) =
+    if size <= 0:
+      let client = getClient(originalClientId)
+      if not client.isNil:
+        client.close(ssl = true)
+    else:
+      originalClientId.send(buf.toString(size))
 
   template reqUrl: string {.dirty.} = ctx.header.url
 
@@ -4916,6 +4968,51 @@ template serverLib(cfg: static Config) {.dirty.} =
     quote do:
       clientHandlerProcs.add appRoutesSend # appStreamSend is same
 
+  macro appProxyMacro(ssl: bool, body: untyped): untyped =
+    quote do:
+      clientHandlerProcs.add proc (ctx: WorkerThreadCtx) {.thread.} =
+        let client = ctx.client
+        let sock = client.sock
+        let proxy = client.proxy
+
+        acquire(client.spinLock)
+        if client.threadId == 0:
+          client.threadId = ctx.threadId
+          release(client.spinLock)
+        else:
+          client.dirty = ClientDirtyTrue
+          release(client.spinLock)
+          return
+
+        while true:
+          client.dirty = ClientDirtyNone
+          let recvlen = sock.recv(ctx.pRecvBuf0, workerRecvBufSize, 0.cint)
+          if recvlen > 0:
+            let sendRet = proxy.send(ctx.pRecvBuf0, recvlen)
+            if sendRet == SendResult.Error:
+              client.close(ssl = `ssl`)
+              break
+          elif recvLen == 0:
+            client.close(ssl = `ssl`)
+            break
+          else:
+            if errno == EAGAIN or errno == EWOULDBLOCK:
+              acquire(client.spinLock)
+              if client.dirty != ClientDirtyNone:
+                release(client.spinLock)
+              else:
+                client.threadId = 0
+                release(client.spinLock)
+                break
+            elif errno == EINTR:
+              continue
+            client.close(ssl = `ssl`)
+            break
+
+  macro appProxySendMacro(ssl: bool, body: untyped): untyped =
+    quote do:
+      clientHandlerProcs.add appRoutesSend # appProxySend is same
+
   proc addHandlerProc(name: string, ssl: NimNode, body: NimNode): NimNode {.compileTime.} =
     newCall(name & "Macro", ssl, body)
 
@@ -5361,6 +5458,11 @@ template serverStartWithCfg(cfg: static Config) =
   serverType()
   serverLib(cfg)
   startTimeStampUpdater()
+  var params: ProxyParams
+  params.abortCallback = proc() =
+    errorQuit "error: proxy dispatcher"
+  proxyManager(params)
+
   when cfg.sslLib != None:
     var fileWatcherThread: Thread[WrapperThreadArg]
     createThread(fileWatcherThread, threadWrapper, (fileWatcher, ThreadArg(type: ThreadArgType.Void)))
@@ -5388,6 +5490,7 @@ template serverStartWithCfg(cfg: static Config) =
   when cfg.sslLib != None:
     freeFileWatcher()
     joinThread(fileWatcherThread)
+  QuitProxyManager()
   joinThread(contents.timeStampThread)
 
 template serverStart*() = serverStartWithCfg(cfg)
