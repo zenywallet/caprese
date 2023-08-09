@@ -69,7 +69,7 @@ proc newProxy*(hostname: string, port: Port): Proxy =
   rwlockInit(p.lock.toRWLock)
   result = p
 
-proc free*(proxy: var Proxy) =
+proc free*(proxy: Proxy) =
   var sock = proxy.sock
   withWriteLock proxy.lock.toRWLock:
     if sock == osInvalidSocket: return
@@ -81,7 +81,7 @@ proc free*(proxy: var Proxy) =
   rwlockDestroy(proxy.lock.toRWLock)
   proxy.deallocShared()
 
-proc shutdown*(proxy: var Proxy): bool {.discardable.} =
+proc shutdown*(proxy: Proxy): bool {.discardable.} =
   var retShutdown = proxy.sock.shutdown(SHUT_RD)
   if retShutdown != 0:
     echo "error: shutdown ret=", retShutdown, " errno=", errno
@@ -89,7 +89,7 @@ proc shutdown*(proxy: var Proxy): bool {.discardable.} =
   else:
     result = true
 
-proc setRecvCallback*(proxy: var Proxy, recvCallback: RecvCallback) {.inline.} =
+proc setRecvCallback*(proxy: Proxy, recvCallback: RecvCallback) {.inline.} =
   proxy.recvCallback = recvCallback
 
   var ev: EpollEvent
@@ -102,13 +102,13 @@ proc setRecvCallback*(proxy: var Proxy, recvCallback: RecvCallback) {.inline.} =
 proc reallocClientBuf(buf: ptr UncheckedArray[byte], size: int): ptr UncheckedArray[byte] =
   result = cast[ptr UncheckedArray[byte]](reallocShared(buf, size))
 
-proc addSendBuf(proxy: var Proxy, data: ptr UncheckedArray[byte], size: int) =
+proc addSendBuf(proxy: Proxy, data: ptr UncheckedArray[byte], size: int) =
   var nextSize = proxy.sendBufSize + size
   proxy.sendBuf = reallocClientBuf(proxy.sendBuf, nextSize)
   copyMem(addr proxy.sendBuf[proxy.sendBufSize], data, size)
   proxy.sendBufSize = nextSize
 
-proc send*(proxy: var Proxy, data: ptr UncheckedArray[byte], size: int): SendResult =
+proc send*(proxy: Proxy, data: ptr UncheckedArray[byte], size: int): SendResult =
   withWriteLock proxy.lock.toRWLock:
     if not proxy.sendBuf.isNil:
       proxy.addSendBuf(data, size)
@@ -144,7 +144,7 @@ proc send*(proxy: var Proxy, data: ptr UncheckedArray[byte], size: int): SendRes
       else:
         return SendResult.None
 
-proc sendFlush(proxy: var Proxy): SendResult =
+proc sendFlush(proxy: Proxy): SendResult =
   withWriteLock proxy.lock.toRWLock:
     if proxy.sendBuf.isNil:
       return SendResult.None
