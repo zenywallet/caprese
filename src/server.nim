@@ -2247,7 +2247,7 @@ macro addServerMacro*(bindAddress: string, port: uint16, ssl: bool, sslLib: SslL
         elif eqIdent(s2[0], "stream"):
           inc(curAppId)
           var streamAppId = curAppId
-          if not eqIdent(s2[1][0], "streamAppId"):
+          if s2[1].kind != nnkExprEqExpr or not eqIdent(s2[1][0], "streamAppId"):
             s2.insert(1, nnkExprEqExpr.newTree(
               newIdentNode("streamAppId"),
               newLit(streamAppId)
@@ -2286,7 +2286,7 @@ macro addServerMacro*(bindAddress: string, port: uint16, ssl: bool, sslLib: SslL
         elif eqIdent(s2[0], "proxy"):
           inc(curAppId)
           var proxyAppId = curAppId
-          if s2[1].len != 2 or not eqIdent(s2[1][0], "proxyAppId"):
+          if s2[1].kind != nnkExprEqExpr or not eqIdent(s2[1][0], "proxyAppId"):
             s2.insert(1, nnkExprEqExpr.newTree(
               newIdentNode("proxyAppId"),
               newLit(proxyAppId)
