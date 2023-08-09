@@ -413,6 +413,12 @@ template serverTagLib*(cfg: static Config) {.dirty.} =
   var clientId2Tags*: HashTableMem[ClientId, Array[TagRef]]
   var clientId2Tasks*: HashTableMem[ClientId, Array[ClientTask]]
 
+  proc getClient*(clientId: ClientId): Client =
+    withWriteLock clientsLock:
+      let pair = pendingClients.get(clientId)
+      if not pair.isNil:
+        result = pair.val
+
   proc markPending*(client: Client): ClientId {.discardable.} =
     withWriteLock clientsLock:
       if client.clientId == INVALID_CLIENT_ID:
