@@ -201,7 +201,7 @@ proc proxyDispatcher(params: ProxyParams) {.thread.} =
         break
 
       for i in 0..<nfd:
-        var proxy = cast[Proxy](epollEvents[i].data.u64)
+        let proxy = cast[Proxy](epollEvents[i].data.u64)
         if (epollEvents[i].events.int and EPOLLOUT.int) > 0:
           var retFlush = proxy.sendFlush()
           if retFlush == SendResult.Pending:
@@ -252,7 +252,7 @@ when isMainModule:
   proxyManager(params)
 
   try:
-    var proxy = newProxy("localhost", 8000.Port)
+    let proxy = newProxy("localhost", 8000.Port)
     try:
       proxy.originalClientId = 1
 
