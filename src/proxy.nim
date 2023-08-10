@@ -187,12 +187,6 @@ proc proxyDispatcher(params: ProxyParams) {.thread.} =
     if epfd < 0:
       errorException "error: epfd=", epfd, " errno=", errno
 
-    var ev: EpollEvent
-    ev.events = EPOLLRDHUP
-    var ret = epoll_ctl(epfd, EPOLL_CTL_ADD, abortSock.cint, addr ev)
-    if ret < 0:
-      errorException "error: EPOLL_CTL_ADD epfd=", ret, " errno=", errno
-
     var epollEvents: array[EPOLL_EVENTS_SIZE, EpollEvent]
     while true:
       var nfd = epoll_wait(epfd, cast[ptr EpollEvent](addr epollEvents),
@@ -238,8 +232,13 @@ proc waitProxyManagerThread*() =
 
 proc QuitProxyManager*() =
   active = false
-  abortSock.close()
+  var ev: EpollEvent
+  ev.events = EPOLLRDHUP
+  var ret = epoll_ctl(epfd, EPOLL_CTL_ADD, abortSock.cint, addr ev)
+  if ret < 0:
+    errorException "error: EPOLL_CTL_ADD epfd=", ret, " errno=", errno
   waitProxyManagerThread()
+  abortSock.close()
 
 
 when isMainModule:
