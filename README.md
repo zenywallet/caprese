@@ -11,20 +11,13 @@ A front-end web server specialized for real-time message exchange
 *Caprese will be the base of that system. It would be a decentralized web server with server-to-server connections that could verify the reliability of contents and applications.*
 
 ### Quick Trial
-#### Install Dependencies
+#### Install Nim
 I heard you like Ubuntu, so I will explain for it. The following are required to install [Nim](https://nim-lang.org/).
 
     sudo apt install build-essential curl
 
-Do you have git installed?
+Installation using [choosenim](https://github.com/dom96/choosenim#choosenim).
 
-    sudo apt install git
-
-you also require the following installation to build the SSL libraries, *golang* is required to build *BoringSSL*. The version of *golang* installed by the Ubuntu package tool might be old, so you might want to download and install the latest version from [The Go Programming Language](https://go.dev/), you can choose either.
-
-    sudo apt install autoconf libtool cmake pkg-config golang
-
-#### Install Nim
     curl https://nim-lang.org/choosenim/init.sh -sSf | sh
     echo 'export PATH='$HOME'/.nimble/bin:$PATH' >> ~/.bashrc
     . ~/.bashrc
@@ -32,6 +25,16 @@ you also require the following installation to build the SSL libraries, *golang*
 See [Nim](https://nim-lang.org/) for installation details.
 
 #### Build Caprese and Launch
+you also require the following installation to build the SSL libraries, *golang* is required to build *BoringSSL*. The version of *golang* installed by the Ubuntu package tool might be old, so you might want to download and install the latest version from [The Go Programming Language](https://go.dev/), you can choose either.
+
+    sudo apt install autoconf libtool cmake pkg-config golang
+
+Do you have git installed?
+
+    sudo apt install git
+
+Now let's build the Caprese.
+
     git clone https://github.com/zenywallet/caprese
     cd caprese
     nimble install -d
@@ -456,12 +459,14 @@ Get the header string by specifying the header ID with the `reqHeader()` in the 
 The `reqHeader:` can only be called within the `routes:` block contexts, because the headers only manage the read position of the receive buffer, which may be in the server thread context.
 
 ### Publishing Static Files
-All files in `importPath` are statically imported into the code at compile time. Specify the `importPath` as Nim `import`, `importPath` is added internally `getProjectPath()`. The `responce()` sends compressed files if the client allows to receive *Brotli* or *Deflate*. It also checks the *If-None-Match* header and return *304 Not Modified* if the file has not been changed.
+Use `public:` block. All files in `importPath` are statically imported into the code at compile time. Specify the `importPath` as Nim `import`, `importPath` is added internally `getProjectPath()`.
 
 ```nim
   routes:
     public(importPath = "../public")
 ```
+
+ Inside the `public:` block, `responce()` is used, which sends compressed files if the client allows to receive *Brotli* or *Deflate*. It also checks the *If-None-Match* header and return *304 Not Modified* if the file has not been changed.
 
 Custom handling such as changing the base URL.
 
@@ -492,6 +497,45 @@ server(ssl = true, ip = "0.0.0.0", port = 8009):
 
     get "/js/app.js":
       return response(content(AppMinJs, "application/javascript"))
+```
+
+### Web Proxy
+The Caprese's proxy is different from a typical proxy server and is more simplified. It may be faster than a typical proxy server due to the following specifications and more useful in simple configurations.
+
+- The request URL and http headers are not changed. Since data is sent and received without changing the data to the proxy destination, it would work fine with WebSockets and such.
+- When a client makes a request to a proxy path, all subsequent communication is connected to the proxy destination until disconnected. The proxy path is simply compared to the URL, and if the first string matches, proxy forwarding starts. It may be better to add a `/` at the end of the proxy path to make it strict.
+- External connections are made with SSL, but no SSL inside the proxy. It could be used for internal connections or to connect to back-end services.
+
+#### `proxy:` block
+```nim
+import caprese
+
+server(ssl = true, ip = "0.0.0.0", port = 8009):
+  routes(host = "localhost"):
+    proxy(path = "/", host = "localhost", port = 8089)
+
+server(ip = "0.0.0.0", port = 8089):
+  routes(host = "localhost:8009"):
+    get "/":
+      return response(content("Hello!", "text/html"))
+
+serverStart()
+```
+
+It might be better not to check the hostname and port.
+```nim
+server(ip = "0.0.0.0", port = 8089):
+  routes: # no hostname and port check
+    get "/":
+```
+
+#### Debug or custom handling
+```nim
+server(ssl = true, ip = "0.0.0.0", port = 8009):
+  routes(host = "localhost"):
+    proxy(path = "/", host = "localhost", port = 8089):
+      debug "url=", reqUrl
+      # custom handling here
 ```
 
 ### Tag-based Message Exchange
