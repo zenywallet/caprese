@@ -2167,6 +2167,19 @@ macro getAppId*(): int =
   inc(curAppId)
   newLit(curAppId)
 
+proc findColonNum(s: string): bool {.compileTime.} =
+  var findmColonNum = 0
+  for i in countdown(s.len-1, 0):
+    if isDigit(s[i]):
+      findmColonNum = 1
+    elif findmColonNum == 1 and s[i] == ':':
+      findmColonNum = 2
+      break
+    else:
+      findmColonNum = 0
+      break
+  if findmColonNum == 2: true else: false
+
 macro addServerMacro*(bindAddress: string, port: uint16, ssl: bool, sslLib: SslLib, body: untyped = newEmptyNode()): untyped =
   inc(curSrvId)
   var srvId = curSrvId
@@ -2198,11 +2211,11 @@ macro addServerMacro*(bindAddress: string, port: uint16, ssl: bool, sslLib: SslL
       var portInt = intVal(port)
       if s[1].kind == nnkStrLit:
         hostname = $s[1]
-        if portInt != 80 and portInt != 443 and not hostname.endsWith(":" & $portInt):
+        if portInt != 80 and portInt != 443 and not findColonNum(hostname):
           s[1] = newLit(hostname & ":" & $portInt)
       elif s[1].kind == nnkExprEqExpr and eqIdent(s[1][0], "host"):
         hostname = $s[1][1]
-        if portInt != 80 and portInt != 443 and not hostname.endsWith(":" & $portInt):
+        if portInt != 80 and portInt != 443 and not findColonNum(hostname):
           s[1][1] = newLit(hostname & ":" & $portInt)
       for i in countdown(hostname.len-1, 0):
         if hostname[i] == ':':
