@@ -3724,8 +3724,12 @@ template serverLib(cfg: static Config) {.dirty.} =
 
     acquire(client.spinLock)
     if client.threadId == 0:
-      client.threadId = ctx.threadId
-      release(client.spinLock)
+      if client.sock == osInvalidSocket:
+        release(client.spinLock)
+        return
+      else:
+        client.threadId = ctx.threadId
+        release(client.spinLock)
     else:
       client.dirty = ClientDirtyTrue
       release(client.spinLock)
@@ -3847,8 +3851,12 @@ template serverLib(cfg: static Config) {.dirty.} =
 
           acquire(client.spinLock)
           if client.threadId == 0:
-            client.threadId = ctx.threadId
-            release(client.spinLock)
+            if sock == osInvalidSocket:
+              release(client.spinLock)
+              return
+            else:
+              client.threadId = ctx.threadId
+              release(client.spinLock)
           else:
             client.dirty = ClientDirtyTrue
             release(client.spinLock)
@@ -4213,8 +4221,12 @@ template serverLib(cfg: static Config) {.dirty.} =
 
         acquire(client.spinLock)
         if client.threadId == 0:
-          client.threadId = ctx.threadId
-          release(client.spinLock)
+          if sock == osInvalidSocket:
+            release(client.spinLock)
+            return
+          else:
+            client.threadId = ctx.threadId
+            release(client.spinLock)
         else:
           client.dirty = ClientDirtyTrue
           release(client.spinLock)
@@ -4365,8 +4377,12 @@ template serverLib(cfg: static Config) {.dirty.} =
 
           acquire(client.spinLock)
           if client.threadId == 0:
-            client.threadId = ctx.threadId
-            release(client.spinLock)
+            if client.sock == osInvalidSocket:
+              release(client.spinLock)
+              return
+            else:
+              client.threadId = ctx.threadId
+              release(client.spinLock)
           else:
             client.dirty = ClientDirtyTrue
             release(client.spinLock)
@@ -4434,8 +4450,12 @@ template serverLib(cfg: static Config) {.dirty.} =
 
               acquire(client.spinLock)
               if client.threadId == 0:
-                client.threadId = ctx.threadId
-                release(client.spinLock)
+                if sock == osInvalidSocket:
+                  release(client.spinLock)
+                  return
+                else:
+                  client.threadId = ctx.threadId
+                  release(client.spinLock)
               else:
                 client.dirty = ClientDirtyTrue
                 release(client.spinLock)
@@ -4513,8 +4533,12 @@ template serverLib(cfg: static Config) {.dirty.} =
 
             acquire(client.spinLock)
             if client.threadId == 0:
-              client.threadId = ctx.threadId
-              release(client.spinLock)
+              if sock == osInvalidSocket:
+                release(client.spinLock)
+                return
+              else:
+                client.threadId = ctx.threadId
+                release(client.spinLock)
             else:
               client.dirty = ClientDirtyTrue
               release(client.spinLock)
@@ -4687,8 +4711,12 @@ template serverLib(cfg: static Config) {.dirty.} =
 
             acquire(client.spinLock)
             if client.threadId == 0:
-              client.threadId = ctx.threadId
-              release(client.spinLock)
+              if client.sock == osInvalidSocket:
+                release(client.spinLock)
+                return
+              else:
+                client.threadId = ctx.threadId
+                release(client.spinLock)
             else:
               client.dirty = ClientDirtyTrue
               release(client.spinLock)
@@ -4850,8 +4878,12 @@ template serverLib(cfg: static Config) {.dirty.} =
 
           acquire(client.spinLock)
           if client.threadId == 0:
-            client.threadId = ctx.threadId
-            release(client.spinLock)
+            if client.sock == osInvalidSocket:
+              release(client.spinLock)
+              return
+            else:
+              client.threadId = ctx.threadId
+              release(client.spinLock)
           else:
             client.dirty = ClientDirtyTrue
             release(client.spinLock)
@@ -4990,8 +5022,12 @@ template serverLib(cfg: static Config) {.dirty.} =
 
         acquire(client.spinLock)
         if client.threadId == 0:
-          client.threadId = ctx.threadId
-          release(client.spinLock)
+          if sock == osInvalidSocket:
+            release(client.spinLock)
+            return
+          else:
+            client.threadId = ctx.threadId
+            release(client.spinLock)
         else:
           client.dirty = ClientDirtyTrue
           release(client.spinLock)
