@@ -4400,7 +4400,7 @@ template serverLib(cfg: static Config) {.dirty.} =
               else:
                 release(client.spinLock)
             elif retFlush == SendResult.Error:
-              client.close()
+              client.close(ssl = true)
               acquire(client.spinLock)
               client.threadId = 0
               release(client.spinLock)
@@ -4440,7 +4440,8 @@ template serverLib(cfg: static Config) {.dirty.} =
                 release(client.spinLock)
             else:
               if lastSendErr != SendResult.Pending:
-                client.close()
+                client.close(ssl = true)
+
               acquire(client.spinLock)
               client.threadId = 0
               release(client.spinLock)
