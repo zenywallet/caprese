@@ -4441,6 +4441,7 @@ template serverLib(cfg: static Config) {.dirty.} =
             else:
               if lastSendErr != SendResult.Pending:
                 client.close(ssl = true)
+                return
 
               acquire(client.spinLock)
               client.threadId = 0
