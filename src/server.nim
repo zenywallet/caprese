@@ -594,7 +594,7 @@ template serverTagLib*(cfg: static Config) {.dirty.} =
       if not tasksPair.isNil:
         tasksPair.val = tasksPair.val[idx + 1..^1]
 
-  proc getAndPurgeTasks*(clientId: ClientId, cb: proc(task: ClientTask): bool): bool =
+  proc getAndPurgeTasks*(clientId: ClientId, cb: proc(task: ClientTask): bool {.gcsafe.}): bool =
     result = true
     var tasksPair: HashTableData[ClientId, Array[ClientTask]]
     var tasks: Array[ClientTask]
