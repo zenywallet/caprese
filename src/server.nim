@@ -248,7 +248,7 @@ type
     WorkerParams
 
   ThreadArg* = object
-    case type*: ThreadArgType
+    case argType*: ThreadArgType
     of ThreadArgType.Void:
       discard
     of ThreadArgType.WorkerParams:
@@ -5516,7 +5516,7 @@ template serverStartWithCfg(cfg: static Config) =
 
   when cfg.sslLib != None:
     var fileWatcherThread: Thread[WrapperThreadArg]
-    createThread(fileWatcherThread, threadWrapper, (fileWatcher, ThreadArg(type: ThreadArgType.Void)))
+    createThread(fileWatcherThread, threadWrapper, (fileWatcher, ThreadArg(argType: ThreadArgType.Void)))
 
   let cpuCount = countProcessors()
   when cfg.serverWorkerNum < 0:
@@ -5530,7 +5530,7 @@ template serverStartWithCfg(cfg: static Config) =
   var threads = newSeq[Thread[WrapperThreadArg]](serverWorkerNum)
   for i in 0..<serverWorkerNum:
     createThread(threads[i], threadWrapper, (serverWorker,
-      ThreadArg(type: ThreadArgType.WorkerParams, workerParams: (i + 1, workerRecvBufSize))))
+      ThreadArg(argType: ThreadArgType.WorkerParams, workerParams: (i + 1, workerRecvBufSize))))
 
   joinThreads(threads)
   for i in countdown(releaseOnQuitEpfds.high, 0):
