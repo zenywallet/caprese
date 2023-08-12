@@ -5142,11 +5142,11 @@ template serverLib(cfg: static Config) {.dirty.} =
     when cfg.sslLib == BearSSL:
       when defined(BEARSSL_DEFAULT_EC):
         certKeyChainsList[0].key = CertPrivateKey(
-          type: CertPrivateKeyType.EC,
+          keyType: CertPrivateKeyType.EC,
           ec: cast[ptr br_ec_private_key](unsafeAddr EC))
       else:
         certKeyChainsList[0].key = CertPrivateKey(
-          type: CertPrivateKeyType.RSA,
+          keyType: CertPrivateKeyType.RSA,
           rsa: cast[ptr br_rsa_private_key](unsafeAddr RSA))
       certKeyChainsList[0].chains = X509CertificateChains(
         cert: cast[ptr UncheckedArray[br_x509_certificate]](unsafeAddr CHAIN[0]),
