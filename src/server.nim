@@ -2959,7 +2959,7 @@ template serverLib(cfg: static Config) {.dirty.} =
         EC
 
       CertPrivateKey* = object
-        case type*: CertPrivateKeyType
+        case keyType*: CertPrivateKeyType
         of CertPrivateKeyType.None:
           discard
         of CertPrivateKeyType.RSA:
@@ -2973,7 +2973,7 @@ template serverLib(cfg: static Config) {.dirty.} =
       br_skey_decoder_push(addr dc, unsafeAddr data[0], data.len.csize_t)
       let err = br_skey_decoder_last_error(addr dc)
       if err != 0:
-        return CertPrivateKey(type: CertPrivateKeyType.None)
+        return CertPrivateKey(keyType: CertPrivateKeyType.None)
 
       let keyType = br_skey_decoder_key_type(addr dc)
       case keyType
@@ -2997,7 +2997,7 @@ template serverLib(cfg: static Config) {.dirty.} =
         copyMem(sk.iq, rk.iq, rk.iqlen)
         sk.iqlen = rk.iqlen
         zeroMem(addr dc, sizeof(br_skey_decoder_context))
-        return CertPrivateKey(type: CertPrivateKeyType.RSA, rsa: sk)
+        return CertPrivateKey(keyType: CertPrivateKeyType.RSA, rsa: sk)
 
       of BR_KEYTYPE_EC:
         var ek = br_skey_decoder_get_ec(addr dc)
@@ -3007,13 +3007,13 @@ template serverLib(cfg: static Config) {.dirty.} =
         copyMem(sk.x, ek.x, ek.xlen)
         sk.xlen = ek.xlen
         zeroMem(addr dc, sizeof(br_skey_decoder_context))
-        return CertPrivateKey(type: CertPrivateKeyType.EC, ec: sk)
+        return CertPrivateKey(keyType: CertPrivateKeyType.EC, ec: sk)
 
       else:
-        return CertPrivateKey(type: CertPrivateKeyType.None)
+        return CertPrivateKey(keyType: CertPrivateKeyType.None)
 
     proc freeCertPrivateKey(certPrivKey: var CertPrivateKey) =
-      case certPrivKey.type
+      case certPrivKey.keyType
       of CertPrivateKeyType.RSA:
         if not certPrivKey.rsa.isNil:
           zeroMem(certPrivKey.rsa.iq, certPrivKey.rsa.iqlen)
@@ -3029,7 +3029,7 @@ template serverLib(cfg: static Config) {.dirty.} =
           zeroMem(certPrivKey.rsa, sizeof(br_rsa_private_key))
           deallocShared(certPrivKey.rsa)
           certPrivKey.rsa = nil
-          certPrivKey = CertPrivateKey(type: CertPrivateKeyType.None)
+          certPrivKey = CertPrivateKey(keyType: CertPrivateKeyType.None)
 
       of CertPrivateKeyType.EC:
         if not certPrivKey.ec.isNil:
@@ -3038,7 +3038,7 @@ template serverLib(cfg: static Config) {.dirty.} =
           zeroMem(certPrivKey.ec, sizeof(br_ec_private_key))
           deallocShared(certPrivKey.ec)
           certPrivKey.ec = nil
-          certPrivKey = CertPrivateKey(type: CertPrivateKeyType.None)
+          certPrivKey = CertPrivateKey(keyType: CertPrivateKeyType.None)
 
       of CertPrivateKeyType.None:
         discard
@@ -3293,7 +3293,7 @@ template serverLib(cfg: static Config) {.dirty.} =
 
       var idx = certsIdxTable[].getOrDefault(serverName)
       var certKeyChains = addr certKeyChainsList[idx]
-      if certKeyChains[].key.type == CertPrivateKeyType.None:
+      if certKeyChains[].key.keyType == CertPrivateKeyType.None:
         debug "CertPrivateKeyType.None serverName=", serverName
         certKeyChains = addr certKeyChainsList[0]
       acquire(certKeyChainsListLock)
@@ -3301,7 +3301,7 @@ template serverLib(cfg: static Config) {.dirty.} =
       let chains = certKeyChains[].chains
       release(certKeyChainsListLock)
 
-      case certKey.type
+      case certKey.keyType
       of CertPrivateKeyType.EC:
         workerThreadCtx.client.keyType = BR_KEYTYPE_EC
         cc.chain_handler.single_ec.chain = cast[ptr br_x509_certificate](chains.cert)
@@ -5248,7 +5248,7 @@ template serverLib(cfg: static Config) {.dirty.} =
                 logs.debug "not found ", val.chainPath
                 noFile = true
               let certKeyChains = addr certKeyChainsList[idx]
-              if certKeyChains[].key.type != CertPrivateKeyType.None:
+              if certKeyChains[].key.keyType != CertPrivateKeyType.None:
                 acquire(certKeyChainsListLock)
                 freeCertPrivateKey(certKeyChainsList[idx].key)
                 freeChains(certKeyChainsList[idx].chains)
