@@ -132,6 +132,12 @@ else:
     result.len = 0
     result.cap = size
 
+  proc newArrayOfCap*[T](a: var Array[T], len: Natural) =
+    let size = sizeof(T) * len
+    a.data = cast[typeof(a.data)](allocShared0(size))
+    a.len = 0
+    a.cap = size
+
   proc newArray*[T](buf: ptr UncheckedArray[T], len: Natural): Array[T] =
     let size = sizeof(T) * len
     result.data = cast[typeof(result.data)](allocShared0(size))
