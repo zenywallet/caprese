@@ -61,7 +61,7 @@ proc defaultConfig*(): Config {.compileTime.} =
 macro HttpTargetHeader(idEnumName, valListName, targetHeaders, body: untyped): untyped =
   var enumParams = nnkEnumTy.newTree(newEmptyNode())
   var targetParams = nnkBracket.newTree()
-  var headers = nnkBracket.newTree()
+  var addHeadersStmt = nnkStmtList.newTree()
   var internalEssentialHeaders = @[("InternalEssentialHeaderHost", "Host"),
                                   ("InternalEssentialHeaderConnection", "Connection"),
                                   ("InternalSecWebSocketKey", "Sec-WebSocket-Key"),
@@ -75,16 +75,24 @@ macro HttpTargetHeader(idEnumName, valListName, targetHeaders, body: untyped): u
     enumParams.add(a[0])
     var paramLit = newLit($a[1][0] & ": ")
     targetParams.add(paramLit)
-    headers.add(nnkTupleConstr.newTree(
-      nnkExprColonExpr.newTree(
-        newIdentNode("id"),
-        a[0]
-      ),
-      nnkExprColonExpr.newTree(
-        newIdentNode("val"),
-        paramLit
+    addHeadersStmt.add(
+      nnkCall.newTree(
+        nnkDotExpr.newTree(
+          targetHeaders,
+          newIdentNode("add")
+        ),
+        nnkTupleConstr.newTree(
+          nnkExprColonExpr.newTree(
+            newIdentNode("id"),
+            a[0]
+          ),
+          nnkExprColonExpr.newTree(
+            newIdentNode("val"),
+            paramLit
+          )
+        )
       )
-    ))
+    )
 
   for a in body:
     for i, b in internalEssentialHeaders:
@@ -104,17 +112,26 @@ macro HttpTargetHeader(idEnumName, valListName, targetHeaders, body: untyped): u
     enumParams.add(newIdentNode(b[0]))
     var compareVal = b[1] & ": "
     targetParams.add(newLit(compareVal))
-    headers.add(nnkTupleConstr.newTree(
-      nnkExprColonExpr.newTree(
-        newIdentNode("id"),
-        newIdentNode(b[0])
-      ),
-      nnkExprColonExpr.newTree(
-        newIdentNode("val"),
-        newLit(compareVal)
+    addHeadersStmt.add(
+      nnkCall.newTree(
+        nnkDotExpr.newTree(
+          targetHeaders,
+          newIdentNode("add")
+        ),
+        nnkTupleConstr.newTree(
+          nnkExprColonExpr.newTree(
+            newIdentNode("id"),
+            newIdentNode(b[0])
+          ),
+          nnkExprColonExpr.newTree(
+            newIdentNode("val"),
+            newLit(compareVal)
+          )
+        )
       )
-    ))
+    )
 
+  echo "addHeadersStmt.len=", addHeadersStmt.len
   nnkStmtList.newTree(
     nnkTypeSection.newTree(
       nnkTypeDef.newTree(
@@ -134,13 +151,32 @@ macro HttpTargetHeader(idEnumName, valListName, targetHeaders, body: untyped): u
     nnkVarSection.newTree(
       nnkIdentDefs.newTree(
         targetHeaders,
-        newEmptyNode(),
-        nnkPrefix.newTree(
-          newIdentNode("@^"),
-          headers
-        )
+        nnkBracketExpr.newTree(
+          newIdentNode("Array"),
+          nnkTupleTy.newTree(
+            nnkIdentDefs.newTree(
+              newIdentNode("id"),
+              newIdentNode("HeaderParams"),
+              newEmptyNode()
+            ),
+            nnkIdentDefs.newTree(
+              newIdentNode("val"),
+              newIdentNode("string"),
+              newEmptyNode()
+            )
+          )
+        ),
+        newEmptyNode()
       )
-    )
+    ),
+    nnkCall.newTree(
+      nnkDotExpr.newTree(
+        targetHeaders,
+        newIdentNode("newArrayOfCap")
+      ),
+      newLit(addHeadersStmt.len)
+    ),
+    addHeadersStmt
   )
 
 macro HttpTargetHeader*(body: untyped): untyped =
