@@ -493,7 +493,10 @@ template serverTagLib*(cfg: static Config) {.dirty.} =
 
       template checkFirstTagAndReturn() {.dirty.} =
         if clientIdsPair.isNil:
-          clientIdsPair = tag2ClientIds.set(tag, @^[ClientId clientId])
+          var ca: Array[ClientId]
+          ca.newArray(1)
+          ca[0] = clientId
+          clientIdsPair = tag2ClientIds.set(tag, ca)
           tagRefsPair.val.add(TagRef(tag: clientIdsPair.key.addr, idx: 0))
           return
 
@@ -606,7 +609,10 @@ template serverTagLib*(cfg: static Config) {.dirty.} =
     withWriteLock clientsLock:
       let tasksPair = clientId2Tasks.get(clientId)
       if tasksPair.isNil:
-        clientId2Tasks.set(clientId, @^[task])
+        var ta: Array[ClientTask]
+        ta.newArray(1)
+        ta[0] = task
+        clientId2Tasks.set(clientId, ta)
       else:
         tasksPair.val.add(task)
 
