@@ -126,6 +126,12 @@ else:
     result.len = len
     result.cap = size
 
+  proc newArrayUninitialized*[T](a: var Array[T], len: Natural): Array[T] =
+    let size = sizeof(T) * len
+    a.data = cast[typeof(a.data)](allocShared(size))
+    a.len = len
+    a.cap = size
+
   proc newArrayOfCap*[T](len: Natural): Array[T] =
     let size = sizeof(T) * len
     result.data = cast[typeof(result.data)](allocShared0(size))
