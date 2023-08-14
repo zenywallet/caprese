@@ -56,11 +56,11 @@ else:
     a.cap = b.cap
     a.data = b.data
 
-  proc nextCap(cap: int): int =
+  template nextCap(cap: int): int =
     if cap <= 16:
-      result = 32
+      32
     else:
-      result = cap * 2
+      cap * 2
 
   proc add*[T](x: var Array[T]; y: sink Array[T]) =
     let newLen = x.len + y.len
