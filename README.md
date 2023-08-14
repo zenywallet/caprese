@@ -290,7 +290,7 @@ serverStart()
 ```
 
 #### Pending and worker
-Inside the `server:` block is called the server dispatch-level. Inside this block is called by multiple threads, it must not call wait and must return results immediately. If the response cannot be returned immediately, return pending first and then process it in another worker thread.
+The runnable level inside the `server:` block is called the server dispatch-level. Inside the block is called from multiple threads, it must not call functions that generate waits and must return results immediately. If the response cannot be returned immediately, return pending first and then process it in another worker thread.
 
 ```nim
 type
@@ -320,7 +320,7 @@ server(ip = "0.0.0.0", port = 8089):
 serverStart()
 ```
 
-The send commands executed by another worker thread invoke a dispatch-level thread to execute the sending process. The number of threads in the `server:` block is the number of *serverWorkerNum* in the `config:` block. The same worker threads are used even in a multi-port configuration with multiple `server:` blocks, and the number of threads remains the same.
+The send commands executed by another worker thread invoke a server dispatch-level thread to execute the sending process. The number of threads in the `server:` block is the number of *serverWorkerNum* in the `config:` block. The same worker threads are used even in a multi-port configuration with multiple `server:` blocks, and the number of threads remains the same.
 
 One of the reasons for creating Caprese is stream encryption. The common method of stream encryption using a web proxy server in a separate process seems inefficient. To reduce context switches, it would be better to handle stream encryption in the same thread context as the SSL process, like the `server:` block in the Caprese.
 
@@ -647,7 +647,7 @@ First copy of certificate files, also for testing.
 
 Now open [http://YOUR_DOMAIN/](http://YOUR_DOMAIN/) in your browser. If the URL http redirects to https and there is no certificate warning, it is successful.
 
-If you have just created the directory */path/to/certs/YOUR_DOMAIN*, wait about 30 seconds before opening the URL. This is because if the directory does not exist yet, real-time file monitoring to update the certificates is not enabled. Once the Caprese has detected the directory, the certificates will be updated instantly after the certificate files have been changed.
+If you have just created the directory */path/to/certs/YOUR_DOMAIN*, wait about 30 seconds before opening the URL. This is because if the directory does not exist yet, real-time file monitoring to update the certificates is deactivated. Once the Caprese has detected the directory, monitoring is activated, the certificates will be updated instantly after the certificate files have been changed.
 
 ### License
 MIT
