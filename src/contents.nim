@@ -20,7 +20,7 @@ var timeStampThread*: Thread[void]
 var active = false
 
 for i in 0..1:
-  timeStrArrays[i] = newArray[byte](30)
+  timeStrArrays[i].newArray(30)
 
 proc updateTimeStamp() {.inline.} =
   var timeStr = now().utc().format("ddd, dd MMM yyyy HH:mm:ss 'GMT'")
