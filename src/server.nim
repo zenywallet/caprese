@@ -3892,11 +3892,10 @@ template serverLib(cfg: static Config) {.dirty.} =
       clientHandlerProcs.add proc (ctx: WorkerThreadCtx) {.thread.} =
         when `ssl`:
           let client = ctx.client
-          let sock = client.sock
 
           acquire(client.spinLock)
           if client.threadId == 0:
-            if sock == osInvalidSocket:
+            if client.sock == osInvalidSocket:
               release(client.spinLock)
               return
             else:
@@ -3906,6 +3905,8 @@ template serverLib(cfg: static Config) {.dirty.} =
             client.dirty = ClientDirtyTrue
             release(client.spinLock)
             return
+
+          let sock = client.sock
 
           routesMainTmpl(`body`)
 
@@ -4262,11 +4263,10 @@ template serverLib(cfg: static Config) {.dirty.} =
     quote do:
       clientHandlerProcs.add proc (ctx: WorkerThreadCtx) {.thread.} =
         let client = ctx.client
-        let sock = client.sock
 
         acquire(client.spinLock)
         if client.threadId == 0:
-          if sock == osInvalidSocket:
+          if client.sock == osInvalidSocket:
             release(client.spinLock)
             return
           else:
@@ -4276,6 +4276,8 @@ template serverLib(cfg: static Config) {.dirty.} =
           client.dirty = ClientDirtyTrue
           release(client.spinLock)
           return
+
+        let sock = client.sock
 
         routesMainTmpl(`body`)
 
@@ -4500,7 +4502,7 @@ template serverLib(cfg: static Config) {.dirty.} =
 
               acquire(client.spinLock)
               if client.threadId == 0:
-                if sock == osInvalidSocket:
+                if client.sock == osInvalidSocket:
                   release(client.spinLock)
                   return
                 else:
@@ -4579,11 +4581,10 @@ template serverLib(cfg: static Config) {.dirty.} =
           when cfg.sslLib == BearSSL:
             echo "stream bearssl"
             let client = ctx.client
-            let sock = client.sock
 
             acquire(client.spinLock)
             if client.threadId == 0:
-              if sock == osInvalidSocket:
+              if client.sock == osInvalidSocket:
                 release(client.spinLock)
                 return
               else:
@@ -4593,6 +4594,8 @@ template serverLib(cfg: static Config) {.dirty.} =
               client.dirty = ClientDirtyTrue
               release(client.spinLock)
               return
+
+            let sock = client.sock
 
             `callStreamMainTmplStmt`
 
@@ -5070,12 +5073,10 @@ template serverLib(cfg: static Config) {.dirty.} =
     quote do:
       clientHandlerProcs.add proc (ctx: WorkerThreadCtx) {.thread.} =
         let client = ctx.client
-        let sock = client.sock
-        let proxy = client.proxy
 
         acquire(client.spinLock)
         if client.threadId == 0:
-          if sock == osInvalidSocket:
+          if client.sock == osInvalidSocket:
             release(client.spinLock)
             return
           else:
@@ -5085,6 +5086,9 @@ template serverLib(cfg: static Config) {.dirty.} =
           client.dirty = ClientDirtyTrue
           release(client.spinLock)
           return
+
+        let sock = client.sock
+        let proxy = client.proxy
 
         while true:
           client.dirty = ClientDirtyNone
