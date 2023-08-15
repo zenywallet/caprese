@@ -688,9 +688,12 @@ template serverTagLib*(cfg: static Config) {.dirty.} =
     let pair = pendingClients.get(clientId)
     if pair.isNil:
       return SendResult.None
+    let client = pair.val
+    if client.isNil:
+      return SendResult.None
 
     clientId.addTask(ClientTask(cmd: ClientTaskCmd.Data, data: data.toBytes.toArray))
-    if pair.val.invokeSendEvent():
+    if client.invokeSendEvent():
       result = SendResult.Pending
     else:
       clientId.delTasks()
