@@ -5405,7 +5405,6 @@ template serverLib(cfg: static Config) {.dirty.} =
 
     proc serverNameCallback(ssl: SSL; out_alert: ptr cint; arg: pointer): cint {.cdecl.} =
       try:
-        echo "workerThreadCtx.client.srvId=", workerThreadCtx.client.srvId
         let sitename = $SSL_get_servername(ssl, TLSEXT_NAMETYPE_host_name)
         debug "sitename=", sitename
         let certs = certsTable[][sitename]
