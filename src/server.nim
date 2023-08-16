@@ -12,6 +12,7 @@ import logs
 import arraylib
 import files
 import server_types
+export arraylib
 export server_types
 
 type
