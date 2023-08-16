@@ -4345,6 +4345,7 @@ template serverLib(cfg: static Config) {.dirty.} =
                   else:
                     release(client.spinLock)
                 elif client.sslErr == SSL_ERROR_WANT_WRITE:
+                  acquire(client.spinLock)
                   if client.dirty == ClientDirtyNone:
                     client.threadId = 0
                     release(client.spinLock)
@@ -4843,6 +4844,7 @@ template serverLib(cfg: static Config) {.dirty.} =
                     else:
                       release(client.spinLock)
                   elif client.sslErr == SSL_ERROR_WANT_WRITE:
+                    acquire(client.spinLock)
                     if client.dirty == ClientDirtyNone:
                       client.threadId = 0
                       release(client.spinLock)
