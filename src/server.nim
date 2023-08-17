@@ -4359,7 +4359,10 @@ template serverLib(cfg: static Config) {.dirty.} =
                     release(client.spinLock)
                     break
                 else:
-                  if errno == EINTR:
+                  if errno == EAGAIN or errno == EWOULDBLOCK:
+                    client.threadId = 0
+                    return
+                  if client.sslErr == SSL_ERROR_SYSCALL or errno == EINTR:
                     continue
                   client.close(ssl = true)
                   return
