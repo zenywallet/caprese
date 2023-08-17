@@ -678,8 +678,8 @@ template serverTagLib*(cfg: static Config) {.dirty.} =
     if not client.appShift:
       inc(client.appId)
       client.appShift = true
-    release(client.spinLock)
     client.ev.events = EPOLLRDHUP or EPOLLET or EPOLLOUT
+    release(client.spinLock)
     var retCtl = epoll_ctl(epfd, EPOLL_CTL_MOD, cast[cint](client.sock), addr client.ev)
     if retCtl != 0:
       return false
@@ -4485,9 +4485,9 @@ template serverLib(cfg: static Config) {.dirty.} =
                   dec(client.appId)
                   client.appShift = false
                 client.threadId = 0
+                client.ev.events = EPOLLIN or EPOLLRDHUP or EPOLLET
                 release(client.spinLock)
 
-                client.ev.events = EPOLLIN or EPOLLRDHUP or EPOLLET
                 var retCtl = epoll_ctl(epfd, EPOLL_CTL_MOD, cast[cint](client.sock), addr client.ev)
                 if retCtl != 0:
                   errorRaise "error: appRoutesSend epoll_ctl ret=", retCtl, " ", getErrnoStr()
