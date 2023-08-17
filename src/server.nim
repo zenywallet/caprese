@@ -4500,25 +4500,8 @@ template serverLib(cfg: static Config) {.dirty.} =
                 client.close(ssl = true)
                 return
 
-              acquire(client.spinLock)
               client.threadId = 0
-              release(client.spinLock)
-
-              let client = ctx.client
-              let sock = client.sock
-
-              acquire(client.spinLock)
-              if client.threadId == 0:
-                if client.sock == osInvalidSocket:
-                  release(client.spinLock)
-                  return
-                else:
-                  client.threadId = ctx.threadId
-                  release(client.spinLock)
-              else:
-                client.dirty = ClientDirtyTrue
-                release(client.spinLock)
-                return
+              return
         else:
           raise
 
