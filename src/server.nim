@@ -3765,7 +3765,6 @@ template serverLib(cfg: static Config) {.dirty.} =
   ]#
 
   proc appRoutesSend(ctx: WorkerThreadCtx) {.thread.} =
-    echo "appRoutesSend"
     let client = ctx.client
 
     acquire(client.spinLock)
