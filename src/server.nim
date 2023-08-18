@@ -674,12 +674,26 @@ template serverTagLib*(cfg: static Config) {.dirty.} =
       clientId2Tasks.del(tasksPair)
 
   proc invokeSendEvent*(client: Client): bool =
-    acquire(client.spinLock)
-    if not client.appShift:
-      inc(client.appId)
-      client.appShift = true
-    client.ev.events = EPOLLRDHUP or EPOLLET or EPOLLOUT
-    release(client.spinLock)
+    when cfg.sslLib == BearSSL:
+      if client.sc.isNil:
+        acquire(client.spinLock)
+        if not client.appShift:
+          inc(client.appId)
+          client.appShift = true
+        client.ev.events = EPOLLRDHUP or EPOLLET or EPOLLOUT
+        release(client.spinLock)
+      else:
+        acquire(client.spinLock)
+        client.ev.events = EPOLLIN or EPOLLRDHUP or EPOLLET or EPOLLOUT
+        release(client.spinLock)
+    else:
+      acquire(client.spinLock)
+      if not client.appShift:
+        inc(client.appId)
+        client.appShift = true
+      client.ev.events = EPOLLRDHUP or EPOLLET or EPOLLOUT
+      release(client.spinLock)
+
     var retCtl = epoll_ctl(epfd, EPOLL_CTL_MOD, cast[cint](client.sock), addr client.ev)
     if retCtl != 0:
       return false
@@ -3925,7 +3939,12 @@ template serverLib(cfg: static Config) {.dirty.} =
             var bufLen: csize_t
             var buf: ptr UncheckedArray[byte]
 
-            var engine = RecvApp
+            proc taskCallback(task: ClientTask): bool =
+              client.addSendBuf(task.data.toString())
+              result = true
+            discard client.clientId.getAndPurgeTasks(taskCallback)
+
+            var engine = if client.sendCurSize > 0: SendApp else: RecvApp
 
             block engineBlock:
               while true:
@@ -3993,14 +4012,13 @@ template serverLib(cfg: static Config) {.dirty.} =
                   buf = cast[ptr UncheckedArray[byte]](br_ssl_engine_sendrec_buf(ec, addr bufLen))
                   if buf.isNil:
                     engine = RecvRec
-                    if client.ev.events == (EPOLLIN or EPOLLRDHUP or EPOLLET or EPOLLOUT):
-                      client.ev.events = EPOLLIN or EPOLLRDHUP or EPOLLET
-                      var retCtl = epoll_ctl(epfd, EPOLL_CTL_MOD, cast[cint](client.sock), addr client.ev)
-                      if retCtl != 0:
-                        acquire(client.spinLock)
-                        client.threadId = 0
-                        release(client.spinLock)
-                        break
+                    client.ev.events = EPOLLIN or EPOLLRDHUP or EPOLLET or EPOLLOUT
+                    var retCtl = epoll_ctl(epfd, EPOLL_CTL_MOD, cast[cint](client.sock), addr client.ev)
+                    if retCtl != 0:
+                      acquire(client.spinLock)
+                      client.threadId = 0
+                      release(client.spinLock)
+                      break
                   else:
                     let sendlen = sock.send(buf, bufLen.int, 0.cint)
                     if sendlen > 0:
@@ -4515,10 +4533,7 @@ template serverLib(cfg: static Config) {.dirty.} =
 
   macro appRoutesSendMacro(ssl: bool, body: untyped): untyped =
     quote do:
-      when `ssl`:
-        clientHandlerProcs.add appRoutesSendSsl
-      else:
-        clientHandlerProcs.add appRoutesSend
+      clientHandlerProcs.add appRoutesSend
 
   template streamMainTmpl(body: untyped) {.dirty.} =
     proc streamMain(client: Client, opcode: WebSocketOpCode,
