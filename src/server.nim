@@ -992,7 +992,10 @@ template serverInitFreeClient() {.dirty.} =
       p[i].sendCurSize = 0
       p[i].keepAlive = true
       p[i].payloadSize = 0
-      when cfg.sslLib == OpenSSL or cfg.sslLib == LibreSSL or cfg.sslLib == BoringSSL:
+      when cfg.sslLib == BearSSL:
+        p[i].sc = nil
+        p[i].keyType = 0.cint
+      elif cfg.sslLib == OpenSSL or cfg.sslLib == LibreSSL or cfg.sslLib == BoringSSL:
         p[i].ssl = nil
         p[i].sslErr = SSL_ERROR_NONE
       p[i].ip = 0
