@@ -994,6 +994,7 @@ template serverInitFreeClient() {.dirty.} =
       p[i].payloadSize = 0
       when cfg.sslLib == OpenSSL or cfg.sslLib == LibreSSL or cfg.sslLib == BoringSSL:
         p[i].ssl = nil
+        p[i].sslErr = SSL_ERROR_NONE
       p[i].ip = 0
       p[i].invoke = false
       initLock(p[i].lock)
