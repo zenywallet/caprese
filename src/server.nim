@@ -3832,7 +3832,7 @@ template serverLib(cfg: static Config) {.dirty.} =
 
     var lastSendErr: SendResult
     proc taskCallback(task: ClientTask): bool =
-      lastSendErr = client.send(task.data.toSeq().toString())
+      lastSendErr = client.send(task.data.toString())
       result = (lastSendErr == SendResult.Success)
 
     while true:
@@ -4500,7 +4500,7 @@ template serverLib(cfg: static Config) {.dirty.} =
 
           var lastSendErr: SendResult
           proc taskCallback(task: ClientTask): bool =
-            lastSendErr = client.send(task.data.toSeq().toString())
+            lastSendErr = client.send(task.data.toString())
             result = (lastSendErr == SendResult.Success)
 
           while true:
