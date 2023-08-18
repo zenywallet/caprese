@@ -1048,7 +1048,12 @@ template serverInitFreeClient() {.dirty.} =
       client.sock = osInvalidSocket
       client.threadId = 0
       release(client.spinLock)
-      when ssl and (cfg.sslLib == OpenSSL or cfg.sslLib == LibreSSL or cfg.sslLib == BoringSSL):
+      when cfg.sslLib == BearSSL:
+        if not client.sc.isNil:
+          deallocShared(cast[pointer](client.sc))
+          client.sc = nil
+        client.keyType = 0.cint
+      elif ssl and (cfg.sslLib == OpenSSL or cfg.sslLib == LibreSSL or cfg.sslLib == BoringSSL):
         if not client.ssl.isNil:
           SSL_free(client.ssl)
           client.ssl = nil
