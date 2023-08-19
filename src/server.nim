@@ -2681,6 +2681,7 @@ template serverLib(cfg: static Config) {.dirty.} =
       sockAddress: Sockaddr_in
       addrLen: SockLen
       recvBuf: Array[byte]
+      events: uint32
       client: Client
       pRecvBuf: ptr UncheckedArray[byte]
       header: ReqHeader
@@ -5480,6 +5481,7 @@ template serverLib(cfg: static Config) {.dirty.} =
                         cfg.epollEventsSize.cint, -1.cint)
         for i in 0..<nfd:
           try:
+            ctx.events = pevents[i].events
             ctx.client = cast[Client](pevents[i].data)
             cast[ClientHandlerProc](clientHandlerProcs[ctx.client.appId])(ctx)
           except:
