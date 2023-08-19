@@ -5445,16 +5445,6 @@ template serverLib(cfg: static Config) {.dirty.} =
     SSL_CTX_set_tlsext_servername_callback(sslCtx, serverNameCallback)
 
   proc serverWorker(arg: ThreadArg) {.thread.} =
-    var evData: uint64
-    #var sockAddress: Sockaddr_in
-    #var addrLen = sizeof(sockAddress).SockLen
-    #var recvBuf = newArray[byte](workerRecvBufSize)
-    #var pClient: Client
-    #var pRecvBuf: ptr UncheckedArray[byte]
-    #var sock: SocketHandle = osInvalidSocket
-    #var header: ReqHeader
-    #var targetHeaders: Array[ptr tuple[id: HeaderParams, val: string]]
-
     var ctxObj: WorkerThreadCtxObj
     workerThreadCtx = cast[WorkerThreadCtx](addr ctxObj)
     var ctx = cast[WorkerThreadCtx](addr ctxObj)
