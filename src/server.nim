@@ -4059,7 +4059,6 @@ template serverLib(cfg: static Config) {.dirty.} =
                                 if client.dirty != ClientDirtyNone:
                                   client.dirty = ClientDirtyNone
                                   release(client.spinLock)
-                                  engine = RecvApp
                                   break
                                 else:
                                   client.threadId = 0
