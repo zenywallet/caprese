@@ -4043,7 +4043,6 @@ template serverLib(cfg: static Config) {.dirty.} =
                         (headerErr, headerNext) = parseHeader(ctx.pRecvBuf, parseSize, ctx.targetHeaders, ctx.header)
                         if headerErr == 0:
                           let retMain = routesMain(ctx, client)
-                          engine = SendRec
                           if retMain == SendResult.Success:
                             if client.keepAlive == true:
                               if ctx.header.minorVer == 0 or getHeaderValue(ctx.pRecvBuf, ctx.header,
