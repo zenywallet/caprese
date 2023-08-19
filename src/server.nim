@@ -3939,6 +3939,8 @@ template serverLib(cfg: static Config) {.dirty.} =
             let ec = addr client.sc.eng
             var bufLen {.noinit.}: csize_t
             var buf {.noinit.}: ptr UncheckedArray[byte]
+            var headerErr {.noinit.}: int
+            var headerNext {.noinit.}: int
 
             proc taskCallback(task: ClientTask): bool =
               client.addSendBuf(task.data.toString())
@@ -3964,9 +3966,8 @@ template serverLib(cfg: static Config) {.dirty.} =
                       var parseSize = client.recvCurSize
                       while true:
                         ctx.pRecvBuf = cast[ptr UncheckedArray[byte]](addr client.recvBuf[nextPos])
-                        let retHeader = parseHeader(ctx.pRecvBuf, parseSize, ctx.targetHeaders)
-                        if retHeader.err == 0:
-                          ctx.header = retHeader.header
+                        (headerErr, ctx.header, headerNext) = parseHeader(ctx.pRecvBuf, parseSize, ctx.targetHeaders)
+                        if headerErr == 0:
                           let retMain = routesMain(ctx, client)
                           engine = SendRec
                           if retMain == SendResult.Success:
@@ -3976,8 +3977,8 @@ template serverLib(cfg: static Config) {.dirty.} =
                                 client.keepAlive = false
                                 client.close()
                                 break engineBlock
-                              elif retHeader.next < client.recvCurSize:
-                                nextPos = retHeader.next
+                              elif headerNext < client.recvCurSize:
+                                nextPos = headerNext
                                 parseSize = client.recvCurSize - nextPos
                               else:
                                 client.recvCurSize = 0
@@ -3995,8 +3996,8 @@ template serverLib(cfg: static Config) {.dirty.} =
                               client.close()
                               break engineBlock
                           elif retMain == SendResult.Pending:
-                            if retHeader.next < parseSize:
-                              nextPos = retHeader.next
+                            if headerNext < parseSize:
+                              nextPos = headerNext
                               parseSize = parseSize - nextPos
                             else:
                               client.recvCurSize = 0
