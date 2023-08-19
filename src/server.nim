@@ -5452,18 +5452,15 @@ template serverLib(cfg: static Config) {.dirty.} =
     ctx.recvBuf = newArray[byte](workerRecvBufSize)
     for i in 0..<TargetHeaders.len:
       ctx.targetHeaders.add(addr TargetHeaders[i])
-
     ctx.threadId = arg.workerParams.threadId
+    ctx.pRecvBuf0 = cast[ptr UncheckedArray[byte]](addr ctx.recvBuf[0])
 
     serverWorkerInit()
 
     var events: array[cfg.epollEventsSize, EpollEvent]
     var pevents: ptr UncheckedArray[EpollEvent] = cast[ptr UncheckedArray[EpollEvent]](addr events[0])
-    var pRecvBuf0 = cast[ptr UncheckedArray[byte]](addr ctx.recvBuf[0])
     var skip = false
     var nfd: cint
-
-    ctx.pRecvBuf0 = pRecvBuf0
 
     when cfg.sslLib != None:
       while active:
