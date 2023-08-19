@@ -3937,8 +3937,8 @@ template serverLib(cfg: static Config) {.dirty.} =
           when cfg.sslLib == BearSSL:
             let sc = client.sc
             let ec = addr client.sc.eng
-            var bufLen: csize_t
-            var buf: ptr UncheckedArray[byte]
+            var bufLen {.noinit.}: csize_t
+            var buf {.noinit.}: ptr UncheckedArray[byte]
 
             proc taskCallback(task: ClientTask): bool =
               client.addSendBuf(task.data.toString())
