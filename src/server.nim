@@ -2834,6 +2834,80 @@ template serverLib(cfg: static Config) {.dirty.} =
       result.err = 2
       result.next = -1
 
+  proc parseHeader(buf: ptr UncheckedArray[byte], size: int,
+                  targetHeaders: var Array[ptr tuple[id: HeaderParams, val: string]],
+                  header: var ReqHeader
+                  ): tuple[err: int, next: int] =
+    if equalMem(addr buf[0], "GET /".cstring, 5):
+      var cur = 4
+      var pos = 5
+      while true:
+        if equalMem(addr buf[pos], " HTTP/1.".cstring, 8):
+          header.url = cast[ptr UncheckedArray[byte]](addr buf[cur]).toString(pos - cur)
+          inc(pos, 8)
+          if equalMem(addr buf[pos], "1\c\L".cstring, 3):
+            header.minorVer = 1
+            inc(pos, 3)
+          elif equalMem(addr buf[pos], "0\c\L".cstring, 3):
+            header.minorVer = 0
+            inc(pos, 3)
+          else:
+            let minorVer = int(buf[pos]) - int('0')
+            if minorVer < 0 or minorVer > 9:
+              result.err = 4
+              result.next = -1
+              return
+            inc(pos)
+            if not equalMem(addr buf[pos], "\c\L".cstring, 2):
+              result.err = 5
+              result.next = -1
+              return
+            inc(pos, 2)
+            header.minorVer = minorVer
+          if equalMem(addr buf[pos], "\c\L".cstring, 2):
+            result.next = pos + 2
+            return
+
+          var incompleteIdx = 0
+          while true:
+            block paramsLoop:
+              for i in incompleteIdx..<targetHeaders.len:
+                let (headerId, targetParam) = targetHeaders[i][]
+                if equalMem(addr buf[pos], targetParam.cstring, targetParam.len):
+                  inc(pos, targetParam.len)
+                  cur = pos
+                  while not equalMem(addr buf[pos], "\c\L".cstring, 2):
+                    inc(pos)
+                  header.params[headerId.int] = (cur, pos - cur)
+                  inc(pos, 2)
+                  if equalMem(addr buf[pos], "\c\L".cstring, 2):
+                    result.next = pos + 2
+                    return
+                  if i != incompleteIdx:
+                    swap(targetHeaders[incompleteIdx], targetHeaders[i])
+                  inc(incompleteIdx)
+                  if incompleteIdx >= targetHeaders.len:
+                    inc(pos)
+                    while(not equalMem(addr buf[pos], "\c\L\c\L".cstring, 4)):
+                      inc(pos)
+                    result.next = pos + 4
+                    return
+                  break paramsLoop
+              while not equalMem(addr buf[pos], "\c\L".cstring, 2):
+                inc(pos)
+              inc(pos, 2)
+              if equalMem(addr buf[pos], "\c\L".cstring, 2):
+                result.next = pos + 2
+                return
+
+        elif equalMem(addr buf[pos], "\c\L".cstring, 2):
+          result.err = 3
+          result.next = -1
+          return
+        inc(pos)
+    else:
+      result.err = 2
+      result.next = -1
 
   proc getFrame(data: ptr UncheckedArray[byte],
                 size: int): tuple[find: bool, fin: bool, opcode: int8,
@@ -3966,7 +4040,7 @@ template serverLib(cfg: static Config) {.dirty.} =
                       var parseSize = client.recvCurSize
                       while true:
                         ctx.pRecvBuf = cast[ptr UncheckedArray[byte]](addr client.recvBuf[nextPos])
-                        (headerErr, ctx.header, headerNext) = parseHeader(ctx.pRecvBuf, parseSize, ctx.targetHeaders)
+                        (headerErr, headerNext) = parseHeader(ctx.pRecvBuf, parseSize, ctx.targetHeaders, ctx.header)
                         if headerErr == 0:
                           let retMain = routesMain(ctx, client)
                           engine = SendRec
