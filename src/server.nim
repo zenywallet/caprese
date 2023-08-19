@@ -5445,7 +5445,6 @@ template serverLib(cfg: static Config) {.dirty.} =
     SSL_CTX_set_tlsext_servername_callback(sslCtx, serverNameCallback)
 
   proc serverWorker(arg: ThreadArg) {.thread.} =
-    var events: array[cfg.epollEventsSize, EpollEvent]
     var evData: uint64
     #var sockAddress: Sockaddr_in
     #var addrLen = sizeof(sockAddress).SockLen
@@ -5468,6 +5467,7 @@ template serverLib(cfg: static Config) {.dirty.} =
 
     serverWorkerInit()
 
+    var events: array[cfg.epollEventsSize, EpollEvent]
     var pevents: ptr UncheckedArray[EpollEvent] = cast[ptr UncheckedArray[EpollEvent]](addr events[0])
     var pRecvBuf0 = cast[ptr UncheckedArray[byte]](addr ctx.recvBuf[0])
     var skip = false
