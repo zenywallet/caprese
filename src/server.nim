@@ -224,6 +224,11 @@ template serverInit*() {.dirty.} =
   type
     ClientSendProc = proc (client: Client, data: ptr UncheckedArray[byte], size: int): SendResult {.thread.}
 
+    KeepAliveStatus {.pure.} = enum
+      Unknown
+      True
+      False
+
     ClientBase* = ref object of RootObj
       sock*: SocketHandle
       recvBuf: ptr UncheckedArray[byte]
@@ -232,6 +237,7 @@ template serverInit*() {.dirty.} =
       sendBuf: ptr UncheckedArray[byte]
       sendCurSize: int
       keepAlive: bool
+      keepAlive2: KeepAliveStatus
       ip: uint32
       invoke: bool
       lock: Lock
@@ -4043,6 +4049,12 @@ template serverLib(cfg: static Config) {.dirty.} =
                         (headerErr, headerNext) = parseHeader(ctx.pRecvBuf, parseSize, ctx.targetHeaders, ctx.header)
                         if headerErr == 0:
                           let retMain = routesMain(ctx, client)
+                          if client.keepAlive2 == KeepAliveStatus.Unknown:
+                            if ctx.header.minorVer == 0 or getHeaderValue(ctx.pRecvBuf, ctx.header,
+                              InternalEssentialHeaderConnection) == "close":
+                              client.keepAlive2 = KeepAliveStatus.False
+                            else:
+                              client.keepAlive2 = KeepAliveStatus.True
                           if retMain == SendResult.Success:
                             if client.keepAlive == true:
                               if ctx.header.minorVer == 0 or getHeaderValue(ctx.pRecvBuf, ctx.header,
