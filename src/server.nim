@@ -4055,31 +4055,7 @@ template serverLib(cfg: static Config) {.dirty.} =
                               client.keepAlive2 = KeepAliveStatus.False
                             else:
                               client.keepAlive2 = KeepAliveStatus.True
-                          if retMain == SendResult.Success:
-                            if client.keepAlive == true:
-                              if ctx.header.minorVer == 0 or getHeaderValue(ctx.pRecvBuf, ctx.header,
-                                InternalEssentialHeaderConnection) == "close":
-                                client.keepAlive = false
-                                client.close()
-                                break engineBlock
-                              elif headerNext < client.recvCurSize:
-                                nextPos = headerNext
-                                parseSize = client.recvCurSize - nextPos
-                              else:
-                                client.recvCurSize = 0
-                                acquire(client.spinLock)
-                                if client.dirty != ClientDirtyNone:
-                                  client.dirty = ClientDirtyNone
-                                  release(client.spinLock)
-                                  break
-                                else:
-                                  client.threadId = 0
-                                  release(client.spinLock)
-                                  break engineBlock
-                            else:
-                              client.close()
-                              break engineBlock
-                          elif retMain == SendResult.Pending:
+                          if retMain == SendResult.Pending:
                             if headerNext < parseSize:
                               nextPos = headerNext
                               parseSize = parseSize - nextPos
