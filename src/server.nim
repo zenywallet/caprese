@@ -697,7 +697,6 @@ template serverTagLib*(cfg: static Config) {.dirty.} =
       else:
         acquire(client.spinLock)
         if client.threadId == 0:
-          client.ev.events = EPOLLIN or EPOLLRDHUP or EPOLLET or EPOLLOUT
           release(client.spinLock)
 
           var retCtl = epoll_ctl(epfd, EPOLL_CTL_MOD, cast[cint](client.sock), addr client.ev)
@@ -706,7 +705,6 @@ template serverTagLib*(cfg: static Config) {.dirty.} =
           return true
         else:
           client.dirty = ClientDirtyTrue
-          client.ev.events = EPOLLIN or EPOLLRDHUP or EPOLLET or EPOLLOUT
           release(client.spinLock)
           return true
 
@@ -3757,7 +3755,10 @@ template serverLib(cfg: static Config) {.dirty.} =
       else:
         newClient.sendProc = sendNativeProc
 
-      newClient.ev.events = EPOLLIN or EPOLLRDHUP or EPOLLET
+      when sslFlag and cfg.sslLib == BearSSL:
+        newClient.ev.events = EPOLLIN or EPOLLRDHUP or EPOLLET or EPOLLOUT
+      else:
+        newClient.ev.events = EPOLLIN or EPOLLRDHUP or EPOLLET
       let retCtl = epoll_ctl(epfd, EPOLL_CTL_ADD, cast[cint](clientSock), addr newClient.ev)
       if retCtl < 0:
         errorRaise "error: epoll_ctl ret=", retCtl, " errno=", errno
@@ -4107,7 +4108,6 @@ template serverLib(cfg: static Config) {.dirty.} =
                             engine = RecvApp
                             break
                           else:
-                            client.ev.events = EPOLLIN or EPOLLRDHUP or EPOLLET or EPOLLOUT
                             client.threadId = 0
                             release(client.spinLock)
                             var retCtl = epoll_ctl(epfd, EPOLL_CTL_MOD, cast[cint](client.sock), addr client.ev)
