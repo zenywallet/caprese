@@ -4017,8 +4017,8 @@ template serverLib(cfg: static Config) {.dirty.} =
           when cfg.sslLib == BearSSL:
             let sc = client.sc
             let ec = addr client.sc.eng
+            var bufRecvApp, bufSendRec, bufRecvRec, bufSendApp: ptr UncheckedArray[byte]
             var bufLen {.noinit.}: csize_t
-            var buf {.noinit.}: ptr UncheckedArray[byte]
             var headerErr {.noinit.}: int
             var headerNext {.noinit.}: int
             var engine = RecvApp
@@ -4028,11 +4028,11 @@ template serverLib(cfg: static Config) {.dirty.} =
                 {.computedGoto.}
                 case engine
                 of RecvApp:
-                  buf = cast[ptr UncheckedArray[byte]](br_ssl_engine_recvapp_buf(ec, addr bufLen))
-                  if buf.isNil:
+                  bufRecvApp = cast[ptr UncheckedArray[byte]](br_ssl_engine_recvapp_buf(ec, addr bufLen))
+                  if bufRecvApp.isNil:
                     engine = SendRec
                   else:
-                    client.addRecvBuf(buf, bufLen.int, if bufLen.int > workerRecvBufSize: bufLen.int else: workerRecvBufSize)
+                    client.addRecvBuf(bufRecvApp, bufLen.int, if bufLen.int > workerRecvBufSize: bufLen.int else: workerRecvBufSize)
                     br_ssl_engine_recvapp_ack(ec, bufLen.csize_t)
 
                     if client.recvCurSize >= 17 and equalMem(addr client.recvBuf[client.recvCurSize - 4], "\c\L\c\L".cstring, 4):
@@ -4067,12 +4067,12 @@ template serverLib(cfg: static Config) {.dirty.} =
                       engine = SendRec
 
                 of SendRec:
-                  buf = cast[ptr UncheckedArray[byte]](br_ssl_engine_sendrec_buf(ec, addr bufLen))
-                  if buf.isNil:
+                  bufSendRec = cast[ptr UncheckedArray[byte]](br_ssl_engine_sendrec_buf(ec, addr bufLen))
+                  if bufSendRec.isNil:
                     engine = RecvRec
                   else:
                     while true:
-                      let sendlen = sock.send(buf, bufLen.int, 0.cint)
+                      let sendlen = sock.send(bufSendRec, bufLen.int, 0.cint)
                       if sendlen > 0:
                         br_ssl_engine_sendrec_ack(ec, sendlen.csize_t)
                         engine = RecvRec
@@ -4106,12 +4106,12 @@ template serverLib(cfg: static Config) {.dirty.} =
                           break engineBlock
 
                 of RecvRec:
-                  buf = cast[ptr UncheckedArray[byte]](br_ssl_engine_recvrec_buf(ec, addr bufLen))
-                  if buf.isNil:
+                  bufRecvRec = cast[ptr UncheckedArray[byte]](br_ssl_engine_recvrec_buf(ec, addr bufLen))
+                  if bufRecvRec.isNil:
                     engine = SendApp
                   else:
                     while true:
-                      let recvlen = sock.recv(buf, bufLen.int, 0.cint)
+                      let recvlen = sock.recv(bufRecvRec, bufLen.int, 0.cint)
                       if recvlen > 0:
                         br_ssl_engine_recvrec_ack(ec, recvlen.csize_t)
                         engine = RecvApp
@@ -4130,8 +4130,8 @@ template serverLib(cfg: static Config) {.dirty.} =
                           break engineBlock
 
                 of SendApp:
-                  buf = cast[ptr UncheckedArray[byte]](br_ssl_engine_sendapp_buf(ec, addr bufLen))
-                  if buf.isNil:
+                  bufSendApp = cast[ptr UncheckedArray[byte]](br_ssl_engine_sendapp_buf(ec, addr bufLen))
+                  if bufSendApp.isNil:
                     acquire(client.spinLock)
                     if client.dirty != ClientDirtyNone:
                       client.dirty = ClientDirtyNone
@@ -4151,13 +4151,13 @@ template serverLib(cfg: static Config) {.dirty.} =
                     var sendSize = client.sendCurSize
                     if sendSize > 0:
                       if bufLen.int >= sendSize:
-                        copyMem(buf, addr client.sendBuf[0], sendSize)
+                        copyMem(bufSendApp, addr client.sendBuf[0], sendSize)
                         client.sendCurSize = 0
                         release(client.lock)
                         br_ssl_engine_sendapp_ack(ec, sendSize.csize_t)
                         br_ssl_engine_flush(ec, 0)
                       else:
-                        copyMem(buf, client.sendBuf, bufLen.int)
+                        copyMem(bufSendApp, client.sendBuf, bufLen.int)
                         client.sendCurSize = sendSize - bufLen.int
                         copyMem(addr client.sendBuf[0], addr client.sendBuf[bufLen], sendSize)
                         release(client.lock)
