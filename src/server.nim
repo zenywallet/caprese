@@ -4021,7 +4021,7 @@ template serverLib(cfg: static Config) {.dirty.} =
             var buf {.noinit.}: ptr UncheckedArray[byte]
             var headerErr {.noinit.}: int
             var headerNext {.noinit.}: int
-            var engine = if client.sendCurSize > 0: SendApp else: RecvApp
+            var engine = RecvApp
 
             block engineBlock:
               while true:
