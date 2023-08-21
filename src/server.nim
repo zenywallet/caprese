@@ -4160,9 +4160,25 @@ template serverLib(cfg: static Config) {.dirty.} =
                         release(client.lock)
                         br_ssl_engine_sendapp_ack(ec, bufLen)
                         br_ssl_engine_flush(ec, 0)
+                        engine = SendRec
                     else:
                       release(client.lock)
-                    engine = SendRec
+
+                      acquire(client.spinLock)
+                      if client.dirty != ClientDirtyNone:
+                        client.dirty = ClientDirtyNone
+                        release(client.spinLock)
+                        engine = RecvApp
+                      else:
+                        if bufRecvApp.isNil and bufSendRec.isNil and
+                          not bufRecvRec.isNil and not bufSendApp.isNil and
+                          client.sendCurSize == 0:
+                          client.threadId = 0
+                          release(client.spinLock)
+                          break
+                        else:
+                          release(client.spinLock)
+                          engine = RecvApp
 
           elif cfg.sslLib == OpenSSL or cfg.sslLib == LibreSSL or cfg.sslLib == BoringSSL:
             while true:
