@@ -4063,6 +4063,8 @@ template serverLib(cfg: static Config) {.dirty.} =
                         else:
                           client.close()
                           break engineBlock
+                    else:
+                      engine = SendRec
 
                 of SendRec:
                   buf = cast[ptr UncheckedArray[byte]](br_ssl_engine_sendrec_buf(ec, addr bufLen))
