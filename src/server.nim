@@ -4082,13 +4082,6 @@ template serverLib(cfg: static Config) {.dirty.} =
                         break engineBlock
                       else:
                         if errno == EAGAIN or errno == EWOULDBLOCK:
-                          client.ev.events = EPOLLIN or EPOLLRDHUP or EPOLLET or EPOLLOUT
-                          var retCtl = epoll_ctl(epfd, EPOLL_CTL_MOD, cast[cint](client.sock), addr client.ev)
-                          if retCtl != 0:
-                            acquire(client.spinLock)
-                            client.threadId = 0
-                            release(client.spinLock)
-                            break engineBlock
                           acquire(client.spinLock)
                           if client.dirty != ClientDirtyNone:
                             client.dirty = ClientDirtyNone
@@ -4096,8 +4089,12 @@ template serverLib(cfg: static Config) {.dirty.} =
                             engine = RecvApp
                             break
                           else:
+                            client.ev.events = EPOLLIN or EPOLLRDHUP or EPOLLET or EPOLLOUT
                             client.threadId = 0
                             release(client.spinLock)
+                            var retCtl = epoll_ctl(epfd, EPOLL_CTL_MOD, cast[cint](client.sock), addr client.ev)
+                            if retCtl != 0:
+                              logs.error "error: epoll_ctl ret=", retCtl, " errno=", errno
                             break engineBlock
                         elif errno == EINTR:
                           continue
