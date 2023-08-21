@@ -4071,57 +4071,63 @@ template serverLib(cfg: static Config) {.dirty.} =
                   if buf.isNil:
                     engine = RecvRec
                   else:
-                    let sendlen = sock.send(buf, bufLen.int, 0.cint)
-                    if sendlen > 0:
-                      br_ssl_engine_sendrec_ack(ec, sendlen.csize_t)
-                      engine = RecvRec
-                    elif sendlen == 0:
-                      client.close()
-                      break
-                    else:
-                      if errno == EAGAIN or errno == EWOULDBLOCK:
-                        client.ev.events = EPOLLIN or EPOLLRDHUP or EPOLLET or EPOLLOUT
-                        var retCtl = epoll_ctl(epfd, EPOLL_CTL_MOD, cast[cint](client.sock), addr client.ev)
-                        if retCtl != 0:
-                          acquire(client.spinLock)
-                          client.threadId = 0
-                          release(client.spinLock)
-                          break
-                        acquire(client.spinLock)
-                        if client.dirty != ClientDirtyNone:
-                          client.dirty = ClientDirtyNone
-                          release(client.spinLock)
-                          engine = RecvApp
-                        else:
-                          client.threadId = 0
-                          release(client.spinLock)
-                          break
-                      elif errno == EINTR:
-                        continue
-                      else:
-                        client.close()
+                    while true:
+                      let sendlen = sock.send(buf, bufLen.int, 0.cint)
+                      if sendlen > 0:
+                        br_ssl_engine_sendrec_ack(ec, sendlen.csize_t)
+                        engine = RecvRec
                         break
+                      elif sendlen == 0:
+                        client.close()
+                        break engineBlock
+                      else:
+                        if errno == EAGAIN or errno == EWOULDBLOCK:
+                          client.ev.events = EPOLLIN or EPOLLRDHUP or EPOLLET or EPOLLOUT
+                          var retCtl = epoll_ctl(epfd, EPOLL_CTL_MOD, cast[cint](client.sock), addr client.ev)
+                          if retCtl != 0:
+                            acquire(client.spinLock)
+                            client.threadId = 0
+                            release(client.spinLock)
+                            break engineBlock
+                          acquire(client.spinLock)
+                          if client.dirty != ClientDirtyNone:
+                            client.dirty = ClientDirtyNone
+                            release(client.spinLock)
+                            engine = RecvApp
+                            break
+                          else:
+                            client.threadId = 0
+                            release(client.spinLock)
+                            break engineBlock
+                        elif errno == EINTR:
+                          continue
+                        else:
+                          client.close()
+                          break engineBlock
 
                 of RecvRec:
                   buf = cast[ptr UncheckedArray[byte]](br_ssl_engine_recvrec_buf(ec, addr bufLen))
                   if buf.isNil:
                     engine = SendApp
                   else:
-                    let recvlen = sock.recv(buf, bufLen.int, 0.cint)
-                    if recvlen > 0:
-                      br_ssl_engine_recvrec_ack(ec, recvlen.csize_t)
-                      engine = RecvApp
-                    elif recvlen == 0:
-                      client.close()
-                      break
-                    else:
-                      if errno == EAGAIN or errno == EWOULDBLOCK:
-                        engine = SendApp
-                      elif errno == EINTR:
-                        continue
-                      else:
-                        client.close()
+                    while true:
+                      let recvlen = sock.recv(buf, bufLen.int, 0.cint)
+                      if recvlen > 0:
+                        br_ssl_engine_recvrec_ack(ec, recvlen.csize_t)
+                        engine = RecvApp
                         break
+                      elif recvlen == 0:
+                        client.close()
+                        break engineBlock
+                      else:
+                        if errno == EAGAIN or errno == EWOULDBLOCK:
+                          engine = SendApp
+                          break
+                        elif errno == EINTR:
+                          continue
+                        else:
+                          client.close()
+                          break engineBlock
 
                 of SendApp:
                   buf = cast[ptr UncheckedArray[byte]](br_ssl_engine_sendapp_buf(ec, addr bufLen))
