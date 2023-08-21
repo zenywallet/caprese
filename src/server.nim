@@ -4129,15 +4129,11 @@ template serverLib(cfg: static Config) {.dirty.} =
                 of SendApp:
                   bufSendApp = cast[ptr UncheckedArray[byte]](br_ssl_engine_sendapp_buf(ec, addr bufLen))
                   if bufSendApp.isNil:
-                    acquire(client.spinLock)
-                    if client.dirty != ClientDirtyNone:
-                      client.dirty = ClientDirtyNone
-                      release(client.spinLock)
-                      engine = RecvApp
-                    else:
-                      client.threadId = 0
-                      release(client.spinLock)
+                    if bufRecvApp.isNil and bufSendRec.isNil and bufRecvRec.isNil:
+                      client.close()
                       break
+                    else:
+                      engine = RecvApp
                   else:
                     proc taskCallback(task: ClientTask): bool =
                       client.addSendBuf(task.data.toString())
