@@ -4021,12 +4021,6 @@ template serverLib(cfg: static Config) {.dirty.} =
             var buf {.noinit.}: ptr UncheckedArray[byte]
             var headerErr {.noinit.}: int
             var headerNext {.noinit.}: int
-
-            proc taskCallback(task: ClientTask): bool =
-              client.addSendBuf(task.data.toString())
-              result = true
-            discard client.clientId.getAndPurgeTasks(taskCallback)
-
             var engine = if client.sendCurSize > 0: SendApp else: RecvApp
 
             block engineBlock:
@@ -4161,6 +4155,11 @@ template serverLib(cfg: static Config) {.dirty.} =
                       release(client.spinLock)
                       break
                   else:
+                    proc taskCallback(task: ClientTask): bool =
+                      client.addSendBuf(task.data.toString())
+                      result = true
+                    discard client.clientId.getAndPurgeTasks(taskCallback)
+
                     acquire(client.lock)
                     var sendSize = client.sendCurSize
                     if sendSize > 0:
