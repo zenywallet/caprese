@@ -4161,19 +4161,19 @@ template serverLib(cfg: static Config) {.dirty.} =
                       release(client.spinLock)
                       break
                   else:
-                    var sendSize = client.sendCurSize
                     acquire(client.lock)
-                    if client.sendCurSize > 0:
-                      if bufLen.int >= client.sendCurSize:
-                        copyMem(buf, addr client.sendBuf[0], client.sendCurSize)
+                    var sendSize = client.sendCurSize
+                    if sendSize > 0:
+                      if bufLen.int >= sendSize:
+                        copyMem(buf, addr client.sendBuf[0], sendSize)
                         client.sendCurSize = 0
                         release(client.lock)
                         br_ssl_engine_sendapp_ack(ec, sendSize.csize_t)
                         br_ssl_engine_flush(ec, 0)
                       else:
                         copyMem(buf, client.sendBuf, bufLen.int)
-                        client.sendCurSize = client.sendCurSize - bufLen.int
-                        copyMem(addr client.sendBuf[0], addr client.sendBuf[bufLen], client.sendCurSize)
+                        client.sendCurSize = sendSize - bufLen.int
+                        copyMem(addr client.sendBuf[0], addr client.sendBuf[bufLen], sendSize)
                         release(client.lock)
                         br_ssl_engine_sendapp_ack(ec, bufLen)
                         br_ssl_engine_flush(ec, 0)
