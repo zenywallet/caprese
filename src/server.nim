@@ -4116,15 +4116,7 @@ template serverLib(cfg: static Config) {.dirty.} =
                       break
                     else:
                       if errno == EAGAIN or errno == EWOULDBLOCK:
-                        acquire(client.spinLock)
-                        if client.dirty != ClientDirtyNone:
-                          client.dirty = ClientDirtyNone
-                          release(client.spinLock)
-                          engine = RecvApp
-                        else:
-                          client.threadId = 0
-                          release(client.spinLock)
-                          break
+                        engine = SendApp
                       elif errno == EINTR:
                         continue
                       else:
