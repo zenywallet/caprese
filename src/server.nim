@@ -688,10 +688,28 @@ template serverTagLib*(cfg: static Config) {.dirty.} =
           client.appShift = true
         client.ev.events = EPOLLRDHUP or EPOLLET or EPOLLOUT
         release(client.spinLock)
+
+        var retCtl = epoll_ctl(epfd, EPOLL_CTL_MOD, cast[cint](client.sock), addr client.ev)
+        if retCtl != 0:
+          return false
+        return true
+
       else:
         acquire(client.spinLock)
-        client.ev.events = EPOLLIN or EPOLLRDHUP or EPOLLET or EPOLLOUT
-        release(client.spinLock)
+        if client.threadId == 0:
+          client.ev.events = EPOLLIN or EPOLLRDHUP or EPOLLET or EPOLLOUT
+          release(client.spinLock)
+
+          var retCtl = epoll_ctl(epfd, EPOLL_CTL_MOD, cast[cint](client.sock), addr client.ev)
+          if retCtl != 0:
+            return false
+          return true
+        else:
+          client.dirty = ClientDirtyTrue
+          client.ev.events = EPOLLIN or EPOLLRDHUP or EPOLLET or EPOLLOUT
+          release(client.spinLock)
+          return true
+
     else:
       acquire(client.spinLock)
       if not client.appShift:
@@ -700,10 +718,10 @@ template serverTagLib*(cfg: static Config) {.dirty.} =
       client.ev.events = EPOLLRDHUP or EPOLLET or EPOLLOUT
       release(client.spinLock)
 
-    var retCtl = epoll_ctl(epfd, EPOLL_CTL_MOD, cast[cint](client.sock), addr client.ev)
-    if retCtl != 0:
-      return false
-    return true
+      var retCtl = epoll_ctl(epfd, EPOLL_CTL_MOD, cast[cint](client.sock), addr client.ev)
+      if retCtl != 0:
+        return false
+      return true
 
   proc send*(clientId: ClientId, data: string): SendResult {.discardable.} =
     let pair = pendingClients.get(clientId)
