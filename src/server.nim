@@ -2400,7 +2400,10 @@ macro addServerMacro*(bindAddress: string, port: uint16, ssl: bool, sslLib: SslL
           serverHandlerList.add(("appProxy", ssl, newStmtList()))
           appIdTypeList.add(AppProxy)
           inc(curAppId)
-          serverHandlerList.add(("appProxySend", ssl, newStmtList()))
+          if eqIdent("true", ssl) and (eqIdent("OpenSSL", sslLib) or eqIdent("LibreSSL", sslLib) or eqIdent("BoringSSL", sslLib)):
+            serverHandlerList.add(("appRoutesStage2", ssl, newStmtList()))
+          else:
+            serverHandlerList.add(("appProxySend", ssl, newStmtList()))
           appIdTypeList.add(AppProxySend)
         routesBody.add(s2)
 
@@ -5180,30 +5183,87 @@ template serverLib(cfg: static Config) {.dirty.} =
         let sock = client.sock
         let proxy = client.proxy
 
-        while true:
-          client.dirty = ClientDirtyNone
-          let recvlen = sock.recv(ctx.pRecvBuf0, workerRecvBufSize, 0.cint)
-          if recvlen > 0:
-            let sendRet = proxy.send(ctx.pRecvBuf0, recvlen)
-            if sendRet == SendResult.Error:
+        when `ssl`:
+          when cfg.sslLib == BearSSL:
+            discard
+
+          elif cfg.sslLib == OpenSSL or cfg.sslLib == LibreSSL or cfg.sslLib == BoringSSL:
+            while true:
+              client.dirty = ClientDirtyNone
+              let recvlen = client.ssl.SSL_read(cast[pointer](ctx.pRecvBuf0), workerRecvBufSize.cint).int
+              if recvlen > 0:
+                let sendRet = proxy.send(ctx.pRecvBuf0, recvlen)
+                if sendRet == SendResult.Error:
+                  client.close(ssl = `ssl`)
+                  break
+              elif recvLen == 0:
+                client.close(ssl = `ssl`)
+                break
+              else:
+                client.sslErr = SSL_get_error(client.ssl, recvlen.cint)
+                if client.sslErr == SSL_ERROR_WANT_READ:
+                  acquire(client.spinLock)
+                  if client.dirty == ClientDirtyNone:
+                    client.threadId = 0
+                    if client.appShift or client.sendCurSize > 0:
+                      client.ev.events = EPOLLRDHUP or EPOLLET or EPOLLOUT
+                    else:
+                      client.ev.events = EPOLLIN or EPOLLRDHUP or EPOLLET
+                    release(client.spinLock)
+                    var retCtl = epoll_ctl(epfd, EPOLL_CTL_MOD, cast[cint](client.sock), addr client.ev)
+                    if retCtl != 0:
+                      logs.error "error: epoll_ctl ret=", retCtl, " errno=", errno
+                    return
+                  else:
+                    release(client.spinLock)
+                    break
+                elif client.sslErr == SSL_ERROR_WANT_WRITE:
+                  acquire(client.spinLock)
+                  if client.dirty == ClientDirtyNone:
+                    client.threadId = 0
+                    release(client.spinLock)
+                    client.ev.events = EPOLLRDHUP or EPOLLET or EPOLLOUT
+                    var retCtl = epoll_ctl(epfd, EPOLL_CTL_MOD, cast[cint](client.sock), addr client.ev)
+                    if retCtl != 0:
+                      logs.error "error: epoll_ctl ret=", retCtl, " errno=", errno
+                    return
+                  else:
+                    release(client.spinLock)
+                    break
+                else:
+                  if errno == EAGAIN or errno == EWOULDBLOCK:
+                    client.threadId = 0
+                    return
+                  if client.sslErr == SSL_ERROR_SYSCALL or errno == EINTR:
+                    continue
+                  client.close(ssl = true)
+                  return
+
+        else:
+          while true:
+            client.dirty = ClientDirtyNone
+            let recvlen = sock.recv(ctx.pRecvBuf0, workerRecvBufSize, 0.cint)
+            if recvlen > 0:
+              let sendRet = proxy.send(ctx.pRecvBuf0, recvlen)
+              if sendRet == SendResult.Error:
+                client.close(ssl = `ssl`)
+                break
+            elif recvLen == 0:
               client.close(ssl = `ssl`)
               break
-          elif recvLen == 0:
-            client.close(ssl = `ssl`)
-            break
-          else:
-            if errno == EAGAIN or errno == EWOULDBLOCK:
-              acquire(client.spinLock)
-              if client.dirty != ClientDirtyNone:
-                release(client.spinLock)
-              else:
-                client.threadId = 0
-                release(client.spinLock)
-                break
-            elif errno == EINTR:
-              continue
-            client.close(ssl = `ssl`)
-            break
+            else:
+              if errno == EAGAIN or errno == EWOULDBLOCK:
+                acquire(client.spinLock)
+                if client.dirty != ClientDirtyNone:
+                  release(client.spinLock)
+                else:
+                  client.threadId = 0
+                  release(client.spinLock)
+                  break
+              elif errno == EINTR:
+                continue
+              client.close(ssl = `ssl`)
+              break
 
   macro appProxySendMacro(ssl: bool, body: untyped): untyped =
     quote do:
