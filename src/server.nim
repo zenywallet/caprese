@@ -132,7 +132,6 @@ macro HttpTargetHeader(idEnumName, valListName, targetHeaders, body: untyped): u
       )
     )
 
-  echo "addHeadersStmt.len=", addHeadersStmt.len
   nnkStmtList.newTree(
     nnkTypeSection.newTree(
       nnkTypeDef.newTree(
