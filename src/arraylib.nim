@@ -286,12 +286,7 @@ else:
       x.data = cast[ptr UncheckedArray[T]](reallocShared0(x.data, sizeof(T) * x.len, sizeof(T) * x.cap))
     x.len = newlen
 
-  proc toString*(x: Array[byte]): string =
-    result = newStringOfCap(len(x))
-    for c in x:
-      result.add(cast[char](c))
-
-  proc toString*(x: Array[char]): string =
-    result = newStringOfCap(len(x))
-    for c in x:
-      result.add(c)
+  proc toString*(x: Array[byte] or Array[char]): string =
+    let xlen = len(x)
+    result = newString(xlen)
+    copyMem(addr result[0], x.data, xlen)
