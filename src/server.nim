@@ -317,6 +317,12 @@ var epfd*: cint = -1
 type
   WrapperThreadArg = tuple[threadFunc: proc (arg: ThreadArg) {.thread.}, arg: ThreadArg]
 
+  Tag* = Array[byte]
+
+  TagRef* = object
+    tag: ptr Tag
+    idx: int
+
 proc getErrnoStr*(): string =
   case errno
   of EADDRINUSE: "errno=EADDRINUSE(" & $errno & ")"
@@ -331,12 +337,6 @@ template serverTagLib*(cfg: static Config) {.dirty.} =
   import logs
 
   type
-    Tag* = Array[byte]
-
-    TagRef* = object
-      tag: ptr Tag
-      idx: int
-
     ClientTaskCmd* {.pure.} = enum
       None
       Data
