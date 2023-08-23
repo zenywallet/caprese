@@ -97,11 +97,11 @@ elif paramCount() == 4:
     var mime = mimes.getMimeType(mimeType, "")
     if mime.len == 0:
       mime = mimes.getExt(mimeType, "")
-    if mime.len == 0:
-      echo "error: unknown mime ", mimeType
-      quit(QuitFailure)
-    else:
-      mime = mimeType
+      if mime.len == 0:
+        echo "error: unknown mime ", mimeType
+        quit(QuitFailure)
+      else:
+        mime = mimeType
     let hash = base64.encode(sha256.digest(content).data)
     let md5 = base64.encode(content.getMD5().toBytesFromHex)
     var zopfliComp, brotliComp: seq[byte]
