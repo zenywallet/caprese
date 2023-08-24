@@ -52,26 +52,38 @@ proc stopTimeStampUpdater*(waitStop: bool = false) =
   if waitStop:
     joinThread(timeStampThread)
 
-proc addHeader*(body: string, code: StatusCode = Status200, mimetype: string = "text/html"): string =
+macro getMime*(mimetype: string): untyped =
+  var mimeStr = $mimetype
+  var mimes = newMimetypes()
+  var mime = mimes.getMimetype(mimeStr, "")
+  if mime.len == 0:
+    mime = mimes.getExt(mimeStr, "")
+    if mime.len == 0:
+      macros.error "unknown mimetype=" & mimeStr
+    else:
+      mime = mimeStr
+  newLit(mime)
+
+proc addHeader*(body: string, code: StatusCode = Status200, mimetype: static string = "text/html"): string =
   result = "HTTP/" & $HTTP_VERSION & " " & $code & "\c\L" &
-          "Content-Type: " & mimetype & "\c\L" &
+          "Content-Type: " & getMime(mimetype) & "\c\L" &
           "Date: " & getCurTimeStr() & "\c\L" &
           "Server: " & ServerName & "\c\L" &
           "Content-Length: " & $body.len & "\c\L\c\L" &
           body
 
-proc addHeader*(body: string, etag: string, code: StatusCode = Status200, mimetype: string = "text/html"): string =
+proc addHeader*(body: string, etag: string, code: StatusCode = Status200, mimetype: static string = "text/html"): string =
   result = "HTTP/" & $HTTP_VERSION & " " & $code & "\c\L" &
-          "Content-Type: " & mimetype & "\c\L" &
+          "Content-Type: " & getMime(mimetype) & "\c\L" &
           "ETag: " & etag & "\c\L" &
           "Date: " & getCurTimeStr() & "\c\L" &
           "Server: " & ServerName & "\c\L" &
           "Content-Length: " & $body.len & "\c\L\c\L" &
           body
 
-proc addHeaderDeflate*(body: string, etag: string, code: StatusCode = Status200, mimetype: string = "text/html"): string =
+proc addHeaderDeflate*(body: string, etag: string, code: StatusCode = Status200, mimetype: static string = "text/html"): string =
   result = "HTTP/" & $HTTP_VERSION & " " & $code & "\c\L" &
-          "Content-Type: " & mimetype & "\c\L" &
+          "Content-Type: " & getMime(mimetype) & "\c\L" &
           "ETag: " & etag & "\c\L" &
           "Content-Encoding: deflate\c\L" &
           "Date: " & getCurTimeStr() & "\c\L" &
@@ -79,9 +91,9 @@ proc addHeaderDeflate*(body: string, etag: string, code: StatusCode = Status200,
           "Content-Length: " & $body.len & "\c\L\c\L" &
           body
 
-proc addHeaderBrotli*(body: string, etag: string, code: StatusCode = Status200, mimetype: string = "text/html"): string =
+proc addHeaderBrotli*(body: string, etag: string, code: StatusCode = Status200, mimetype: static string = "text/html"): string =
   result = "HTTP/" & $HTTP_VERSION & " " & $code & "\c\L" &
-          "Content-Type: " & mimetype & "\c\L" &
+          "Content-Type: " & getMime(mimetype) & "\c\L" &
           "ETag: " & etag & "\c\L" &
           "Content-Encoding: br\c\L" &
           "Date: " & getCurTimeStr() & "\c\L" &
