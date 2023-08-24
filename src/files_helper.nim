@@ -98,7 +98,7 @@ elif paramCount() == 4:
     if mime.len == 0:
       mime = mimes.getExt(mimeType, "")
       if mime.len == 0:
-        echo "error: unknown mime ", mimeType
+        echo "error: unknown mimetype=", mimeType
         quit(QuitFailure)
       else:
         mime = mimeType
