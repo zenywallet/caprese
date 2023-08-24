@@ -64,7 +64,7 @@ macro getMime*(mimetype: string): untyped =
       mime = mimeStr
   newLit(mime)
 
-proc addHeader*(body: string, code: StatusCode = Status200, mimetype: static string = "text/html"): string =
+proc addHeader*(body: string, code: static StatusCode = Status200, mimetype: static string = "text/html"): string =
   result = "HTTP/" & $HTTP_VERSION & " " & $code & "\c\L" &
           "Content-Type: " & getMime(mimetype) & "\c\L" &
           "Date: " & getCurTimeStr() & "\c\L" &
@@ -72,7 +72,7 @@ proc addHeader*(body: string, code: StatusCode = Status200, mimetype: static str
           "Content-Length: " & $body.len & "\c\L\c\L" &
           body
 
-proc addHeader*(body: string, etag: string, code: StatusCode = Status200, mimetype: static string = "text/html"): string =
+proc addHeader*(body: string, etag: string, code: static StatusCode = Status200, mimetype: static string = "text/html"): string =
   result = "HTTP/" & $HTTP_VERSION & " " & $code & "\c\L" &
           "Content-Type: " & getMime(mimetype) & "\c\L" &
           "ETag: " & etag & "\c\L" &
@@ -81,7 +81,7 @@ proc addHeader*(body: string, etag: string, code: StatusCode = Status200, mimety
           "Content-Length: " & $body.len & "\c\L\c\L" &
           body
 
-proc addHeaderDeflate*(body: string, etag: string, code: StatusCode = Status200, mimetype: static string = "text/html"): string =
+proc addHeaderDeflate*(body: string, etag: string, code: static StatusCode = Status200, mimetype: static string = "text/html"): string =
   result = "HTTP/" & $HTTP_VERSION & " " & $code & "\c\L" &
           "Content-Type: " & getMime(mimetype) & "\c\L" &
           "ETag: " & etag & "\c\L" &
@@ -91,7 +91,7 @@ proc addHeaderDeflate*(body: string, etag: string, code: StatusCode = Status200,
           "Content-Length: " & $body.len & "\c\L\c\L" &
           body
 
-proc addHeaderBrotli*(body: string, etag: string, code: StatusCode = Status200, mimetype: static string = "text/html"): string =
+proc addHeaderBrotli*(body: string, etag: string, code: static StatusCode = Status200, mimetype: static string = "text/html"): string =
   result = "HTTP/" & $HTTP_VERSION & " " & $code & "\c\L" &
           "Content-Type: " & getMime(mimetype) & "\c\L" &
           "ETag: " & etag & "\c\L" &
