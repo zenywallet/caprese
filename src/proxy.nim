@@ -27,7 +27,7 @@ type
     recvCallback*: RecvCallback
     sendBuf*: ptr UncheckedArray[byte]
     sendBufSize*: int
-    lock*: int # RWLock workaround
+    lock*: RWLock
 
   Proxy* = ptr ProxyObj
 
@@ -44,8 +44,6 @@ template errorException(x: varargs[string, `$`]) =
 
 template at(p: ptr UncheckedArray[byte] or string or seq[byte], pos: int): ptr UncheckedArray[byte] =
   cast[ptr UncheckedArray[byte]](addr p[pos])
-
-template toRWLock(lock: int): RWLock = cast[ptr RWLock](unsafeAddr lock)[]
 
 proc newProxy*(hostname: string, port: Port): Proxy =
   var sock = createNativeSocket()
@@ -66,7 +64,7 @@ proc newProxy*(hostname: string, port: Port): Proxy =
   freeaddrinfo(aiList)
   var p = cast[Proxy](allocShared0(sizeof(ProxyObj)))
   p.sock = sock
-  rwlockInit(p.lock.toRWLock)
+  rwlockInit(p.lock)
   result = p
 
 proc free*(proxy: Proxy) =
@@ -79,7 +77,7 @@ proc free*(proxy: Proxy) =
   if ret < 0:
     echo "error: EPOLL_CTL_DEL ret=", ret, " errno=", errno
   sock.close()
-  rwlockDestroy(proxy.lock.toRWLock)
+  rwlockDestroy(proxy.lock)
   proxy.deallocShared()
 
 proc shutdown*(proxy: Proxy): bool {.discardable.} =
@@ -110,7 +108,7 @@ proc addSendBuf(proxy: Proxy, data: ptr UncheckedArray[byte], size: int) =
   proxy.sendBufSize = nextSize
 
 proc send*(proxy: Proxy, data: ptr UncheckedArray[byte], size: int): SendResult =
-  withWriteLock proxy.lock.toRWLock:
+  withWriteLock proxy.lock:
     if not proxy.sendBuf.isNil:
       proxy.addSendBuf(data, size)
       return SendResult.Pending
@@ -146,7 +144,7 @@ proc send*(proxy: Proxy, data: ptr UncheckedArray[byte], size: int): SendResult 
         return SendResult.None
 
 proc sendFlush(proxy: Proxy): SendResult =
-  withWriteLock proxy.lock.toRWLock:
+  withWriteLock proxy.lock:
     if proxy.sendBuf.isNil:
       return SendResult.None
 
