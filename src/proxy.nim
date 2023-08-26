@@ -70,8 +70,9 @@ proc newProxy*(hostname: string, port: Port): Proxy =
   result = p
 
 proc free*(proxy: Proxy) =
-  var sock = proxy.sock
-  withWriteLock proxy.lock.toRWLock:
+  var sock {.noInit.}: SocketHandle
+  withWriteLock proxy.lock:
+    sock = proxy.sock
     if sock == osInvalidSocket: return
     proxy.sock = osInvalidSocket
   var ret = epoll_ctl(epfd, EPOLL_CTL_DEL, sock.cint, nil)
