@@ -459,7 +459,7 @@ Get the header string by specifying the header ID with the `reqHeader()` in the 
 The `reqHeader:` can only be called within the `routes:` block contexts, because the headers only manage the read position of the receive buffer, which may be in the server thread context.
 
 ### Publishing Static Files
-Use `public:` block. All files in `importPath` are statically imported into the code at compile time. Specify the `importPath` as Nim `import`, `importPath` is added internally `getProjectPath()`.
+Use `public:` block. All files in `importPath` are statically imported into the code at compile time. Specify the `importPath` as relative path like Nim `import`, however, double quotes are necessary. The `importPath` is added internally `getProjectPath()`.
 
 ```nim
   routes:
@@ -478,7 +478,7 @@ Custom handling such as changing the base URL.
         return response(retFile.data)
 ```
 
-You can also create static content objects from static strings. The MIME type can be an extension such as *html* or *js*. The content object has uncompressed, Deflate compressed, Brotli compressed, MIME type, SHA256 hash, and MD5 hash.
+You can also create static content objects from static strings with `content()`. The second argument of `content()` does not have to be a formal MIME type, but can be an extension such as *html* or *js*. The content object has uncompressed, Deflate compressed, Brotli compressed, MIME type, SHA256 hash, and MD5 hash.
 
 ```nim
 const IndexHtml = staticHtmlDocument:
@@ -648,6 +648,12 @@ First copy of certificate files, also for testing.
 Now open [http://YOUR_DOMAIN/](http://YOUR_DOMAIN/) in your browser. If the URL http redirects to https and there is no certificate warning, it is successful.
 
 If you have just created the directory */path/to/certs/YOUR_DOMAIN*, wait about 30 seconds before opening the URL. This is because if the directory does not exist yet, real-time file monitoring to update the certificates is deactivated. Once the Caprese has detected the directory, monitoring is activated, the certificates will be updated instantly after the certificate files have been changed.
+
+### Leftover Desserts
+- POST
+- IPv6
+- QUIC
+- Cookies
 
 ### License
 MIT
