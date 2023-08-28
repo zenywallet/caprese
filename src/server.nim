@@ -962,7 +962,7 @@ template serverInitFreeClient() {.dirty.} =
       client.recvCurSize = 0
       client.recvBufSize = 0
       if not client.proxy.isNil:
-        client.proxy.free()
+        client.proxy.shutdown()
         client.proxy = nil
       if not client.recvBuf.isNil:
         deallocShared(cast[pointer](client.recvBuf))

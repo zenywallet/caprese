@@ -5,6 +5,7 @@ import std/posix
 import std/epoll
 import std/strutils
 import bytes
+import arraylib
 import queue
 import ptlock
 import server_types
@@ -181,6 +182,7 @@ proc proxyDispatcher(params: ProxyParams) {.thread.} =
     var tcp_rmem = abortSock.getSockOptInt(SOL_SOCKET, SO_RCVBUF)
 
     var buf = newSeq[byte](tcp_rmem)
+    var toBeFreed = newArrayOfCap[Proxy](EPOLL_EVENTS_SIZE)
 
     epfd = epoll_create1(O_CLOEXEC)
     if epfd < 0:
@@ -205,6 +207,7 @@ proc proxyDispatcher(params: ProxyParams) {.thread.} =
           var ret = epoll_ctl(epfd, EPOLL_CTL_MOD, proxy.sock.cint, addr ev)
           if ret < 0:
             proxy.recvCallback(proxy.originalClientId, nil, 0)
+            toBeFreed.add(proxy)
             echo "error: EPOLL_CTL_MOD epfd=", ret, " errno=", errno
             continue
 
@@ -214,9 +217,15 @@ proc proxyDispatcher(params: ProxyParams) {.thread.} =
             proxy.recvCallback(proxy.originalClientId, buf.at(0), retLen)
           elif retLen == 0:
             proxy.recvCallback(proxy.originalClientId, nil, retLen)
+            toBeFreed.add(proxy)
           else: # retLen < 0
             if errno != EAGAIN and errno != EWOULDBLOCK and errno != EINTR:
               proxy.recvCallback(proxy.originalClientId, nil, retLen)
+              toBeFreed.add(proxy)
+
+      if toBeFreed.len > 0:
+        for p in toBeFreed: p.free()
+        toBeFreed.clear()
   except:
     let e = getCurrentException()
     echo e.name, ": ", e.msg
