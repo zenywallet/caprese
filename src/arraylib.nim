@@ -259,6 +259,9 @@ else:
   proc empty*[T](x: var Array[T]) =
     `=destroy`(x)
 
+  proc clear*[T](x: var Array[T]) {.inline.} =
+    x.len = 0
+
   proc del*[T](x: var Array[T]; i: Natural) =
     let last = x.high
     x[i] = x[last]
