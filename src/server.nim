@@ -1002,6 +1002,25 @@ proc createServer(bindAddress: string, port: uint16, reusePort: bool = false): S
     errorRaise "error: listen ret=", retListen, " ", getErrnoStr()
   result = sock
 
+proc createServer(unixDomainSockFile: string): SocketHandle =
+  let sock = socket(Domain.AF_UNIX.cint, posix.SOCK_STREAM, 0)
+  var sa: Sockaddr_un
+  sa.sun_family = Domain.AF_UNIX.TSa_Family
+  if unixDomainSockFile.len > sa.sun_path.len:
+    errorRaise "error: unix domain socket file is too long"
+  var ss: Stat
+  if stat(unixDomainSockFile, ss) == 0 and S_ISSOCK(ss.st_mode):
+    removeFile(unixDomainSockFile)
+  copyMem(addr sa.sun_path[0], unsafeAddr unixDomainSockFile[0], unixDomainSockFile.len)
+  let retBind = sock.bindSocket(cast[ptr SockAddr](addr sa), sizeof(sa).SockLen)
+  if retBind < 0:
+    errorRaise "error: bind ret=", retBind, " ", getErrnoStr()
+
+  let retListen = sock.listen()
+  if retListen < 0:
+    errorRaise "error: listen ret=", retListen, " ", getErrnoStr()
+  result = sock
+
 proc threadWrapper(wrapperArg: WrapperThreadArg) {.thread.} =
   try:
     wrapperArg.threadFunc(wrapperArg.arg)
@@ -1048,7 +1067,7 @@ var serverWorkerMainStmt {.compileTime.} =
       )
     )
   )
-var serverHandlerList* {.compileTime.} = @[("appDummy", ident("false"), newStmtList())]
+var serverHandlerList* {.compileTime.} = @[("appDummy", ident("false"), ident("false"), newStmtList())]
 var appIdTypeList* {.compileTime.} = @[AppDummy]
 var freePoolServerUsedCount* {.compileTime.} = 0
 var sockTmp = createNativeSocket()
@@ -1085,28 +1104,28 @@ proc findColonNum(s: string): bool {.compileTime.} =
       break
   if findmColonNum == 2: true else: false
 
-macro addServerMacro*(bindAddress: string, port: uint16, ssl: bool, sslLib: SslLib, body: untyped = newEmptyNode()): untyped =
+macro addServerMacro*(bindAddress: string, port: uint16, unix: bool, ssl: bool, sslLib: SslLib, body: untyped = newEmptyNode()): untyped =
   inc(curSrvId)
   var srvId = curSrvId
   inc(curAppId)
   var appId = curAppId
-  serverHandlerList.add(("appListen", ssl, newStmtList()))
+  serverHandlerList.add(("appListen", ssl, unix, newStmtList()))
   appIdTypeList.add(AppListen)
   inc(curAppId) # reserved
   var appRoutes = curAppId
-  serverHandlerList.add(("appRoutes", ssl, newStmtList()))
+  serverHandlerList.add(("appRoutes", ssl, unix, newStmtList()))
   appIdTypeList.add(AppRoutes)
   if eqIdent("true", ssl) and (eqIdent("OpenSSL", sslLib) or eqIdent("LibreSSL", sslLib) or eqIdent("BoringSSL", sslLib)):
     inc(curAppId)
     appRoutes = curAppId
-    serverHandlerList.add(("appRoutesStage1", ssl, newStmtList()))
+    serverHandlerList.add(("appRoutesStage1", ssl, unix, newStmtList()))
     appIdTypeList.add(AppRoutesStage1)
     inc(curAppId)
-    serverHandlerList.add(("appRoutesStage2", ssl, newStmtList()))
+    serverHandlerList.add(("appRoutesStage2", ssl, unix, newStmtList()))
     appIdTypeList.add(AppRoutesStage2)
   else:
     inc(curAppId)
-    serverHandlerList.add(("appRoutesSend", ssl, newStmtList()))
+    serverHandlerList.add(("appRoutesSend", ssl, unix, newStmtList()))
     appIdTypeList.add(AppRoutesSend)
   var serverResources = newStmtList()
   var routesList = newStmtList()
@@ -1116,11 +1135,11 @@ macro addServerMacro*(bindAddress: string, port: uint16, ssl: bool, sslLib: SslL
       var portInt = intVal(port)
       if s[1].kind == nnkStrLit:
         hostname = $s[1]
-        if portInt != 80 and portInt != 443 and not findColonNum(hostname):
+        if portInt > 0 and portInt != 80 and portInt != 443 and not findColonNum(hostname):
           s[1] = newLit(hostname & ":" & $portInt)
       elif s[1].kind == nnkExprEqExpr and eqIdent(s[1][0], "host"):
         hostname = $s[1][1]
-        if portInt != 80 and portInt != 443 and not findColonNum(hostname):
+        if portInt > 0 and portInt != 80 and portInt != 443 and not findColonNum(hostname):
           s[1][1] = newLit(hostname & ":" & $portInt)
       for i in countdown(hostname.len-1, 0):
         if hostname[i] == ':':
@@ -1175,10 +1194,10 @@ macro addServerMacro*(bindAddress: string, port: uint16, ssl: bool, sslLib: SslL
               newIdentNode("protocol"),
               newLit("")
             ))
-          serverHandlerList.add(("appStream", ssl, s2[s2.len - 1]))
+          serverHandlerList.add(("appStream", ssl, unix, s2[s2.len - 1]))
           appIdTypeList.add(AppStream)
           inc(curAppId)
-          serverHandlerList.add(("appStreamSend", ssl, newStmtList()))
+          serverHandlerList.add(("appStreamSend", ssl, unix, newStmtList()))
           appIdTypeList.add(AppStreamSend)
         elif eqIdent(s2[0], "public"):
           var importPath = s2[1]
@@ -1211,13 +1230,13 @@ macro addServerMacro*(bindAddress: string, port: uint16, ssl: bool, sslLib: SslL
             ))
             if s2.len == 5:
               s2.add(newBlockStmt(newStmtList()))
-          serverHandlerList.add(("appProxy", ssl, newStmtList()))
+          serverHandlerList.add(("appProxy", ssl, unix, newStmtList()))
           appIdTypeList.add(AppProxy)
           inc(curAppId)
           if eqIdent("true", ssl) and (eqIdent("OpenSSL", sslLib) or eqIdent("LibreSSL", sslLib) or eqIdent("BoringSSL", sslLib)):
-            serverHandlerList.add(("appRoutesStage2", ssl, newStmtList()))
+            serverHandlerList.add(("appRoutesStage2", ssl, unix, newStmtList()))
           else:
-            serverHandlerList.add(("appProxySend", ssl, newStmtList()))
+            serverHandlerList.add(("appProxySend", ssl, unix, newStmtList()))
           appIdTypeList.add(AppProxySend)
         routesBody.add(s2)
 
@@ -1229,7 +1248,7 @@ macro addServerMacro*(bindAddress: string, port: uint16, ssl: bool, sslLib: SslL
       routesList.add(routesBase)
     else:
       serverWorkerInitStmt.add(s)
-    serverHandlerList[appRoutes][2] = routesList
+    serverHandlerList[appRoutes][3] = routesList
 
   inc(freePoolServerUsedCount)
 
@@ -1238,7 +1257,8 @@ macro addServerMacro*(bindAddress: string, port: uint16, ssl: bool, sslLib: SslL
 
     `serverResources`
 
-    var serverSock = createServer(`bindAddress`, `port`)
+    var serverSock = when `unix`: createServer(`bindAddress`) else: createServer(`bindAddress`, `port`)
+
     addReleaseOnQuit(serverSock)
     serverSock.setBlocking(false)
 
@@ -1262,18 +1282,18 @@ macro addServerMacro*(bindAddress: string, port: uint16, ssl: bool, sslLib: SslL
       errorRaise "error: addServer epoll_ctl ret=", retCtl, " ", getErrnoStr()
 
 
-template addServer*(bindAddress: string, port: uint16, ssl: bool, body: untyped) {.dirty.} =
+template addServer*(bindAddress: string, port: uint16, unix: bool, ssl: bool, body: untyped) {.dirty.} =
   initServer()
   when cfg.sslLib == BearSSL:
-    addServerMacro(bindAddress, port, ssl, BearSSL, body)
+    addServerMacro(bindAddress, port, unix, ssl, BearSSL, body)
   elif cfg.sslLib == OpenSSL:
-    addServerMacro(bindAddress, port, ssl, OpenSSL, body)
+    addServerMacro(bindAddress, port, unix, ssl, OpenSSL, body)
   elif cfg.sslLib == LibreSSL:
-    addServerMacro(bindAddress, port, ssl, LibreSSL, body)
+    addServerMacro(bindAddress, port, unix, ssl, LibreSSL, body)
   elif cfg.sslLib == BoringSSL:
-    addServerMacro(bindAddress, port, ssl, BoringSSL, body)
+    addServerMacro(bindAddress, port, unix, ssl, BoringSSL, body)
   else:
-    addServerMacro(bindAddress, port, ssl, None, body)
+    addServerMacro(bindAddress, port, unix, ssl, None, body)
 
 macro serverWorkerInit*(): untyped = serverWorkerInitStmt
 
@@ -2512,12 +2532,12 @@ template serverLib(cfg: static Config) {.dirty.} =
 
     var sslCtx: SSL_CTX
 
-  proc appListenBase(ctx: WorkerThreadCtx, sslFlag: static bool) {.thread, inline.} =
+  proc appListenBase(ctx: WorkerThreadCtx, sslFlag: static bool, unixFlag: static bool) {.thread, inline.} =
     let clientSock = ctx.client.sock.accept4(cast[ptr SockAddr](addr ctx.sockAddress), addr ctx.addrLen, O_NONBLOCK)
     if cast[int](clientSock) > 0:
       when cfg.soKeepalive:
         clientSock.setSockOptInt(SOL_SOCKET, SO_KEEPALIVE, 1)
-      when cfg.tcpNodelay:
+      when cfg.tcpNodelay and not unixFlag:
         clientSock.setSockOptInt(Protocol.IPPROTO_TCP.int, TCP_NODELAY, 1)
       var newClient = clientFreePool.pop()
       while newClient.isNil:
@@ -2567,9 +2587,11 @@ template serverLib(cfg: static Config) {.dirty.} =
             for i in 0..<serverWorkerNum:
               discard sem_post(addr throttleBody)
 
-  proc appListen(ctx: WorkerThreadCtx) {.thread.} = appListenBase(ctx, false)
+  proc appListen(ctx: WorkerThreadCtx) {.thread.} = appListenBase(ctx, false, false)
 
-  proc appListenSsl(ctx: WorkerThreadCtx) {.thread.} = appListenBase(ctx, true)
+  proc appListenSsl(ctx: WorkerThreadCtx) {.thread.} = appListenBase(ctx, true, false)
+
+  proc appListenUnix(ctx: WorkerThreadCtx) {.thread.} = appListenBase(ctx, false, true)
 
   proc appRoutesSend(ctx: WorkerThreadCtx) {.thread.} =
     let client = ctx.client
@@ -2660,9 +2682,11 @@ template serverLib(cfg: static Config) {.dirty.} =
     quote do:
       clientHandlerProcs.add appDummy
 
-  macro appListenMacro(ssl: bool, body: untyped): untyped =
+  macro appListenMacro(ssl: bool, unix: bool, body: untyped): untyped =
     quote do:
-      when `ssl`:
+      when `unix`:
+        clientHandlerProcs.add appListenUnix
+      elif `ssl`:
         clientHandlerProcs.add appListenSsl
       else:
         clientHandlerProcs.add appListen
@@ -4080,13 +4104,16 @@ template serverLib(cfg: static Config) {.dirty.} =
     quote do:
       clientHandlerProcs.add appRoutesSend # appProxySend is same
 
-  proc addHandlerProc(name: string, ssl: NimNode, body: NimNode): NimNode {.compileTime.} =
-    newCall(name & "Macro", ssl, body)
+  proc addHandlerProc(name: string, ssl: NimNode, unix: NimNode, body: NimNode): NimNode {.compileTime.} =
+    if name == "appListen":
+      newCall(name & "Macro", ssl, unix, body)
+    else:
+      newCall(name & "Macro", ssl, body)
 
   macro serverHandlerMacro(): untyped =
     result = newStmtList()
     for s in serverHandlerList:
-      result.add(addHandlerProc(s[0], s[1], s[2]))
+      result.add(addHandlerProc(s[0], s[1], s[2], s[3]))
 
   serverHandlerMacro()
 

@@ -96,13 +96,19 @@ macro server*(ssl: bool, ip: string, port: uint16, body: untyped): untyped =
   quote do:
     init()
     echo "server: ", `ip`, ":", `port`, (if `ssl`: " SSL" else: "")
-    addServer(`ip`, `port`, `ssl`, `body`)
+    addServer(`ip`, `port`, false, `ssl`, `body`)
 
 macro server*(ip: string, port: uint16, body: untyped): untyped =
   quote do:
     init()
     echo "server: ", `ip`, ":", `port`
-    addServer(`ip`, `port`, false, `body`)
+    addServer(`ip`, `port`, false, false, `body`)
+
+macro server*(unix: string, body: untyped): untyped =
+  quote do:
+    init()
+    echo "server: unix:", `unix`
+    addServer(`unix`, 0, true, false, `body`)
 
 template serverHttp*(ip: string, port: uint16, body: untyped) =
   server(false, ip, port, body)
