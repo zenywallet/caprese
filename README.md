@@ -75,8 +75,10 @@ Open [https://localhost:8009/](https://localhost:8009/) in your browser. You'll 
 - Multi-threaded server processing
 - [WebSocket](https://datatracker.ietf.org/doc/html/rfc6455) support
 - [TLS/SSL](https://en.wikipedia.org/wiki/Transport_Layer_Security) support. [BearSSL](https://bearssl.org/), [OpenSSL](https://www.openssl.org/), [LibreSSL](https://www.libressl.org/), or [BoringSSL](https://boringssl.googlesource.com/boringssl/) can be selected depending on the performance and the future security situation
+- [SNI](https://en.wikipedia.org/wiki/Server_Name_Indication) support for TLS/SSL. Servers can use multiple hostname certificates with the same IP address
 - Support for automatic renewal of [Let's Encrypt](https://letsencrypt.org/) SSL certificates without application restart
 - Web pages are in-memory static files at compile time, dynamic file loading is also available for development
+- Web proxy for internal services
 - Messaging functionality to send data from the server to clients individually or in groups
 - Dependency-free executables for easy server deployment
 - Languages - Nim 100.0%
@@ -197,7 +199,7 @@ serverStart()
     return send(fmt"Not found: {urlText}".addDocType().addHeader(Status404))
 ```
 
-#### SSL website and multiple ports with no SSL website
+#### Multiple ports for SSL website and no SSL website
 
 ```nim
 server(ssl = true, ip = "0.0.0.0", port = 8009):
@@ -290,7 +292,7 @@ serverStart()
 ```
 
 #### Pending and worker
-The runnable level inside the `server:` block is called the server dispatch-level. Inside the block is called from multiple threads, it must not call functions that generate waits and must return results immediately. If the response cannot be returned immediately, return pending first and then process it in another worker thread.
+The runnable level inside the `server:` block is called the server dispatch-level. Inside the block is called from multiple threads, it must not call functions that generate waits and must return results immediately. If the response cannot be returned immediately, return pending first and then process it in another worker thread. Feel free to use async/await in another thread.
 
 ```nim
 type
@@ -514,10 +516,14 @@ server(ssl = true, ip = "0.0.0.0", port = 8009):
   routes(host = "localhost"):
     proxy(path = "/", host = "localhost", port = 8089)
 
+    return send("Not found".addHeader(Status404))
+
 server(ip = "0.0.0.0", port = 8089):
   routes(host = "localhost:8009"):
     get "/":
       return response(content("Hello!", "text/html"))
+
+    return send("Not found".addHeader(Status404))
 
 serverStart()
 ```
@@ -536,6 +542,28 @@ server(ssl = true, ip = "0.0.0.0", port = 8009):
     proxy(path = "/", host = "localhost", port = 8089):
       debug "url=", reqUrl
       # custom handling here
+```
+
+#### UNIX domain socket
+You can also use UNIX domain sockets. It will provide a fast internal connection.
+
+```nim
+import caprese
+
+server(ssl = true, ip = "0.0.0.0", port = 8009):
+  routes(host = "localhost"):
+    proxy(path = "/", unix = "/tmp/caprese1.sock")
+
+    return send("Not found".addHeader(Status404))
+
+server(unix = "/tmp/caprese1.sock"):
+  routes(host = "localhost:8009"):
+    get "/":
+      return response(content("Hello!", "text/html"))
+
+    return send("Not found".addHeader(Status404))
+
+serverStart()
 ```
 
 ### Tag-based Message Exchange
@@ -605,7 +633,7 @@ serverStart()
 
 Create a *server.nim* file with the above code and launch *server* as a non-root user. Open ports 80 and 443 to allow connections from external clients.
 
-    nim c -d:release --threads:on server.nim
+    nim c -d:release --threads:on --mm:orc server.nim
     sudo setcap cap_net_bind_service=+ep ./server
     ./server
 
