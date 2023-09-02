@@ -47,7 +47,7 @@ template at(p: ptr UncheckedArray[byte] or string or seq[byte], pos: int): ptr U
   cast[ptr UncheckedArray[byte]](addr p[pos])
 
 proc newProxy*(hostname: string, port: Port): Proxy =
-  var sock = createNativeSocket()
+  let sock = createNativeSocket()
   when ENABLE_KEEPALIVE:
     sock.setSockOptInt(SOL_SOCKET, SO_KEEPALIVE, 1)
   when ENABLE_TCP_NODELAY:
