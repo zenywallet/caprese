@@ -68,6 +68,24 @@ proc newProxy*(hostname: string, port: Port): Proxy =
   rwlockInit(p.lock)
   result = p
 
+proc newProxy*(unixDomainSockFile: string): Proxy =
+  let sock = socket(Domain.AF_UNIX.cint, posix.SOCK_STREAM, 0)
+  when ENABLE_KEEPALIVE:
+    sock.setSockOptInt(SOL_SOCKET, SO_KEEPALIVE, 1)
+  sock.setSockOptInt(SOL_SOCKET, SO_REUSEADDR, 1) # local proxy only
+  # bind
+  sock.setBlocking(false)
+  var sa: Sockaddr_un
+  sa.sun_family = Domain.AF_UNIX.TSa_Family
+  if unixDomainSockFile.len > sa.sun_path.len:
+    errorException "error: unix domain socket file is too long"
+  copyMem(addr sa.sun_path[0], unsafeAddr unixDomainSockFile[0], unixDomainSockFile.len)
+  discard sock.connect(cast[ptr SockAddr](addr sa), sizeof(sa).SockLen)
+  var p = cast[Proxy](allocShared0(sizeof(ProxyObj)))
+  p.sock = sock
+  rwlockInit(p.lock)
+  result = p
+
 proc free*(proxy: Proxy) =
   var sock {.noInit.}: SocketHandle
   withWriteLock proxy.lock:

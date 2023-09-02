@@ -1228,7 +1228,7 @@ macro addServerMacro*(bindAddress: string, port: uint16, unix: bool, ssl: bool, 
               newIdentNode("proxyAppId"),
               newLit(proxyAppId)
             ))
-            if s2.len == 5:
+            if s2[s2.len - 1].kind != nnkStmtList:
               s2.add(newBlockStmt(newStmtList()))
           serverHandlerList.add(("appProxy", ssl, unix, newStmtList()))
           appIdTypeList.add(AppProxy)
@@ -1470,12 +1470,34 @@ template proxy*(path, host: string, port: uint16) = discard
 
 template proxy*(path, host: string, port: uint16, body: untyped) = discard
 
+template proxy*(path, unix: string) = discard
+
+template proxy*(path, unix: string, body: untyped) = discard
+
 template proxy*(proxyAppId: int, path, host: string, port: uint16, body: untyped) =
   if startsWith(headerUrl(), path):
     body
     let client = ctx.client
     if client.proxy.isNil:
       client.proxy = newProxy(host, port.Port)
+      client.proxy.originalClientId = client.markPending()
+      client.proxy.setRecvCallback(proxyRecvCallback)
+
+    let sendRet = if client.recvCurSize > 0:
+      client.proxy.send(cast[ptr UncheckedArray[byte]](addr client.recvBuf[0]), client.recvCurSize)
+    else:
+      client.proxy.send(ctx.pRecvBuf0, ctx.recvDataSize)
+    if sendRet == SendResult.None or sendRet == SendResult.Error:
+      return sendRet
+    client.appId = proxyAppId
+    return SendResult.Pending
+
+template proxy*(proxyAppId: int, path, unix: string, body: untyped) =
+  if startsWith(headerUrl(), path):
+    body
+    let client = ctx.client
+    if client.proxy.isNil:
+      client.proxy = newProxy(unix)
       client.proxy.originalClientId = client.markPending()
       client.proxy.setRecvCallback(proxyRecvCallback)
 
