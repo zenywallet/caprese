@@ -14,7 +14,7 @@ bin           = @["caprese"]
 
 requires "nim >= 1.6.4"
 requires "nimcrypto"
-requires "karax"
+requires "karax >= 1.2.3"
 
 
 task bearssl, "Build BearSSL":
