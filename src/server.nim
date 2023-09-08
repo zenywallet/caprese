@@ -633,7 +633,7 @@ template serverTagLib*(cfg: static Config) {.dirty.} =
         return false
       return true
 
-  proc send*(clientId: ClientId, data: string): SendResult {.discardable.} =
+  proc send*(clientId: ClientId, data: seq[byte] | string | Array[byte]): SendResult {.discardable.} =
     let pair = pendingClients.get(clientId)
     if pair.isNil:
       return SendResult.None
@@ -641,7 +641,12 @@ template serverTagLib*(cfg: static Config) {.dirty.} =
     if client.isNil:
       return SendResult.None
 
-    clientId.addTask(ClientTask(cmd: ClientTaskCmd.Data, data: data.toBytes.toArray))
+    when data is Array[byte]:
+      clientId.addTask(ClientTask(cmd: ClientTaskCmd.Data, data: data))
+    elif data is string:
+      clientId.addTask(ClientTask(cmd: ClientTaskCmd.Data, data: cast[seq[byte]](data).toArray))
+    else:
+      clientId.addTask(ClientTask(cmd: ClientTaskCmd.Data, data: data.toArray))
     if client.invokeSendEvent():
       result = SendResult.Pending
     else:
