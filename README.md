@@ -48,7 +48,7 @@ Install Caprese package.
 
     nimble install https://github.com/zenywallet/caprese
 
-It will take quite a while, so make some coffee. The Caprese body is located *~/.nimble/pkgs/caprese-0.1.0/* when installed. The version number may change, though.
+It will take quite a while, so make some coffee. The Caprese body is located *~/.nimble/pkgs/caprese-0.1.0/* when installed. The version number may change, though. If you can't find it, try looking for *~/.nimble/pkgs2*.
 
 In some directory, create *server.nim* file with the following code.
 
@@ -78,7 +78,7 @@ Open [https://localhost:8009/](https://localhost:8009/) in your browser. You'll 
 - [SNI](https://en.wikipedia.org/wiki/Server_Name_Indication) support for TLS/SSL. Servers can use multiple hostname certificates with the same IP address
 - Support for automatic renewal of [Let's Encrypt](https://letsencrypt.org/) SSL certificates without application restart
 - Web pages are in-memory static files at compile time, dynamic file loading is also available for development
-- Web proxy for internal services
+- Web proxy for backend and internal services
 - Messaging functionality to send data from the server to clients individually or in groups
 - Dependency-free executables for easy server deployment
 - Languages - Nim 100.0%
@@ -96,7 +96,7 @@ Maven is used to download the closure-compiler. Caprese automatically downloads 
 
     mvn dependency:get -Ddest=./ -Dartifact=com.google.javascript:closure-compiler:LATEST
 
-You can find closure-compiler-vyyyyMMdd.jar in the current path. Copy the file to the *src* path or *~/.nimble/pkgs/caprese-0.1.0/* of the caprese repository. If several versions of a closure-compiler are found in the path, the latest version is used.
+You can find closure-compiler-vyyyyMMdd.jar in the current path. Copy the file to the *src* path or *~/.nimble/pkgs/caprese-0.1.0/* of the caprese repository, *~/.nimble/pkgs* could be *~/.nimble/pkgs2*. If several versions of a closure-compiler are found in the path, the latest version is used.
 
 Use *scriptMinifier* to make minified javascript.
 ```nim
@@ -367,6 +367,9 @@ server(ssl = true, ip = "0.0.0.0", port = 8009):
       onClose:
         # client: Client
         echo "onClose"
+
+    get "/ws":
+      return send("WebSocket Protocol: caprese-0.1".addHeader())
 ```
 
 #### Custom WebSocket handling such as ping and pong
@@ -435,7 +438,7 @@ Use `onProtocol:` block.
 * **reqClient:** Pointer to the client object currently being processed in the thread context, the same as `client`. Normally, `client` should be used.
 
 ### Http Headers
-There are various efficient ways to parse http headers, though, Caprese uses the approach of predefining only the headers to be used and reading only those headers that are needed. I could not find any servers implementing this approach, so it may be very novel. Compared to a fast header parsing algorithm, this approach had an advantage over it.
+There are various efficient ways to parse http headers, though, Caprese uses the approach of predefining only the headers to be used and reading only those headers that are needed. I could not find any servers implementing this approach, so it may be very novel approach. Compared to a fast header parsing algorithm, this approach had an advantage over it.
 
 Enumerate any header IDs you have determined and target strings of headers to be retrieved in the `httpHeader:` block. The `httpHeader:` block must be in the `config:` block.
 
@@ -516,8 +519,6 @@ server(ssl = true, ip = "0.0.0.0", port = 8009):
   routes(host = "localhost"):
     proxy(path = "/", host = "localhost", port = 8089)
 
-    return send("Not found".addHeader(Status404))
-
 server(ip = "0.0.0.0", port = 8089):
   routes(host = "localhost:8009"):
     get "/":
@@ -554,8 +555,6 @@ server(ssl = true, ip = "0.0.0.0", port = 8009):
   routes(host = "localhost"):
     proxy(path = "/", unix = "/tmp/caprese1.sock")
 
-    return send("Not found".addHeader(Status404))
-
 server(unix = "/tmp/caprese1.sock"):
   routes(host = "localhost:8009"):
     get "/":
@@ -567,7 +566,7 @@ serverStart()
 ```
 
 ### Tag-based Message Exchange
-Let me explain one of the unique features of the Caprese that is not implemented in common web servers. Tags can be attached to client connections. It is possible to send some data to the tag. That data will be sent to all tagged clients. Tags can be any data, but must be hashed data. It is assumed that the data is hashed originally, and no internal hashing of tags is performed. Hashing would be easy with Nim's `converter`. To control the tags, you need the *ClientId*, which you can get with `markPending()`.
+Let me explain one of the unique features of the Caprese that is not implemented in common web servers. Tags can be attached to client connections. It is possible to send some data to the tag. That data will be sent to all tagged clients. The tag value must be a number or at least 8 bytes of data. It could be a string or something else, but it is better to use hashed data. It is assumed that the data is hashed originally, and no internal hashing of tags is performed. Hashing would be easy with Nim's `converter`. To control the tags, you need the *ClientId*, which you can get with `markPending()`.
 
 #### The tag control functions
 ```nim
