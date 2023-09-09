@@ -2905,7 +2905,7 @@ template serverLib(cfg: static Config) {.dirty.} =
                       else:
                         copyMem(bufSendApp, client.sendBuf, bufLen.int)
                         client.sendCurSize = sendSize - bufLen.int
-                        copyMem(addr client.sendBuf[0], addr client.sendBuf[bufLen], sendSize)
+                        copyMem(addr client.sendBuf[0], addr client.sendBuf[bufLen], client.sendCurSize)
                         release(client.lock)
                         br_ssl_engine_sendapp_ack(ec, bufLen)
                         br_ssl_engine_flush(ec, 0)
@@ -3556,7 +3556,7 @@ template serverLib(cfg: static Config) {.dirty.} =
                       else:
                         copyMem(bufSendApp, client.sendBuf, bufLen.int)
                         client.sendCurSize = sendSize - bufLen.int
-                        copyMem(addr client.sendBuf[0], addr client.sendBuf[bufLen], sendSize)
+                        copyMem(addr client.sendBuf[0], addr client.sendBuf[bufLen], client.sendCurSize)
                         release(client.lock)
                         br_ssl_engine_sendapp_ack(ec, bufLen)
                         br_ssl_engine_flush(ec, 0)
@@ -4025,7 +4025,7 @@ template serverLib(cfg: static Config) {.dirty.} =
                       else:
                         copyMem(bufSendApp, client.sendBuf, bufLen.int)
                         client.sendCurSize = sendSize - bufLen.int
-                        copyMem(addr client.sendBuf[0], addr client.sendBuf[bufLen], sendSize)
+                        copyMem(addr client.sendBuf[0], addr client.sendBuf[bufLen], client.sendCurSize)
                         release(client.lock)
                         br_ssl_engine_sendapp_ack(ec, bufLen)
                         br_ssl_engine_flush(ec, 0)
