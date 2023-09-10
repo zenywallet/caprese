@@ -72,6 +72,14 @@ proc addHeader*(body: string, code: static StatusCode = Status200, mimetype: sta
           "Content-Length: " & $body.len & "\c\L\c\L" &
           body
 
+template addHeader*(body: static string, code: static StatusCode = Status200, mimetype: static string = "text/html"): string =
+  "HTTP/" & $HTTP_VERSION & " " & $code & "\c\L" &
+  "Content-Type: " & getMime(mimetype) & "\c\L" &
+  "Date: " & getCurTimeStr() & "\c\L" &
+  "Server: " & ServerName & "\c\L" &
+  "Content-Length: " & $body.len & "\c\L\c\L" &
+  body
+
 proc addHeader*(body: string, etag: string, code: static StatusCode = Status200, mimetype: static string = "text/html"): string =
   result = "HTTP/" & $HTTP_VERSION & " " & $code & "\c\L" &
           "Content-Type: " & getMime(mimetype) & "\c\L" &
