@@ -505,7 +505,7 @@ server(ssl = true, ip = "0.0.0.0", port = 8009):
 ```
 
 ### Web Proxy
-The Caprese's proxy is different from a typical proxy server and is more simplified. It may be faster than a typical proxy server due to the following specifications and more useful in simple configurations.
+The Caprese's proxy is different from a typical proxy server and is more simplified. It may be faster than a typical proxy server due to the following specifications. It would be more useful in simple configurations.
 
 - The request URL and http headers are not changed. Since data is sent and received without changing the data to the proxy destination, it would work fine with WebSockets and such.
 - When a client makes a request to a proxy path, all subsequent communication is connected to the proxy destination until disconnected. The proxy path is simply compared to the URL, and if the first string matches, proxy forwarding starts. It may be better to add a `/` at the end of the proxy path to make it strict.
@@ -655,7 +655,7 @@ If successful, the certificate files will be created in the following path.
 
 These files should be copied to the *certs* folder. Caprese monitors the files in the *certs* folder and automatically loads the new certificates if any files are changed. However, it is necessary to change the permissions on the certificate files so that user running Caprese can access it.
 
-Create *caprese_certs_udpate.sh*, in the following, user and group is assumed to be *caprese*.
+Create *caprese_certs_update.sh*, in the following, user and group is assumed to be *caprese*.
 
 ```bash
 #!/bin/bash
@@ -664,9 +664,9 @@ cp /etc/letsencrypt/live/YOUR_DOMAIN/{privkey.pem,fullchain.pem} /path/to/certs/
 chown -R caprese:caprese /path/to/certs
 ```
 
-Copy *caprese_certs_udpate.sh* to letsencrypt post hook.
+Copy *caprese_certs_update.sh* to letsencrypt post hook.
 
-    cp caprese_certs_udpate.sh /etc/letsencrypt/renewal-hooks/post
+    cp caprese_certs_update.sh /etc/letsencrypt/renewal-hooks/post
 
 First copy of certificate files, also for testing.
 
