@@ -75,7 +75,7 @@ Open [https://localhost:8009/](https://localhost:8009/) in your browser. You'll 
 - Multi-threaded server processing
 - [WebSocket](https://datatracker.ietf.org/doc/html/rfc6455) support
 - [TLS/SSL](https://en.wikipedia.org/wiki/Transport_Layer_Security) support. [BearSSL](https://bearssl.org/), [OpenSSL](https://www.openssl.org/), [LibreSSL](https://www.libressl.org/), or [BoringSSL](https://boringssl.googlesource.com/boringssl/) can be selected depending on the performance and the future security situation
-- [SNI](https://en.wikipedia.org/wiki/Server_Name_Indication) support for TLS/SSL. Servers can use multiple hostname certificates with the same IP address
+- [SNI](https://en.wikipedia.org/wiki/Server_Name_Indication) support for TLS/SSL. Servers can use multiple certificates of different hostnames with the same IP address
 - Support for automatic renewal of [Let's Encrypt](https://letsencrypt.org/) SSL certificates without application restart
 - Web pages are in-memory static files at compile time, dynamic file loading is also available for development
 - Web proxy for backend and internal services
@@ -105,7 +105,7 @@ import caprese
 const HelloJs = staticScript:
   import jsffi
   var console {.importc, nodecl.}: JsObject
-  console.log("hello".cstring)
+  console.log("hello")
 
 const HelloMinJs = scriptMinifier(code = HelloJs, extern = "")
 
@@ -147,7 +147,7 @@ config:
 
 * **sslLib:** *None*, *BearSSL*(default), *OpenSSL*, *LibreSSL*, *BoringSSL*  
 Somewhat surprisingly, Caprese supports 4 different SSL libraries. I would like to keep it a secret that *BearSSL* is the most extreme, with the smallest binary size and the fastest SSL processing speed. Enjoy the differences.  
-If SSL is not required, it is recommended set to *None*. This will enable the experimental implementation of fast dispatch processing based on number of client connections. At this time, it is only available for *None*.
+If SSL is not required, it is recommended set to *None*. This will enable the experimental implementation of fast dispatch processing based on number of client connections and requests. At this time, it is only available for *None*.
 * **debugLog:** *true* or *false*(default). If *true*, debug messages are output to the console.
 * **sigTermQuit:** *true*(default) or *false*. If *true*, handling SIGTERM at the end of the process. The code in the `onQuit:` block is called before the process is terminated.
 * **sigPipeIgnore:** Whether to ignore SIGPIPE. Caprese requires SIGPIPE to be ignored, but can be set to *false* if duplicated in other libraries.
@@ -339,7 +339,7 @@ server(ip = "0.0.0.0", port = 8089):
 
 #### Web pages and WebSocket use the same port
 To use WebSocket, add a `stream:` block in the `routes:` block. When a WebSocket connection is established, the `onOpen:` block is called. When a message is received, the `onMessage:` block is called. When the connection is closed, the `onClose:` block is called.
-Although a bit tricky to use, WebSockets and web pages can also use the same url path like `"/"`. In that case, the `get:` path to the web page should be after the `stream:`.
+Although a bit tricky to use, WebSockets and web pages can also use the same url path like `/`. In that case, the `get:` path to the web page should be after the `stream:`.
 
 ```nim
 server(ssl = true, ip = "0.0.0.0", port = 8009):
@@ -519,7 +519,7 @@ server(ssl = true, ip = "0.0.0.0", port = 8009):
   routes(host = "localhost"):
     proxy(path = "/", host = "localhost", port = 8089)
 
-server(ip = "0.0.0.0", port = 8089):
+server(ip = "127.0.0.1", port = 8089):
   routes(host = "localhost:8009"):
     get "/":
       return response(content("Hello!", "text/html"))
@@ -531,7 +531,7 @@ serverStart()
 
 It might be better not to check the hostname and port.
 ```nim
-server(ip = "0.0.0.0", port = 8089):
+server(ip = "127.0.0.1", port = 8089):
   routes: # no hostname and port check
     get "/":
 ```
@@ -586,10 +586,10 @@ iterator getTags(clientId: ClientId): Tag
 #### Send to tag, WebSocket only
 ```nim
 proc wsSend(tag: Tag, data: seq[byte] | string | Array[byte],
-            opcode: WebSocketOpCode = WebSocketOpCode.Binary): SendResult
-proc wsSendTag(tag: Tag, data: seq[byte] | string | Array[byte],
-              opcode: WebSocketOpCode = WebSocketOpCode.Binary): int
+            opcode: WebSocketOpCode = WebSocketOpCode.Binary): int
 ```
+
+This is a feature that was originally used in the server of the block explorer. What this is used for is that if the HASH160 of addresses in the user wallets are registered as tags, when a new block is found, in the process of parsing the block and transactions, address-related information can be sent to the tags of the found addresses, and the user wallets will be notified in real time.
 
 ### Release Build
 Non-root users cannot use privileged ports such as 80 or 443 by default, so capabilities must be added after each build.
