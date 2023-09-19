@@ -2520,6 +2520,23 @@ template serverLib(cfg: static Config) {.dirty.} =
       checkErr X509_NAME_add_entry_by_txt(name, "C", MBSTRING_ASC, "JP", -1, -1, 0)
       checkErr X509_NAME_add_entry_by_txt(name, "CN", MBSTRING_ASC, "Caprese Self-Signed Certificate", -1, -1, 0)
       checkErr X509_set_issuer_name(x509, name)
+
+      var v3CtxObj: v3_ext_ctx
+      var v3Ctx: X509V3_CTX = addr v3CtxObj
+      X509V3_set_ctx(v3Ctx, x509, x509, nil, nil, 0)
+      var subjectAltName = X509V3_EXT_nconf_nid(nil, v3Ctx, NID_subject_alt_name, "DNS:localhost".cstring)
+      checkErr X509_add_ext(x509, subjectAltName, -1)
+      X509_EXTENSION_free(subjectAltName)
+      var basicConstraints = X509V3_EXT_nconf_nid(nil, v3Ctx, NID_basic_constraints, "critical,CA:FALSE".cstring)
+      checkErr X509_add_ext(x509, basicConstraints, -1)
+      X509_EXTENSION_free(basicConstraints)
+      var subjectKeyIdentifier = X509V3_EXT_nconf_nid(nil, v3Ctx, NID_subject_key_identifier, "hash".cstring)
+      checkErr X509_add_ext(x509, subjectKeyIdentifier, -1)
+      X509_EXTENSION_free(subjectKeyIdentifier)
+      var authorityKeyIdentifier = X509V3_EXT_nconf_nid(nil, v3Ctx, NID_authority_key_identifier, "keyid:always".cstring)
+      checkErr X509_add_ext(x509, authorityKeyIdentifier, -1)
+      X509_EXTENSION_free(authorityKeyIdentifier)
+
       checkErr X509_sign(x509, pkey, EVP_sha1())
 
       var retCert = SSL_CTX_use_certificate(ctx, x509)
