@@ -321,6 +321,45 @@ proc X509_NAME_add_entry_by_txt*(name: X509_NAME , field: cstring, stype: cint,
                                set: cint): cint {.importc, cdecl.}
 proc X509_sign*(x: X509, pkey: EVP_PKEY, md: EVP_MD): cint {.importc, cdecl.}
 
+# SAN
+# include/openssl/x509.h
+type
+  X509_EXTENSION* = ptr object
+
+proc X509_add_ext*(x: X509; ex: X509_EXTENSION; loc: cint): cint {.importc, cdecl.}
+proc X509_EXTENSION_free*(ex: X509_EXTENSION) {.importc, cdecl.}
+
+# include/openssl/x509v3.h
+type
+  X509V3_CONF_METHOD* = ptr object
+
+  v3_ext_ctx* {.bycopy.} = object
+    flags*: cint
+    issuer_cert*: X509
+    subject_cert*: X509
+    subject_req*: X509_REQ
+    crl*: X509_CRL
+    db_meth*: X509V3_CONF_METHOD
+    db*: pointer
+
+# include/openssl/type.h
+type
+  X509V3_CTX* = ptr v3_ext_ctx
+  CONF = ptr object
+
+# include/openssl/x509v3.h
+proc X509V3_EXT_nconf_nid*(conf: CONF; ctx: X509V3_CTX; ext_nid: cint;
+                           value: cstring): X509_EXTENSION {.importc, cdecl.}
+proc X509V3_set_ctx*(ctx: X509V3_CTX, issuer: X509,  subject: X509,
+                     req: X509_REQ, crl: X509_CRL, flags: cint) {.importc, cdecl.}
+
+# include/openssl/obj_mac.h
+const
+  NID_subject_key_identifier* = 82
+  NID_subject_alt_name* = 85
+  NID_basic_constraints* = 87
+  NID_authority_key_identifier* = 90
+
 
 when isMainModule:
   echo SSL_load_error_strings()
