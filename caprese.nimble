@@ -66,7 +66,7 @@ task brotli, "Copy brotli":
     exec "mkdir -p ../../src/brotli"
     exec "cp -r c ../../src/brotli/"
 
-task deps, "Build deps":
+task depsAll, "Build deps":
   exec "git submodule update --init"
   bearsslTask()
   opensslTask()
