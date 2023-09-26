@@ -37,8 +37,8 @@ Now let's build the Caprese.
 
     git clone https://github.com/zenywallet/caprese
     cd caprese
-    nimble install -d
-    nimble deps
+    nimble install --depsOnly
+    nimble depsAll
     nim c -r -d:release --threads:on --mm:orc src/caprese.nim
 
 Open [https://localhost:8009/](https://localhost:8009/) in your browser. You'll probably get a SSL certificate warning, but make sure it's a local server and proceed.
@@ -78,7 +78,7 @@ Open [https://localhost:8009/](https://localhost:8009/) in your browser. You'll 
 - [SNI](https://en.wikipedia.org/wiki/Server_Name_Indication) support for TLS/SSL. Servers can use multiple certificates of different hostnames with the same IP address
 - Support for automatic renewal of [Let's Encrypt](https://letsencrypt.org/) SSL certificates without application restart
 - Web pages are in-memory static files at compile time, dynamic file loading is also available for development
-- Web proxy for backend and internal services
+- Reverse proxy for backend and internal services
 - Messaging functionality to send data from the server to clients individually or in groups
 - Dependency-free executables for easy server deployment
 - Languages - Nim 100.0%
@@ -324,7 +324,7 @@ serverStart()
 
 The send commands executed by another worker thread invoke a server dispatch-level thread to execute the sending process. The number of threads in the `server:` block is the number of *serverWorkerNum* in the `config:` block. The same worker threads are used even in a multi-port configuration with multiple `server:` blocks, and the number of threads remains the same.
 
-One of the reasons for creating Caprese is stream encryption. The common method of stream encryption using a web proxy server in a separate process seems inefficient. To reduce context switches, it would be better to handle stream encryption in the same thread context as the SSL process, like the `server:` block in the Caprese.
+One of the reasons for creating Caprese is stream encryption. The common method of stream encryption using a reverse proxy server in a separate process seems inefficient. To reduce context switches, it would be better to handle stream encryption in the same thread context as the SSL process, like the `server:` block in the Caprese.
 
 #### Thread context variables
 Put before the `routes:` block in the `server:` block. Um, how do I access it?
@@ -504,8 +504,8 @@ server(ssl = true, ip = "0.0.0.0", port = 8009):
       return response(content(AppMinJs, "application/javascript"))
 ```
 
-### Web Proxy
-The Caprese's proxy is different from a typical proxy server and is more simplified. It may be faster than a typical proxy server due to the following specifications. It would be more useful in simple configurations.
+### Reverse Proxy
+The Caprese's reverse proxy is different from a typical reverse proxy server and is more simplified. It may be faster than a typical reverse proxy server due to the following specifications. It would be more useful in simple configurations.
 
 - The request URL and http headers are not changed. Since data is sent and received without changing the data to the proxy destination, it would work fine with WebSockets and such.
 - When a client makes a request to a proxy path, all subsequent communication is connected to the proxy destination until disconnected. The proxy path is simply compared to the URL, and if the first string matches, proxy forwarding starts. It may be better to add a `/` at the end of the proxy path to make it strict.
