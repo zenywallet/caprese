@@ -43,8 +43,12 @@ when DYNAMIC_FILES:
 
   proc initDynamicFile*(publicPath: string = "public") =
     echo "warning: Dynamic file loading is for test purposes only. Super slow."
-    currentPublicDirString = getCurrentDir() / publicPath
+    if publicPath.startsWith("/"):
+      currentPublicDirString = publicPath
+    else:
+      currentPublicDirString = getCurrentDir() / publicPath
     currentPublicDir = currentPublicDirString.cstring
+    echo "public: ", currentPublicDirString
 
   proc getDynamicFile*(file: string): FileContentResult =
     var currentPublicDir = $currentPublicDir
