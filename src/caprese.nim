@@ -3,6 +3,9 @@
 when not compileOption("threads"):
   {.error: "requires --threads:on option.".}
 
+when isMainModule:
+  {.define: DYNAMIC_FILES.}
+
 import nativesockets
 import server as serverlib
 import contents
@@ -177,7 +180,27 @@ template getPending*(reqs: auto): auto =
 
 
 when isMainModule:
-  import strformat
+  import std/os
+
+  if paramCount() != 1:
+    echo "usage: caprese <public folder>"
+    quit(QuitFailure)
+
+  var publicPath = paramStr(1)
+  initDynamicFile(publicPath)
+
+  server(ssl = true, ip = "127.0.0.1", port = 8009):
+    routes(host = "localhost"):
+      var fileContentResult = getDynamicFile(reqUrl())
+      if fileContentResult.err == FileContentSuccess:
+        var fileContent = fileContentResult.data
+        return send(fileContent.content.addHeader(fileContent.md5, Status200, fileContent.mime))
+      return send("Not found".addHeader(Status404))
+
+  serverStart()
+
+  #[
+  import std/strformat
   import std/re
 
   type
@@ -328,3 +351,4 @@ when isMainModule:
       return send(fmt"Not found: {urlText}".addDocType().addHeader(Status404))
 
   serverStart()
+  ]#
