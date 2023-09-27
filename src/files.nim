@@ -41,8 +41,8 @@ when DYNAMIC_FILES:
   var currentPublicDir*: cstring
   const mimes: MimeDB = newMimetypes()
 
-  proc initDynamicFile*() =
-    currentPublicDirString = getCurrentDir() / "public"
+  proc initDynamicFile*(publicPath: string = "public") =
+    currentPublicDirString = getCurrentDir() / publicPath
     currentPublicDir = currentPublicDirString.cstring
 
   proc getDynamicFile*(file: string): FileContentResult =
