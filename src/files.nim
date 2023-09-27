@@ -38,11 +38,10 @@ when DYNAMIC_FILES:
     import brotli
 
   var currentPublicDir {.threadvar.}: string
-  var mimes {.threadvar.}: MimeDB
+  const mimes: MimeDB = newMimetypes()
 
   proc initDynamicFile*() =
     currentPublicDir = getCurrentDir() / "public"
-    mimes = newMimetypes()
 
   proc getDynamicFile*(file: string): FileContentResult =
     var requestDir = currentPublicDir / file
