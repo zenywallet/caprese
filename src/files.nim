@@ -37,13 +37,16 @@ when DYNAMIC_FILES:
     import zip/zlib
     import brotli
 
-  var currentPublicDir {.threadvar.}: string
+  var currentPublicDirString*: string
+  var currentPublicDir*: cstring
   const mimes: MimeDB = newMimetypes()
 
   proc initDynamicFile*() =
-    currentPublicDir = getCurrentDir() / "public"
+    currentPublicDirString = getCurrentDir() / "public"
+    currentPublicDir = currentPublicDirString.cstring
 
   proc getDynamicFile*(file: string): FileContentResult =
+    var currentPublicDir = $currentPublicDir
     var requestDir = currentPublicDir / file
     if requestDir.startsWith(currentPublicDir):
       var ext = ""
