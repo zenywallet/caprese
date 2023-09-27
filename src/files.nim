@@ -42,6 +42,7 @@ when DYNAMIC_FILES:
   const mimes: MimeDB = newMimetypes()
 
   proc initDynamicFile*(publicPath: string = "public") =
+    echo "warning: Dynamic file loading is for test purposes only. Super slow."
     currentPublicDirString = getCurrentDir() / publicPath
     currentPublicDir = currentPublicDirString.cstring
 
