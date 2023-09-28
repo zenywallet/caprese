@@ -14,12 +14,14 @@ import statuscode
 import queue
 import macros
 import rlimit
+import config
 export nativesockets
 export serverlib
 export contents
 export files
 export statuscode
 export queue
+export config
 
 var active* = true
 var workerNum = 0
