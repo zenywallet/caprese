@@ -58,7 +58,7 @@ proc stopTimeStampUpdater*(waitStop: bool = false) =
   if waitStop:
     joinThread(timeStampThread)
 
-macro getMime*(mimetype: string): untyped =
+macro getMime*(mimetype: static string): untyped =
   var mimeStr = $mimetype
   var mimes = newMimetypes()
   var mime = mimes.getMimetype(mimeStr, "")
@@ -70,21 +70,19 @@ macro getMime*(mimetype: string): untyped =
       mime = mimeStr
   newLit(mime)
 
-proc addHeader*(body: string, code: static StatusCode = Status200, mimetype: static string = "text/html"): string =
-  result = "HTTP/" & HTTP_VERSION & " " & $code & "\c\L" &
-          "Content-Type: " & getMime(mimetype) & "\c\L" &
-          "Date: " & getCurTimeStr() & "\c\L" &
-          "Server: " & ServerName & "\c\L" &
-          "Content-Length: " & $body.len & "\c\L\c\L" &
-          body
+template getMime*(mimetype: string): string = mimetype
 
-template addHeader*(body: static string, code: static StatusCode = Status200, mimetype: static string = "text/html"): string =
+template addHeader*(body: string, code: StatusCode, mimetype: string = "text/html"): string =
   "HTTP/" & HTTP_VERSION & " " & $code & "\c\L" &
   "Content-Type: " & getMime(mimetype) & "\c\L" &
   "Date: " & getCurTimeStr() & "\c\L" &
   "Server: " & ServerName & "\c\L" &
   "Content-Length: " & $body.len & "\c\L\c\L" &
   body
+
+template addHeader*(body: string, mimetype: string): string = addHeader(body, Status200, mimetype)
+
+template addHeader*(body: string): string = addHeader(body, Status200, "text/html")
 
 proc addHeader*(body: string, etag: string, code: static StatusCode = Status200, mimetype: static string = "text/html"): string =
   result = "HTTP/" & HTTP_VERSION & " " & $code & "\c\L" &
