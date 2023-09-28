@@ -9,9 +9,15 @@ import mimetypes
 export macros except error
 import times
 import arraylib
+import config
 
-const HTTP_VERSION* = 1.1
-const ServerName* = "Caprese"
+var cfg {.compileTime.}: Config = defaultConfig()
+
+template loadConfig(cfg: static Config) {.dirty.} =
+  const HTTP_VERSION* = $cfg.httpVersion
+  const ServerName* = cfg.serverName
+
+loadConfig(cfg)
 
 var timeStrArrays: array[2, Array[byte]]
 var shiftTimeStrArray: int = 0
@@ -65,7 +71,7 @@ macro getMime*(mimetype: string): untyped =
   newLit(mime)
 
 proc addHeader*(body: string, code: static StatusCode = Status200, mimetype: static string = "text/html"): string =
-  result = "HTTP/" & $HTTP_VERSION & " " & $code & "\c\L" &
+  result = "HTTP/" & HTTP_VERSION & " " & $code & "\c\L" &
           "Content-Type: " & getMime(mimetype) & "\c\L" &
           "Date: " & getCurTimeStr() & "\c\L" &
           "Server: " & ServerName & "\c\L" &
@@ -73,7 +79,7 @@ proc addHeader*(body: string, code: static StatusCode = Status200, mimetype: sta
           body
 
 template addHeader*(body: static string, code: static StatusCode = Status200, mimetype: static string = "text/html"): string =
-  "HTTP/" & $HTTP_VERSION & " " & $code & "\c\L" &
+  "HTTP/" & HTTP_VERSION & " " & $code & "\c\L" &
   "Content-Type: " & getMime(mimetype) & "\c\L" &
   "Date: " & getCurTimeStr() & "\c\L" &
   "Server: " & ServerName & "\c\L" &
@@ -81,7 +87,7 @@ template addHeader*(body: static string, code: static StatusCode = Status200, mi
   body
 
 proc addHeader*(body: string, etag: string, code: static StatusCode = Status200, mimetype: static string = "text/html"): string =
-  result = "HTTP/" & $HTTP_VERSION & " " & $code & "\c\L" &
+  result = "HTTP/" & HTTP_VERSION & " " & $code & "\c\L" &
           "Content-Type: " & getMime(mimetype) & "\c\L" &
           "ETag: " & etag & "\c\L" &
           "Date: " & getCurTimeStr() & "\c\L" &
@@ -90,7 +96,7 @@ proc addHeader*(body: string, etag: string, code: static StatusCode = Status200,
           body
 
 proc addHeaderDeflate*(body: string, etag: string, code: static StatusCode = Status200, mimetype: static string = "text/html"): string =
-  result = "HTTP/" & $HTTP_VERSION & " " & $code & "\c\L" &
+  result = "HTTP/" & HTTP_VERSION & " " & $code & "\c\L" &
           "Content-Type: " & getMime(mimetype) & "\c\L" &
           "ETag: " & etag & "\c\L" &
           "Content-Encoding: deflate\c\L" &
@@ -100,7 +106,7 @@ proc addHeaderDeflate*(body: string, etag: string, code: static StatusCode = Sta
           body
 
 proc addHeaderBrotli*(body: string, etag: string, code: static StatusCode = Status200, mimetype: static string = "text/html"): string =
-  result = "HTTP/" & $HTTP_VERSION & " " & $code & "\c\L" &
+  result = "HTTP/" & HTTP_VERSION & " " & $code & "\c\L" &
           "Content-Type: " & getMime(mimetype) & "\c\L" &
           "ETag: " & etag & "\c\L" &
           "Content-Encoding: br\c\L" &
@@ -110,7 +116,7 @@ proc addHeaderBrotli*(body: string, etag: string, code: static StatusCode = Stat
           body
 
 proc addHeader*(body: string, etag: string, code: static StatusCode = Status200, mimetype: string = "text/html"): string =
-  result = "HTTP/" & $HTTP_VERSION & " " & $code & "\c\L" &
+  result = "HTTP/" & HTTP_VERSION & " " & $code & "\c\L" &
           "Content-Type: " & mimetype & "\c\L" &
           "ETag: " & etag & "\c\L" &
           "Date: " & getCurTimeStr() & "\c\L" &
@@ -119,7 +125,7 @@ proc addHeader*(body: string, etag: string, code: static StatusCode = Status200,
           body
 
 proc addHeaderDeflate*(body: string, etag: string, code: static StatusCode = Status200, mimetype: string = "text/html"): string =
-  result = "HTTP/" & $HTTP_VERSION & " " & $code & "\c\L" &
+  result = "HTTP/" & HTTP_VERSION & " " & $code & "\c\L" &
           "Content-Type: " & mimetype & "\c\L" &
           "ETag: " & etag & "\c\L" &
           "Content-Encoding: deflate\c\L" &
@@ -129,7 +135,7 @@ proc addHeaderDeflate*(body: string, etag: string, code: static StatusCode = Sta
           body
 
 proc addHeaderBrotli*(body: string, etag: string, code: static StatusCode = Status200, mimetype: string = "text/html"): string =
-  result = "HTTP/" & $HTTP_VERSION & " " & $code & "\c\L" &
+  result = "HTTP/" & HTTP_VERSION & " " & $code & "\c\L" &
           "Content-Type: " & mimetype & "\c\L" &
           "ETag: " & etag & "\c\L" &
           "Content-Encoding: br\c\L" &
@@ -139,7 +145,7 @@ proc addHeaderBrotli*(body: string, etag: string, code: static StatusCode = Stat
           body
 
 proc redirect301*(location: string): string =
-  result = "HTTP/" & $HTTP_VERSION & " " & $Status301 & "\c\L" &
+  result = "HTTP/" & HTTP_VERSION & " " & $Status301 & "\c\L" &
           "Content-Type: text/html\c\L" &
           "Date: " & getCurTimeStr() & "\c\L" &
           "Server: " & ServerName & "\c\L" &

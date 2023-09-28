@@ -25,6 +25,8 @@ type
     certsPath*: string
     privKeyFile*: string
     fullChainFile*: string
+    httpVersion*: float64
+    serverName*: string
 
 proc defaultConfig*(): Config {.compileTime.} =
   result.sslLib = BearSSL
@@ -43,3 +45,5 @@ proc defaultConfig*(): Config {.compileTime.} =
   result.certsPath = "./certs"
   result.privKeyFile = "privkey.pem"
   result.fullChainFile = "fullchain.pem"
+  result.httpVersion = 1.1
+  result.serverName = "Caprese"
