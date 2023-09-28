@@ -84,63 +84,27 @@ template addHeader*(body: string, mimetype: string): string = addHeader(body, St
 
 template addHeader*(body: string): string = addHeader(body, Status200, "text/html")
 
-proc addHeader*(body: string, etag: string, code: static StatusCode = Status200, mimetype: static string = "text/html"): string =
-  result = "HTTP/" & HTTP_VERSION & " " & $code & "\c\L" &
-          "Content-Type: " & getMime(mimetype) & "\c\L" &
-          "ETag: " & etag & "\c\L" &
-          "Date: " & getCurTimeStr() & "\c\L" &
-          "Server: " & ServerName & "\c\L" &
-          "Content-Length: " & $body.len & "\c\L\c\L" &
-          body
+type
+  EncodingType* {.pure.} = enum
+    None = ""
+    Deflate = "deflate"
+    Brotli = "br"
 
-proc addHeaderDeflate*(body: string, etag: string, code: static StatusCode = Status200, mimetype: static string = "text/html"): string =
-  result = "HTTP/" & HTTP_VERSION & " " & $code & "\c\L" &
-          "Content-Type: " & getMime(mimetype) & "\c\L" &
-          "ETag: " & etag & "\c\L" &
-          "Content-Encoding: deflate\c\L" &
-          "Date: " & getCurTimeStr() & "\c\L" &
-          "Server: " & ServerName & "\c\L" &
-          "Content-Length: " & $body.len & "\c\L\c\L" &
-          body
+template addHeader*(body: string, encodingType: EncodingType, etag: string, code: StatusCode, mimetype: string): string =
+  "HTTP/" & HTTP_VERSION & " " & $code & "\c\L" &
+  "Content-Type: " & getMime(mimetype) & "\c\L" &
+  "ETag: " & etag & "\c\L" &
+  (when encodingType == EncodingType.None: "" else: "Content-Encoding: " & $encodingType & "\c\L") &
+  "Date: " & getCurTimeStr() & "\c\L" &
+  "Server: " & ServerName & "\c\L" &
+  "Content-Length: " & $body.len & "\c\L\c\L" &
+  body
 
-proc addHeaderBrotli*(body: string, etag: string, code: static StatusCode = Status200, mimetype: static string = "text/html"): string =
-  result = "HTTP/" & HTTP_VERSION & " " & $code & "\c\L" &
-          "Content-Type: " & getMime(mimetype) & "\c\L" &
-          "ETag: " & etag & "\c\L" &
-          "Content-Encoding: br\c\L" &
-          "Date: " & getCurTimeStr() & "\c\L" &
-          "Server: " & ServerName & "\c\L" &
-          "Content-Length: " & $body.len & "\c\L\c\L" &
-          body
+template addHeader*(body: string, encodingType: EncodingType, etag: string, code: StatusCode): string =
+  addHeader(body, encodingType, etag, code, "text/html")
 
-proc addHeader*(body: string, etag: string, code: static StatusCode = Status200, mimetype: string = "text/html"): string =
-  result = "HTTP/" & HTTP_VERSION & " " & $code & "\c\L" &
-          "Content-Type: " & mimetype & "\c\L" &
-          "ETag: " & etag & "\c\L" &
-          "Date: " & getCurTimeStr() & "\c\L" &
-          "Server: " & ServerName & "\c\L" &
-          "Content-Length: " & $body.len & "\c\L\c\L" &
-          body
-
-proc addHeaderDeflate*(body: string, etag: string, code: static StatusCode = Status200, mimetype: string = "text/html"): string =
-  result = "HTTP/" & HTTP_VERSION & " " & $code & "\c\L" &
-          "Content-Type: " & mimetype & "\c\L" &
-          "ETag: " & etag & "\c\L" &
-          "Content-Encoding: deflate\c\L" &
-          "Date: " & getCurTimeStr() & "\c\L" &
-          "Server: " & ServerName & "\c\L" &
-          "Content-Length: " & $body.len & "\c\L\c\L" &
-          body
-
-proc addHeaderBrotli*(body: string, etag: string, code: static StatusCode = Status200, mimetype: string = "text/html"): string =
-  result = "HTTP/" & HTTP_VERSION & " " & $code & "\c\L" &
-          "Content-Type: " & mimetype & "\c\L" &
-          "ETag: " & etag & "\c\L" &
-          "Content-Encoding: br\c\L" &
-          "Date: " & getCurTimeStr() & "\c\L" &
-          "Server: " & ServerName & "\c\L" &
-          "Content-Length: " & $body.len & "\c\L\c\L" &
-          body
+template addHeader*(body: string, encodingType: EncodingType, etag: string): string =
+  addHeader(body, encodingType, etag, Status200, "text/html")
 
 proc redirect301*(location: string): string =
   result = "HTTP/" & HTTP_VERSION & " " & $Status301 & "\c\L" &

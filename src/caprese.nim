@@ -196,7 +196,7 @@ when isMainModule:
       var fileContentResult = getDynamicFile(reqUrl())
       if fileContentResult.err == FileContentSuccess:
         var fileContent = fileContentResult.data
-        return send(fileContent.content.addHeader(fileContent.md5, Status200, fileContent.mime))
+        return send(fileContent.content.addHeader(EncodingType.None, fileContent.md5, Status200, fileContent.mime))
       return send("Not found".addHeader(Status404))
 
   serverStart()

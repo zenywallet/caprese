@@ -1841,11 +1841,11 @@ template serverLib(cfg: static Config) {.dirty.} =
       var acceptEnc = reqHeader(InternalAcceptEncoding).split(",")
       acceptEnc.apply(proc(x: string): string = x.strip)
       if acceptEnc.contains("br"):
-        send(file.brotli.addHeaderBrotli(file.md5, Status200, file.mime))
+        send(file.brotli.addHeader(EncodingType.Brotli, file.md5, Status200, file.mime))
       elif acceptEnc.contains("deflate"):
-        send(file.deflate.addHeaderDeflate(file.md5, Status200, file.mime))
+        send(file.deflate.addHeader(EncodingType.Deflate, file.md5, Status200, file.mime))
       else:
-        send(file.content.addHeader(file.md5, Status200, file.mime))
+        send(file.content.addHeader(EncodingType.None, file.md5, Status200, file.mime))
 
   proc mainServerHandler(ctx: WorkerThreadCtx, client: Client, pRecvBuf: ptr UncheckedArray[byte], header: ReqHeader): SendResult {.inline.} =
     let appId = client.appId - 1
