@@ -11,14 +11,6 @@ import times
 import arraylib
 import config
 
-var cfg {.compileTime.}: Config = defaultConfig()
-
-template loadConfig(cfg: static Config) {.dirty.} =
-  const HTTP_VERSION* = $cfg.httpVersion
-  const ServerName* = cfg.serverName
-
-loadConfig(cfg)
-
 var timeStrArrays: array[2, Array[byte]]
 var shiftTimeStrArray: int = 0
 var pTimeStrArray: ptr Array[byte]
@@ -72,47 +64,51 @@ macro getMime*(mimetype: static string): untyped =
 
 template getMime*(mimetype: string): string = mimetype
 
-template addHeader*(body: string, code: StatusCode, mimetype: string = "text/html"): string =
-  "HTTP/" & HTTP_VERSION & " " & $code & "\c\L" &
-  "Content-Type: " & getMime(mimetype) & "\c\L" &
-  "Date: " & getCurTimeStr() & "\c\L" &
-  "Server: " & ServerName & "\c\L" &
-  "Content-Length: " & $body.len & "\c\L\c\L" &
-  body
+template contentsWithCfg*(cfg: static Config) {.dirty.} =
+  const HTTP_VERSION* = $cfg.httpVersion
+  const ServerName* = cfg.serverName
 
-template addHeader*(body: string, mimetype: string): string = addHeader(body, Status200, mimetype)
+  template addHeader*(body: string, code: StatusCode, mimetype: string = "text/html"): string =
+    "HTTP/" & HTTP_VERSION & " " & $code & "\c\L" &
+    "Content-Type: " & getMime(mimetype) & "\c\L" &
+    "Date: " & getCurTimeStr() & "\c\L" &
+    "Server: " & ServerName & "\c\L" &
+    "Content-Length: " & $body.len & "\c\L\c\L" &
+    body
 
-template addHeader*(body: string): string = addHeader(body, Status200, "text/html")
+  template addHeader*(body: string, mimetype: string): string = addHeader(body, Status200, mimetype)
 
-type
-  EncodingType* {.pure.} = enum
-    None = ""
-    Deflate = "deflate"
-    Brotli = "br"
+  template addHeader*(body: string): string = addHeader(body, Status200, "text/html")
 
-template addHeader*(body: string, encodingType: EncodingType, etag: string, code: StatusCode, mimetype: string): string =
-  "HTTP/" & HTTP_VERSION & " " & $code & "\c\L" &
-  "Content-Type: " & getMime(mimetype) & "\c\L" &
-  "ETag: " & etag & "\c\L" &
-  (when encodingType == EncodingType.None: "" else: "Content-Encoding: " & $encodingType & "\c\L") &
-  "Date: " & getCurTimeStr() & "\c\L" &
-  "Server: " & ServerName & "\c\L" &
-  "Content-Length: " & $body.len & "\c\L\c\L" &
-  body
+  type
+    EncodingType* {.pure.} = enum
+      None = ""
+      Deflate = "deflate"
+      Brotli = "br"
 
-template addHeader*(body: string, encodingType: EncodingType, etag: string, code: StatusCode): string =
-  addHeader(body, encodingType, etag, code, "text/html")
+  template addHeader*(body: string, encodingType: EncodingType, etag: string, code: StatusCode, mimetype: string): string =
+    "HTTP/" & HTTP_VERSION & " " & $code & "\c\L" &
+    "Content-Type: " & getMime(mimetype) & "\c\L" &
+    "ETag: " & etag & "\c\L" &
+    (when encodingType == EncodingType.None: "" else: "Content-Encoding: " & $encodingType & "\c\L") &
+    "Date: " & getCurTimeStr() & "\c\L" &
+    "Server: " & ServerName & "\c\L" &
+    "Content-Length: " & $body.len & "\c\L\c\L" &
+    body
 
-template addHeader*(body: string, encodingType: EncodingType, etag: string): string =
-  addHeader(body, encodingType, etag, Status200, "text/html")
+  template addHeader*(body: string, encodingType: EncodingType, etag: string, code: StatusCode): string =
+    addHeader(body, encodingType, etag, code, "text/html")
 
-proc redirect301*(location: string): string =
-  result = "HTTP/" & HTTP_VERSION & " " & $Status301 & "\c\L" &
-          "Content-Type: text/html\c\L" &
-          "Date: " & getCurTimeStr() & "\c\L" &
-          "Server: " & ServerName & "\c\L" &
-          "Content-Length: 0\c\L" &
-          "Location: " & location & "\c\L\c\L"
+  template addHeader*(body: string, encodingType: EncodingType, etag: string): string =
+    addHeader(body, encodingType, etag, Status200, "text/html")
+
+  proc redirect301*(location: string): string =
+    result = "HTTP/" & HTTP_VERSION & " " & $Status301 & "\c\L" &
+            "Content-Type: text/html\c\L" &
+            "Date: " & getCurTimeStr() & "\c\L" &
+            "Server: " & ServerName & "\c\L" &
+            "Content-Length: 0\c\L" &
+            "Location: " & location & "\c\L\c\L"
 
 const BusyBody* = "<!DOCTYPE html><meta charset=\"utf-8\"><i>Sorry, It is a break time.</i>"
 const BadRequest* = "<!DOCTYPE html><meta charset=\"utf-8\"><i>Oops, something's wrong?</i>"

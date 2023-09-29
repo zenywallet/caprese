@@ -4536,6 +4536,7 @@ template httpTargetHeaderDefault() {.dirty.} =
       HeaderHost: "Host"
 
 template serverStartWithCfg(cfg: static Config) =
+  contentsWithCfg(cfg)
   httpTargetHeaderDefault()
   serverType()
   serverLib(cfg)
