@@ -39,7 +39,7 @@ Now let's build the Caprese.
     cd caprese
     nimble install --depsOnly
     nimble depsAll
-    nim c -r -d:release --threads:on --mm:orc src/caprese.nim
+    nim c -r -d:EXAMPLE1 -d:release --threads:on --mm:orc src/caprese.nim
 
 Open [https://localhost:8009/](https://localhost:8009/) in your browser. You'll probably get a SSL certificate warning, but make sure it's a local server and proceed.
 
@@ -78,9 +78,10 @@ Open [https://localhost:8009/](https://localhost:8009/) in your browser. You'll 
 - [SNI](https://en.wikipedia.org/wiki/Server_Name_Indication) support for TLS/SSL. Servers can use multiple certificates of different hostnames with the same IP address
 - Support for automatic renewal of [Let's Encrypt](https://letsencrypt.org/) SSL certificates without application restart
 - Web pages are in-memory static files at compile time, dynamic file loading is also available for development
-- Reverse proxy for backend and internal services
+- Reverse proxy for backend and internal services, server load balancing is available
 - Messaging functionality to send data from the server to clients individually or in groups
 - Dependency-free executables for easy server deployment
+- Build on your device from source code, this repository does not include binary modules such as SSL libraries
 - Languages - Nim 100.0%
 
 ### Requirements
@@ -143,6 +144,8 @@ config:
   certsPath = "./certs"
   privKeyFile = "privkey.pem"
   fullChainFile = "fullchain.pem"
+  httpVersion = 1.1
+  serverName = "Caprese"
 ```
 
 * **sslLib:** *None*, *BearSSL*(default), *OpenSSL*, *LibreSSL*, *BoringSSL*  
@@ -565,6 +568,29 @@ server(unix = "/tmp/caprese1.sock"):
 serverStart()
 ```
 
+#### Server load balancing
+It would be better to assign the servers according to the load of each server, but if you simply assign them in order, it would look something like this. There are many ways to do this, and the various configurations will be flexible.
+
+```nim
+import std/atomics
+import caprese
+
+const ProxyHostList = ["host1", "host2", "host3", "host4"]
+var proxyHostCounter: Atomic[uint]
+
+proc getProxyHost(): string =
+  var curIdx = proxyHostCounter.fetchAdd(1) mod ProxyHostList.len.uint
+  result = ProxyHostList[curIdx]
+
+server(ssl = true, ip = "0.0.0.0", port = 8009):
+  routes(host = "localhost"):
+    proxy(path = "/", host = getProxyHost(), port = 8089)
+
+serverStart()
+```
+
+**Note:** Since `proxy:` block is Nim's *template*, `getProxyHost()` function is called after the proxy path is matched.
+
 ### Tag-based Message Exchange
 Let me explain one of the unique features of the Caprese that is not implemented in common web servers. Tags can be attached to client connections. It is possible to send some data to the tag. That data will be sent to all tagged clients. The tag value must be a number or at least 8 bytes of data. It could be a string or something else, but it is better to use hashed data. It is assumed that the data is hashed originally, and no internal hashing of tags is performed. Hashing would be easy with Nim's `converter`. To control the tags, you need the *ClientId*, which you can get with `markPending()`.
 
@@ -591,12 +617,10 @@ proc wsSend(tag: Tag, data: seq[byte] | string | Array[byte],
 
 This is a feature that was originally used in the server of the block explorer. What this is used for is that if the HASH160 of addresses in the user wallets are registered as tags, when a new block is found, in the process of parsing the block and transactions, address-related information can be sent to the tags of the found addresses, and the user wallets will be notified in real time.
 
-### Release Build
-Non-root users cannot use privileged ports such as 80 or 443 by default, so capabilities must be added after each build.
+### Deploying a release-built executable
+Non-root users cannot use privileged ports such as 80 or 443 by default, so capabilities must be added on the target server after each build.
 
-    sudo setcap cap_net_bind_service=+ep ./caprese
-
-**Note:** The target file name should actually be your executable file name.
+    sudo setcap cap_net_bind_service=+ep <executable_file_name>
 
 If the above command is not executed, the following bind error will occur.
 
