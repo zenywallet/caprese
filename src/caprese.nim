@@ -182,24 +182,36 @@ template getPending*(reqs: auto): auto =
 
 
 when isMainModule:
-  import std/os
+  when defined(EXAMPLE1):
+    server(ssl = true, ip = "0.0.0.0", port = 8009):
+      routes:
+        get "/":
+          return send("Hello!".addHeader())
 
-  if paramCount() != 1:
-    echo "usage: caprese <public folder>"
-    quit(QuitFailure)
+        return send("Not found".addHeader(Status404))
 
-  var publicPath = paramStr(1)
-  initDynamicFile(publicPath)
+    serverStart()
 
-  server(ssl = true, ip = "127.0.0.1", port = 8009):
-    routes(host = "localhost"):
-      var fileContentResult = getDynamicFile(reqUrl())
-      if fileContentResult.err == FileContentSuccess:
-        var fileContent = fileContentResult.data
-        return send(fileContent.content.addHeader(EncodingType.None, fileContent.md5, Status200, fileContent.mime))
-      return send("Not found".addHeader(Status404))
+  else:
+    import std/os
 
-  serverStart()
+    if paramCount() != 1:
+      echo "usage: caprese <public folder>"
+      quit(QuitFailure)
+
+    var publicPath = paramStr(1)
+    initDynamicFile(publicPath)
+
+    server(ssl = true, ip = "127.0.0.1", port = 8009):
+      routes(host = "localhost"):
+        var fileContentResult = getDynamicFile(reqUrl())
+        if fileContentResult.err == FileContentSuccess:
+          var fileContent = fileContentResult.data
+          return send(fileContent.content.addHeader(EncodingType.None, fileContent.md5, Status200, fileContent.mime))
+        return send("Not found".addHeader(Status404))
+
+    serverStart()
+
 
   #[
   import std/strformat
