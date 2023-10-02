@@ -68,7 +68,7 @@ template contentsWithCfg*(cfg: static Config) {.dirty.} =
   const HTTP_VERSION* = $cfg.httpVersion
   const ServerName* = cfg.serverName
 
-  template addHeader*(body: string, code: StatusCode, mimetype: string = "text/html"): string =
+  template addHeader*(body: string, code: StatusCode, mimetype: string): string =
     "HTTP/" & HTTP_VERSION & " " & $code & "\c\L" &
     "Content-Type: " & getMime(mimetype) & "\c\L" &
     "Date: " & getCurTimeStr() & "\c\L" &
@@ -76,7 +76,7 @@ template contentsWithCfg*(cfg: static Config) {.dirty.} =
     "Content-Length: " & $body.len & "\c\L\c\L" &
     body
 
-  template addHeader*(body: string, mimetype: string): string = addHeader(body, Status200, mimetype)
+  template addHeader*(body: string, code: StatusCode): string = addHeader(body, code, "text/html")
 
   template addHeader*(body: string): string = addHeader(body, Status200, "text/html")
 
