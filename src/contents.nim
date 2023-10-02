@@ -92,13 +92,17 @@ template contentsWithCfg*(cfg: static Config) {.dirty.} =
   template addHeader*(body: string, code: StatusCode, mimetype: RawMimeType, charset: string): string =
     addHeader(body, code, (mimetype.string & "; charset=" & charset).ContentType)
 
-  template addHeader*(body: string, code: StatusCode): string = addHeader(body, code, "text/html".ContentType)
+  template addHeader*(body: string, code: StatusCode): string =
+    addHeader(body, code, "text/html".ContentType)
 
-  template addHeader*(body: string, mimetype: string | RawMimeType): string = addHeader(body, Status200, mimetype)
+  template addHeader*(body: string, mimetype: string | RawMimeType): string =
+    addHeader(body, Status200, mimetype)
 
-  template addHeader*(body: string, mimetype: string | RawMimeType, charset: string): string = addHeader(body, Status200, mimetype, charset)
+  template addHeader*(body: string, mimetype: string | RawMimeType, charset: string): string =
+    addHeader(body, Status200, mimetype, charset)
 
-  template addHeader*(body: string): string = addHeader(body, Status200, "text/html".ContentType)
+  template addHeader*(body: string): string =
+    addHeader(body, Status200, "text/html".ContentType)
 
   type
     EncodingType* {.pure.} = enum
