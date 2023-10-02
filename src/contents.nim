@@ -72,13 +72,19 @@ template contentsWithCfg*(cfg: static Config) {.dirty.} =
   const HTTP_VERSION* = $cfg.httpVersion
   const ServerName* = cfg.serverName
 
-  template addHeader*(body: string, code: StatusCode, mimetype: string | RawMimeType | ContentType): string =
+  template addHeader*(body: string, code: StatusCode, contentType: ContentType): string =
     "HTTP/" & HTTP_VERSION & " " & $code & "\c\L" &
-    "Content-Type: " & (when mimetype is string: getMime(mimetype) else: mimetype.string) & "\c\L" &
+    "Content-Type: " & contentType.string & "\c\L" &
     "Date: " & getCurTimeStr() & "\c\L" &
     "Server: " & ServerName & "\c\L" &
     "Content-Length: " & $body.len & "\c\L\c\L" &
     body
+
+  template addHeader*(body: string, code: StatusCode, mimetype: string): string =
+    addHeader(body, code, getMime(mimetype).ContentType)
+
+  template addHeader*(body: string, code: StatusCode, mimetype: RawMimeType): string =
+    addHeader(body, code, mimetype.ContentType)
 
   template addHeader*(body: string, code: StatusCode, mimetype: string, charset: string): string =
     addHeader(body, code, (getMime(mimetype) & "; charset=" & charset).ContentType)
@@ -86,11 +92,13 @@ template contentsWithCfg*(cfg: static Config) {.dirty.} =
   template addHeader*(body: string, code: StatusCode, mimetype: RawMimeType, charset: string): string =
     addHeader(body, code, (mimetype.string & "; charset=" & charset).ContentType)
 
-  template addHeader*(body: string, code: StatusCode): string = addHeader(body, code, "text/html")
+  template addHeader*(body: string, code: StatusCode): string = addHeader(body, code, "text/html".ContentType)
 
   template addHeader*(body: string, mimetype: string | RawMimeType): string = addHeader(body, Status200, mimetype)
 
-  template addHeader*(body: string): string = addHeader(body, Status200, "text/html")
+  template addHeader*(body: string, mimetype: string | RawMimeType, charset: string): string = addHeader(body, Status200, mimetype, charset)
+
+  template addHeader*(body: string): string = addHeader(body, Status200, "text/html".ContentType)
 
   type
     EncodingType* {.pure.} = enum
