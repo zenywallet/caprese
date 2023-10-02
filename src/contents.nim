@@ -64,19 +64,27 @@ macro getMime*(mimetype: static string): untyped =
 
 template getMime*(mimetype: string): string = mimetype
 
-type RawMimeType* = distinct string
+type
+  RawMimeType* = distinct string
+  ContentType* = distinct string
 
 template contentsWithCfg*(cfg: static Config) {.dirty.} =
   const HTTP_VERSION* = $cfg.httpVersion
   const ServerName* = cfg.serverName
 
-  template addHeader*(body: string, code: StatusCode, mimetype: string | RawMimeType): string =
+  template addHeader*(body: string, code: StatusCode, mimetype: string | RawMimeType | ContentType): string =
     "HTTP/" & HTTP_VERSION & " " & $code & "\c\L" &
     "Content-Type: " & (when mimetype is string: getMime(mimetype) else: mimetype.string) & "\c\L" &
     "Date: " & getCurTimeStr() & "\c\L" &
     "Server: " & ServerName & "\c\L" &
     "Content-Length: " & $body.len & "\c\L\c\L" &
     body
+
+  template addHeader*(body: string, code: StatusCode, mimetype: string, charset: string): string =
+    addHeader(body, code, (getMime(mimetype) & "; charset=" & charset).ContentType)
+
+  template addHeader*(body: string, code: StatusCode, mimetype: RawMimeType, charset: string): string =
+    addHeader(body, code, (mimetype.string & "; charset=" & charset).ContentType)
 
   template addHeader*(body: string, code: StatusCode): string = addHeader(body, code, "text/html")
 
