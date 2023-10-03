@@ -295,7 +295,7 @@ serverStart()
 ```
 
 #### Pending and worker
-The runnable level inside the `server:` block is called the server dispatch-level. Inside the block is called from multiple threads, it must not call functions that generate waits and must return results immediately. If the response cannot be returned immediately, return pending first and then process it in another worker thread. Feel free to use async/await in another thread.
+The runnable level inside the `server:` block is called the server dispatch-level. Inside the block is called from multiple threads, it must not call functions that generate long waits and must return results immediately. If the response cannot be returned immediately, return pending first and then process it in another worker thread. Feel free to use async/await in another thread.
 
 ```nim
 type
@@ -589,7 +589,7 @@ server(ssl = true, ip = "0.0.0.0", port = 8009):
 serverStart()
 ```
 
-**Note:** Since `proxy:` block is Nim's *template*, `getProxyHost()` function is called after the proxy path is matched.
+**Note:** Since `proxy:` block is Nim's *template*, `getProxyHost()` function is called after the `proxy:` `path` is matched.
 
 ### Tag-based Message Exchange
 Let me explain one of the unique features of the Caprese that is not implemented in common web servers. Tags can be attached to client connections. It is possible to send some data to the tag. That data will be sent to all tagged clients. The tag value must be a number or at least 8 bytes of data. It could be a string or something else, but it is better to use hashed data. It is assumed that the data is hashed originally, and no internal hashing of tags is performed. Hashing would be easy with Nim's `converter`. To control the tags, you need the *ClientId*, which you can get with `markPending()`.
@@ -611,8 +611,8 @@ iterator getTags(clientId: ClientId): Tag
 
 #### Send to tag, WebSocket only
 ```nim
-proc wsSend(tag: Tag, data: seq[byte] | string | Array[byte],
-            opcode: WebSocketOpCode = WebSocketOpCode.Binary): int
+template wsSendTag(tag: Tag, data: seq[byte] | string | Array[byte],
+                  opcode: WebSocketOpCode = WebSocketOpCode.Binary): int
 ```
 
 This is a feature that was originally used in the server of the block explorer. What this is used for is that if the HASH160 of addresses in the user wallets are registered as tags, when a new block is found, in the process of parsing the block and transactions, address-related information can be sent to the tags of the found addresses, and the user wallets will be notified in real time.
