@@ -824,12 +824,17 @@ template serverTagLib*(cfg: static Config) {.dirty.} =
       if ret == SendResult.Pending:
         result = SendResult.Pending
 
-  proc wsSend(tag: Tag, data: seq[byte] | string | Array[byte],
-              opcode: WebSocketOpCode = WebSocketOpCode.Binary): int =
-    for cid in tag.getClientIds():
-      let ret = cid.wsServerSend(data, opcode)
-      if ret == SendResult.Pending or ret == SendResult.Success:
-        inc(result)
+  template wsSendTag(tag: Tag, data: seq[byte] | string | Array[byte],
+                    opcode: WebSocketOpCode = WebSocketOpCode.Binary): int =
+    var sendCount = 0
+    let clientIds = tag.getClientIds()
+    if clientIds.len > 0:
+      let sendData = data
+      for cid in clientIds:
+        let ret = cid.wsServerSend(sendData, opcode)
+        if ret == SendResult.Pending or ret == SendResult.Success:
+          inc(sendCount)
+    sendCount
 
 var abort*: proc() {.thread.} = proc() {.thread.} = active = false
 
