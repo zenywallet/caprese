@@ -192,6 +192,17 @@ when isMainModule:
 
     serverStart()
 
+  elif defined(BENCHMARK1):
+    config:
+      sslLib = None
+
+    server(ip = "0.0.0.0", port = 8089):
+      routes:
+        get "/": return "Hello, World!".addHeader("text").send
+        return "Not found".addHeader(Status404, "text").send
+
+    serverStart()
+
   else:
     import std/os
 
