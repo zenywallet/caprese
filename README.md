@@ -274,7 +274,7 @@ The `host` value of the `routes:` block is used for the file location.
 #### Multi-website configuration on the same port with SSL
 
 ```nim
-server(ssl = true, ip = "0.0.0.0", port = 8089):
+server(ssl = true, ip = "0.0.0.0", port = 8009):
   routes(host = "website1"):
     certificates(path = "./certs/website1"):
       privKey: "privkey.pem"
