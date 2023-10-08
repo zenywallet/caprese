@@ -28,6 +28,7 @@ type
     httpVersion*: float64
     serverName*: string
     headerServer*: bool
+    headerDate*: bool
 
 proc defaultConfig*(): Config {.compileTime.} =
   result.sslLib = BearSSL
@@ -49,3 +50,4 @@ proc defaultConfig*(): Config {.compileTime.} =
   result.httpVersion = 1.1
   result.serverName = "Caprese"
   result.headerServer = true
+  result.headerDate = true

@@ -41,14 +41,18 @@ proc timeStampUpdater() {.thread.} =
     updateTimeStamp()
     sleep(1000)
 
-proc startTimeStampUpdater*() =
-  active = true
-  createThread(timeStampThread, timeStampUpdater)
+proc startTimeStampUpdater*(cfg: static Config) =
+  when cfg.headerDate:
+    active = true
+    createThread(timeStampThread, timeStampUpdater)
+  else:
+    discard
 
 proc stopTimeStampUpdater*(waitStop: bool = false) =
-  active = false
-  if waitStop:
-    joinThread(timeStampThread)
+  if active:
+    active = false
+    if waitStop:
+      joinThread(timeStampThread)
 
 macro getMime*(mimetype: static string): untyped =
   var mimeStr = $mimetype
@@ -75,7 +79,7 @@ template contentsWithCfg*(cfg: static Config) {.dirty.} =
   template addHeader*(body: string, code: StatusCode, contentType: ContentType): string =
     "HTTP/" & HTTP_VERSION & " " & $code & "\c\L" &
     "Content-Type: " & contentType.string & "\c\L" &
-    "Date: " & getCurTimeStr() & "\c\L" &
+    (when cfg.headerDate: "Date: " & getCurTimeStr() & "\c\L" else: "") &
     (when cfg.headerServer: "Server: " & ServerName & "\c\L" else: "") &
     "Content-Length: " & $body.len & "\c\L\c\L" &
     body
@@ -115,7 +119,7 @@ template contentsWithCfg*(cfg: static Config) {.dirty.} =
     "Content-Type: " & getMime(mimetype) & "\c\L" &
     "ETag: " & etag & "\c\L" &
     (when encodingType == EncodingType.None: "" else: "Content-Encoding: " & $encodingType & "\c\L") &
-    "Date: " & getCurTimeStr() & "\c\L" &
+    (when cfg.headerDate: "Date: " & getCurTimeStr() & "\c\L" else: "") &
     (when cfg.headerServer: "Server: " & ServerName & "\c\L" else: "") &
     "Content-Length: " & $body.len & "\c\L\c\L" &
     body
@@ -129,7 +133,7 @@ template contentsWithCfg*(cfg: static Config) {.dirty.} =
   proc redirect301*(location: string): string =
     result = "HTTP/" & HTTP_VERSION & " " & $Status301 & "\c\L" &
             "Content-Type: text/html\c\L" &
-            "Date: " & getCurTimeStr() & "\c\L" &
+            (when cfg.headerDate: "Date: " & getCurTimeStr() & "\c\L" else: "") &
             (when cfg.headerServer: "Server: " & ServerName & "\c\L" else: "") &
             "Content-Length: 0\c\L" &
             "Location: " & location & "\c\L\c\L"

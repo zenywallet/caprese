@@ -4545,7 +4545,7 @@ template serverStartWithCfg(cfg: static Config) =
   httpTargetHeaderDefault()
   serverType()
   serverLib(cfg)
-  startTimeStampUpdater()
+  startTimeStampUpdater(cfg)
   var params: ProxyParams
   params.abortCallback = proc() =
     errorQuit "error: proxy dispatcher"
