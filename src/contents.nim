@@ -76,7 +76,7 @@ template contentsWithCfg*(cfg: static Config) {.dirty.} =
     "HTTP/" & HTTP_VERSION & " " & $code & "\c\L" &
     "Content-Type: " & contentType.string & "\c\L" &
     "Date: " & getCurTimeStr() & "\c\L" &
-    "Server: " & ServerName & "\c\L" &
+    (when cfg.headerServer: "Server: " & ServerName & "\c\L" else: "") &
     "Content-Length: " & $body.len & "\c\L\c\L" &
     body
 
@@ -116,7 +116,7 @@ template contentsWithCfg*(cfg: static Config) {.dirty.} =
     "ETag: " & etag & "\c\L" &
     (when encodingType == EncodingType.None: "" else: "Content-Encoding: " & $encodingType & "\c\L") &
     "Date: " & getCurTimeStr() & "\c\L" &
-    "Server: " & ServerName & "\c\L" &
+    (when cfg.headerServer: "Server: " & ServerName & "\c\L" else: "") &
     "Content-Length: " & $body.len & "\c\L\c\L" &
     body
 
@@ -130,7 +130,7 @@ template contentsWithCfg*(cfg: static Config) {.dirty.} =
     result = "HTTP/" & HTTP_VERSION & " " & $Status301 & "\c\L" &
             "Content-Type: text/html\c\L" &
             "Date: " & getCurTimeStr() & "\c\L" &
-            "Server: " & ServerName & "\c\L" &
+            (when cfg.headerServer: "Server: " & ServerName & "\c\L" else: "") &
             "Content-Length: 0\c\L" &
             "Location: " & location & "\c\L\c\L"
 

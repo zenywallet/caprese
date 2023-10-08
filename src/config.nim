@@ -27,6 +27,7 @@ type
     fullChainFile*: string
     httpVersion*: float64
     serverName*: string
+    headerServer*: bool
 
 proc defaultConfig*(): Config {.compileTime.} =
   result.sslLib = BearSSL
@@ -47,3 +48,4 @@ proc defaultConfig*(): Config {.compileTime.} =
   result.fullChainFile = "fullchain.pem"
   result.httpVersion = 1.1
   result.serverName = "Caprese"
+  result.headerServer = true
