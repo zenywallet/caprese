@@ -1,7 +1,7 @@
 # Copyright (c) 2021 zenywallet
 # nim c -r --forceBuild src/files.nim
 
-import os, strutils, mimetypes
+import os, strutils
 import md5, base64
 import macros, tables
 import nimcrypto
@@ -33,6 +33,8 @@ type FileContentResult* = object
 const srcDir = currentSourcePath().parentDir()
 
 when DYNAMIC_FILES:
+  import std/mimetypes
+
   when DYNAMIC_COMPRESS:
     import zip/zlib
     import brotli
