@@ -41,7 +41,20 @@ when DYNAMIC_FILES:
 
   var currentPublicDirString*: string
   var currentPublicDir*: cstring
-  const mimes: MimeDB = newMimetypes()
+
+  type
+    MimeDB2 = object
+      mimes: OrderedTable[string, string]
+
+  func getMimetype(mimedb: MimeDB2, ext: string, default = "text/plain"): string =
+    if ext.startsWith("."):
+      result = mimedb.mimes.getOrDefault(ext.toLowerAscii.substr(1))
+    else:
+      result = mimedb.mimes.getOrDefault(ext.toLowerAscii())
+    if result == "":
+      return default
+
+  const mimes = MimeDB2(mimes: mimetypes.mimes.toOrderedTable())
 
   proc initDynamicFile*(publicPath: string = "public") =
     echo "warning: Dynamic file loading is for test purposes only. Super slow."
