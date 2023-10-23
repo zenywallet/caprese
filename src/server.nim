@@ -4540,48 +4540,61 @@ template httpTargetHeaderDefault() {.dirty.} =
     HttpTargetHeader:
       HeaderHost: "Host"
 
-template serverStartWithCfg(cfg: static Config) =
+template serverStartWithCfg(cfg: static Config, wait: static bool) =
   contentsWithCfg(cfg)
   httpTargetHeaderDefault()
   serverType()
   serverLib(cfg)
   startTimeStampUpdater(cfg)
-  var params: ProxyParams
-  params.abortCallback = proc() =
-    errorQuit "error: proxy dispatcher"
-  var proxyThread = proxyManager(params)
 
-  when cfg.sslLib != None:
-    var fileWatcherThread: Thread[WrapperThreadArg]
-    createThread(fileWatcherThread, threadWrapper, (fileWatcher, ThreadArg(argType: ThreadArgType.Void)))
+  template serverStartBody() =
+    var params: ProxyParams
+    params.abortCallback = proc() =
+      errorQuit "error: proxy dispatcher"
+    var proxyThread = proxyManager(params)
 
-  let cpuCount = countProcessors()
-  when cfg.serverWorkerNum < 0:
-    serverWorkerNum = cpuCount
+    when cfg.sslLib != None:
+      var fileWatcherThread: Thread[WrapperThreadArg]
+      createThread(fileWatcherThread, threadWrapper, (fileWatcher, ThreadArg(argType: ThreadArgType.Void)))
+
+    let cpuCount = countProcessors()
+    when cfg.serverWorkerNum < 0:
+      serverWorkerNum = cpuCount
+    else:
+      serverWorkerNum = cfg.serverWorkerNum
+    echo "server workers: ", serverWorkerNum, "/", cpuCount
+
+    highGearThreshold = serverWorkerNum * 3
+
+    var threads = newSeq[Thread[WrapperThreadArg]](serverWorkerNum)
+    for i in 0..<serverWorkerNum:
+      createThread(threads[i], threadWrapper, (serverWorker,
+        ThreadArg(argType: ThreadArgType.WorkerParams, workerParams: (i + 1, workerRecvBufSize))))
+
+    joinThreads(threads)
+    for i in countdown(releaseOnQuitEpfds.high, 0):
+      let retEpfdClose = releaseOnQuitEpfds[i].close()
+      if retEpfdClose != 0:
+        logs.error "error: close epfd=", epfd, " ret=", retEpfdClose, " ", getErrnoStr()
+    freeClient(cfg.clientMax)
+    when cfg.sslLib != None:
+      freeFileWatcher()
+      joinThread(fileWatcherThread)
+    proxyThread.QuitProxyManager()
+    joinThread(contents.timeStampThread)
+
+  when wait:
+    serverStartBody()
   else:
-    serverWorkerNum = cfg.serverWorkerNum
-  echo "server workers: ", serverWorkerNum, "/", cpuCount
+    proc waitProc(arg: ThreadArg) {.thread.} =
+      serverStartBody()
 
-  highGearThreshold = serverWorkerNum * 3
+    var waitThread: Thread[WrapperThreadArg]
+    createThread(waitThread, threadWrapper, (waitProc, ThreadArg(argType: ThreadArgType.Void)))
 
-  var threads = newSeq[Thread[WrapperThreadArg]](serverWorkerNum)
-  for i in 0..<serverWorkerNum:
-    createThread(threads[i], threadWrapper, (serverWorker,
-      ThreadArg(argType: ThreadArgType.WorkerParams, workerParams: (i + 1, workerRecvBufSize))))
+template serverStart*() = serverStartWithCfg(cfg, true)
 
-  joinThreads(threads)
-  for i in countdown(releaseOnQuitEpfds.high, 0):
-    let retEpfdClose = releaseOnQuitEpfds[i].close()
-    if retEpfdClose != 0:
-      logs.error "error: close epfd=", epfd, " ret=", retEpfdClose, " ", getErrnoStr()
-  freeClient(cfg.clientMax)
-  when cfg.sslLib != None:
-    freeFileWatcher()
-    joinThread(fileWatcherThread)
-  proxyThread.QuitProxyManager()
-  joinThread(contents.timeStampThread)
-
-template serverStart*() = serverStartWithCfg(cfg)
+template serverStartNoWait*() = serverStartWithCfg(cfg, false)
 
 template serverStop*() =
   active = false
