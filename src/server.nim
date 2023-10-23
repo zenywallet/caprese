@@ -4549,7 +4549,7 @@ template serverStartWithCfg(cfg: static Config) =
   var params: ProxyParams
   params.abortCallback = proc() =
     errorQuit "error: proxy dispatcher"
-  proxyManager(params)
+  var proxyThread = proxyManager(params)
 
   when cfg.sslLib != None:
     var fileWatcherThread: Thread[WrapperThreadArg]
@@ -4578,7 +4578,7 @@ template serverStartWithCfg(cfg: static Config) =
   when cfg.sslLib != None:
     freeFileWatcher()
     joinThread(fileWatcherThread)
-  QuitProxyManager()
+  proxyThread.QuitProxyManager()
   joinThread(contents.timeStampThread)
 
 template serverStart*() = serverStartWithCfg(cfg)

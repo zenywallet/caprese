@@ -36,7 +36,6 @@ type
 
 var active = true
 var epfd: cint = -1
-var proxyDispatcherThread: Thread[ProxyParams]
 
 template errorException(x: varargs[string, `$`]) =
   var msg = join(x)
@@ -249,21 +248,18 @@ proc proxyDispatcher(params: ProxyParams) {.thread.} =
     echo e.name, ": ", e.msg
     params.abortCallback()
 
-proc proxyManager*(params: ProxyParams) =
+proc proxyManager*(params: ProxyParams): Thread[ProxyParams] =
   active = true
-  createThread(proxyDispatcherThread, proxyDispatcher, params)
+  createThread(result, proxyDispatcher, params)
 
-proc waitProxyManagerThread*() =
-  proxyDispatcherThread.joinThread()
-
-proc QuitProxyManager*() =
+proc QuitProxyManager*(proxyThread: Thread[ProxyParams])=
   active = false
   var ev: EpollEvent
   ev.events = EPOLLRDHUP
   var ret = epoll_ctl(epfd, EPOLL_CTL_ADD, abortSock.cint, addr ev)
   if ret < 0:
     errorException "error: EPOLL_CTL_ADD epfd=", ret, " errno=", errno
-  waitProxyManagerThread()
+  proxyThread.joinThread()
   abortSock.close()
 
 
