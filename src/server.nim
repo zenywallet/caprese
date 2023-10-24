@@ -288,6 +288,7 @@ proc getErrnoStr*(): string =
 template serverTagLib*(cfg: static Config) {.dirty.} =
   import std/nativesockets
   import std/posix
+
   import arraylib
   import bytes
   import hashtable
@@ -1525,7 +1526,7 @@ template serverLib(cfg: static Config) {.dirty.} =
   #var clientHandlerProcs: Array[ClientHandlerProc]
 
   var clientQueue = queue2.newQueue[Client]()
-  var highGearManagerAssinged: int = 0
+  var highGearManagerAssigned: int = 0
   var highGearSemaphore: Sem
   discard sem_init(addr highGearSemaphore, 0, 0)
   #discard sem_destroy(addr highGearSemaphore)
@@ -2588,7 +2589,7 @@ template serverLib(cfg: static Config) {.dirty.} =
 
       when cfg.sslLib == None:
         if (cfg.clientMax - FreePoolServerUsedCount) - clientFreePool.count >= highGearThreshold:
-          if highGearManagerAssinged == 0:
+          if highGearManagerAssigned == 0:
             highGear = true
             for i in 0..<serverWorkerNum:
               discard sem_post(addr throttleBody)
@@ -4486,8 +4487,8 @@ template serverLib(cfg: static Config) {.dirty.} =
             logs.error e.name, ": ", e.msg
 
         if highGear:
-          var assinged = atomic_fetch_add(addr highGearManagerAssinged, 1, 0)
-          if assinged == 0:
+          var assigned = atomic_fetch_add(addr highGearManagerAssigned, 1, 0)
+          if assigned == 0:
             while highGear:
               var nfd = epoll_wait(epfd, cast[ptr EpollEvent](addr events),
                                   cfg.epollEventsSize.cint, 1000.cint)
@@ -4520,8 +4521,8 @@ template serverLib(cfg: static Config) {.dirty.} =
             for i in 0..<serverWorkerNum:
               clientQueue.sendFlush()
             while true:
-              if highGearManagerAssinged == 1:
-                atomic_fetch_sub(addr highGearManagerAssinged, 1, 0)
+              if highGearManagerAssigned == 1:
+                atomic_fetch_sub(addr highGearManagerAssigned, 1, 0)
                 break
               sleep(10)
               clientQueue.sendFlush()
@@ -4531,7 +4532,7 @@ template serverLib(cfg: static Config) {.dirty.} =
               ctx.client = clientQueue.recv(highGear)
               if ctx.client.isNil: break
               cast[ClientHandlerProc](clientHandlerProcs[ctx.client.appId])(ctx)
-            atomic_fetch_sub(addr highGearManagerAssinged, 1, 0)
+            atomic_fetch_sub(addr highGearManagerAssigned, 1, 0)
 
       discard sem_post(addr throttleBody)
 
