@@ -1,15 +1,15 @@
 # Copyright (c) 2021 zenywallet
 
+import std/macros
+import std/os
+import std/strutils
+import std/mimetypes
 import statuscode
-import macros
-import os
-import strutils
 import exec
-import mimetypes
-export macros except error
 import times
 import arraylib
 import config
+export macros except error
 
 var timeStrArrays: array[2, Array[byte]]
 var shiftTimeStrArray: int = 0
