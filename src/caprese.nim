@@ -65,8 +65,8 @@ macro configCalls*(body: untyped): untyped =
     )
     result.insert(0, alib)
 
-template config*(body: untyped) {.dirty.} =
-  var cfg* {.compileTime.}: Config = defaultConfig()
+template config*(body: untyped) =
+  var cfg* {.compileTime, inject.}: Config = defaultConfig()
   addCfgDotExpr(body)
   configCalls(body)
 
