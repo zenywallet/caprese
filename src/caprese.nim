@@ -32,7 +32,7 @@ macro onSigTermQuit(body: untyped) = discard onSigTermQuitBody.add(body)
 template onQuit*(body: untyped) = onSigTermQuit(body)
 
 macro addCfgDotExpr*(body: untyped): untyped =
-  result = nnkStmtList.newTree()
+  var addCfgBody = nnkStmtList.newTree()
   for i in 0..<body.len:
     if body[i].kind == nnkAsgn:
       var a = body[i]
@@ -40,7 +40,12 @@ macro addCfgDotExpr*(body: untyped): untyped =
         newIdentNode("cfg"),
         a[0]
       )
-      result.add(a)
+      addCfgBody.add(a)
+  quote do:
+    macro addCfg() {.gensym.} =
+      `addCfgBody`
+    addCfg()
+
 
 macro configCalls*(body: untyped): untyped =
   result = nnkStmtList.newTree()
@@ -62,9 +67,7 @@ macro configCalls*(body: untyped): untyped =
 
 template config*(body: untyped) {.dirty.} =
   var cfg* {.compileTime.}: Config = defaultConfig()
-  macro addCfg() =
-    addCfgDotExpr(body)
-  addCfg()
+  addCfgDotExpr(body)
   configCalls(body)
 
 template cfgDefault() {.dirty.} =
