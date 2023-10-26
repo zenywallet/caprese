@@ -1250,7 +1250,7 @@ macro addServerMacro*(bindAddress: string, port: uint16, unix: bool, ssl: bool, 
       errorRaise "error: addServer epoll_ctl ret=", retCtl, " ", getErrnoStr()
 
 
-template addServer*(bindAddress: string, port: uint16, unix: bool, ssl: bool, body: untyped) {.dirty.} =
+template addServer*(bindAddress: string, port: uint16, unix: bool, ssl: bool, body: untyped) =
   initServer()
   when cfg.sslLib == BearSSL:
     addServerMacro(bindAddress, port, unix, ssl, BearSSL, body)
@@ -1788,21 +1788,21 @@ template serverLib(cfg: static Config) {.dirty.} =
     else:
       return (true, fin, opcode, payload, payloadLen, nil, 0)
 
-  template headerUrl(): string {.dirty.} = ctx.header.url
+  template headerUrl(): string = ctx.header.url
 
-  template get(path: string, body: untyped) {.dirty.} =
+  template get(path: string, body: untyped) =
     if headerUrl() == path:
       body
 
-  template get(pathArgs: varargs[string], body: untyped) {.dirty.} =
+  template get(pathArgs: varargs[string], body: untyped) =
     if headerUrl() in pathArgs:
       body
 
-  template get(path: Regex, body: untyped) {.dirty.} =
+  template get(path: Regex, body: untyped) =
     if headerUrl() =~ path:
       body
 
-  template acme(path: static string, body: untyped) {.dirty.} =
+  template acme(path: static string, body: untyped) =
     block:
       var (acmeFlag, content, mime) = getAcmeChallenge(path, ctx.header.url)
       if acmeFlag:
@@ -1810,7 +1810,7 @@ template serverLib(cfg: static Config) {.dirty.} =
         if content.len > 0:
           return send(content.addHeader(Status200, mime))
 
-  template acme(path: static string) {.dirty.} =
+  template acme(path: static string) =
     block:
       var (acmeFlag, content, mime) = getAcmeChallenge(path, ctx.header.url)
       if content.len > 0:
@@ -1824,20 +1824,20 @@ template serverLib(cfg: static Config) {.dirty.} =
     else:
       originalClientId.send(buf.toString(size))
 
-  template reqUrl: string {.dirty.} = ctx.header.url
+  template reqUrl: string = ctx.header.url
 
-  template reqClient: Client {.dirty.} = ctx.client
+  template reqClient: Client = ctx.client
 
-  template reqHost: string {.dirty.} =
+  template reqHost: string =
     getHeaderValue(ctx.pRecvBuf, ctx.header, InternalEssentialHeaderHost)
 
-  template reqProtocol: string {.dirty.} =
+  template reqProtocol: string =
     getHeaderValue(ctx.pRecvBuf, ctx.header, InternalSecWebSocketProtocol)
 
-  template reqHeader(paramId: HeaderParams): string {.dirty.} =
+  template reqHeader(paramId: HeaderParams): string =
     getHeaderValue(ctx.pRecvBuf, ctx.header, paramId)
 
-  template getHeaderValue(paramId: HeaderParams): string {.dirty.} =
+  template getHeaderValue(paramId: HeaderParams): string =
     getHeaderValue(ctx.pRecvBuf, ctx.header, paramId)
 
   template response(file: FileContent): SendResult =
