@@ -75,7 +75,7 @@ template cfgDefault() =
     var cfg* {.compileTime, inject.}: Config = defaultConfig()
 
 var initFlag {.compileTime.}: bool
-macro init(): untyped =
+macro init*(): untyped =
   if initFlag: return
   initFlag = true
   quote do:
