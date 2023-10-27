@@ -70,9 +70,9 @@ template config*(body: untyped) =
   addCfgDotExpr(body)
   configCalls(body)
 
-template cfgDefault() {.dirty.} =
+template cfgDefault() =
   when not declared(cfg):
-    var cfg* {.compileTime.}: Config = defaultConfig()
+    var cfg* {.compileTime, inject.}: Config = defaultConfig()
 
 var initFlag {.compileTime.}: bool
 macro init(): untyped =
