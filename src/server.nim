@@ -941,7 +941,7 @@ template serverInitFreeClient() {.dirty.} =
       client.keepAlive = true
       client.payloadSize = 0
       client.appShift = false
-      when cfg.sslLib == None:
+      when cfg.sslLib == SslLib.None:
         client.listenFlag = false
       acquire(client.lock)
       let clientId = client.clientId
@@ -1242,7 +1242,7 @@ macro addServerMacro*(bindAddress: string, port: uint16, unix: bool, ssl: bool, 
     newClient.sock = serverSock
     newClient.srvId = `srvId`
     newClient.appId = `appId`
-    when cfg.sslLib == None:
+    when cfg.sslLib == SslLib.None:
       newClient.listenFlag = true
     newClient.ev.events = EPOLLIN or EPOLLEXCLUSIVE
     var retCtl = epoll_ctl(epfd, EPOLL_CTL_ADD, serverSock, addr newClient.ev)
@@ -2587,7 +2587,7 @@ template serverLib(cfg: static Config) {.dirty.} =
       if retCtl < 0:
         errorRaise "error: epoll_ctl ret=", retCtl, " errno=", errno
 
-      when cfg.sslLib == None:
+      when cfg.sslLib == SslLib.None:
         if (cfg.clientMax - FreePoolServerUsedCount) - clientFreePool.count >= highGearThreshold:
           if highGearManagerAssigned == 0:
             highGear = true
@@ -4176,7 +4176,7 @@ template serverLib(cfg: static Config) {.dirty.} =
   when cfg.sslLib == BearSSL:
     certKeyChainsList.setLen(staticCertsTable.len + 1)
 
-  when cfg.sslLib != None:
+  when cfg.sslLib != SslLib.None:
     import std/inotify
 
     var inoty: FileHandle = inotify_init()
@@ -4440,7 +4440,7 @@ template serverLib(cfg: static Config) {.dirty.} =
     var skip = false
     var nfd: cint
 
-    when cfg.sslLib != None:
+    when cfg.sslLib != SslLib.None:
       while active:
         nfd = epoll_wait(epfd, cast[ptr EpollEvent](addr events),
                         cfg.epollEventsSize.cint, -1.cint)
@@ -4554,7 +4554,7 @@ template serverStartWithCfg(cfg: static Config, wait: static bool) =
       errorQuit "error: proxy dispatcher"
     var proxyThread = proxyManager(params)
 
-    when cfg.sslLib != None:
+    when cfg.sslLib != SslLib.None:
       var fileWatcherThread: Thread[WrapperThreadArg]
       createThread(fileWatcherThread, threadWrapper, (fileWatcher, ThreadArg(argType: ThreadArgType.Void)))
 
@@ -4578,7 +4578,7 @@ template serverStartWithCfg(cfg: static Config, wait: static bool) =
       if retEpfdClose != 0:
         logs.error "error: close epfd=", epfd, " ret=", retEpfdClose, " ", getErrnoStr()
     freeClient(cfg.clientMax)
-    when cfg.sslLib != None:
+    when cfg.sslLib != SslLib.None:
       freeFileWatcher()
       joinThread(fileWatcherThread)
     proxyThread.QuitProxyManager()
