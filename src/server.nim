@@ -1449,15 +1449,22 @@ template proxy*(proxyAppId: int, path, host: string, port: uint16, body: untyped
     if client.proxy.isNil:
       client.proxy = newProxy(host, port.Port)
       client.proxy.originalClientId = client.markPending()
+      let sendRet = if client.recvCurSize > 0:
+        client.proxy.send(cast[ptr UncheckedArray[byte]](addr client.recvBuf[0]), client.recvCurSize)
+      else:
+        client.proxy.send(ctx.pRecvBuf0, ctx.recvDataSize)
+      if sendRet == SendResult.None or sendRet == SendResult.Error:
+        return sendRet
+      client.appId = proxyAppId
       client.proxy.setRecvCallback(proxyRecvCallback)
-
-    let sendRet = if client.recvCurSize > 0:
-      client.proxy.send(cast[ptr UncheckedArray[byte]](addr client.recvBuf[0]), client.recvCurSize)
     else:
-      client.proxy.send(ctx.pRecvBuf0, ctx.recvDataSize)
-    if sendRet == SendResult.None or sendRet == SendResult.Error:
-      return sendRet
-    client.appId = proxyAppId
+      let sendRet = if client.recvCurSize > 0:
+        client.proxy.send(cast[ptr UncheckedArray[byte]](addr client.recvBuf[0]), client.recvCurSize)
+      else:
+        client.proxy.send(ctx.pRecvBuf0, ctx.recvDataSize)
+      if sendRet == SendResult.None or sendRet == SendResult.Error:
+        return sendRet
+      client.appId = proxyAppId
     return SendResult.Pending
 
 template proxy*(proxyAppId: int, path, unix: string, body: untyped) =
@@ -1467,15 +1474,22 @@ template proxy*(proxyAppId: int, path, unix: string, body: untyped) =
     if client.proxy.isNil:
       client.proxy = newProxy(unix)
       client.proxy.originalClientId = client.markPending()
+      let sendRet = if client.recvCurSize > 0:
+        client.proxy.send(cast[ptr UncheckedArray[byte]](addr client.recvBuf[0]), client.recvCurSize)
+      else:
+        client.proxy.send(ctx.pRecvBuf0, ctx.recvDataSize)
+      if sendRet == SendResult.None or sendRet == SendResult.Error:
+        return sendRet
+      client.appId = proxyAppId
       client.proxy.setRecvCallback(proxyRecvCallback)
-
-    let sendRet = if client.recvCurSize > 0:
-      client.proxy.send(cast[ptr UncheckedArray[byte]](addr client.recvBuf[0]), client.recvCurSize)
     else:
-      client.proxy.send(ctx.pRecvBuf0, ctx.recvDataSize)
-    if sendRet == SendResult.None or sendRet == SendResult.Error:
-      return sendRet
-    client.appId = proxyAppId
+      let sendRet = if client.recvCurSize > 0:
+        client.proxy.send(cast[ptr UncheckedArray[byte]](addr client.recvBuf[0]), client.recvCurSize)
+      else:
+        client.proxy.send(ctx.pRecvBuf0, ctx.recvDataSize)
+      if sendRet == SendResult.None or sendRet == SendResult.Error:
+        return sendRet
+      client.appId = proxyAppId    
     return SendResult.Pending
 
 template serverType() {.dirty.} =
