@@ -4555,6 +4555,8 @@ template httpTargetHeaderDefault() {.dirty.} =
     HttpTargetHeader:
       HeaderHost: "Host"
 
+var serverWaitThread: Thread[WrapperThreadArg]
+
 template serverStartWithCfg(cfg: static Config, wait: static bool) =
   contentsWithCfg(cfg)
   httpTargetHeaderDefault()
@@ -4604,12 +4606,13 @@ template serverStartWithCfg(cfg: static Config, wait: static bool) =
     proc waitProc(arg: ThreadArg) {.thread.} =
       serverStartBody()
 
-    var waitThread: Thread[WrapperThreadArg]
-    createThread(waitThread, threadWrapper, (waitProc, ThreadArg(argType: ThreadArgType.Void)))
+    createThread(serverWaitThread, threadWrapper, (waitProc, ThreadArg(argType: ThreadArgType.Void)))
 
 template serverStart*() = serverStartWithCfg(cfg, true)
 
 template serverStartNoWait*() = serverStartWithCfg(cfg, false)
+
+template serverWait*() = joinThread(serverWaitThread)
 
 template serverStop*() =
   active = false
