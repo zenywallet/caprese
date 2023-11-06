@@ -1450,13 +1450,13 @@ template proxy*(proxyAppId: int, path, host: string, port: uint16, body: untyped
       client.proxy = newProxy(host, port.Port)
       client.proxy.originalClientId = client.markPending()
       let sendRet = if client.recvCurSize > 0:
-        client.proxy.send(cast[ptr UncheckedArray[byte]](addr client.recvBuf[0]), client.recvCurSize)
+        client.proxy.send(cast[ptr UncheckedArray[byte]](addr client.recvBuf[0]), client.recvCurSize, false)
       else:
-        client.proxy.send(ctx.pRecvBuf0, ctx.recvDataSize)
+        client.proxy.send(ctx.pRecvBuf0, ctx.recvDataSize, false)
       if sendRet == SendResult.None or sendRet == SendResult.Error:
         return sendRet
       client.appId = proxyAppId
-      client.proxy.setRecvCallback(proxyRecvCallback)
+      client.proxy.setRecvCallback(proxyRecvCallback, true)
     else:
       let sendRet = if client.recvCurSize > 0:
         client.proxy.send(cast[ptr UncheckedArray[byte]](addr client.recvBuf[0]), client.recvCurSize)

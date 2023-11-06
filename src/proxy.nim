@@ -106,11 +106,14 @@ proc shutdown*(proxy: Proxy): bool {.discardable.} =
   else:
     result = true
 
-proc setRecvCallback*(proxy: Proxy, recvCallback: RecvCallback) {.inline.} =
+proc setRecvCallback*(proxy: Proxy, recvCallback: RecvCallback, epollOut: static bool = false) {.inline.} =
   proxy.recvCallback = recvCallback
 
   var ev: EpollEvent
-  ev.events = EPOLLIN or EPOLLRDHUP
+  when epollOut:
+    ev.events = EPOLLIN or EPOLLRDHUP or EPOLLOUT
+  else:
+    ev.events = EPOLLIN or EPOLLRDHUP
   ev.data.u64 = cast[uint64](proxy)
   var ret = epoll_ctl(epfd, EPOLL_CTL_ADD, proxy.sock.cint, addr ev)
   if ret < 0:
@@ -125,7 +128,7 @@ proc addSendBuf(proxy: Proxy, data: ptr UncheckedArray[byte], size: int) =
   copyMem(addr proxy.sendBuf[proxy.sendBufSize], data, size)
   proxy.sendBufSize = nextSize
 
-proc send*(proxy: Proxy, data: ptr UncheckedArray[byte], size: int): SendResult =
+proc send*(proxy: Proxy, data: ptr UncheckedArray[byte], size: int, epollMod: static bool = true): SendResult =
   withWriteLock proxy.lock:
     if not proxy.sendBuf.isNil:
       proxy.addSendBuf(data, size)
@@ -146,12 +149,13 @@ proc send*(proxy: Proxy, data: ptr UncheckedArray[byte], size: int): SendResult 
         if errno == EAGAIN or errno == EWOULDBLOCK:
           if proxy.sendBuf.isNil:
             proxy.addSendBuf(d, left)
-            var ev: EpollEvent
-            ev.events = EPOLLIN or EPOLLRDHUP or EPOLLOUT
-            ev.data.u64 = cast[uint64](proxy)
-            var ret = epoll_ctl(epfd, EPOLL_CTL_MOD, proxy.sock.cint, addr ev)
-            if ret < 0:
-              errorException "error: EPOLL_CTL_MOD ret=", ret, " errno=", errno
+            when epollMod:
+              var ev: EpollEvent
+              ev.events = EPOLLIN or EPOLLRDHUP or EPOLLOUT
+              ev.data.u64 = cast[uint64](proxy)
+              var ret = epoll_ctl(epfd, EPOLL_CTL_MOD, proxy.sock.cint, addr ev)
+              if ret < 0:
+                errorException "error: EPOLL_CTL_MOD ret=", ret, " errno=", errno
           else:
             proxy.addSendBuf(d, left)
           return SendResult.Pending
