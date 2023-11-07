@@ -296,7 +296,7 @@ server(ssl = true, ip = "0.0.0.0", port = 8009):
 serverStart()
 ```
 
-#### Pending and worker
+#### Pending and workers
 The runnable level inside the `server:` block is called the server dispatch-level. Inside the block is called from multiple threads, it must not call functions that generate long waits and must return results immediately. If the response cannot be returned immediately, return pending first and then process it in another worker thread. Feel free to use async/await in another thread.
 
 ```nim
@@ -488,7 +488,7 @@ Custom handling such as changing the base URL.
         return response(retFile.data)
 ```
 
-You can also create static content objects from static strings with `content()`. The second argument of `content()` does not have to be a formal MIME type, but can be an extension such as *html* or *js*. The content object has uncompressed, Deflate compressed, Brotli compressed, MIME type, SHA256 hash, and MD5 hash.
+You can also create static content objects from static strings with `content()`. The content object has uncompressed, Deflate compressed, Brotli compressed, MIME type, SHA256 hash, and MD5 hash.
 
 ```nim
 const IndexHtml = staticHtmlDocument:
@@ -507,6 +507,16 @@ server(ssl = true, ip = "0.0.0.0", port = 8009):
 
     get "/js/app.js":
       return response(content(AppMinJs, "application/javascript"))
+```
+
+The second argument of `content()` does not have to be a formal MIME type, but can be an extension such as *html* or *js*.
+
+```nim
+    get "/":
+      return response(content(IndexHtml, "html"))
+
+    get "/js/app.js":
+      return response(content(AppMinJs, "js"))
 ```
 
 ### Reverse Proxy
