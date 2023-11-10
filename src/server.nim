@@ -30,27 +30,12 @@ macro HttpTargetHeader(idEnumName, valListName, targetHeaders, body: untyped): u
   var internalEssentialConst = nnkStmtList.newTree()
 
   for a in body:
-    enumParams.add(a[0])
+    var a0 = a[0]
     var paramLit = newLit($a[1][0] & ": ")
+    enumParams.add(a0)
     targetParams.add(paramLit)
-    addHeadersStmt.add(
-      nnkCall.newTree(
-        nnkDotExpr.newTree(
-          targetHeaders,
-          newIdentNode("add")
-        ),
-        nnkTupleConstr.newTree(
-          nnkExprColonExpr.newTree(
-            newIdentNode("id"),
-            a[0]
-          ),
-          nnkExprColonExpr.newTree(
-            newIdentNode("val"),
-            paramLit
-          )
-        )
-      )
-    )
+    addHeadersStmt.add quote do:
+      `targetHeaders`.add((id: `a0`, val: `paramLit`))
 
   for a in body:
     for i, b in internalEssentialHeaders:
@@ -67,27 +52,12 @@ macro HttpTargetHeader(idEnumName, valListName, targetHeaders, body: untyped): u
         break
 
   for b in internalEssentialHeaders:
-    enumParams.add(newIdentNode(b[0]))
-    var compareVal = b[1] & ": "
-    targetParams.add(newLit(compareVal))
-    addHeadersStmt.add(
-      nnkCall.newTree(
-        nnkDotExpr.newTree(
-          targetHeaders,
-          newIdentNode("add")
-        ),
-        nnkTupleConstr.newTree(
-          nnkExprColonExpr.newTree(
-            newIdentNode("id"),
-            newIdentNode(b[0])
-          ),
-          nnkExprColonExpr.newTree(
-            newIdentNode("val"),
-            newLit(compareVal)
-          )
-        )
-      )
-    )
+    var b0 = newIdentNode(b[0])
+    var compareVal = newLit(b[1] & ": ")
+    enumParams.add(b0)
+    targetParams.add(compareVal)
+    addHeadersStmt.add quote do:
+      `targetHeaders`.add((id: `b0`, val: `compareVal`))
 
   nnkStmtList.newTree(
     nnkTypeSection.newTree(
