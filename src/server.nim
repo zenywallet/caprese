@@ -39,15 +39,11 @@ macro HttpTargetHeader(idEnumName, valListName, targetHeaders, body: untyped): u
 
   for a in body:
     for i, b in internalEssentialHeaders:
-      if $a[1][0] == b[1]:
-        internalEssentialConst.add(
-          nnkConstSection.newTree(
-            nnkConstDef.newTree(
-              newIdentNode(b[0]),
-              newEmptyNode(),
-              newIdentNode($a[0])
-            )
-          ))
+      if eqIdent(a[1][0], b[1]):
+        var b0 = newIdentNode(b[0])
+        var a0 = newIdentNode($a[0])
+        internalEssentialConst.add quote do:
+          const `b0` = `a0`
         internalEssentialHeaders.delete(i)
         break
 
