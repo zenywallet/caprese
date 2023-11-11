@@ -55,52 +55,14 @@ macro HttpTargetHeader(idEnumName, valListName, targetHeaders, body: untyped): u
     addHeadersStmt.add quote do:
       `targetHeaders`.add((id: `b0`, val: `compareVal`))
 
-  nnkStmtList.newTree(
-    nnkTypeSection.newTree(
-      nnkTypeDef.newTree(
-        idEnumName,
-        newEmptyNode(),
-        enumParams
-      )
-    ),
-    internalEssentialConst,
-    nnkConstSection.newTree(
-      nnkConstDef.newTree(
-        valListName,
-        newEmptyNode(),
-        targetParams
-      )
-    ),
-    nnkVarSection.newTree(
-      nnkIdentDefs.newTree(
-        targetHeaders,
-        nnkBracketExpr.newTree(
-          newIdentNode("Array"),
-          nnkTupleTy.newTree(
-            nnkIdentDefs.newTree(
-              newIdentNode("id"),
-              newIdentNode("HeaderParams"),
-              newEmptyNode()
-            ),
-            nnkIdentDefs.newTree(
-              newIdentNode("val"),
-              newIdentNode("string"),
-              newEmptyNode()
-            )
-          )
-        ),
-        newEmptyNode()
-      )
-    ),
-    nnkCall.newTree(
-      nnkDotExpr.newTree(
-        targetHeaders,
-        newIdentNode("newArrayOfCap")
-      ),
-      newLit(addHeadersStmt.len)
-    ),
-    addHeadersStmt
-  )
+  var addHeadersStmtLen = newLit(addHeadersStmt.len)
+  quote do:
+    type `idEnumName` = `enumParams`
+    `internalEssentialConst`
+    const `valListName` = `targetParams`
+    var `targetHeaders`: Array[tuple[id: HeaderParams, val: string]]
+    `targetHeaders`.newArrayOfCap(`addHeadersStmtLen`)
+    `addHeadersStmt`
 
 macro HttpTargetHeader*(body: untyped): untyped =
   quote do:
