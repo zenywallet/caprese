@@ -106,20 +106,20 @@ type
   INNER_C_STRUCT_bearssl_pem_1* {.bycopy.} = object
     dp*: ptr uint32_t
     rp*: ptr uint32_t
-    ip*: ptr cuchar
+    ip*: ptr uint8
 
   br_pem_decoder_context* {.bycopy.} = object
     cpu*: INNER_C_STRUCT_bearssl_pem_1 ##  CPU for the T0 virtual machine.
     dp_stack*: array[32, uint32_t]
     rp_stack*: array[32, uint32_t]
     err*: cint
-    hbuf*: ptr cuchar
+    hbuf*: ptr uint8
     hlen*: csize_t
     dest*: proc (dest_ctx: pointer; src: pointer; len: csize_t) {.cdecl.}
     dest_ctx*: pointer
-    event*: cuchar
+    event*: uint8
     name*: array[128, char]
-    buf*: array[255, cuchar]
+    buf*: array[255, uint8]
     `ptr`*: csize_t
 
 
