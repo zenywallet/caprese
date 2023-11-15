@@ -1861,7 +1861,7 @@ proc br_ssl_engine_inject_entropy*(cc: ptr br_ssl_engine_context; data: pointer;
 ##
 
 proc br_ssl_engine_get_server_name*(cc: ptr br_ssl_engine_context): cstring {.inline.} =
-  return addr cc.server_name
+  return cast[cstring](addr cc.server_name)
 
 ## *
 ##  \brief Get the protocol version.

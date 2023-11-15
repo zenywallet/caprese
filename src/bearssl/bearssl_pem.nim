@@ -223,7 +223,7 @@ const
 ##
 
 proc br_pem_decoder_name*(ctx: ptr br_pem_decoder_context): cstring {.inline.} =
-  return addr ctx.name
+  return cast[cstring](addr ctx.name)
 
 ## *
 ##  \brief Encode an object in PEM.
