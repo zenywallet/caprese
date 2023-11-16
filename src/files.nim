@@ -1,9 +1,12 @@
 # Copyright (c) 2021 zenywallet
 # nim c -r --forceBuild src/files.nim
 
-import os, strutils
-import md5, base64
-import macros, tables
+import std/os
+import std/strutils
+import std/md5
+import std/base64
+import std/macros
+import std/tables
 import exec
 
 const DYNAMIC_FILES* = defined(DYNAMIC_FILES)
