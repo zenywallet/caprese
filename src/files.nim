@@ -4,8 +4,6 @@
 import os, strutils
 import md5, base64
 import macros, tables
-import nimcrypto
-import bytes
 import exec
 
 const DYNAMIC_FILES* = defined(DYNAMIC_FILES)
