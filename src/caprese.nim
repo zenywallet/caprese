@@ -209,8 +209,6 @@ when isMainModule:
     serverStart()
 
   else:
-    import std/os
-
     if paramCount() != 1:
       echo "usage: caprese <public folder>"
       quit(QuitFailure)
