@@ -8,6 +8,7 @@ when isMainModule:
 
 import std/macros
 import std/nativesockets
+import std/os
 import server as serverlib
 import contents
 import files
@@ -16,6 +17,7 @@ import queue
 import rlimit
 import config
 export nativesockets
+export os
 export serverlib
 export contents
 export files
