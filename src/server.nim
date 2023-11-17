@@ -2141,11 +2141,6 @@ template serverLib(cfg: static Config) {.dirty.} =
 
     proc se_do_sign(pctx: ptr ptr br_ssl_server_policy_class; algo_id: cuint;
                     data: ptr uint8; hv_len: csize_t; len: csize_t): csize_t {.cdecl.} =
-      var a: array[128, byte]
-      for i in 0..<128:
-        a[i] = 5
-      a[0] = 3
-      var alen: csize_t
       var hv: array[64, char]
       var algo_id = (algo_id and 0xff).cint
       var pc = cast[ptr br_ssl_server_policy_ec_context](pctx)
@@ -2302,11 +2297,6 @@ template serverLib(cfg: static Config) {.dirty.} =
                     data: ptr uint8; hv_len: csize_t; len: csize_t): csize_t {.cdecl.} =
       case workerThreadCtx.client.keyType
       of BR_KEYTYPE_EC:
-        var a: array[128, byte]
-        for i in 0..<128:
-          a[i] = 5
-        a[0] = 3
-        var alen: csize_t
         var hv: array[64, char]
         var algo_id = (algo_id and 0xff).cint
         var pc = cast[ptr br_ssl_server_policy_ec_context](pctx)
