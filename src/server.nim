@@ -214,13 +214,9 @@ proc getErrnoStr*(): string =
   else: "errno=" & $errno
 
 template serverTagLib*(cfg: static Config) {.dirty.} =
-  import std/nativesockets
   import std/posix
-
-  import arraylib
   import bytes
   import hashtable
-  import logs
 
   type
     ClientTaskCmd* {.pure.} = enum
@@ -768,11 +764,7 @@ template serverTagLib*(cfg: static Config) {.dirty.} =
 var abort*: proc() {.thread.} = proc() {.thread.} = active = false
 
 template serverInitFreeClient() {.dirty.} =
-  import std/locks
   import queue2
-  import ptlock
-  import arraylib
-  import logs
 
   var clients: ptr UncheckedArray[ClientObj] = nil
   var clientFreePool* = queue2.newQueue[Client]()
@@ -1149,8 +1141,6 @@ macro addServerMacro*(bindAddress: string, port: uint16, unix: bool, ssl: bool, 
   inc(freePoolServerUsedCount)
 
   quote do:
-    from nativesockets import setBlocking, getSockOptInt, setSockOptInt
-
     `serverResources`
 
     var serverSock = when `unix`: createServer(`bindAddress`) else: createServer(`bindAddress`, `port`)
@@ -1428,20 +1418,10 @@ template serverType() {.dirty.} =
       minorVer: int
 
 template serverLib(cfg: static Config) {.dirty.} =
-  import std/posix
-  import std/epoll
-  import std/tables
-  import std/os
   import std/sha1
   import std/re
   import std/strutils
   import std/sequtils
-  import arraylib
-  import bytes
-  import queue2
-  import ptlock
-  import logs
-  import files
 
   mixin addSafe, popSafe
 
