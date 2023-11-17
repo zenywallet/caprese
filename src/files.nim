@@ -3,8 +3,6 @@
 
 import std/os
 import std/strutils
-import std/md5
-import std/base64
 import std/macros
 import std/tables
 import exec
