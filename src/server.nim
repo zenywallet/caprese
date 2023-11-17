@@ -1326,7 +1326,7 @@ template stream*(streamAppId: int, path: string, protocol: string, body: untyped
             return ret
           else:
             reqClient()[].appId = streamAppId
-            let ret = send(webSocketMessageProtocol(key))
+            let ret = send(webSocketMessage(key))
             getOnOpenBody(body)
             return ret
         else:
@@ -1343,7 +1343,7 @@ template stream*(streamAppId: int, path: string, protocol: string, body: untyped
             return SendResult.Error
         else:
           reqClient()[].appId = streamAppId
-          let ret = send(webSocketMessageProtocol(key))
+          let ret = send(webSocketMessage(key))
           getOnOpenBody(body)
           return ret
 
