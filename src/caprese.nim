@@ -6,13 +6,13 @@ when not compileOption("threads"):
 when isMainModule:
   {.define: DYNAMIC_FILES.}
 
-import nativesockets
+import std/macros
+import std/nativesockets
 import server as serverlib
 import contents
 import files
 import statuscode
 import queue
-import macros
 import rlimit
 import config
 export nativesockets
