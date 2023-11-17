@@ -17,11 +17,11 @@ proc atomic_compare_exchange_n(p: ptr uint64, expected: ptr uint64, desired: uin
                               success_memmodel: int, failure_memmodel: int): bool
                               {.importc: "__atomic_compare_exchange_n", nodecl, discardable.}
 
-proc atomic_fetch_add(p: ptr uint64, val: uint64, memmodel: int): uint64
-                        {.importc: "__atomic_fetch_add", nodecl, discardable.}
+#proc atomic_fetch_add(p: ptr uint64, val: uint64, memmodel: int): uint64
+#                        {.importc: "__atomic_fetch_add", nodecl, discardable.}
 
-proc atomic_fetch_sub(p: ptr uint64, val: uint64, memmodel: int): uint64
-                        {.importc: "__atomic_fetch_sub", nodecl, discardable.}
+#proc atomic_fetch_sub(p: ptr uint64, val: uint64, memmodel: int): uint64
+#                        {.importc: "__atomic_fetch_sub", nodecl, discardable.}
 
 
 proc `=destroy`*[T](queue: var Queue[T]) =
