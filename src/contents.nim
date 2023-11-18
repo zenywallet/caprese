@@ -147,9 +147,6 @@ const Empty* = ""
 
 template addDocType*(body: string): string = "<!DOCTYPE html><meta charset=\"utf-8\">" & body
 
-const srcFile = currentSourcePath()
-const (srcFileDir, srcFieName, srcFileExt) = splitFile(srcFile)
-
 var tmpFileId {.compileTime.}: int = 0
 
 template convertHtmlDocument*(code: string): string =
