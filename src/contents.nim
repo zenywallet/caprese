@@ -147,8 +147,6 @@ const Empty* = ""
 
 template addDocType*(body: string): string = "<!DOCTYPE html><meta charset=\"utf-8\">" & body
 
-var tmpFileId {.compileTime.}: int = 0
-
 template convertHtmlDocument*(code: string): string =
   mixin unindent
   let ret = execCode(code).unindent(4)
