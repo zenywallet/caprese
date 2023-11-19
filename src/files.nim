@@ -33,6 +33,8 @@ const srcDir = currentSourcePath().parentDir()
 
 when DYNAMIC_FILES:
   import std/mimetypes
+  import std/md5
+  import std/base64
 
   when DYNAMIC_COMPRESS:
     import zip/zlib
