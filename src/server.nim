@@ -2913,7 +2913,7 @@ template serverLib(cfg: static Config) {.dirty.} =
                         client.close()
                         return
                     else:
-                      echo "retHeader err=", retHeader.err
+                      debug "retHeader err=", retHeader.err
                       client.close()
                       return
 
@@ -2973,7 +2973,7 @@ template serverLib(cfg: static Config) {.dirty.} =
                       client.close()
                       return
                   else:
-                    echo "retHeader err=", retHeader.err
+                    debug "retHeader err=", retHeader.err
                     client.close()
                     return
 
@@ -3294,7 +3294,7 @@ template serverLib(cfg: static Config) {.dirty.} =
       clientHandlerProcs.add proc (ctx: WorkerThreadCtx) {.thread.} =
         when `ssl`:
           when cfg.sslLib == BearSSL:
-            echo "stream bearssl"
+            debug "stream bearssl"
             let client = ctx.client
 
             acquire(client.spinLock)
@@ -3473,7 +3473,7 @@ template serverLib(cfg: static Config) {.dirty.} =
                           engine = RecvApp
 
           elif cfg.sslLib == OpenSSL or cfg.sslLib == LibreSSL or cfg.sslLib == BoringSSL:
-            echo "stream openssl"
+            debug "stream openssl"
             let client = ctx.client
 
             acquire(client.spinLock)
