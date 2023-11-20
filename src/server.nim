@@ -2695,7 +2695,7 @@ template serverLib(cfg: static Config) {.dirty.} =
                               client.keepAlive2 = KeepAliveStatus.False
                             else:
                               client.keepAlive2 = KeepAliveStatus.True
-                          if retMain == SendResult.Pending:
+                          if retMain == SendResult.Pending or retMain == SendResult.Success:
                             if headerNext < parseSize:
                               nextPos = headerNext
                               parseSize = parseSize - nextPos
