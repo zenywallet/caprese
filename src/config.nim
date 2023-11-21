@@ -8,6 +8,10 @@ type
     LibreSSL
     BoringSSL
 
+  ErrorCloseMode* = enum
+    CloseImmediately
+    UntilConnectionTimeout
+
   Config* = object
     sslLib*: SslLib
     debugLog*: bool
@@ -29,6 +33,7 @@ type
     serverName*: string
     headerServer*: bool
     headerDate*: bool
+    errorCloseMode*: ErrorCloseMode
 
 proc defaultConfig*(): Config {.compileTime.} =
   result.sslLib = BearSSL
@@ -51,3 +56,4 @@ proc defaultConfig*(): Config {.compileTime.} =
   result.serverName = "Caprese"
   result.headerServer = true
   result.headerDate = true
+  result.errorCloseMode = CloseImmediately

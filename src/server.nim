@@ -2704,7 +2704,10 @@ template serverLib(cfg: static Config) {.dirty.} =
                               engine = SendApp
                               break
                           else:
-                            client.close()
+                            when cfg.errorCloseMode == ErrorCloseMode.UntilConnectionTimeout:
+                              discard client.sock.shutdown(SHUT_RD)
+                            else:
+                              client.close()
                             break engineBlock
                         else:
                           client.close()
@@ -2910,7 +2913,10 @@ template serverLib(cfg: static Config) {.dirty.} =
                         else:
                           break
                       else:
-                        client.close()
+                        when cfg.errorCloseMode == ErrorCloseMode.UntilConnectionTimeout:
+                          discard client.sock.shutdown(SHUT_RD)
+                        else:
+                          client.close()
                         return
                     else:
                       debug "retHeader err=", retHeader.err
@@ -2970,7 +2976,10 @@ template serverLib(cfg: static Config) {.dirty.} =
                         client.recvCurSize = 0
                         break
                     else:
-                      client.close()
+                      when cfg.errorCloseMode == ErrorCloseMode.UntilConnectionTimeout:
+                        discard client.sock.shutdown(SHUT_RD)
+                      else:
+                        client.close()
                       return
                   else:
                     debug "retHeader err=", retHeader.err
@@ -3043,7 +3052,10 @@ template serverLib(cfg: static Config) {.dirty.} =
                         else:
                           break
                       else:
-                        client.close(ssl = true)
+                        when cfg.errorCloseMode == ErrorCloseMode.UntilConnectionTimeout:
+                          discard client.sock.shutdown(SHUT_RD)
+                        else:
+                          client.close(ssl = true)
                         return
                     else:
                       client.close(ssl = true)
@@ -3134,7 +3146,10 @@ template serverLib(cfg: static Config) {.dirty.} =
                         client.recvCurSize = 0
                         break
                     else:
-                      client.close(ssl = true)
+                      when cfg.errorCloseMode == ErrorCloseMode.UntilConnectionTimeout:
+                        discard client.sock.shutdown(SHUT_RD)
+                      else:
+                        client.close(ssl = true)
                       return
                   else:
                     client.close(ssl = true)
