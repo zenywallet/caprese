@@ -82,8 +82,8 @@ when DYNAMIC_FILES:
         when DYNAMIC_COMPRESS:
           let data = readFile(requestDir)
           let mime = mimes.getMimeType(ext)
-          let hash = base64.encode(sha256.digest(data).data)
-          let md5 = base64.encode(data.toMD5())
+          let hash = "\"" & base64.encode(sha256.digest(data).data) & "\""
+          let md5 = "\"" & base64.encode(data.toMD5()) & "\""
           let deflate = compress(data, stream = RAW_DEFLATE)
           let brotliComp = brotli.comp(data).toString
           result = FileContentResult(err: FileContentSuccess, data: FileContent(content: data,
@@ -91,7 +91,7 @@ when DYNAMIC_FILES:
         else:
           let data = readFile(requestDir)
           let mime = mimes.getMimeType(ext)
-          let md5 = base64.encode(data.toMD5())
+          let md5 = "\"" & base64.encode(data.toMD5()) & "\""
           result = FileContentResult(err: FileContentSuccess, data: FileContent(content: data,
             deflate: cast[string](""), brotli: cast[string](""), mime: mime,
             sha256: cast[string](""), md5: md5))

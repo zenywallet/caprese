@@ -50,8 +50,8 @@ if paramCount() == 3:
         if fileSplit.ext.len > 1:
           ext = fileSplit.ext[1..^1]
         let mime = mimes.getMimeType(ext)
-        let hash = base64.encode(sha256.digest(content).data)
-        let md5 = base64.encode(content.getMD5().toBytesFromHex)
+        let hash = "\"" & base64.encode(sha256.digest(content).data) & "\""
+        let md5 = "\"" & base64.encode(content.getMD5().toBytesFromHex) & "\""
         var zopfliComp, brotliComp: seq[byte]
         if content.len > 0:
           try:
@@ -102,8 +102,8 @@ elif paramCount() == 4:
         quit(QuitFailure)
       else:
         mime = mimeType
-    let hash = base64.encode(sha256.digest(content).data)
-    let md5 = base64.encode(content.getMD5().toBytesFromHex)
+    let hash = "\"" & base64.encode(sha256.digest(content).data) & "\""
+    let md5 = "\"" & base64.encode(content.getMD5().toBytesFromHex) & "\""
     var zopfliComp, brotliComp: seq[byte]
     if content.len > 0:
       try:
