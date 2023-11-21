@@ -146,8 +146,9 @@ config:
   fullChainFile = "fullchain.pem"
   httpVersion = 1.1
   serverName = "Caprese"
-  headerServer = true
-  headerDate = true
+  headerServer = false
+  headerDate = false
+  errorCloseMode = CloseImmediately
 ```
 
 * **sslLib:** *None*, *BearSSL*(default), *OpenSSL*, *LibreSSL*, *BoringSSL*  
@@ -159,6 +160,8 @@ If SSL is not required, it is recommended set to *None*. This will enable the ex
 * **limitOpenFiles:** *[Number of open files]*, *-1*(default, automatically set the maximum number of open files)
 * **serverWorkerNum:** *[Number of processing threads]*, *-1*(default, automatically set the number of CPUs in the system)
 * **connectionTimeout:** *[Client connection timeout in seconds]*, *-1*(disabled). The time to disconnect is not exact. Disconnection occurs between a specified second and twice the time.
+* **headerServer:** *true* or *false*(default), If *true*, include `Server:` in the response headers. Common benchmarks require this value to be *true*. In benchmark competition, even a single byte of copying can feel heavy.
+* **headerDate:** *true* or *false*(default), If *true*, include `Date:` in the response headers. Common benchmarks require this value to be *true*. It should not be the essence of benchmarking, but sometimes it is a competition of how to implement the date strings.
 
 ### Server Routes
 #### Example of a simple `server:` block
@@ -509,7 +512,7 @@ server(ssl = true, ip = "0.0.0.0", port = 8009):
       return response(content(AppMinJs, "application/javascript"))
 ```
 
-The second argument of `content()` does not have to be a formal MIME type, but can be an extension such as *html* or *js*.
+The second argument of `content()` can be an extension shuch as *html* or *js* instead of a formal MIME type.
 
 ```nim
     get "/":
