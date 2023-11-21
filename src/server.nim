@@ -2705,7 +2705,10 @@ template serverLib(cfg: static Config) {.dirty.} =
                               break
                           else:
                             when cfg.errorCloseMode == ErrorCloseMode.UntilConnectionTimeout:
-                              discard client.sock.shutdown(SHUT_RD)
+                              if retMain == SendResult.Error:
+                                discard client.sock.shutdown(SHUT_RD)
+                              else:
+                                client.close()
                             else:
                               client.close()
                             break engineBlock
@@ -2914,7 +2917,10 @@ template serverLib(cfg: static Config) {.dirty.} =
                           break
                       else:
                         when cfg.errorCloseMode == ErrorCloseMode.UntilConnectionTimeout:
-                          discard client.sock.shutdown(SHUT_RD)
+                          if retMain == SendResult.Error:
+                            discard client.sock.shutdown(SHUT_RD)
+                          else:
+                            client.close()
                         else:
                           client.close()
                         return
@@ -2977,7 +2983,10 @@ template serverLib(cfg: static Config) {.dirty.} =
                         break
                     else:
                       when cfg.errorCloseMode == ErrorCloseMode.UntilConnectionTimeout:
-                        discard client.sock.shutdown(SHUT_RD)
+                        if retMain == SendResult.Error:
+                          discard client.sock.shutdown(SHUT_RD)
+                        else:
+                          client.close()
                       else:
                         client.close()
                       return
@@ -3053,7 +3062,10 @@ template serverLib(cfg: static Config) {.dirty.} =
                           break
                       else:
                         when cfg.errorCloseMode == ErrorCloseMode.UntilConnectionTimeout:
-                          discard client.sock.shutdown(SHUT_RD)
+                          if retMain == SendResult.Error:
+                            discard client.sock.shutdown(SHUT_RD)
+                          else:
+                            client.close(ssl = true)
                         else:
                           client.close(ssl = true)
                         return
@@ -3147,7 +3159,10 @@ template serverLib(cfg: static Config) {.dirty.} =
                         break
                     else:
                       when cfg.errorCloseMode == ErrorCloseMode.UntilConnectionTimeout:
-                        discard client.sock.shutdown(SHUT_RD)
+                        if retMain == SendResult.Error:
+                          discard client.sock.shutdown(SHUT_RD)
+                        else:
+                          client.close(ssl = true)
                       else:
                         client.close(ssl = true)
                       return
