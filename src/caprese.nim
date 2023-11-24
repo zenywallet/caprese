@@ -200,6 +200,8 @@ when isMainModule:
   elif defined(BENCHMARK1):
     config:
       sslLib = None
+      headerServer = true
+      headerDate = true
 
     server(ip = "0.0.0.0", port = 8089):
       routes:
