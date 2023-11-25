@@ -4488,7 +4488,7 @@ template httpTargetHeaderDefault() {.dirty.} =
 
 var serverWaitThread: Thread[WrapperThreadArg]
 
-template serverStartWithCfg(wait: static bool) =
+template serverStart*() =
   serverMacro()
   contentsWithCfg(cfg)
   httpTargetHeaderDefault()
@@ -4532,17 +4532,13 @@ template serverStartWithCfg(wait: static bool) =
     proxyThread.QuitProxyManager()
     joinThread(contents.timeStampThread)
 
-  when wait:
+  when cfg.serverWait:
     serverStartBody()
   else:
     proc waitProc(arg: ThreadArg) {.thread.} =
       serverStartBody()
 
     createThread(serverWaitThread, threadWrapper, (waitProc, ThreadArg(argType: ThreadArgType.Void)))
-
-template serverStart*() = serverStartWithCfg(true)
-
-template serverStartNoWait*() = serverStartWithCfg(false)
 
 template serverWait*() = joinThread(serverWaitThread)
 
