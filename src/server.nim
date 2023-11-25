@@ -941,6 +941,7 @@ var initServerFlag {.compileTime.} = false
 var curSrvId {.compileTime.} = 0
 var curAppId {.compileTime.} = 0
 var curResId {.compileTime.} = 0
+var serverStmt* {.compileTime.} = newStmtList()
 var serverWorkerInitStmt {.compileTime.} = newStmtList()
 var serverWorkerMainStmt {.compileTime.} =
   nnkStmtList.newTree(
@@ -1180,6 +1181,8 @@ template addServer*(bindAddress: string, port: uint16, unix: bool, ssl: bool, bo
     addServerMacro(bindAddress, port, unix, ssl, BoringSSL, body)
   else:
     addServerMacro(bindAddress, port, unix, ssl, None, body)
+
+macro serverMacro*(): untyped = serverStmt
 
 macro serverWorkerInit*(): untyped = serverWorkerInitStmt
 
@@ -4485,7 +4488,8 @@ template httpTargetHeaderDefault() {.dirty.} =
 
 var serverWaitThread: Thread[WrapperThreadArg]
 
-template serverStartWithCfg(cfg: static Config, wait: static bool) =
+template serverStartWithCfg(wait: static bool) =
+  serverMacro()
   contentsWithCfg(cfg)
   httpTargetHeaderDefault()
   serverType()
@@ -4536,9 +4540,9 @@ template serverStartWithCfg(cfg: static Config, wait: static bool) =
 
     createThread(serverWaitThread, threadWrapper, (waitProc, ThreadArg(argType: ThreadArgType.Void)))
 
-template serverStart*() = serverStartWithCfg(cfg, true)
+template serverStart*() = serverStartWithCfg(true)
 
-template serverStartNoWait*() = serverStartWithCfg(cfg, false)
+template serverStartNoWait*() = serverStartWithCfg(false)
 
 template serverWait*() = joinThread(serverWaitThread)
 
