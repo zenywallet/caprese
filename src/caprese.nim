@@ -51,21 +51,11 @@ macro addCfgDotExpr*(body: untyped): untyped =
 
 macro configCalls*(body: untyped): untyped =
   result = nnkStmtList.newTree()
-  var flag = false
   for i in 0..<body.len:
     if body[i].kind == nnkCall:
       if $body[i][0] == "httpHeader":
         body[i][0] = newIdentNode("HttpTargetHeader")
-        flag = true
       result.add(body[i])
-  if flag:
-    var alib = nnkFromStmt.newTree(
-      newIdentNode("arraylib"),
-      nnkAccQuoted.newTree(
-        newIdentNode("@^")
-      )
-    )
-    result.insert(0, alib)
 
 template config*(body: untyped) =
   var cfg* {.compileTime, inject.}: Config = defaultConfig()
