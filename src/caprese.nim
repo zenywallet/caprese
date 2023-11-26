@@ -48,14 +48,16 @@ macro addCfgDotExpr*(body: untyped): untyped =
       `addCfgBody`
     addCfg()
 
+var configCallsStmt {.compileTime.} = newStmtList()
+
+macro configCallsMacro(): untyped = configCallsStmt
 
 macro configCalls*(body: untyped): untyped =
-  result = nnkStmtList.newTree()
   for i in 0..<body.len:
     if body[i].kind == nnkCall:
       if $body[i][0] == "httpHeader":
         body[i][0] = newIdentNode("HttpTargetHeader")
-      result.add(body[i])
+      configCallsStmt.add(body[i])
 
 template config*(body: untyped) =
   var cfg* {.compileTime, inject.}: Config = defaultConfig()
@@ -70,7 +72,20 @@ var initFlag {.compileTime.}: bool
 macro init*(): untyped =
   if initFlag: return
   initFlag = true
+
+  for s0 in serverStmt:
+    for s1 in s0:
+      if s1.kind == nnkCall and eqIdent(s1[0], "addServer"):
+        var s2 = s1[s1.len - 1]
+        for s3 in s2:
+          if s3.kind == nnkCall and eqIdent(s3[0], "routes"):
+            var s4 = s3[s3.len - 1]
+            for s5 in s4:
+              if s5.kind == nnkCommand and eqIdent(s5[0], "stream"):
+                streamCodeExists = true
+
   quote do:
+    configCallsMacro()
     cfgDefault()
     when cfg.debugLog: {.define: DEBUG_LOG.}
 
