@@ -16,7 +16,7 @@ import config
 export arraylib
 export server_types
 
-var hostParamExists* {.compileTime.}: bool = false
+var routesHostParamExists* {.compileTime.}: bool = false
 var streamBlockExists* {.compileTime.}: bool = false
 
 macro HttpTargetHeader(idEnumName, valListName, targetHeaders, body: untyped): untyped =
@@ -24,7 +24,7 @@ macro HttpTargetHeader(idEnumName, valListName, targetHeaders, body: untyped): u
   var targetParams = nnkBracket.newTree()
   var addHeadersStmt = nnkStmtList.newTree()
   var internalEssentialHeaders: seq[tuple[headerId: string, headerString: string]]
-  if hostParamExists:
+  if routesHostParamExists:
     internalEssentialHeaders.add(("InternalEssentialHeaderHost", "Host"))
   internalEssentialHeaders.add(("InternalEssentialHeaderConnection", "Connection"))
   if streamBlockExists:
