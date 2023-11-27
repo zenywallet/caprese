@@ -16,25 +16,23 @@ import config
 export arraylib
 export server_types
 
+var hostParamExists* {.compileTime.}: bool = false
 var streamCodeExists* {.compileTime.}: bool = false
 
 macro HttpTargetHeader(idEnumName, valListName, targetHeaders, body: untyped): untyped =
   var enumParams = nnkEnumTy.newTree(newEmptyNode())
   var targetParams = nnkBracket.newTree()
   var addHeadersStmt = nnkStmtList.newTree()
-  var internalEssentialHeaders = if streamCodeExists:
-    @[("InternalEssentialHeaderHost", "Host"),
-      ("InternalEssentialHeaderConnection", "Connection"),
-      ("InternalSecWebSocketKey", "Sec-WebSocket-Key"),
-      ("InternalSecWebSocketProtocol", "Sec-WebSocket-Protocol"),
-      ("InternalSecWebSocketVersion", "Sec-WebSocket-Version"),
-      ("InternalAcceptEncoding", "Accept-Encoding"),
-      ("InternalIfNoneMatch", "If-None-Match")]
-  else:
-    @[("InternalEssentialHeaderHost", "Host"),
-      ("InternalEssentialHeaderConnection", "Connection"),
-      ("InternalAcceptEncoding", "Accept-Encoding"),
-      ("InternalIfNoneMatch", "If-None-Match")]
+  var internalEssentialHeaders: seq[tuple[headerId: string, headerString: string]]
+  if hostParamExists:
+    internalEssentialHeaders.add(("InternalEssentialHeaderHost", "Host"))
+  internalEssentialHeaders.add(("InternalEssentialHeaderConnection", "Connection"))
+  if streamCodeExists:
+    internalEssentialHeaders.add(("InternalSecWebSocketKey", "Sec-WebSocket-Key"))
+    internalEssentialHeaders.add(("InternalSecWebSocketProtocol", "Sec-WebSocket-Protocol"))
+    internalEssentialHeaders.add(("InternalSecWebSocketVersion", "Sec-WebSocket-Version"))
+  internalEssentialHeaders.add(("InternalAcceptEncoding", "Accept-Encoding"))
+  internalEssentialHeaders.add(("InternalIfNoneMatch", "If-None-Match"))
   var internalEssentialConst = nnkStmtList.newTree()
 
   for a in body:
