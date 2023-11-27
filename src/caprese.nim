@@ -73,16 +73,19 @@ macro init*(): untyped =
   if initFlag: return
   initFlag = true
 
-  for s0 in serverStmt:
-    for s1 in s0:
-      if s1.kind == nnkCall and eqIdent(s1[0], "addServer"):
-        var s2 = s1[s1.len - 1]
-        for s3 in s2:
-          if s3.kind == nnkCall and eqIdent(s3[0], "routes"):
-            var s4 = s3[s3.len - 1]
-            for s5 in s4:
-              if s5.kind == nnkCommand and eqIdent(s5[0], "stream"):
-                streamCodeExists = true
+  proc search(searchNode: NimNode) =
+    for n in searchNode:
+      search(n)
+      if searchNode.kind == nnkCommand and eqIdent(n, "stream"):
+        streamCodeExists = true
+
+  proc searchAddServer(searchNode: NimNode) =
+    for n in searchNode:
+      searchAddServer(n)
+      if searchNode.kind == nnkCall and eqIdent(n, "addServer"):
+        search(searchNode[searchNode.len - 1])
+
+  searchAddServer(serverStmt)
 
   quote do:
     configCallsMacro()
