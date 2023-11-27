@@ -17,7 +17,7 @@ export arraylib
 export server_types
 
 var hostParamExists* {.compileTime.}: bool = false
-var streamCodeExists* {.compileTime.}: bool = false
+var streamBlockExists* {.compileTime.}: bool = false
 
 macro HttpTargetHeader(idEnumName, valListName, targetHeaders, body: untyped): untyped =
   var enumParams = nnkEnumTy.newTree(newEmptyNode())
@@ -27,7 +27,7 @@ macro HttpTargetHeader(idEnumName, valListName, targetHeaders, body: untyped): u
   if hostParamExists:
     internalEssentialHeaders.add(("InternalEssentialHeaderHost", "Host"))
   internalEssentialHeaders.add(("InternalEssentialHeaderConnection", "Connection"))
-  if streamCodeExists:
+  if streamBlockExists:
     internalEssentialHeaders.add(("InternalSecWebSocketKey", "Sec-WebSocket-Key"))
     internalEssentialHeaders.add(("InternalSecWebSocketProtocol", "Sec-WebSocket-Protocol"))
     internalEssentialHeaders.add(("InternalSecWebSocketVersion", "Sec-WebSocket-Version"))

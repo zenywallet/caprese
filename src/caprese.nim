@@ -79,7 +79,7 @@ macro init*(): untyped =
       if searchNode.kind == nnkCall and eqIdent(n, "routes") and searchNode.len >= 3:
         hostParamExists = true
       if searchNode.kind == nnkCommand and eqIdent(n, "stream"):
-        streamCodeExists = true
+        streamBlockExists = true
 
   proc searchAddServer(searchNode: NimNode) =
     for n in searchNode:
