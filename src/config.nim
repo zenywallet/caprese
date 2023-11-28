@@ -1,5 +1,7 @@
 # Copyright (c) 2023 zenywallet
 
+import macros
+
 type
   SslLib* = enum
     None
@@ -59,3 +61,8 @@ proc defaultConfig*(): Config {.compileTime.} =
   result.headerDate = false
   result.errorCloseMode = CloseImmediately
   result.serverWait = true
+
+macro constBool*(b: static bool): untyped = newLit(b)
+macro constInt*(a: static int): untyped = newLit(a)
+macro constFloat64*(a: static float64): untyped = newLit(a)
+macro constString*(s: static string): untyped = newLit(s)
