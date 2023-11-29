@@ -62,7 +62,7 @@ proc defaultConfig*(): Config {.compileTime.} =
   result.errorCloseMode = CloseImmediately
   result.serverWait = true
 
-macro constBool*(b: static bool): untyped = newLit(b)
-macro constInt*(a: static int): untyped = newLit(a)
-macro constFloat64*(a: static float64): untyped = newLit(a)
-macro constString*(s: static string): untyped = newLit(s)
+macro staticBool*(b: static bool): untyped = newLit(b)
+macro staticInt*(a: static int): untyped = newLit(a)
+macro staticFloat64*(a: static float64): untyped = newLit(a)
+macro staticString*(s: static string): untyped = newLit(s)
