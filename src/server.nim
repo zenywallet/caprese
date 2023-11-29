@@ -4448,7 +4448,11 @@ template serverLib(cfg: static Config) {.dirty.} =
                 while true:
                   ctx.client = cast[Client](pevents[i].data)
                   if ctx.client.listenFlag:
-                    cast[ClientHandlerProc](clientHandlerProcs[ctx.client.appId])(ctx)
+                    try:
+                      cast[ClientHandlerProc](clientHandlerProcs[ctx.client.appId])(ctx)
+                    except:
+                      let e = getCurrentException()
+                      logs.error e.name, ": ", e.msg
                     if highGear and (cfg.clientMax - FreePoolServerUsedCount) - clientFreePool.count < highGearThreshold:
                       highGear = false
                   else:
@@ -4467,7 +4471,11 @@ template serverLib(cfg: static Config) {.dirty.} =
               ctx.client = clientQueue.popSafe()
               if ctx.client.isNil:
                 break
-              cast[ClientHandlerProc](clientHandlerProcs[ctx.client.appId])(ctx)
+              try:
+                cast[ClientHandlerProc](clientHandlerProcs[ctx.client.appId])(ctx)
+              except:
+                let e = getCurrentException()
+                logs.error e.name, ": ", e.msg
 
             for i in 0..<serverWorkerNum:
               clientQueue.sendFlush()
@@ -4482,7 +4490,11 @@ template serverLib(cfg: static Config) {.dirty.} =
             while true:
               ctx.client = clientQueue.recv(highGear)
               if ctx.client.isNil: break
-              cast[ClientHandlerProc](clientHandlerProcs[ctx.client.appId])(ctx)
+              try:
+                cast[ClientHandlerProc](clientHandlerProcs[ctx.client.appId])(ctx)
+              except:
+                let e = getCurrentException()
+                logs.error e.name, ": ", e.msg
             atomic_fetch_sub(addr highGearManagerAssigned, 1, 0)
 
       discard sem_post(addr throttleBody)
