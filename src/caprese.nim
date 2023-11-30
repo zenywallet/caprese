@@ -78,6 +78,8 @@ macro init*(): untyped =
       search(n)
       if searchNode.kind == nnkCall and eqIdent(n, "routes") and searchNode.len >= 3:
         routesHostParamExists = true
+      if n.kind == nnkIdent and eqIdent(n, "reqHost"):
+        routesHostParamExists = true
       if searchNode.kind == nnkCommand and eqIdent(n, "stream"):
         streamBlockExists = true
       if (searchNode.kind == nnkCall or searchNode.kind == nnkDotExpr) and eqIdent(n, "response"):
