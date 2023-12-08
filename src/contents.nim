@@ -189,6 +189,8 @@ template scriptMinifier*(code, extern: string): string =
       )
     scriptMinifierMacro()
 
+template scriptMinifier*(code: string): string = scriptMinifier(code, "")
+
 var externKeywordId {.compileTime.}: int
 
 proc generateExternCode(externKeyword: seq[string]): string {.compileTime.} =
