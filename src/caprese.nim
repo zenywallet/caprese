@@ -9,13 +9,13 @@ when isMainModule:
 import std/macros
 import std/nativesockets
 import std/os
-import server as serverlib
-import contents
-import files
-import statuscode
-import queue
-import rlimit
-import config
+import capresepkg/server as serverlib
+import capresepkg/contents
+import capresepkg/files
+import capresepkg/statuscode
+import capresepkg/queue
+import capresepkg/rlimit
+import capresepkg/config
 export nativesockets
 export os
 export serverlib
