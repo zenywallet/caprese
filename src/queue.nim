@@ -78,6 +78,22 @@ proc send*[T](queue: var Queue[T], data: T): bool {.discardable.} =
     signal(queue.cond)
   return true
 
+proc send*[T](queue: var Queue[T], data: ptr UncheckedArray[T], size: int): bool {.discardable.} =
+  acquire(queue.lock)
+  defer:
+    release(queue.lock)
+  for i in 0..<size:
+    if unlikely(queue.count >= queue.bufLen or queue.count < 0):
+      return false
+    elif unlikely(queue.next >= queue.bufLen):
+      queue.next = 0
+    queue.buf[queue.next] = data[i]
+    inc(queue.count)
+    inc(queue.next)
+  if unlikely(queue.waitCount > 0):
+    signal(queue.cond)
+  return true
+
 proc recv*[T](queue: var Queue[T]): T =
   acquire(queue.lock)
   defer:
