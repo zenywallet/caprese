@@ -2,7 +2,7 @@
 
 import os
 
-const zopfliPath = currentSourcePath().parentDir() / "zopfli"
+const zopfliPath = currentSourcePath().parentDir() / "../zopfli"
 
 {.passC: "-I\"" & zopfliPath  & "\"".}
 {.compile: zopfliPath / "deflate.c".}

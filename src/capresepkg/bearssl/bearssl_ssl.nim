@@ -4198,7 +4198,7 @@ const
 
 
 import os
-const libbearsslPath = currentSourcePath.parentDir() / "../lib/bearssl"
+const libbearsslPath = currentSourcePath.parentDir() / "../../lib/bearssl"
 {.passL: libbearsslPath / "libbearssl.a".}
 
 {.used.}
