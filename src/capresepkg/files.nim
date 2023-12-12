@@ -116,7 +116,7 @@ var buildToolFlag {.compileTime.} = false
 macro buildCompressTools() =
   if not buildToolFlag:
     buildToolFlag = true
-    echo staticExec("nim c -d:release --threads:on -o:bin/ " & (srcDir / "files_helper.nim"))
+    echo staticExec("nim c -d:release --threads:on -o:../bin/ " & (srcDir / "files_helper.nim"))
 
 var tmpFileId {.compileTime.}: int = 0
 
@@ -125,8 +125,8 @@ macro createStaticFilesTable*(importPath: string): untyped =
   var path = getProjectPath() / $importPath
   echo "createStaticFilesTable: ", path
   inc(tmpFileId)
-  let tmpFile = srcDir / "bin/files_helper_tmp" & $tmpFileId & randomStr()
-  echo staticExec((srcDir / "bin/files_helper") & " import " & path & " " & tmpFile)
+  let tmpFile = srcDir / ".." / "bin/files_helper_tmp" & $tmpFileId & randomStr()
+  echo staticExec((srcDir / ".." / "bin/files_helper") & " import " & path & " " & tmpFile)
   var dump = readFile(tmpFile)
   discard staticExec("rm " & tmpFile)
   var last = dump.len
@@ -162,11 +162,11 @@ proc getStaticFile*(filesTable: Table[string, FileContent], file: string): FileC
 proc createStaticFile*(content: string, ext: string): FileContent {.compileTime.} =
   buildCompressTools()
   inc(tmpFileId)
-  let tmpInFile = srcDir / "bin/files_helper_tmp" & $tmpFileId & randomStr()
+  let tmpInFile = srcDir / ".." / "bin/files_helper_tmp" & $tmpFileId & randomStr()
   inc(tmpFileId)
-  let tmpOutFile = srcDir / "bin/files_helper_tmp" & $tmpFileId & randomStr()
+  let tmpOutFile = srcDir / ".." / "bin/files_helper_tmp" & $tmpFileId & randomStr()
   writeFile(tmpInFile, content)
-  echo staticExec((srcDir / "bin/files_helper") & " single " & tmpInFile & " " & ext & " " & tmpOutFile)
+  echo staticExec((srcDir / ".." / "bin/files_helper") & " single " & tmpInFile & " " & ext & " " & tmpOutFile)
   var dump = readFile(tmpOutFile)
   discard staticExec("rm " & tmpOutFile)
   discard staticExec("rm " & tmpInFile)
