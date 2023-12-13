@@ -62,16 +62,16 @@ template execCode*(code: string): string = execCode(binDir, code, randomStr())
 
 template execCode*(srcFileDir: string, code: string): string = execCode(srcFileDir, code, randomStr())
 
-template staticExecCode*(code: string): string =
+template staticExecCode*(body: untyped): string =
   block:
     const srcFile = instantiationInfo(-1, true).filename
     const srcFileDir = splitFile(srcFile).dir
 
-    macro execCodeResult(): string =
+    macro execCodeResult(bodyMacro: untyped): string =
       nnkStmtList.newTree(
-        newLit(execCode(srcFileDir, code))
+        newLit(execCode(srcFileDir, $bodyMacro.toStrLit))
       )
-    execCodeResult()
+    execCodeResult: body
 
 proc removeThreadVarPatch(code: string): string {.compileTime.} =
   var stage = 0
@@ -155,12 +155,10 @@ template minifyJsCode*(baseDir, code, extern: string): string =
 
 
 when isMainModule:
-  echo staticExecCode("""
-echo "hello"
-""")
-  echo staticExecCode("""
-echo "hello!"
-""")
+  echo staticExecCode(echo "hello")
+
+  echo staticExecCode(echo "hello!")
+
   echo compileJsCode(binDir, """
 echo "hello!"
 """)
