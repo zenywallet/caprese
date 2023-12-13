@@ -38,10 +38,10 @@ proc removeCacheDirs(removeDir: string) {.compileTime.} =
 
 var tmpFileId {.compileTime.}: int = 0
 
-proc execCode*(code: string, rstr: string): string {.compileTime.} =
+proc execCode*(srcFileDir: string, code: string, rstr: string): string {.compileTime.} =
   inc(tmpFileId)
   let exeFileName = srcFileName & "_tmp" & $tmpFileId & rstr
-  let tmpExeFile = binDir / exeFileName
+  let tmpExeFile = srcFileDir / exeFileName
   let tmpSrcFile = tmpExeFile & srcFileExt
   let tmpCacheDir = cacheDir / exeFileName
   writeFile(tmpSrcFile, code)
@@ -51,20 +51,25 @@ proc execCode*(code: string, rstr: string): string {.compileTime.} =
     echo staticExec("rm -rf \"" & tmpCacheDir & "\"")
     macros.error "nim c failed"
   result = staticExec(tmpExeFile)
-  removeTmpFiles(binDir)
+  removeTmpFiles(srcFileDir)
   removeCacheDirs(cacheDir)
   rmFile(tmpExeFile)
   rmFile(tmpSrcFile)
   echo staticExec("rm -rf \"" & tmpCacheDir & "\"")
   discard staticExec("rmdir \"" & cacheDir & "\"")
 
-template execCode*(code: string): string = execCode(code, randomStr())
+template execCode*(code: string): string = execCode(binDir, code, randomStr())
+
+template execCode*(srcFileDir: string, code: string): string = execCode(srcFileDir, code, randomStr())
 
 template staticExecCode*(code: string): string =
   block:
+    const srcFile = instantiationInfo(-1, true).filename
+    const srcFileDir = splitFile(srcFile).dir
+
     macro execCodeResult(): string =
       nnkStmtList.newTree(
-        newLit(execCode(code))
+        newLit(execCode(srcFileDir, code))
       )
     execCodeResult()
 
