@@ -113,7 +113,7 @@ proc minifyJsCode*(srcFileDir: string, code: string, extern: string, rstr: strin
   let tmpDstFile = tmpNameFile & "_min.js"
   writeFile(tmpSrcFile, code)
   writeFile(tmpExtFile, extern & basicExtern(tmpSrcFile))
-  let srcPath = currentSourcePath().parentDir()
+  let srcPath = currentSourcePath().parentDir() / ".."
   let downloadClosureCompiler = staticExec fmt"""
 if [ -x "$(command -v google-closure-compiler)" ]; then
   echo "download closure-compiler skip"
