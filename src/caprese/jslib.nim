@@ -8,6 +8,7 @@ type
   DocumentObj* = JsObject
   ConsoleObj* = JsObject
   WindowObj* = JsObject
+  NavigatorObj* = JsObject
   JsonObj* = JsObject
   ArgumentsObj* = JsObject
   MathObj* = JsObject
@@ -28,6 +29,7 @@ type
 var document* {.importc, nodecl.}: DocumentObj
 var console* {.importc, nodecl.}: ConsoleObj
 var window* {.importc, nodecl.}: WindowObj
+var navigator* {.importc, nodecl.}: NavigatorObj
 var JSON* {.importc, nodecl.}: JsonObj
 var arguments* {.importc, nodecl.}: ArgumentsObj
 var Math* {.importc, nodecl.}: MathObj
