@@ -4289,7 +4289,7 @@ template serverLib(cfg: static Config) {.dirty.} =
             if w.path.toString == watchFolder:
               certWatchList[i].idxList.add((idx, ctype.int))
               break SearchPath
-          var wd = inotify_add_watch(inoty, watchFolder.cstring, IN_CLOSE_WRITE)
+          var wd = inotify_add_watch(inoty, watchFolder.cstring, IN_CLOSE_WRITE or IN_ATTRIB)
           if wd == -1:
             logs.error "error: inotify_add_watch path=", watchFolder
           var nextPos = certWatchList.len
@@ -4385,7 +4385,7 @@ template serverLib(cfg: static Config) {.dirty.} =
               for i, w in certWatchList:
                 if w.wd == -1:
                   let watchFolder = w.path.toString()
-                  certWatchList[i].wd = inotify_add_watch(inoty, watchFolder.cstring, IN_CLOSE_WRITE)
+                  certWatchList[i].wd = inotify_add_watch(inoty, watchFolder.cstring, IN_CLOSE_WRITE or IN_ATTRIB)
                   if certWatchList[i].wd >= 0:
                     logs.debug "certs watch add: ", watchFolder
                     for d in w.idxList:
