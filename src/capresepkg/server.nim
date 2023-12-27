@@ -757,7 +757,7 @@ template serverTagLib*(cfg: static Config) {.dirty.} =
       if ret == SendResult.Pending:
         result = SendResult.Pending
 
-  template wsSendTag(tag: Tag, data: seq[byte] | string | Array[byte],
+  template wsSendTag*(tag: Tag, data: seq[byte] | string | Array[byte],
                     opcode: WebSocketOpCode = WebSocketOpCode.Binary): int =
     var sendCount = 0
     let clientIds = tag.getClientIds()
