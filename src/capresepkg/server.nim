@@ -769,6 +769,10 @@ template serverTagLib*(cfg: static Config) {.dirty.} =
           inc(sendCount)
     sendCount
 
+  template wsSend*(tag: Tag, data: seq[byte] | string | Array[byte],
+                  opcode: WebSocketOpCode = WebSocketOpCode.Binary): int =
+    wsSendTag(tag, data, opcode)
+
 var abort*: proc() {.thread.} = proc() {.thread.} = active = false
 
 template serverInitFreeClient() {.dirty.} =
@@ -4591,6 +4595,7 @@ template serverStart*() =
   serverType()
   serverLib(cfg)
   startTimeStampUpdater(cfg)
+
 
   template serverStartBody() =
     var params: ProxyParams
