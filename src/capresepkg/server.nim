@@ -1679,10 +1679,10 @@ template serverLib(cfg: static Config) {.dirty.} =
                   targetHeaders: var Array[ptr tuple[id: HeaderParams, val: string]],
                   header: var ReqHeader
                   ): int =
+    var next {.noInit.}: int
     block parseMain:
       let cur0 = cast[uint](addr buf[0])
       if equalMem(cast[pointer](cur0), "GET ".cstring, 4):
-        var next {.noInit.}: int
         var cur = cur0 + 4
         var pos = cur + 1
         while true:
@@ -1751,9 +1751,9 @@ template serverLib(cfg: static Config) {.dirty.} =
             next = -1
             break
           inc(pos)
-        next
       else:
-        -1
+        next = -1
+    next
 
   proc getFrame(data: ptr UncheckedArray[byte],
                 size: int): tuple[find: bool, fin: bool, opcode: int8,
