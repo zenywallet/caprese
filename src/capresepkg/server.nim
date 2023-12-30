@@ -1704,9 +1704,11 @@ template serverLib(cfg: static Config) {.dirty.} =
             else:
               let minorVer = int(cast[ptr char](cast[pointer](pos))[]) - int('0')
               if minorVer < 0 or minorVer > 9:
+                next = -1
                 break
               inc(pos)
               if not equalMem(cast[pointer](pos), "\c\L".cstring, 2):
+                next = -1
                 break
               inc(pos, 2)
               header.minorVer = minorVer
