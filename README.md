@@ -347,7 +347,7 @@ server(ip = "0.0.0.0", port = 8089):
 
 #### Web pages and WebSocket use the same port
 To use WebSocket, add a `stream:` block in the `routes:` block. When a WebSocket connection is established, the `onOpen:` block is called. When a message is received, the `onMessage:` block is called. When the connection is closed, the `onClose:` block is called.
-Although a bit tricky to use, WebSockets and web pages can also use the same url path like `/`. In that case, the `get:` path to the web page should be after the `stream:`.
+Although a bit tricky to use, WebSockets and web pages can also use the same url path like `/`, `/ws`. In that case, the `get:` path to the web page should be after the `stream:`.
 
 ```nim
 server(ssl = true, ip = "0.0.0.0", port = 8009):
@@ -472,7 +472,7 @@ Get the header string by specifying the header ID with the `reqHeader()` in the 
 The `reqHeader()` can only be called within the `routes:` block contexts, because the headers only manage the read position of the receive buffer, which may be in the server thread context.
 
 ### Publishing Static Files
-Use `public:` block. All files in `importPath` are statically imported into the code at compile time. Specify the `importPath` as relative path like Nim `import`, however, double quotes are necessary. The `importPath` is added internally `getProjectPath()`.
+Use `public:` block. All files in `importPath` are statically imported into the code at compile time. Specify the `importPath` as relative path like Nim `import`, however, double quotes are necessary. The `getProjectPath()` is added internally to the `importPath`.
 
 ```nim
   routes:
