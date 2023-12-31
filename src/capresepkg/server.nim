@@ -1859,18 +1859,18 @@ template serverLib(cfg: static Config) {.dirty.} =
   template getHeaderValue(paramId: HeaderParams): string =
     getHeaderValue(ctx.pRecvBuf, ctx.header, paramId)
 
-  template response(file: FileContent): SendResult =
+  template response(file: FileContent, code: StatusCode = Status200): SendResult =
     if reqHeader(InternalIfNoneMatch) == file.md5:
       send(Empty.addHeader(Status304))
     else:
       var acceptEnc = reqHeader(InternalAcceptEncoding).split(",")
       acceptEnc.apply(proc(x: string): string = x.strip)
       if acceptEnc.contains("br"):
-        send(file.brotli.addHeader(EncodingType.Brotli, file.md5, Status200, file.mime))
+        send(file.brotli.addHeader(EncodingType.Brotli, file.md5, code, file.mime))
       elif acceptEnc.contains("deflate"):
-        send(file.deflate.addHeader(EncodingType.Deflate, file.md5, Status200, file.mime))
+        send(file.deflate.addHeader(EncodingType.Deflate, file.md5, code, file.mime))
       else:
-        send(file.content.addHeader(EncodingType.None, file.md5, Status200, file.mime))
+        send(file.content.addHeader(EncodingType.None, file.md5, code, file.mime))
 
   proc mainServerHandler(ctx: WorkerThreadCtx, client: Client, pRecvBuf: ptr UncheckedArray[byte], header: ReqHeader): SendResult {.inline.} =
     let appId = client.appId - 1
