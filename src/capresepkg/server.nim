@@ -4596,6 +4596,7 @@ template serverStart*() =
   httpTargetHeaderDefault()
   serverType()
   serverLib(cfg)
+  activeHeaderInit()
   startTimeStampUpdater(cfg)
 
 

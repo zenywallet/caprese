@@ -15,6 +15,11 @@ var timeStrArrays: array[2, Array[byte]]
 var shiftTimeStrArray: int = 0
 var pTimeStrArray: ptr Array[byte]
 var timeStampThread*: Thread[void]
+var activeHeaderStmt* {.compileTime.} = newStmtList()
+var curActiveHeaderId* {.compileTime.} = 0
+var pActiveHeaderContents*: ptr Array[Array[byte]]
+var activeHeaderContents*: array[2, Array[Array[byte]]]
+var activeHeaderDatePos*: Array[int]
 var active = false
 
 for i in 0..1:
@@ -29,7 +34,22 @@ proc updateTimeStamp() {.inline.} =
   else:
     shiftTimeStrArray = 0
 
+proc updateTimeStamp2() {.inline.} =
+  var timeStr = now().utc().format("ddd, dd MMM yyyy HH:mm:ss 'GMT'")
+  copyMem(timeStrArrays[shiftTimeStrArray].data, addr timeStr[0], 29)
+  pTimeStrArray = addr timeStrArrays[shiftTimeStrArray]
+  var a = activeHeaderContents[shiftTimeStrArray]
+  for i in 0..<a.len:
+    copyMem(addr a[i][activeHeaderDatePos[i]], addr timeStr[0], 29)
+  pActiveHeaderContents = addr activeHeaderContents[shiftTimeStrArray]
+  if shiftTimeStrArray == 0:
+    shiftTimeStrArray = 1
+  else:
+    shiftTimeStrArray = 0
+
 updateTimeStamp()
+pActiveHeaderContents = addr activeHeaderContents[0]
+shiftTimeStrArray = 1
 
 proc getCurTimeStr*(): string {.inline.} = $cast[cstring](pTimeStrArray[].data)
 
@@ -41,10 +61,18 @@ proc timeStampUpdater() {.thread.} =
     updateTimeStamp()
     sleep(1000)
 
+proc timeStampUpdater2() {.thread.} =
+  while active:
+    updateTimeStamp2()
+    sleep(1000)
+
 proc startTimeStampUpdater*(cfg: static Config) =
   when cfg.headerDate:
     active = true
-    createThread(timeStampThread, timeStampUpdater)
+    if activeHeaderDatePos.len > 0:
+      createThread(timeStampThread, timeStampUpdater2)
+    else:
+      createThread(timeStampThread, timeStampUpdater)
   else:
     discard
 
@@ -65,6 +93,17 @@ macro getMime*(mimetype: static string): untyped =
     else:
       mime = mimeStr
   newLit(mime)
+
+proc getMime2*(mimetype: string): string {.compileTime.} =
+  var mimes = newMimetypes()
+  var mime = mimes.getMimetype(mimetype, "")
+  if mime.len == 0:
+    mime = mimes.getExt(mimetype, "")
+    if mime.len == 0:
+      macros.error "unknown mimetype=" & mimetype
+    else:
+      mime = mimetype
+  mime
 
 template getMime*(mimetype: string): string = mimetype
 
@@ -129,6 +168,35 @@ template contentsWithCfg*(cfg: static Config) {.dirty.} =
 
   template addHeader*(body: string, encodingType: EncodingType, etag: string): string =
     addHeader(body, encodingType, etag, Status200, "text/html")
+
+  macro activeHeaderBase(body, code, mimetype: string): Array[byte] =
+    var contentType = getMime2($mimetype)
+    var blen = ($body).len
+    var h = "HTTP/" & HTTP_VERSION & " " & $code & "\c\L" &
+      "Content-Type: " & contentType & "\c\L" &
+      (when cfg.headerDate: "Date: ddd, dd MMM yyyy HH:mm:ss GMT\c\L" else: "") &
+      (when cfg.headerServer: "Server: " & ServerName & "\c\L" else: "") &
+      "Content-Length: " & $blen & "\c\L\c\L" &
+      $body
+
+    var last = h.len - blen - 4 - 1
+    activeHeaderStmt.add quote do:
+      for i in 0..1:
+        activeHeaderContents[i].add(cast[Array[byte]](`h`.toArray()))
+      activeHeaderDatePos.add(`h`.find("Date: ", 0, `last`) + "Date: ".len)
+
+    var aid = curActiveHeaderId
+    inc(curActiveHeaderId)
+    quote do:
+      pActiveHeaderContents[][`aid`]
+
+  macro activeHeaderInit*(): untyped = activeHeaderStmt
+
+  template addActiveHeader*(body: string, code: StatusCode, mimetype: string): Array[byte] =
+    activeHeaderBase(body, $code, mimetype)
+
+  template addActiveHeader*(body: string, mimetype: string | RawMimeType): Array[byte] =
+    addActiveHeader(body, Status200, mimetype)
 
   proc redirect301*(location: string): string =
     result = "HTTP/" & HTTP_VERSION & " " & $Status301 & "\c\L" &
