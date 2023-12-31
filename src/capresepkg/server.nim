@@ -4599,7 +4599,6 @@ template serverStart*(wait: bool = true) =
   activeHeaderInit()
   startTimeStampUpdater(cfg)
 
-
   template serverStartBody() =
     var params: ProxyParams
     params.abortCallback = proc() =
