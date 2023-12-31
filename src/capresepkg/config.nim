@@ -36,7 +36,6 @@ type
     headerServer*: bool
     headerDate*: bool
     errorCloseMode*: ErrorCloseMode
-    serverWait*: bool
 
 proc defaultConfig*(): Config {.compileTime.} =
   result.sslLib = BearSSL
@@ -60,7 +59,6 @@ proc defaultConfig*(): Config {.compileTime.} =
   result.headerServer = false
   result.headerDate = false
   result.errorCloseMode = CloseImmediately
-  result.serverWait = true
 
 macro staticBool*(b: static bool): untyped = newLit(b)
 macro staticInt*(a: static int): untyped = newLit(a)
