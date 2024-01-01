@@ -2555,6 +2555,7 @@ template serverLib(cfg: static Config) {.dirty.} =
         clientSock.setSockOptInt(SOL_SOCKET, SO_KEEPALIVE, 1)
       when cfg.tcpNodelay and not unixFlag:
         clientSock.setSockOptInt(Protocol.IPPROTO_TCP.int, TCP_NODELAY, 1)
+
       var newClient = clientFreePool.pop()
       while newClient.isNil:
         if clientFreePool.count == 0:
@@ -4475,7 +4476,7 @@ template serverLib(cfg: static Config) {.dirty.} =
     var skip = false
     var nfd: cint
 
-    when cfg.sslLib != SslLib.None:
+    when cfg.sslLib != SslLib.None or cfg.connectionPreferred == ConnectionPreferred.InternalConnection:
       while active:
         nfd = epoll_wait(epfd, cast[ptr EpollEvent](addr events),
                         staticInt(cfg.epollEventsSize).cint, -1.cint)

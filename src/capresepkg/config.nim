@@ -14,6 +14,10 @@ type
     CloseImmediately
     UntilConnectionTimeout
 
+  ConnectionPreferred* = enum
+    ExternalConnection
+    InternalConnection
+
   Config* = object
     sslLib*: SslLib
     debugLog*: bool
@@ -36,6 +40,7 @@ type
     headerServer*: bool
     headerDate*: bool
     errorCloseMode*: ErrorCloseMode
+    connectionPreferred*: ConnectionPreferred
 
 proc defaultConfig*(): Config {.compileTime.} =
   result.sslLib = BearSSL
@@ -59,6 +64,7 @@ proc defaultConfig*(): Config {.compileTime.} =
   result.headerServer = false
   result.headerDate = false
   result.errorCloseMode = CloseImmediately
+  result.connectionPreferred = ExternalConnection
 
 macro staticBool*(b: static bool): untyped = newLit(b)
 macro staticInt*(a: static int): untyped = newLit(a)
