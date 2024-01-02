@@ -219,10 +219,11 @@ when isMainModule:
       sslLib = None
       headerServer = true
       headerDate = true
+      connectionPreferred = InternalConnection
 
     server(ip = "0.0.0.0", port = 8089):
       routes:
-        get "/": return "Hello, World!".addHeader("text").send
+        get "/": return "Hello, World!".addActiveHeader("text").send
         return "Not found".addHeader(Status404, "text").send
 
     serverStart()
