@@ -228,6 +228,20 @@ when isMainModule:
 
     serverStart()
 
+  elif defined(BENCHMARK2):
+    config:
+      sslLib = None
+      headerServer = true
+      headerDate = true
+      connectionPreferred = ExternalConnection
+
+    server(ip = "0.0.0.0", port = 8089):
+      routes:
+        get "/": return "Hello, World!".addActiveHeader("text").send
+        return "Not found".addHeader(Status404, "text").send
+
+    serverStart()
+
   else:
     if paramCount() != 1:
       echo "usage: caprese <public folder>"
