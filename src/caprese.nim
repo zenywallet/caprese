@@ -86,6 +86,8 @@ macro init*(): untyped =
         streamBlockExists = true
       if (searchNode.kind == nnkCall or searchNode.kind == nnkDotExpr) and eqIdent(n, "response"):
         responceCallExists = true
+      if searchNode.kind == nnkCall and eqIdent(n, "public"):
+        responceCallExists = true
 
   proc searchAddServer(searchNode: NimNode) =
     for n in searchNode:
