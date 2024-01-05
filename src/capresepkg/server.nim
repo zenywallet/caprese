@@ -223,7 +223,7 @@ proc getErrnoStr*(): string =
 
 template serverTagLib*(cfg: static Config) {.dirty.} =
   import std/posix
-  import bytes
+  from bytes as capbytes import nil
   import hashtable
 
   type
@@ -238,7 +238,7 @@ template serverTagLib*(cfg: static Config) {.dirty.} =
       of ClientTaskCmd.Data:
         data*: Array[byte]
 
-  proc toUint64(tag: Tag): uint64 = tag.toSeq.toUint64
+  proc toUint64(tag: Tag): uint64 = capbytes.toUint64(tag.toSeq)
 
   proc empty*(pair: HashTableData): bool =
     when pair.val is Array:
@@ -715,11 +715,11 @@ template serverTagLib*(cfg: static Config) {.dirty.} =
     var dataLen = data.len
     var finOp = 0x80.byte or opcode.byte
     if dataLen < 126:
-      frame = BytesBE(finOp, dataLen.byte, data)
+      frame = capbytes.BytesBE(finOp, dataLen.byte, data)
     elif dataLen <= 0xffff:
-      frame = BytesBE(finOp, 126.byte, dataLen.uint16, data)
+      frame = capbytes.BytesBE(finOp, 126.byte, dataLen.uint16, data)
     else:
-      frame = BytesBE(finOp, 127.byte, dataLen.uint64, data)
+      frame = capbytes.BytesBE(finOp, 127.byte, dataLen.uint64, data)
     result = client.send(frame)
 
   proc wsServerSend*(clientId: ClientId, data: seq[byte] | string | Array[byte],
@@ -732,11 +732,11 @@ template serverTagLib*(cfg: static Config) {.dirty.} =
       var data = data.toBytes
     var finOp = 0x80.byte or opcode.byte
     if dataLen < 126:
-      frame = BytesBE(finOp, dataLen.byte, data)
+      frame = capbytes.BytesBE(finOp, dataLen.byte, data)
     elif dataLen <= 0xffff:
-      frame = BytesBE(finOp, 126.byte, dataLen.uint16, data)
+      frame = capbytes.BytesBE(finOp, 126.byte, dataLen.uint16, data)
     else:
-      frame = BytesBE(finOp, 127.byte, dataLen.uint64, data)
+      frame = capbytes.BytesBE(finOp, 127.byte, dataLen.uint64, data)
     result = clientId.send(frame.toString())
 
   template send(data: seq[byte] | string | Array[byte]): SendResult {.dirty.} = ctx.client.send(data)
@@ -1520,11 +1520,11 @@ template serverLib(cfg: static Config) {.dirty.} =
   proc echoHeader(buf: ptr UncheckedArray[byte], size: int, header: ReqHeader) =
     echo "url: ", header.url
     for i, param in header.params:
-      echo i.HeaderParams, " ", TargetHeaderParams[i], cast[ptr UncheckedArray[byte]](addr buf[param.cur]).toString(param.size)
+      echo i.HeaderParams, " ", TargetHeaderParams[i], capbytes.toString(cast[ptr UncheckedArray[byte]](addr buf[param.cur]), param.size)
 
   proc getHeaderValue(buf: ptr UncheckedArray[byte], reqHeader: ReqHeader, paramId: HeaderParams): string =
     let param = reqHeader.params[paramId.int]
-    result = cast[ptr UncheckedArray[byte]](addr buf[param.cur]).toString(param.size)
+    result = capbytes.toString(cast[ptr UncheckedArray[byte]](addr buf[param.cur]), param.size)
 
   proc parseHeader(buf: ptr UncheckedArray[byte], size: int,
                   targetHeaders: var Array[ptr tuple[id: HeaderParams, val: string]]
@@ -1534,7 +1534,7 @@ template serverLib(cfg: static Config) {.dirty.} =
       var pos = 5
       while true:
         if equalMem(addr buf[pos], " HTTP/1.".cstring, 8):
-          result.header.url = cast[ptr UncheckedArray[byte]](addr buf[cur]).toString(pos - cur)
+          result.header.url = capbytes.toString(cast[ptr UncheckedArray[byte]](addr buf[cur]), pos - cur)
           inc(pos, 8)
           if equalMem(addr buf[pos], "1\c\L".cstring, 3):
             result.header.minorVer = 1
@@ -1609,7 +1609,7 @@ template serverLib(cfg: static Config) {.dirty.} =
       var pos = 5
       while true:
         if equalMem(addr buf[pos], " HTTP/1.".cstring, 8):
-          header.url = cast[ptr UncheckedArray[byte]](addr buf[cur]).toString(pos - cur)
+          header.url = capbytes.toString(cast[ptr UncheckedArray[byte]](addr buf[cur]), pos - cur)
           inc(pos, 8)
           if equalMem(addr buf[pos], "1\c\L".cstring, 3):
             header.minorVer = 1
@@ -1687,7 +1687,7 @@ template serverLib(cfg: static Config) {.dirty.} =
         var pos = cur + 1
         while true:
           if equalMem(cast[pointer](pos), " HTTP/1.".cstring, 8):
-            header.url = cast[ptr UncheckedArray[byte]](cast[pointer](cur)).toString(pos - cur)
+            header.url = capbytes.toString(cast[ptr UncheckedArray[byte]](cast[pointer](cur)), pos - cur)
             inc(pos, 7)
             if equalMem(cast[pointer](pos), ".1\c\L".cstring, 4):
               header.minorVer = 1
@@ -1779,12 +1779,12 @@ template serverLib(cfg: static Config) {.dirty.} =
     elif payloadLen == 126:
       if size < 4:
         return (false, fin, opcode, nil, 0, data, size)
-      payloadLen = data[2].toUint16BE.int
+      payloadLen = capbytes.toUint16BE(data[2]).int
       frameHeadSize = 8
     elif payloadLen == 127:
       if size < 10:
         return (false, fin, opcode, nil, 0, data, size)
-      payloadLen = data[2].toUint64BE.int # exception may occur. value out of range [RangeDefect]
+      payloadLen = capbytes.toUint64BE(data[2]).int # exception may occur. value out of range [RangeDefect]
       frameHeadSize = 14
     else:
       return (false, fin, opcode, nil, 0, data, size)
@@ -1841,7 +1841,7 @@ template serverLib(cfg: static Config) {.dirty.} =
       if not client.isNil:
         client.close(ssl = true)
     else:
-      originalClientId.send(buf.toString(size))
+      originalClientId.send(capbytes.toString(buf, size))
 
   template reqUrl: string = ctx.header.url
 
@@ -1904,7 +1904,7 @@ template serverLib(cfg: static Config) {.dirty.} =
 
       proc dest(dest_ctx: pointer; src: pointer; len: csize_t) {.cdecl.} =
         let pBuf = cast[ptr seq[byte]](dest_ctx)
-        let srcBytes = cast[ptr UncheckedArray[byte]](src).toBytes(len)
+        let srcBytes = capbytes.toBytes(cast[ptr UncheckedArray[byte]](src), len)
         pBuf[].add(srcBytes)
 
       var buf: seq[byte] = @[]
@@ -2050,7 +2050,7 @@ template serverLib(cfg: static Config) {.dirty.} =
 
       proc dest(dest_ctx: pointer; src: pointer; len: csize_t) {.cdecl.} =
         let pBuf = cast[ptr seq[byte]](dest_ctx)
-        let srcBytes = cast[ptr UncheckedArray[byte]](src).toBytes(len)
+        let srcBytes = capbytes.toBytes(cast[ptr UncheckedArray[byte]](src), len)
         pBuf[].add(srcBytes)
 
       var allBuf: seq[seq[byte]]
