@@ -76,6 +76,63 @@ macro HttpTargetHeader*(body: untyped): untyped =
   quote do:
     HttpTargetHeader(HeaderParams, TargetHeaderParams, TargetHeaders, `body`)
 
+var clientExtRec {.compileTime.} = nnkRecList.newTree()
+
+macro clientExt*(body: untyped): untyped =
+  for n in body[2][2]:
+    clientExtRec.add(n)
+  body
+
+macro clientObjTypeMacro*(cfg: static Config): untyped =
+  result = quote do:
+    type
+      ClientSendProc {.inject.} = proc (client: Client, data: ptr UncheckedArray[byte], size: int): SendResult {.thread.}
+
+      KeepAliveStatus {.pure, inject.} = enum
+        Unknown
+        True
+        False
+
+      ClientBase* {.inject.} = ref object of RootObj
+        sock*: SocketHandle
+        recvBuf: ptr UncheckedArray[byte]
+        recvBufSize: int
+        recvCurSize: int
+        sendBuf: ptr UncheckedArray[byte]
+        sendCurSize: int
+        keepAlive: bool
+        keepAlive2: KeepAliveStatus
+        ip: uint32
+        invoke: bool
+        lock: Lock
+        spinLock: SpinLock
+        whackaMole: bool
+        sendProc: ClientSendProc
+        ev: EpollEvent
+        clientId*: ClientId
+        threadId*: int
+        srvId*: int
+        appId*: int
+        appShift: bool
+        listenFlag*: bool
+        dirty: int
+
+      ClientObj* {.inject.} = object of ClientBase
+        payloadSize: int
+        when `cfg`.sslLib == BearSSL:
+          sc: ptr br_ssl_server_context
+          keyType: cint
+        elif `cfg`.sslLib == OpenSSL or `cfg`.sslLib == LibreSSL or `cfg`.sslLib == BoringSSL:
+          ssl: SSL
+          sslErr: int
+        pStream*: pointer
+        proxy: Proxy
+
+      Client* {.inject.} = ptr ClientObj
+
+  for n in clientExtRec:
+    result[3][2][2].add(n)  # append to ClientObj
+
 template serverInit*() {.dirty.} =
   import std/epoll
   import std/locks
@@ -113,50 +170,7 @@ template serverInit*() {.dirty.} =
     debug "SSL: " & sslLib
     import openssl
 
-  type
-    ClientSendProc = proc (client: Client, data: ptr UncheckedArray[byte], size: int): SendResult {.thread.}
-
-    KeepAliveStatus {.pure.} = enum
-      Unknown
-      True
-      False
-
-    ClientBase* = ref object of RootObj
-      sock*: SocketHandle
-      recvBuf: ptr UncheckedArray[byte]
-      recvBufSize: int
-      recvCurSize: int
-      sendBuf: ptr UncheckedArray[byte]
-      sendCurSize: int
-      keepAlive: bool
-      keepAlive2: KeepAliveStatus
-      ip: uint32
-      invoke: bool
-      lock: Lock
-      spinLock: SpinLock
-      whackaMole: bool
-      sendProc: ClientSendProc
-      ev: EpollEvent
-      clientId*: ClientId
-      threadId*: int
-      srvId*: int
-      appId*: int
-      appShift: bool
-      listenFlag*: bool
-      dirty: int
-
-    ClientObj* = object of ClientBase
-      payloadSize: int
-      when cfg.sslLib == BearSSL:
-        sc: ptr br_ssl_server_context
-        keyType: cint
-      elif cfg.sslLib == OpenSSL or cfg.sslLib == LibreSSL or cfg.sslLib == BoringSSL:
-        ssl: SSL
-        sslErr: int
-      pStream*: pointer
-      proxy: Proxy
-
-    Client* = ptr ClientObj
+  clientObjTypeMacro(cfg)
 
   const ClientDirtyNone = 0
   const ClientDirtyTrue = 1
