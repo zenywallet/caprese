@@ -4487,7 +4487,6 @@ template serverLib(cfg: static Config) {.dirty.} =
 
     var events: array[staticInt(cfg.epollEventsSize), EpollEvent]
     var pevents: ptr UncheckedArray[EpollEvent] = cast[ptr UncheckedArray[EpollEvent]](addr events[0])
-    var skip = false
     var nfd: cint
 
     when cfg.sslLib != SslLib.None or cfg.connectionPreferred == ConnectionPreferred.InternalConnection:
@@ -4504,6 +4503,8 @@ template serverLib(cfg: static Config) {.dirty.} =
             logs.error e.name, ": ", e.msg
 
     else:
+      var skip = false
+
       while active:
         if ctx.threadId == 1:
           nfd = epoll_wait(epfd, cast[ptr EpollEvent](addr events),
