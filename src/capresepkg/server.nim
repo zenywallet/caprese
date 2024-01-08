@@ -81,6 +81,7 @@ var clientExtRec {.compileTime.} = nnkRecList.newTree()
 macro clientExt*(body: untyped): untyped =
   for n in body[2][2]:
     clientExtRec.add(n)
+  body[0][1].add(ident("used"))
   body
 
 macro clientObjTypeMacro*(cfg: static Config): untyped =
