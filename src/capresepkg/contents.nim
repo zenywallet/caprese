@@ -4,7 +4,6 @@ import std/macros
 import std/os
 import std/strutils
 import std/mimetypes
-import statuscode
 import exec
 import times
 import arraylib
