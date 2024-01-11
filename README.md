@@ -149,6 +149,7 @@ config:
   headerServer = false
   headerDate = false
   errorCloseMode = CloseImmediately
+  connectionPreferred = ExternalConnection
 ```
 
 * **sslLib:** *None*, *BearSSL*(default), *OpenSSL*, *LibreSSL*, *BoringSSL*  
@@ -162,6 +163,8 @@ If SSL is not required, it is recommended set to *None*. This will enable the ex
 * **connectionTimeout:** *[Client connection timeout in seconds]*, *-1*(disabled). The time to disconnect is not exact. Disconnection occurs between a specified second and twice the time.
 * **headerServer:** *true* or *false*(default), If *true*, include `Server:` in the response headers. Common benchmarks require this value to be *true*. In benchmark competition, even a single byte of copying can feel heavy.
 * **headerDate:** *true* or *false*(default), If *true*, include `Date:` in the response headers. Common benchmarks require this value to be *true*. It should not be the essence of benchmarking, but sometimes it is a competition of how to implement the date strings.
+* **errorCloseMode:** *CloseImmediately*(default) or *UntilConnectionTimeout*. Behavior when disconnecting clients on error.
+* **connectionPreferred:** *ExternalConnection*(default) or *InternalConnection*. Optimize server processing depending on whether the clients are connected from external or internal network connections. The situation is different when the client and server are on separate PCs or on the same PC, and the benchmarks should be evaluated separately. If the client and server are running on the same PC using virtual technology such as Docker and sharing CPU resources, they should rather be considered internal connections.
 
 ### Server Routes
 #### Example of a simple `server:` block
@@ -298,6 +301,8 @@ server(ssl = true, ip = "0.0.0.0", port = 8009):
 
 serverStart()
 ```
+
+I hope you get the idea... This is SNI.
 
 #### Pending and workers
 The runnable level inside the `server:` block is called the server dispatch-level. Inside the block is called from multiple threads, it must not call functions that generate long waits and must return results immediately. If the response cannot be returned immediately, return pending first and then process it in another worker thread. Feel free to use async/await in another thread.
@@ -444,6 +449,45 @@ Use `onProtocol:` block.
 * **reqProtocol:** WebSocket protocol requested by the client. See [Check multiple protocols of the WebSocket](#check-multiple-protocols-of-the-websocket) for details.
 * **reqHeader(HeaderID):** Get the specific header parameter of the client request by *HeaderID*. See [Http Headers](#http-headers) for details.
 * **reqClient:** Pointer to the client object currently being processed in the thread context, the same as `client`. Normally, `client` should be used.
+
+### Client object custom extension
+Custom parameters can be added to the client object. When custom pragmas `{.clientExt.}` are added to a regular object definitions, all the fields of that object are appended to the client object. However, fields that have already been defined in the client object cannot be added.
+
+```nim
+import caprese
+
+type
+  CipherContext = object
+    encryptVector: array[16, byte]
+    decryptVector: array[16, byte]
+    key: array[140, uint32]
+
+  ClientExt {.clientExt.} = object
+    cipherCtx: CipherContext
+
+proc cipherInit(ctx: var CipherContext) =
+  zeroMem(addr ctx, sizeof(CipherContext))
+  echo "ctx=", ctx
+
+server(ssl = true, ip = "0.0.0.0", port = 8009):
+  routes:
+    stream "/":
+      onOpen:
+        cipherInit(client.cipherCtx)
+
+    get "/":
+      return """<script>new WebSocket("wss://localhost:8009")</script>""".addHeader.send
+
+    return send("Not found".addHeader(Status404)
+)
+serverStart()
+```
+
+One more thing... The following function may be used to access the client extension object from workers that only know the client ID.
+
+```nim
+proc getClient(clientId: ClientId): Client
+```
 
 ### Http Headers
 There are various efficient ways to parse http headers, though, Caprese uses the approach of predefining only the headers to be used and reading only those headers that are needed. I could not find any servers implementing this approach, so it may be very novel approach. Compared to a fast header parsing algorithm, this approach had an advantage over it.
@@ -640,6 +684,10 @@ Non-root users cannot use privileged ports such as 80 or 443 by default, so capa
 If the above command is not executed, the following bind error will occur.
 
     error: bind ret=-1 errno=13
+
+Check if the capabilities is attached.
+
+    getcap <executable_file_name>
 
 ### Let’s Encrypt
 At least http port 80 needs to be open for ACME HTTP-01 challenge. One method is to reply ACME tokens on http port 80, another is to redirect http port 80 to https port 443 and reply ACME tokens on the https connection. ACME does not verify certificates, Caprese has self-certificates and can connect with SSL by simply enabling SSL, so SSL connections for ACME are available on https even without certificate files yet. Try redirecting http to https and handling ACME.
