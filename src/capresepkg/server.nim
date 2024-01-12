@@ -2774,7 +2774,6 @@ template serverLib(cfg: static Config) {.dirty.} =
           routesMainTmpl(`body`)
 
           when cfg.sslLib == BearSSL:
-            let sc = client.sc
             let ec = addr client.sc.eng
             var bufRecvApp, bufSendRec, bufRecvRec, bufSendApp: ptr UncheckedArray[byte]
             var bufLen {.noinit.}: csize_t
@@ -3453,7 +3452,6 @@ template serverLib(cfg: static Config) {.dirty.} =
 
             `callStreamMainTmplStmt`
 
-            let sc = client.sc
             let ec = addr client.sc.eng
             var bufRecvApp, bufSendRec, bufRecvRec, bufSendApp: ptr UncheckedArray[byte]
             var bufLen {.noinit.}: csize_t
