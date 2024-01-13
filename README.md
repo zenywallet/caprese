@@ -450,7 +450,7 @@ Use `onProtocol:` block.
 * **reqHeader(HeaderID):** Get the specific header parameter of the client request by *HeaderID*. See [Http Headers](#http-headers) for details.
 * **reqClient:** Pointer to the client object currently being processed in the thread context, the same as `client`. Normally, `client` should be used.
 
-### Client object custom extension
+### Client Object Custom Extension
 Custom parameters can be added to the client object. When custom pragmas `{.clientExt.}` are added to a regular object definitions, all the fields of that object are appended to the client object. However, fields that have already been defined in the client object cannot be added.
 
 ```nim
@@ -478,12 +478,12 @@ server(ssl = true, ip = "0.0.0.0", port = 8009):
     get "/":
       return """<script>new WebSocket("wss://localhost:8009")</script>""".addHeader.send
 
-    return send("Not found".addHeader(Status404)
-)
+    return "Not found".addHeader(Status404).send
+
 serverStart()
 ```
 
-One more thing... The following function may be used to access the client extension object from workers that only know the client ID.
+One more thing... The following function may be used to access the client extension object from workers that only know the client ID. However, the client objects are usually intended to be accessed from the `server:` blocks and are not permanently accessible from the workers. In some cases, resource management such as locking may be necessary.
 
 ```nim
 proc getClient(clientId: ClientId): Client
