@@ -131,3 +131,5 @@ proc log*(console: ConsoleObj) {.importcpp, varargs.}
 proc debug*(console: ConsoleObj) {.importcpp, varargs.}
 proc info*(console: ConsoleObj) {.importcpp, varargs.}
 proc error*(console: ConsoleObj) {.importcpp, varargs.}
+
+proc addEventListener*(obj: JsObject, ev: cstring, cb: proc(evt: JsObject)) {.importcpp.}
