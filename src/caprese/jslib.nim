@@ -126,3 +126,8 @@ template withStack*(body: untyped) =
     defer:
       Module.stackRestore(stack)
     body
+
+proc log*(console: ConsoleObj) {.importcpp, varargs.}
+proc debug*(console: ConsoleObj) {.importcpp, varargs.}
+proc info*(console: ConsoleObj) {.importcpp, varargs.}
+proc error*(console: ConsoleObj) {.importcpp, varargs.}
