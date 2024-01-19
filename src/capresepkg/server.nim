@@ -4285,7 +4285,6 @@ template serverLib(cfg: static Config) {.dirty.} =
     for i in 0..<certUpdateFlags.len:
       certUpdateFlags[i] = (false, false, 0)
 
-    var folderCheck = true
     var checkFolders: seq[string]
     for c in certsTable[].values:
       for _, path in [c.privPath, c.chainPath]:
@@ -4294,10 +4293,7 @@ template serverLib(cfg: static Config) {.dirty.} =
           checkFolders.add(folder)
     for folder in checkFolders:
       if not dirExists(folder):
-        logs.error "error: not found path=", folder
-        folderCheck = false
-    if not folderCheck:
-      logs.error "error: certificates path does not exists"
+        logs.error "error: certificates path does not exists path=", folder
 
     var certWatchList: Array[tuple[path: Array[char], wd: cint, idxList: Array[tuple[idx: int, ctype: int]]]]
     var idx = 1
