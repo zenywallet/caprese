@@ -12,11 +12,11 @@ A front-end web server specialized for real-time message exchange
 
 ### Quick Trial
 #### Install Nim
-I heard you like Ubuntu, so I will explain for it. The following are required to install [Nim](https://nim-lang.org/).
+I heard you like Ubuntu, so the following are required to install [Nim](https://nim-lang.org/).
 
     sudo apt install build-essential curl
 
-Installation using [choosenim](https://github.com/dom96/choosenim#choosenim).
+Install with [choosenim](https://github.com/dom96/choosenim#choosenim).
 
     curl https://nim-lang.org/choosenim/init.sh -sSf | sh
     echo 'export PATH='$HOME'/.nimble/bin:$PATH' >> ~/.bashrc
