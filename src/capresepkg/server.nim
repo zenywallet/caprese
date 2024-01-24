@@ -1202,18 +1202,17 @@ macro evalBool(val: bool): bool =
   quote do:
     when `val`: true else: false
 
+macro evalSslLib(val: SslLib): SslLib =
+  quote do:
+    when `val` == BearSSL: BearSSL
+    elif `val` == OpenSSL: OpenSSL
+    elif `val` == LibreSSL: LibreSSL
+    elif `val` == BoringSSL: BoringSSL
+    else: None
+
 template addServer*(bindAddress: string, port: uint16, unix: bool, ssl: bool, body: untyped) =
   initServer()
-  when cfg.sslLib == BearSSL:
-    addServerMacro(bindAddress, port, unix, evalBool(ssl), BearSSL, body)
-  elif cfg.sslLib == OpenSSL:
-    addServerMacro(bindAddress, port, unix, evalBool(ssl), OpenSSL, body)
-  elif cfg.sslLib == LibreSSL:
-    addServerMacro(bindAddress, port, unix, evalBool(ssl), LibreSSL, body)
-  elif cfg.sslLib == BoringSSL:
-    addServerMacro(bindAddress, port, unix, evalBool(ssl), BoringSSL, body)
-  else:
-    addServerMacro(bindAddress, port, unix, evalBool(ssl), None, body)
+  addServerMacro(bindAddress, port, unix, evalBool(ssl), evalSslLib(cfg.sslLib), body)
 
 macro serverMacro*(): untyped = serverStmt
 
