@@ -1033,7 +1033,7 @@ macro addServerMacro*(bindAddress: string, port: uint16, unix: bool, ssl: bool, 
   var appRoutes = curAppId
   serverHandlerList.add(("appRoutes", ssl, unix, newStmtList()))
   appIdTypeList.add(AppRoutes)
-  if eqIdent("true", ssl) and (eqIdent("OpenSSL", sslLib) or eqIdent("LibreSSL", sslLib) or eqIdent("BoringSSL", sslLib)):
+  if boolVal(ssl) and (eqIdent("OpenSSL", sslLib) or eqIdent("LibreSSL", sslLib) or eqIdent("BoringSSL", sslLib)):
     inc(curAppId)
     appRoutes = curAppId
     serverHandlerList.add(("appRoutesStage1", ssl, unix, newStmtList()))
@@ -1151,7 +1151,7 @@ macro addServerMacro*(bindAddress: string, port: uint16, unix: bool, ssl: bool, 
           serverHandlerList.add(("appProxy", ssl, unix, newStmtList()))
           appIdTypeList.add(AppProxy)
           inc(curAppId)
-          if eqIdent("true", ssl) and (eqIdent("OpenSSL", sslLib) or eqIdent("LibreSSL", sslLib) or eqIdent("BoringSSL", sslLib)):
+          if boolVal(ssl) and (eqIdent("OpenSSL", sslLib) or eqIdent("LibreSSL", sslLib) or eqIdent("BoringSSL", sslLib)):
             serverHandlerList.add(("appRoutesStage2", ssl, unix, newStmtList()))
           else:
             serverHandlerList.add(("appProxySend", ssl, unix, newStmtList()))
@@ -1198,10 +1198,6 @@ macro addServerMacro*(bindAddress: string, port: uint16, unix: bool, ssl: bool, 
       errorRaise "error: addServer epoll_ctl ret=", retCtl, " ", getErrnoStr()
 
 
-macro evalBool(val: bool): bool =
-  quote do:
-    when `val`: true else: false
-
 macro evalSslLib(val: SslLib): SslLib =
   quote do:
     when `val` == BearSSL: BearSSL
@@ -1212,7 +1208,7 @@ macro evalSslLib(val: SslLib): SslLib =
 
 template addServer*(bindAddress: string, port: uint16, unix: bool, ssl: bool, body: untyped) =
   initServer()
-  addServerMacro(bindAddress, port, unix, evalBool(ssl), evalSslLib(cfg.sslLib), body)
+  addServerMacro(bindAddress, port, unix, ssl, evalSslLib(cfg.sslLib), body)
 
 macro serverMacro*(): untyped = serverStmt
 
