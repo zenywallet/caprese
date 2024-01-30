@@ -50,7 +50,7 @@ proc execCode*(srcFileDir: string, code: string, rstr: string): string {.compile
     rmFile(tmpSrcFile)
     echo staticExec("rm -rf \"" & tmpCacheDir & "\"")
     macros.error "nim c failed"
-  result = staticExec(tmpExeFile)
+  result = staticExec("cd " & srcFileDir & " && " & tmpExeFile)
   removeTmpFiles(srcFileDir)
   removeCacheDirs(cacheDir)
   rmFile(tmpExeFile)
