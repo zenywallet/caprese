@@ -556,7 +556,7 @@ server(ssl = true, ip = "0.0.0.0", port = 8009):
       return response(content(AppMinJs, "application/javascript"))
 ```
 
-The second argument of `content()` can be an extension shuch as *html* or *js* instead of a formal MIME type.
+The second argument of `content()` can be an extension such as *html* or *js* instead of formal MIME types.
 
 ```nim
     get "/":
