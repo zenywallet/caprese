@@ -1158,7 +1158,7 @@ macro addServerMacro*(bindAddress: string, port: uint16, unix: bool, ssl: bool, 
           appIdTypeList.add(AppProxySend)
         routesBody.add(s2)
 
-      if not certsBlockFlag and ssl == newLit(true):
+      if not certsBlockFlag and boolVal(ssl):
         routesBody.insert 0, quote do:
           certificates(`srvId`, `hostname`, "")
 
