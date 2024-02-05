@@ -139,11 +139,11 @@ macro server*(unix: string, body: untyped): untyped =
     echo "server: unix:", `unix`
     addServer(`unix`, 0, true, false, `body`)
 
-template serverHttp*(ip: string, port: uint16, body: untyped) =
-  server(false, ip, port, body)
+template serverHttp*(ip: string, body: untyped) =
+  server(false, ip, 80, body)
 
-template serverHttps*(ip: string, port: uint16, body: untyped) =
-  server(true, ip, port, body)
+template serverHttps*(ip: string, body: untyped) =
+  server(true, ip, 443, body)
 
 macro worker*(num: int, body: untyped): untyped =
   var workerRootBlockBody = nnkStmtList.newTree(
