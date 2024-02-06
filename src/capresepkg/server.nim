@@ -10,10 +10,12 @@ import std/os
 import std/strutils
 import logs
 import arraylib
+import bytes
 import files
 import server_types
 import config
 export arraylib
+export bytes
 export server_types
 
 var routesHostParamExists* {.compileTime.}: bool = false
