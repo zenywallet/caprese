@@ -4605,8 +4605,8 @@ template httpTargetHeaderDefault() {.dirty.} =
 var serverWaitThread: Thread[WrapperThreadArg]
 
 template serverStart*(wait: bool = true) =
-  serverMacro()
   contentsWithCfg(cfg)
+  serverMacro()
   httpTargetHeaderDefault()
   serverType()
   serverLib(cfg)
