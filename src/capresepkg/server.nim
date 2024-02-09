@@ -972,6 +972,7 @@ var initServerFlag {.compileTime.} = false
 var curSrvId {.compileTime.} = 0
 var curAppId {.compileTime.} = 0
 var curResId {.compileTime.} = 0
+var serverConfigStmt* {.compileTime.} = newStmtList()
 var serverStmt* {.compileTime.} = newStmtList()
 var serverWorkerInitStmt {.compileTime.} = newStmtList()
 var serverWorkerMainStmt {.compileTime.} =
@@ -1211,6 +1212,8 @@ macro evalSslLib(val: SslLib): SslLib =
 template addServer*(bindAddress: string, port: uint16, unix: bool, ssl: bool, body: untyped) =
   initServer()
   addServerMacro(bindAddress, port, unix, ssl, evalSslLib(cfg.sslLib), body)
+
+macro serverConfigMacro*(): untyped = serverConfigStmt
 
 macro serverMacro*(): untyped = serverStmt
 
@@ -4605,6 +4608,7 @@ template httpTargetHeaderDefault() {.dirty.} =
 var serverWaitThread: Thread[WrapperThreadArg]
 
 template serverStart*(wait: bool = true) =
+  serverConfigMacro()
   contentsWithCfg(cfg)
   serverMacro()
   httpTargetHeaderDefault()

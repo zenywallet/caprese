@@ -68,6 +68,16 @@ template cfgDefault() =
   when not declared(cfg):
     var cfg* {.compileTime, inject.}: Config = defaultConfig()
 
+var initCfgFlag {.compileTime.}: bool
+macro initCfg*(): untyped =
+  if initCfgFlag: return
+  initCfgFlag = true
+
+  discard serverConfigStmt.add quote do:
+    configCallsMacro()
+    cfgDefault()
+    when cfg.debugLog: {.define: DEBUG_LOG.}
+
 var initFlag {.compileTime.}: bool
 macro init*(): untyped =
   if initFlag: return
@@ -98,10 +108,6 @@ macro init*(): untyped =
   searchAddServer(serverStmt)
 
   quote do:
-    configCallsMacro()
-    cfgDefault()
-    when cfg.debugLog: {.define: DEBUG_LOG.}
-
     serverInit()
     serverTagLib(cfg)
 
@@ -121,12 +127,14 @@ macro init*(): untyped =
         `onSigTermQuitBody`
 
 macro server*(ssl: bool, ip: string, port: uint16, body: untyped): untyped =
+  initCfg()
   discard serverStmt.add quote do:
     init()
     echo "server: ", `ip`, ":", `port`, (if `ssl`: " SSL" else: "")
     addServer(`ip`, `port`, false, `ssl`, `body`)
 
 macro server*(ip: string, port: uint16, body: untyped): untyped =
+  initCfg()
   discard serverStmt.add quote do:
     init()
     echo "server: ", `ip`, ":", `port`
@@ -134,6 +142,7 @@ macro server*(ip: string, port: uint16, body: untyped): untyped =
 
 
 macro server*(unix: string, body: untyped): untyped =
+  initCfg()
   discard serverStmt.add quote do:
     init()
     echo "server: unix:", `unix`
