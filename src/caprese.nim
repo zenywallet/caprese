@@ -225,6 +225,33 @@ when isMainModule:
 
     serverStart()
 
+  elif defined(EXAMPLE2):
+    type
+      CipherContext = object
+        encryptVector: array[16, byte]
+        decryptVector: array[16, byte]
+        key: array[140, uint32]
+
+      ClientExt {.clientExt.} = object
+        cipherCtx: CipherContext
+
+    proc cipherInit(ctx: var CipherContext) =
+      zeroMem(addr ctx, sizeof(CipherContext))
+      echo "ctx=", ctx
+
+    server(ssl = true, ip = "0.0.0.0", port = 8009):
+      routes:
+        stream "/":
+          onOpen:
+            cipherInit(client.cipherCtx)
+
+        get "/":
+          return """<script>new WebSocket("wss://localhost:8009")</script>""".addHeader.send
+
+        return send("Not found".addHeader(Status404))
+
+    serverStart()
+
   elif defined(BENCHMARK1):
     config:
       sslLib = None
