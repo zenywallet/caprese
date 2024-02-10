@@ -161,7 +161,7 @@ macro worker*(num: int, body: untyped): untyped =
       body
     )
   )
-  quote do:
+  discard serverStmt.add quote do:
     init()
     atomicInc(workerNum, `num`)
     var workerThreads: array[`num`, Thread[void]]
