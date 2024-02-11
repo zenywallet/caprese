@@ -68,21 +68,7 @@ template cfgDefault() =
   when not declared(cfg):
     var cfg* {.compileTime, inject.}: Config = defaultConfig()
 
-var initCfgFlag {.compileTime.}: bool
-macro initCfg*(): untyped =
-  if initCfgFlag: return
-  initCfgFlag = true
-
-  discard serverConfigStmt.add quote do:
-    configCallsMacro()
-    cfgDefault()
-    when cfg.debugLog: {.define: DEBUG_LOG.}
-
-var initFlag {.compileTime.}: bool
-macro init*(): untyped =
-  if initFlag: return
-  initFlag = true
-
+macro searchServerNode() =
   proc search(searchNode: NimNode) =
     for n in searchNode:
       search(n)
@@ -106,6 +92,22 @@ macro init*(): untyped =
         search(searchNode[searchNode.len - 1])
 
   searchAddServer(serverStmt)
+
+var initCfgFlag {.compileTime.}: bool
+macro initCfg*(): untyped =
+  if initCfgFlag: return
+  initCfgFlag = true
+
+  discard serverConfigStmt.add quote do:
+    searchServerNode()
+    configCallsMacro()
+    cfgDefault()
+    when cfg.debugLog: {.define: DEBUG_LOG.}
+
+var initFlag {.compileTime.}: bool
+macro init*(): untyped =
+  if initFlag: return
+  initFlag = true
 
   quote do:
     serverInit()
