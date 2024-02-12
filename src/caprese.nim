@@ -254,6 +254,159 @@ when isMainModule:
 
     serverStart()
 
+  elif defined(EXAMPLE3):
+    import std/strformat
+    import std/re
+
+    type
+      PendingData = object
+        url: string
+
+    config:
+      sslLib = BearSSL
+      debugLog = true
+
+      httpHeader:
+        HeaderHost: "Host"
+        HeaderAcceptEncoding: "Accept-Encoding"
+        HeaderConnection: "Connection"
+
+    var reqs = newPending[PendingData](limit = 100)
+
+    onQuit:
+      reqs.drop()
+
+    const IndexHtml = staticHtmlDocument:
+      buildHtml(html):
+        head:
+          meta(charset="utf-8")
+        body:
+          text "welcome"
+
+    const TestHtml = staticHtmlDocument:
+      buildHtml(html):
+        head:
+          meta(charset="utf-8")
+        body:
+          text "[worker] {urlText}"
+
+    const WsTestJs = staticScript:
+      import jsffi
+      import capresepkg/jslib
+
+      var testDataBase = ""
+      var testData = ""
+      for i in 0..<100:
+        testDataBase = testDataBase & "[testdata]"
+      for i in 0..<100:
+        testData = testData & testDataBase
+
+      proc wsUrl(domain, path: cstring): cstring =
+        var prot = if window.location.protocol == "https:".toJs: "wss:".cstring else: "ws:".cstring
+        var port = window.location.port
+        var sport = if port == 80.toJs or port == 443.toJs: "".cstring else: ":".cstring & port.to(cstring)
+        result = prot & "//".cstring & domain & sport & "/".cstring & path
+
+      var ws = newWebSocket(wsUrl("localhost", "ws"), "caprese-0.1")
+      proc testSend() =
+        if ws.readyState == WebSocket.OPEN:
+          ws.send(testData)
+      setInterval(testSend, 3000)
+
+    const WsTestMinJs = scriptMinifier(code = WsTestJs, extern = "")
+
+    const WsTestHtml = staticHtmlDocument:
+      buildHtml(html):
+        head:
+          meta(charset="utf-8")
+        body:
+          text "websocket test"
+          script: verbatim WsTestMinJs
+
+    worker(num = 2):
+      while true:
+        let req = reqs.getPending()
+        let urlText = sanitizeHtml(req.data.url)
+        let clientId = req.cid
+        clientId.send(fmt(TestHtml).addHeader())
+
+    server(ssl = true, ip = "0.0.0.0", port = 8009):
+      routes(host = "localhost"):
+        certificates(path = "./certs/site_a"):
+          privKey: "privkey.pem"
+          fullChain: "fullchain.pem"
+
+        # client: Client
+        # url: string
+        # headers: Headers
+
+        get "/":
+          return send(IndexHtml.addHeader())
+
+        get "/home", "/main", "/about":
+          return send(IndexHtml.addHeader())
+
+        get re"/([a-z]+)(\d+)":
+          return send(sanitizeHtml(matches[0] & "|" & matches[1]).addHeader())
+
+        get "/test":
+          return reqs.pending(PendingData(url: reqUrl))
+
+        get "/wstest":
+          return send(WsTestHtml.addHeader())
+
+        stream(path = "/ws", protocol = "caprese-0.1"):
+          # client: Client
+          onOpen:
+            echo "onOpen"
+
+          # client: Client
+          # opcode: WebSocketOpCode
+          # data: ptr UncheckedArray[byte]
+          # size: int
+          onMessage:
+            echo "onMessage"
+            return wsSend(data.toString(size), WebSocketOpcode.Binary)
+
+          onClose:
+            echo "onClose"
+
+        stream(path = "/ws2", protocol = "caprese-0.1"):
+          # client: Client
+          onOpen:
+            echo "onOpen"
+
+          # client: Client
+          # opcode: WebSocketOpCode
+          # data: ptr UncheckedArray[byte]
+          # size: int
+          echo "stream test"
+          case opcode
+          of WebSocketOpcode.Binary, WebSocketOpcode.Text, WebSocketOpcode.Continue:
+            echo "onMessage"
+            return wsSend(data.toString(size), WebSocketOpcode.Binary)
+          of WebSocketOpcode.Ping:
+            return wsSend(data.toString(size), WebSocketOpcode.Pong)
+          of WebSocketOpcode.Pong:
+            debug "pong ", data.toString(size)
+            return SendResult.Success
+          else: # WebSocketOpcode.Close
+            echo "onClose"
+            return SendResult.None
+
+        let urlText = sanitizeHtml(reqUrl)
+        return send(fmt"Not found: {urlText}".addDocType().addHeader(Status404))
+
+    server(ip = "0.0.0.0", port = 8089):
+      routes(host = "localhost"):
+        get "/":
+          return send(IndexHtml.addHeader())
+
+        let urlText = sanitizeHtml(reqUrl)
+        return send(fmt"Not found: {urlText}".addDocType().addHeader(Status404))
+
+    serverStart()
+
   elif defined(BENCHMARK1):
     config:
       sslLib = None
@@ -299,158 +452,3 @@ when isMainModule:
         return send("Not found".addHeader(Status404))
 
     serverStart()
-
-
-  #[
-  import std/strformat
-  import std/re
-
-  type
-    PendingData = object
-      url: string
-
-  config:
-    sslLib = BearSSL
-    debugLog = true
-
-    httpHeader:
-      HeaderHost: "Host"
-      HeaderAcceptEncoding: "Accept-Encoding"
-      HeaderConnection: "Connection"
-
-  var reqs = newPending[PendingData](limit = 100)
-
-  onQuit:
-    reqs.drop()
-
-  const IndexHtml = staticHtmlDocument:
-    buildHtml(html):
-      head:
-        meta(charset="utf-8")
-      body:
-        text "welcome"
-
-  const TestHtml = staticHtmlDocument:
-    buildHtml(html):
-      head:
-        meta(charset="utf-8")
-      body:
-        text "[worker] {urlText}"
-
-  const WsTestJs = staticScript:
-    import jsffi
-    import jslib
-
-    var testDataBase = ""
-    var testData = ""
-    for i in 0..<100:
-      testDataBase = testDataBase & "[testdata]"
-    for i in 0..<100:
-      testData = testData & testDataBase
-
-    proc wsUrl(domain, path: cstring): cstring =
-      var prot = if window.location.protocol == "https:".toJs: "wss:".cstring else: "ws:".cstring
-      var port = window.location.port
-      var sport = if port == 80.toJs or port == 443.toJs: "".cstring else: ":".cstring & port.to(cstring)
-      result = prot & "//".cstring & domain & sport & "/".cstring & path
-
-    var ws = newWebSocket(wsUrl("localhost", "ws"), "caprese-0.1")
-    proc testSend() =
-      if ws.readyState == WebSocket.OPEN:
-        ws.send(testData)
-    setInterval(testSend, 3000)
-
-  const WsTestMinJs = scriptMinifier(code = WsTestJs, extern = "")
-
-  const WsTestHtml = staticHtmlDocument:
-    buildHtml(html):
-      head:
-        meta(charset="utf-8")
-      body:
-        text "websocket test"
-        script: verbatim WsTestMinJs
-
-  worker(num = 2):
-    while true:
-      let req = reqs.getPending()
-      let urlText = sanitizeHtml(req.data.url)
-      let clientId = req.cid
-      clientId.send(fmt(TestHtml).addHeader())
-
-  server(ssl = true, ip = "0.0.0.0", port = 8009):
-    routes(host = "localhost"):
-      certificates(path = "./certs/site_a"):
-        privKey: "privkey.pem"
-        fullChain: "fullchain.pem"
-
-      # client: Client
-      # url: string
-      # headers: Headers
-
-      get "/":
-        return send(IndexHtml.addHeader())
-
-      get "/home", "/main", "/about":
-        return send(IndexHtml.addHeader())
-
-      get re"/([a-z]+)(\d+)":
-        return send(sanitizeHtml(matches[0] & "|" & matches[1]).addHeader())
-
-      get "/test":
-        return reqs.pending(PendingData(url: reqUrl))
-
-      get "/wstest":
-        return send(WsTestHtml.addHeader())
-
-      stream(path = "/ws", protocol = "caprese-0.1"):
-        # client: Client
-        onOpen:
-          echo "onOpen"
-
-        # client: Client
-        # opcode: WebSocketOpCode
-        # data: ptr UncheckedArray[byte]
-        # size: int
-        onMessage:
-          echo "onMessage"
-          return wsSend(data.toString(size), WebSocketOpcode.Binary)
-
-        onClose:
-          echo "onClose"
-
-      stream(path = "/ws2", protocol = "caprese-0.1"):
-        # client: Client
-        onOpen:
-          echo "onOpen"
-
-        # client: Client
-        # opcode: WebSocketOpCode
-        # data: ptr UncheckedArray[byte]
-        # size: int
-        echo "stream test"
-        case opcode
-        of WebSocketOpcode.Binary, WebSocketOpcode.Text, WebSocketOpcode.Continue:
-          echo "onMessage"
-          return wsSend(data.toString(size), WebSocketOpcode.Binary)
-        of WebSocketOpcode.Ping:
-          return wsSend(data.toString(size), WebSocketOpcode.Pong)
-        of WebSocketOpcode.Pong:
-          debug "pong ", data.toString(size)
-          return SendResult.Success
-        else: # WebSocketOpcode.Close
-          echo "onClose"
-          return SendResult.None
-
-      let urlText = sanitizeHtml(reqUrl)
-      return send(fmt"Not found: {urlText}".addDocType().addHeader(Status404))
-
-  server(ip = "0.0.0.0", port = 8089):
-    routes(host = "localhost"):
-      get "/":
-        return send(IndexHtml.addHeader())
-
-      let urlText = sanitizeHtml(reqUrl)
-      return send(fmt"Not found: {urlText}".addDocType().addHeader(Status404))
-
-  serverStart()
-  ]#
