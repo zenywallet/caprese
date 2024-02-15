@@ -197,6 +197,9 @@ template contentsWithCfg*(cfg: static Config) {.dirty.} =
   template addActiveHeader*(body: string, mimetype: string | RawMimeType): Array[byte] =
     addActiveHeader(body, Status200, mimetype)
 
+  template addActiveHeader*(body: string): Array[byte] =
+    addActiveHeader(body, Status200, "text/html")
+
   proc redirect301*(location: string): string =
     result = "HTTP/" & HTTP_VERSION & " " & $Status301 & "\c\L" &
             "Content-Type: text/html\c\L" &
