@@ -670,8 +670,8 @@ iterator getTags(clientId: ClientId): Tag
 
 #### Send to tag, WebSocket only
 ```nim
-template wsSendTag(tag: Tag, data: seq[byte] | string | Array[byte],
-                  opcode: WebSocketOpCode = WebSocketOpCode.Binary): int
+template wsSend(tag: Tag, data: seq[byte] | string | Array[byte],
+                opcode: WebSocketOpCode = WebSocketOpCode.Binary): int
 ```
 
 This is a feature that was originally used in the server of the block explorer. What this is used for is that if the HASH160 of addresses in the user wallets are registered as tags, when a new block is found, in the process of parsing the block and transactions, address-related information can be sent to the tags of the found addresses, and the user wallets will be notified in real time.
