@@ -215,6 +215,11 @@ template getPending*(reqs: auto): auto =
   if not active: exitWorker()
   ret
 
+template onRecv*(reqs: auto, body: untyped) =
+  while true:
+    let req {.inject.} = reqs.getPending()
+    body
+
 
 when isMainModule:
   when defined(EXAMPLE1):
