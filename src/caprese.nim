@@ -220,6 +220,11 @@ template onRecv*(reqs: auto, body: untyped) =
     let req {.inject.} = reqs.getPending()
     body
 
+template onRecv*(reqs: auto, req: untyped, body: untyped) =
+  while true:
+    let `req` {.inject.} = `reqs`.getPending()
+    `body`
+
 
 when isMainModule:
   when defined(EXAMPLE1):
