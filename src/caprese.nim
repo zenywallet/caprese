@@ -174,8 +174,11 @@ macro worker*(num: int, body: untyped): untyped =
 
 template worker*(body: untyped) = worker(1, body)
 
-proc newPending*[T](limit: int): Queue[tuple[cid: ClientId, data: T]] {.inline.} =
-  newQueue[tuple[cid: ClientId, data: T]](limit)
+template newPending*[T](limit: int): Queue[tuple[cid: ClientId, data: T]] =
+  var pendingQueue = newQueue[tuple[cid: ClientId, data: T]](limit)
+  onQuit:
+    pendingQueue.drop()
+  pendingQueue
 
 macro pendingBody*[T](reqs: var Queue[tuple[cid: ClientId, data: T]], data: T): untyped =
   quote do:
