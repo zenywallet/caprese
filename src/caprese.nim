@@ -218,12 +218,12 @@ template getPending*(reqs: auto): auto =
   if not active: exitWorker()
   ret
 
-template onRecv*(reqs: auto, body: untyped) =
+template recvLoop*(reqs: auto, body: untyped) =
   while true:
     let req {.inject.} = reqs.getPending()
     body
 
-template onRecv*(reqs: auto, req: untyped, body: untyped) =
+template recvLoop*(reqs: auto, req: untyped, body: untyped) =
   while true:
     let `req` {.inject.} = `reqs`.getPending()
     `body`
