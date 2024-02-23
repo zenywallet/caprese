@@ -174,11 +174,13 @@ macro worker*(num: int, body: untyped): untyped =
 
 template worker*(body: untyped) = worker(1, body)
 
-template newPending*[T](limit: int): Queue[tuple[cid: ClientId, data: T]] =
-  var pendingQueue = newQueue[tuple[cid: ClientId, data: T]](limit)
+type
+  Pendings*[T] = Queue[tuple[cid: ClientId, data: T]]
+
+template newPending*[T](pendingQueue: var Pendings[T], limit: int) =
+  pendingQueue.init(limit)
   onQuit:
     pendingQueue.drop()
-  pendingQueue
 
 macro pendingBody*[T](reqs: var Queue[tuple[cid: ClientId, data: T]], data: T): untyped =
   quote do:
@@ -284,10 +286,8 @@ when isMainModule:
         HeaderAcceptEncoding: "Accept-Encoding"
         HeaderConnection: "Connection"
 
-    var reqs = newPending[PendingData](limit = 100)
-
-    onQuit:
-      reqs.drop()
+    var reqs: Pendings[PendingData]
+    reqs.newPending(limit = 100)
 
     const IndexHtml = staticHtmlDocument:
       buildHtml(html):
