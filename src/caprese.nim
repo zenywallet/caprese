@@ -337,8 +337,7 @@ when isMainModule:
           script: verbatim WsTestMinJs
 
     worker(num = 2):
-      while true:
-        let req = reqs.getPending()
+      reqs.recvLoop(req):
         let urlText = sanitizeHtml(req.data.url)
         let clientId = req.cid
         clientId.send(fmt(TestHtml).addHeader())
