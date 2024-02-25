@@ -164,7 +164,7 @@ If SSL is not required, it is recommended set to *None*. This will enable the ex
 * **headerServer:** *true* or *false*(default), If *true*, include `Server:` in the response headers. Common benchmarks require this value to be *true*. In benchmark competition, even a single byte of copying can feel heavy.
 * **headerDate:** *true* or *false*(default), If *true*, include `Date:` in the response headers. Common benchmarks require this value to be *true*. It should not be the essence of benchmarking, but sometimes it is a competition of how to implement the date strings.
 * **errorCloseMode:** *CloseImmediately*(default) or *UntilConnectionTimeout*. Behavior when disconnecting clients on error.
-* **connectionPreferred:** *ExternalConnection*(default) or *InternalConnection*. Optimize server processing depending on whether the clients are connected from external or internal network connections. The situation is different when the client and server are on separate PCs or on the same PC, and the benchmarks should be evaluated separately. If the client and server are running on the same PC using virtual technology such as *Docker* and sharing CPU resources, they should rather be considered internal connections.
+* **connectionPreferred:** *ExternalConnection*(default) or *InternalConnection*. Optimize server processing depending on whether the clients are connected from external or internal network connections. The situation is different when the client and server are on separate PCs or on the same PC, therefore, the benchmarks should be evaluated separately. If the client and server are running on the same PC using virtual technology such as *Docker* and sharing CPU resources, they should rather be considered internal connections.
 
 ### Server Routes
 #### Example of a simple `server:` block
@@ -312,14 +312,11 @@ type
   PendingData = object
     url: string
 
-var reqs = newPending[PendingData](100)
-
-onQuit:
-  reqs.drop()
+var reqs: Pendings[PendingData]
+reqs.newPending(limit = 100)
 
 worker(num = 2):
-  while true:
-    let req = reqs.getPending()
+  reqs.recvLoop(req):
     let urlText = sanitizeHtml(req.data.url)
     let clientId = req.cid
     clientId.send(fmt("worker {urlText}").addHeader())
