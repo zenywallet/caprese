@@ -1741,7 +1741,6 @@ template serverLib(cfg: static Config) {.dirty.} =
             while true:
               block paramsLoop:
                 for i in incompleteIdx..<targetHeaders.len:
-                  #echo "incompleteIdx=", i
                   let (headerId, targetParam) = targetHeaders[i][]
                   if equalMem(cast[pointer](pos), targetParam.cstring, targetParam.len):
                     inc(pos, targetParam.len)
