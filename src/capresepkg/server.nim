@@ -1708,6 +1708,9 @@ template serverLib(cfg: static Config) {.dirty.} =
         var pos = cur + 1
         while true:
           if equalMem(cast[pointer](pos), " HTTP/1.".cstring, 8):
+            if cast[ptr char](cast[pointer](cur))[] != '/':
+              next = -1
+              break
             header.url = capbytes.toString(cast[ptr UncheckedArray[byte]](cast[pointer](cur)), pos - cur)
             inc(pos, 7)
             if equalMem(cast[pointer](pos), ".1\c\L".cstring, 4):
