@@ -41,6 +41,7 @@ type
     headerDate*: bool
     errorCloseMode*: ErrorCloseMode
     connectionPreferred*: ConnectionPreferred
+    urlRootSafe*: bool
 
 proc defaultConfig*(): Config {.compileTime.} =
   result.sslLib = BearSSL
@@ -65,6 +66,7 @@ proc defaultConfig*(): Config {.compileTime.} =
   result.headerDate = false
   result.errorCloseMode = CloseImmediately
   result.connectionPreferred = ExternalConnection
+  result.urlRootSafe = true
 
 macro staticBool*(b: static bool): untyped = newLit(b)
 macro staticInt*(a: static int): untyped = newLit(a)
