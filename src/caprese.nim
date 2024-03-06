@@ -425,6 +425,7 @@ when isMainModule:
       headerServer = true
       headerDate = true
       connectionPreferred = InternalConnection
+      urlRootSafe = false
 
     server(ip = "0.0.0.0", port = 8089):
       routes:
@@ -439,6 +440,7 @@ when isMainModule:
       headerServer = true
       headerDate = true
       connectionPreferred = ExternalConnection
+      urlRootSafe = false
 
     server(ip = "0.0.0.0", port = 8089):
       routes:
