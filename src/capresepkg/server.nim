@@ -1550,7 +1550,7 @@ template serverLib(cfg: static Config) {.dirty.} =
   proc parseHeader(buf: ptr UncheckedArray[byte], size: int,
                   targetHeaders: var Array[ptr tuple[id: HeaderParams, val: string]]
                   ): tuple[err: int, header: ReqHeader, next: int] =
-    if equalMem(addr buf[0], "GET /".cstring, 5):
+    if (when cfg.urlRootSafe: equalMem(addr buf[0], "GET /".cstring, 5) else: equalMem(addr buf[0], "GET ".cstring, 4)):
       var cur = 4
       var pos = 5
       while true:
@@ -1625,7 +1625,7 @@ template serverLib(cfg: static Config) {.dirty.} =
                   targetHeaders: var Array[ptr tuple[id: HeaderParams, val: string]],
                   header: var ReqHeader
                   ): tuple[err: int, next: int] =
-    if equalMem(addr buf[0], "GET /".cstring, 5):
+    if (when cfg.urlRootSafe: equalMem(addr buf[0], "GET /".cstring, 5) else: equalMem(addr buf[0], "GET ".cstring, 4)):
       var cur = 4
       var pos = 5
       while true:
