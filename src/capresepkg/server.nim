@@ -1621,6 +1621,18 @@ template serverLib(cfg: static Config) {.dirty.} =
       result.err = 2
       result.next = -1
 
+  type
+    RequestMethod* = enum
+      Unknown
+      GET
+      HEAD
+      POST
+      PUT
+      DELETE
+      CONNECT
+      OPTIONS
+      TRACE
+
   proc parseHeader(buf: ptr UncheckedArray[byte], size: int,
                   targetHeaders: var Array[ptr tuple[id: HeaderParams, val: string]],
                   header: var ReqHeader
