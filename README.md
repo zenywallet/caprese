@@ -27,7 +27,7 @@ See [Nim](https://nim-lang.org/) for installation details.
 #### Build Caprese and Launch
 you also require the following installation to build the SSL libraries, *golang* is required to build *BoringSSL*. The version of *golang* installed by the Ubuntu package tool might be old, so you might want to download and install the latest version from [The Go Programming Language](https://go.dev/), you can choose either.
 
-    sudo apt install autoconf libtool cmake pkg-config golang
+    sudo apt install automake autoconf libtool cmake pkg-config golang
 
 Do you have git installed?
 
