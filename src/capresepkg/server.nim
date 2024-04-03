@@ -1397,7 +1397,7 @@ template proxy*(path, unix: string) = discard
 template proxy*(path, unix: string, body: untyped) = discard
 
 template proxy*(proxyAppId: int, path, host: string, port: uint16, body: untyped) =
-  if startsWith(headerUrl(), path):
+  if startsWith(reqUrl(), path):
     body
     let client = ctx.client
     if client.proxy.isNil:
@@ -1422,7 +1422,7 @@ template proxy*(proxyAppId: int, path, host: string, port: uint16, body: untyped
     return SendResult.Pending
 
 template proxy*(proxyAppId: int, path, unix: string, body: untyped) =
-  if startsWith(headerUrl(), path):
+  if startsWith(reqUrl(), path):
     body
     let client = ctx.client
     if client.proxy.isNil:
@@ -1843,18 +1843,19 @@ template serverLib(cfg: static Config) {.dirty.} =
     else:
       return (true, fin, opcode, payload, payloadLen, nil, 0)
 
-  template headerUrl(): string = ctx.header.url
+  template reqUrl: string = ctx.header.url
+  template headerUrl(): string = ctx.header.url # deprecated
 
   template get(path: string, body: untyped) =
-    if headerUrl() == path:
+    if reqUrl() == path:
       body
 
   template get(pathArgs: varargs[string], body: untyped) =
-    if headerUrl() in pathArgs:
+    if reqUrl() in pathArgs:
       body
 
   template get(path: Regex, body: untyped) =
-    if headerUrl() =~ path:
+    if reqUrl() =~ path:
       body
 
   template acme(path: static string, body: untyped) =
@@ -1878,8 +1879,6 @@ template serverLib(cfg: static Config) {.dirty.} =
         client.close(ssl = true)
     else:
       originalClientId.send(capbytes.toString(buf, size))
-
-  template reqUrl: string = ctx.header.url
 
   template reqClient: Client = ctx.client
 
