@@ -1858,6 +1858,8 @@ template serverLib(cfg: static Config) {.dirty.} =
     if reqUrl() =~ path:
       body
 
+  template startsWith(path: string): bool = startsWith(reqUrl(), path)
+
   template acme(path: static string, body: untyped) =
     block:
       var (acmeFlag, content, mime) = getAcmeChallenge(path, ctx.header.url)
