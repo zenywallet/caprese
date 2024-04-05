@@ -1860,6 +1860,10 @@ template serverLib(cfg: static Config) {.dirty.} =
 
   template startsWith(path: string): bool = startsWith(reqUrl(), path)
 
+  template get(path: bool, body: untyped) =
+    if path:
+      body
+
   template acme(path: static string, body: untyped) =
     block:
       var (acmeFlag, content, mime) = getAcmeChallenge(path, ctx.header.url)
