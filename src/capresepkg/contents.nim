@@ -4,8 +4,8 @@ import std/macros
 import std/os
 import std/strutils
 import std/mimetypes
+import std/times
 import exec
-import times
 import arraylib
 import config
 export macros except error
