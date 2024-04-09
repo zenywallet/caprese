@@ -367,6 +367,9 @@ when isMainModule:
         get "/wstest":
           return send(WsTestHtml.addHeader())
 
+        get startsWith("/user/"):
+          return send(reqUrl[6..^1].addHeader(mimetype = "text"))
+
         stream(path = "/ws", protocol = "caprese-0.1"):
           # client: Client
           onOpen:
