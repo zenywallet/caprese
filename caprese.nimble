@@ -13,6 +13,7 @@ bin           = @["caprese"]
 # Dependencies
 
 requires "nim >= 1.6.4"
+requires "checksums"
 requires "nimcrypto"
 requires "karax >= 1.2.3"
 
