@@ -1864,6 +1864,12 @@ template serverLib(cfg: static Config) {.dirty.} =
     if path:
       body
 
+  template post(path: string, body: untyped) =
+    when cfg.postRequestMethod:
+      {.warning: "POST is not yet implemented.".}
+    else:
+      {.error: "POST is disabled. It can be enabled with postRequestMethod.".}
+
   template acme(path: static string, body: untyped) =
     block:
       var (acmeFlag, content, mime) = getAcmeChallenge(path, ctx.header.url)
