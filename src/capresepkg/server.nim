@@ -3487,8 +3487,6 @@ template serverLib(cfg: static Config) {.dirty.} =
             let ec = addr client.sc.eng
             var bufRecvApp, bufSendRec, bufRecvRec, bufSendApp: ptr UncheckedArray[byte]
             var bufLen {.noinit.}: csize_t
-            var headerErr {.noinit.}: int
-            var headerNext {.noinit.}: int
             var engine = RecvApp
 
             block engineBlock:
