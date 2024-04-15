@@ -1483,7 +1483,8 @@ template serverLib(cfg: static Config) {.dirty.} =
   var workerThreadCtx {.threadvar.}: WorkerThreadCtx
   #var clientHandlerProcs: Array[ClientHandlerProc]
 
-  var clientQueue = queue2.newQueue[Client]()
+  when cfg.sslLib == SslLib.None and cfg.connectionPreferred != ConnectionPreferred.InternalConnection:
+    var clientQueue = queue2.newQueue[Client]()
   var highGearManagerAssigned: int = 0
   var highGearSemaphore: Sem
   discard sem_init(addr highGearSemaphore, 0, 0)
@@ -1491,18 +1492,20 @@ template serverLib(cfg: static Config) {.dirty.} =
   var throttleBody: Sem
   discard sem_init(addr throttleBody, 0, 0)
   #discard sem_destroy(addr throttleBody)
-  var throttleChanged: bool = false
+  when cfg.sslLib == SslLib.None and cfg.connectionPreferred != ConnectionPreferred.InternalConnection:
+    var throttleChanged: bool = false
   var highGearThreshold: int
 
-  proc atomic_compare_exchange_n(p: ptr int, expected: ptr int, desired: int, weak: bool,
-                                success_memmodel: int, failure_memmodel: int): bool
-                                {.importc: "__atomic_compare_exchange_n", nodecl, discardable.}
+  when cfg.sslLib == SslLib.None and cfg.connectionPreferred != ConnectionPreferred.InternalConnection:
+    proc atomic_compare_exchange_n(p: ptr int, expected: ptr int, desired: int, weak: bool,
+                                  success_memmodel: int, failure_memmodel: int): bool
+                                  {.importc: "__atomic_compare_exchange_n", nodecl, discardable.}
 
-  proc atomic_fetch_add(p: ptr int, val: int, memmodel: int): int
-                          {.importc: "__atomic_fetch_add", nodecl, discardable.}
+    proc atomic_fetch_add(p: ptr int, val: int, memmodel: int): int
+                            {.importc: "__atomic_fetch_add", nodecl, discardable.}
 
-  proc atomic_fetch_sub(p: ptr int, val: int, memmodel: int): int
-                          {.importc: "__atomic_fetch_sub", nodecl, discardable.}
+    proc atomic_fetch_sub(p: ptr int, val: int, memmodel: int): int
+                            {.importc: "__atomic_fetch_sub", nodecl, discardable.}
 
   macro certificates*(srvId: int, site: string, path: string, body: untyped = newEmptyNode()): untyped =
     var srvId = intVal(srvId).int
