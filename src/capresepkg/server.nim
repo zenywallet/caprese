@@ -758,18 +758,18 @@ template serverTagLib*(cfg: static Config) {.dirty.} =
       frame = capbytes.BytesBE(finOp, 127.byte, dataLen.uint64, data)
     result = clientId.send(frame.toString())
 
-  template send(data: seq[byte] | string | Array[byte]): SendResult {.dirty.} = ctx.client.send(data)
+  template send(data: seq[byte] | string | Array[byte]): SendResult {.dirty, used.} = ctx.client.send(data)
 
   template wsSend(data: seq[byte] | string | Array[byte],
-                  opcode: WebSocketOpCode = WebSocketOpCode.Binary): SendResult {.dirty.} =
+                  opcode: WebSocketOpCode = WebSocketOpCode.Binary): SendResult {.dirty, used.} =
     client.wsServerSend(data, opcode)
 
   template wsSend(clientId: ClientId, data: seq[byte] | string | Array[byte],
-                  opcode: WebSocketOpCode = WebSocketOpCode.Binary): SendResult {.dirty.} =
+                  opcode: WebSocketOpCode = WebSocketOpCode.Binary): SendResult {.dirty, used.} =
     clientId.wsServerSend(data, opcode)
 
   proc wsSend0(tag: Tag, data: seq[byte] | string | Array[byte],
-              opcode: WebSocketOpCode = WebSocketOpCode.Binary): SendResult =
+              opcode: WebSocketOpCode = WebSocketOpCode.Binary): SendResult {.used.} =
     result = SendResult.Success
     for cid in tag.getClientIds():
       let ret = cid.wsServerSend(data, opcode)
@@ -1541,7 +1541,7 @@ template serverLib(cfg: static Config) {.dirty.} =
       chain = splitPath(chainPath).tail
     addCertsTable(site, srvId, privPath, chainPath, priv, chain)
 
-  proc echoHeader(buf: ptr UncheckedArray[byte], size: int, header: ReqHeader) =
+  proc echoHeader(buf: ptr UncheckedArray[byte], size: int, header: ReqHeader) {.used.} =
     echo "url: ", header.url
     for i, param in header.params:
       echo i.HeaderParams, " ", TargetHeaderParams[i], capbytes.toString(cast[ptr UncheckedArray[byte]](addr buf[param.cur]), param.size)
@@ -1846,34 +1846,34 @@ template serverLib(cfg: static Config) {.dirty.} =
     else:
       return (true, fin, opcode, payload, payloadLen, nil, 0)
 
-  template reqUrl: string = ctx.header.url
-  template headerUrl(): string = ctx.header.url # deprecated
+  template reqUrl: string {.used.} = ctx.header.url
+  template headerUrl(): string {.used.} = ctx.header.url # deprecated
 
-  template get(path: string, body: untyped) =
+  template get(path: string, body: untyped) {.used.} =
     if reqUrl() == path:
       body
 
-  template get(pathArgs: varargs[string], body: untyped) =
+  template get(pathArgs: varargs[string], body: untyped) {.used.} =
     if reqUrl() in pathArgs:
       body
 
-  template get(path: Regex, body: untyped) =
+  template get(path: Regex, body: untyped) {.used.} =
     if reqUrl() =~ path:
       body
 
-  template startsWith(path: string): bool = startsWith(reqUrl(), path)
+  template startsWith(path: string): bool {.used.} = startsWith(reqUrl(), path)
 
-  template get(path: bool, body: untyped) =
+  template get(path: bool, body: untyped) {.used.} =
     if path:
       body
 
-  template post(path: string, body: untyped) =
+  template post(path: string, body: untyped) {.used.} =
     when cfg.postRequestMethod:
       {.warning: "POST is not yet implemented.".}
     else:
       {.error: "POST is disabled. It can be enabled with postRequestMethod.".}
 
-  template acme(path: static string, body: untyped) =
+  template acme(path: static string, body: untyped) {.used.} =
     block:
       var (acmeFlag, content, mime) = getAcmeChallenge(path, ctx.header.url)
       if acmeFlag:
@@ -1881,7 +1881,7 @@ template serverLib(cfg: static Config) {.dirty.} =
         if content.len > 0:
           return send(content.addHeader(Status200, mime))
 
-  template acme(path: static string) =
+  template acme(path: static string) {.used.} =
     block:
       var (acmeFlag, content, mime) = getAcmeChallenge(path, ctx.header.url)
       if content.len > 0:
@@ -1895,21 +1895,21 @@ template serverLib(cfg: static Config) {.dirty.} =
     else:
       originalClientId.send(capbytes.toString(buf, size))
 
-  template reqClient: Client = ctx.client
+  template reqClient: Client {.used.} = ctx.client
 
-  template reqHost: string =
+  template reqHost: string {.used.} =
     getHeaderValue(ctx.pRecvBuf, ctx.header, InternalEssentialHeaderHost)
 
-  template reqProtocol: string =
+  template reqProtocol: string {.used.} =
     getHeaderValue(ctx.pRecvBuf, ctx.header, InternalSecWebSocketProtocol)
 
-  template reqHeader(paramId: HeaderParams): string =
+  template reqHeader(paramId: HeaderParams): string {.used.} =
     getHeaderValue(ctx.pRecvBuf, ctx.header, paramId)
 
   template getHeaderValue(paramId: HeaderParams): string =
     getHeaderValue(ctx.pRecvBuf, ctx.header, paramId)
 
-  template response(file: FileContent, code: StatusCode = Status200): SendResult =
+  template response(file: FileContent, code: StatusCode = Status200): SendResult {.used.} =
     if reqHeader(InternalIfNoneMatch) == file.md5:
       send(Empty.addHeader(Status304))
     else:
@@ -3430,10 +3430,10 @@ template serverLib(cfg: static Config) {.dirty.} =
         closeBody
         return SendResult.None
 
-  template onProtocol(body: untyped) = discard
-  template onOpen(body: untyped) = discard
-  template onMessage(body: untyped) = discard
-  template onClose(body: untyped) = discard
+  template onProtocol(body: untyped) {.used.} = discard
+  template onOpen(body: untyped) {.used.} = discard
+  template onMessage(body: untyped) {.used.} = discard
+  template onClose(body: untyped) {.used.} = discard
 
   macro appStreamMacro(ssl: bool, body: untyped): untyped =
     var onMessageStmt = newStmtList()
