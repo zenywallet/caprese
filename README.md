@@ -151,6 +151,7 @@ config:
   errorCloseMode = CloseImmediately
   connectionPreferred = ExternalConnection
   urlRootSafe = true
+  postRequestMethod = false
 ```
 
 * **sslLib:** *None*, *BearSSL*(default), *OpenSSL*, *LibreSSL*, *BoringSSL*  
