@@ -1887,7 +1887,7 @@ template serverLib(cfg: static Config) {.dirty.} =
       if content.len > 0:
         return send(content.addHeader(Status200, mime))
 
-  proc proxyRecvCallback(originalClientId: ClientId, buf: ptr UncheckedArray[byte], size: int) =
+  proc proxyRecvCallback(originalClientId: ClientId, buf: ptr UncheckedArray[byte], size: int) {.used.} =
     if size <= 0:
       let client = getClient(originalClientId)
       if not client.isNil:
@@ -2770,7 +2770,7 @@ template serverLib(cfg: static Config) {.dirty.} =
         SendApp
         RecvApp
 
-    template brStateDebug(sc: ptr br_ssl_server_context) =
+    template brStateDebug(sc: ptr br_ssl_server_context) {.used.} =
       var st = br_ssl_engine_current_state(addr sc.eng)
       var s = "state:"
       if (st and BR_SSL_CLOSED) > 0:
@@ -3151,7 +3151,7 @@ template serverLib(cfg: static Config) {.dirty.} =
               client.close()
             return
 
-  macro appRoutesStage1Macro(ssl: bool, body: untyped): untyped =
+  macro appRoutesStage1Macro(ssl: bool, body: untyped): untyped {.used.} =
     quote do:
       clientHandlerProcs.add proc (ctx: WorkerThreadCtx) {.thread.} =
         let client = ctx.client
@@ -3327,7 +3327,7 @@ template serverLib(cfg: static Config) {.dirty.} =
         else:
           raise
 
-  macro appRoutesStage2Macro(ssl: bool, body: untyped): untyped =
+  macro appRoutesStage2Macro(ssl: bool, body: untyped): untyped {.used.} =
     quote do:
       clientHandlerProcs.add proc (ctx: WorkerThreadCtx) {.thread.} =
         when cfg.sslLib == OpenSSL or cfg.sslLib == LibreSSL or cfg.sslLib == BoringSSL:
@@ -3435,7 +3435,7 @@ template serverLib(cfg: static Config) {.dirty.} =
   template onMessage(body: untyped) {.used.} = discard
   template onClose(body: untyped) {.used.} = discard
 
-  macro appStreamMacro(ssl: bool, body: untyped): untyped =
+  macro appStreamMacro(ssl: bool, body: untyped): untyped {.used.} =
     var onMessageStmt = newStmtList()
     var onCloseStmt = newStmtList()
     var rawStmt = newStmtList()
@@ -3952,11 +3952,11 @@ template serverLib(cfg: static Config) {.dirty.} =
               client.close()
               return
 
-  macro appStreamSendMacro(ssl: bool, body: untyped): untyped =
+  macro appStreamSendMacro(ssl: bool, body: untyped): untyped {.used.} =
     quote do:
       clientHandlerProcs.add appRoutesSend # appStreamSend is same
 
-  macro appProxyMacro(ssl: bool, body: untyped): untyped =
+  macro appProxyMacro(ssl: bool, body: untyped): untyped {.used.} =
     quote do:
       clientHandlerProcs.add proc (ctx: WorkerThreadCtx) {.thread.} =
         let client = ctx.client
@@ -4189,7 +4189,7 @@ template serverLib(cfg: static Config) {.dirty.} =
               client.close(ssl = `ssl`)
               break
 
-  macro appProxySendMacro(ssl: bool, body: untyped): untyped =
+  macro appProxySendMacro(ssl: bool, body: untyped): untyped {.used.} =
     quote do:
       clientHandlerProcs.add appRoutesSend # appProxySend is same
 
