@@ -1001,7 +1001,10 @@ macro initServer*(): untyped =
   if not initServerFlag:
     initServerFlag = true
     quote do:
-      import std/tables
+      when NimVersion == "2.0.4": # workaround modulepaths.nim/getModuleName degrade
+        import std.tables
+      else:
+        import std/tables
       serverInitFreeClient()
       initClient(staticInt(cfg.clientMax), ClientObj, Client)
   else:
