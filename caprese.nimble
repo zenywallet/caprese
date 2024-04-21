@@ -90,14 +90,18 @@ before install:
   missingFileWorkaroundTask()
 
 before build:
-  exec "git submodule update --init"
-  if not fileExists("src/lib/bearssl/libbearssl.a"):
-    bearsslTask()
-  if not fileExists("src/lib/openssl/libssl.a") or not fileExists("src/lib/openssl/libcrypto.a"):
-    opensslTask()
-  if not fileExists("src/lib/libressl/libssl.a") or not fileExists("src/lib/libressl/libcrypto.a"):
-    libresslTask()
-  if not fileExists("src/lib/boringssl/libssl.a") or not fileExists("src/lib/boringssl/libcrypto.a"):
-    boringsslTask()
+  if getEnv("NOSSL")  == "1":
+    exec "git submodule update --init deps/zopfli"
+    exec "git submodule update --init deps/brotli"
+  else:
+    exec "git submodule update --init"
+    if not fileExists("src/lib/bearssl/libbearssl.a"):
+      bearsslTask()
+    if not fileExists("src/lib/openssl/libssl.a") or not fileExists("src/lib/openssl/libcrypto.a"):
+      opensslTask()
+    if not fileExists("src/lib/libressl/libssl.a") or not fileExists("src/lib/libressl/libcrypto.a"):
+      libresslTask()
+    if not fileExists("src/lib/boringssl/libssl.a") or not fileExists("src/lib/boringssl/libcrypto.a"):
+      boringsslTask()
   zopfliTask()
   brotliTask()
