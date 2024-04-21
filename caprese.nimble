@@ -90,7 +90,7 @@ before install:
   missingFileWorkaroundTask()
 
 before build:
-  if getEnv("NOSSL")  == "1":
+  if getEnv("NOSSL") == "1":
     exec "git submodule update --init deps/zopfli"
     exec "git submodule update --init deps/brotli"
   else:
