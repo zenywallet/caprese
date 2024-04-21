@@ -460,7 +460,14 @@ when isMainModule:
     var publicPath = paramStr(1)
     initDynamicFile(publicPath)
 
-    server(ssl = true, ip = "127.0.0.1", port = 8009):
+    macro envSslFlag(): untyped =
+      if os.getEnv("NOSSL") == "1":
+        newLit(false)
+      else:
+        newLit(true)
+    const sslFlag = envSslFlag()
+
+    server(ssl = sslFlag, ip = "127.0.0.1", port = (when sslFlag: 8009 else: 8089)):
       routes(host = "localhost"):
         var fileContentResult = getDynamicFile(reqUrl())
         if fileContentResult.err == FileContentSuccess:
