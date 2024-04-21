@@ -465,7 +465,12 @@ when isMainModule:
         newLit(false)
       else:
         newLit(true)
+
     const sslFlag = envSslFlag()
+
+    when not sslFlag:
+      config:
+        sslLib = None
 
     server(ssl = sslFlag, ip = "127.0.0.1", port = (when sslFlag: 8009 else: 8089)):
       routes(host = "localhost"):
