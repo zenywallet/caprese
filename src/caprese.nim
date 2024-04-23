@@ -195,9 +195,8 @@ macro pendingBody*[T](reqs: var Queue[tuple[cid: ClientId, data: T]], data: T): 
 
 template pending*[T](reqs: var Queue[tuple[cid: ClientId, data: T]], data: T): SendResult {.dirty.} =
   block:
-    when not declared(reqClient):
+    when not declared(client):
       {.error: "ClientId of pending can be ommitted only in server blocks.".}
-    var client = reqClient()
     pendingBody(reqs, data)
     pendingProc()
 
