@@ -4362,7 +4362,7 @@ template serverLib(cfg: static Config) {.dirty.} =
     proc fileWatcher(arg: ThreadArg) {.thread.} =
       var evs = newSeq[byte](sizeof(InotifyEvent) * 512)
       var fds: array[1, TPollfd]
-      fds[0].events = POLLIN
+      fds[0].events = posix.POLLIN
       var sec = 0
 
       template updateCerts(idx: int) =
