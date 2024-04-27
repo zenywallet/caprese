@@ -1371,8 +1371,8 @@ template stream*(streamAppId: int, path: string, protocol: string, body: untyped
         else:
           return SendResult.Error
       else:
+        let prot = getHeaderValue(InternalSecWebSocketProtocol)
         when protocol.len > 0:
-          let prot = getHeaderValue(InternalSecWebSocketProtocol)
           if prot == protocol:
             reqClient()[].appId = streamAppId
             let ret = send(webSocketMessageProtocol(key, protocol))
@@ -1382,7 +1382,10 @@ template stream*(streamAppId: int, path: string, protocol: string, body: untyped
             return SendResult.Error
         else:
           reqClient()[].appId = streamAppId
-          let ret = send(webSocketMessage(key))
+          let ret = if prot.len > 0:
+            send(webSocketMessageProtocol(key, prot))
+          else:
+            send(webSocketMessage(key))
           getOnOpenBody(body)
           return ret
 
