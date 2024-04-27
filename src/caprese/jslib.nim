@@ -55,6 +55,7 @@ macro `.()`*(typ: typedesc, field: untyped, args: varargs[JsObject, jsFromAst]):
     result[1].add args[idx].copyNimTree
 
 proc newWebSocket*(url: cstring, protocols: cstring | JsObject): WebSocket {.importcpp: "new WebSocket(#, #)".}
+proc newWebSocket*(url: cstring): WebSocket {.importcpp: "new WebSocket(#)".}
 proc newUint8Array*(): Uint8Array {.importcpp: "new Uint8Array()".}
 proc newUint8Array*(length: int): Uint8Array {.importcpp: "new Uint8Array(#)".}
 proc newUint8Array*(obj: JsObject): Uint8Array {.importcpp: "new Uint8Array(#)".} # typedArray, buffer
