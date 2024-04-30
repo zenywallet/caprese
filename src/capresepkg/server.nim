@@ -4644,6 +4644,8 @@ template serverStart*(wait: bool = true) =
   serverConfigMacro()
   contentsWithCfg(cfg)
   serverMacro()
+  when not initServerFlag:
+    {.error: "No server block to start.".}
   httpTargetHeaderDefault()
   serverType()
   serverLib(cfg)
