@@ -156,6 +156,8 @@ template serverHttp*(ip: string, body: untyped) =
 template serverHttps*(ip: string, body: untyped) =
   server(true, ip, 443, body)
 
+var workerThreadWaitProc: seq[proc()]
+
 macro worker*(num: int, body: untyped): untyped =
   var workerRootBlockBody = nnkStmtList.newTree(
     nnkBlockStmt.newTree(
@@ -171,8 +173,18 @@ macro worker*(num: int, body: untyped): untyped =
       proc workerProc() {.thread.} = `workerRootBlockBody`
       for i in 0..<`num`:
         createThread(workerThreads[i], workerProc)
+    workerThreadWaitProc.add proc() =
+      joinThreads(workerThreads)
 
 template worker*(body: untyped) = worker(1, body)
+
+template workerStart*() =
+  when not initServerFlag:
+    initCfg()
+    serverConfigMacro()
+    serverMacro()
+  for i in countdown(workerThreadWaitProc.high, 0):
+    workerThreadWaitProc[i]()
 
 type
   Pendings*[T] = Queue[tuple[cid: ClientId, data: T]]

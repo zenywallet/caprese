@@ -968,7 +968,7 @@ type
     AppProxy
     AppProxySend
 
-var initServerFlag {.compileTime.} = false
+var initServerFlag* {.compileTime.} = false
 var curSrvId {.compileTime.} = 0
 var curAppId {.compileTime.} = 0
 var curResId {.compileTime.} = 0
