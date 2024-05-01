@@ -8,6 +8,7 @@ import std/base64
 import std/cpuinfo
 import std/os
 import std/strutils
+import std/options
 import logs
 import arraylib
 import bytes
@@ -908,10 +909,11 @@ template serverInitFreeClient() {.dirty.} =
 proc createServer(bindAddress: string, port: uint16, reusePort: bool = false): SocketHandle =
   var aiList: ptr AddrInfo
   try:
-    aiList = getAddrInfo(bindAddress, port.Port, Domain.AF_INET)
+    aiList = getAddrInfo(bindAddress, port.Port, Domain.AF_UNSPEC)
   except:
     errorRaise "error: getaddrinfo ", getErrnoStr(), " bind=", bindAddress, " port=", port
-  let sock = createNativeSocket()
+  let domain = aiList.ai_family.toKnownDomain.get
+  let sock = createNativeSocket(domain)
   sock.setSockOptInt(SOL_SOCKET, SO_REUSEADDR, 1)
   if reusePort:
     sock.setSockOptInt(SOL_SOCKET, SO_REUSEPORT, 1)

@@ -4,6 +4,7 @@ import std/nativesockets
 import std/posix
 import std/epoll
 import std/strutils
+import std/options
 import bytes
 import arraylib
 import queue
@@ -48,10 +49,11 @@ template at(p: ptr UncheckedArray[byte] or string or seq[byte], pos: int): ptr U
 proc newProxy*(hostname: string, port: Port): Proxy =
   var aiList: ptr AddrInfo
   try:
-    aiList = getAddrInfo(hostname, port, Domain.AF_INET)
+    aiList = getAddrInfo(hostname, port, Domain.AF_UNSPEC)
   except:
     errorException "error: getaddrinfo hostname=", hostname, " port=", port, " errno=", errno
-  let sock = createNativeSocket()
+  let domain = aiList.ai_family.toKnownDomain.get
+  let sock = createNativeSocket(domain)
   when ENABLE_KEEPALIVE:
     sock.setSockOptInt(SOL_SOCKET, SO_KEEPALIVE, 1)
   when ENABLE_TCP_NODELAY:
