@@ -46,6 +46,11 @@ template at(p: ptr UncheckedArray[byte] or string or seq[byte], pos: int): ptr U
   cast[ptr UncheckedArray[byte]](addr p[pos])
 
 proc newProxy*(hostname: string, port: Port): Proxy =
+  var aiList: ptr AddrInfo
+  try:
+    aiList = getAddrInfo(hostname, port, Domain.AF_INET)
+  except:
+    errorException "error: getaddrinfo hostname=", hostname, " port=", port, " errno=", errno
   let sock = createNativeSocket()
   when ENABLE_KEEPALIVE:
     sock.setSockOptInt(SOL_SOCKET, SO_KEEPALIVE, 1)
@@ -54,12 +59,6 @@ proc newProxy*(hostname: string, port: Port): Proxy =
   sock.setSockOptInt(SOL_SOCKET, SO_REUSEADDR, 1) # local proxy only
   # bind
   sock.setBlocking(false)
-  var aiList: ptr AddrInfo
-  try:
-    aiList = getAddrInfo(hostname, port, Domain.AF_INET)
-  except:
-    sock.close()
-    errorException "error: getaddrinfo hostname=", hostname, " port=", port, " errno=", errno
   discard sock.connect(aiList.ai_addr, aiList.ai_addrlen.SockLen)
   freeaddrinfo(aiList)
   var p = cast[Proxy](allocShared0(sizeof(ProxyObj)))
