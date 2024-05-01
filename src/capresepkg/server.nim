@@ -906,8 +906,12 @@ template serverInitFreeClient() {.dirty.} =
       release(client.spinLock)
 
 proc createServer(bindAddress: string, port: uint16, reusePort: bool = false): SocketHandle =
+  var aiList: ptr AddrInfo
+  try:
+    aiList = getAddrInfo(bindAddress, port.Port, Domain.AF_INET)
+  except:
+    errorRaise "error: getaddrinfo ", getErrnoStr(), " bind=", bindAddress, " port=", port
   let sock = createNativeSocket()
-  let aiList = getAddrInfo(bindAddress, port.Port, Domain.AF_INET)
   sock.setSockOptInt(SOL_SOCKET, SO_REUSEADDR, 1)
   if reusePort:
     sock.setSockOptInt(SOL_SOCKET, SO_REUSEPORT, 1)
