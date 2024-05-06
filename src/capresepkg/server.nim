@@ -1400,6 +1400,9 @@ template public*(importPath: string, body: untyped) = body
 template content*(content, mime: string): FileContent =
   createStaticFile(content, mime)
 
+template content*(content: string): FileContent =
+  createStaticFile(content, "text/html")
+
 template proxy*(path, host: string, port: uint16) = discard
 
 template proxy*(path, host: string, port: uint16, body: untyped) = discard
