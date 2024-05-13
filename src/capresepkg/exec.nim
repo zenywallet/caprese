@@ -64,7 +64,7 @@ template execCode*(srcFileDir: string, code: string): string = execCode(srcFileD
 
 proc makeDiscardable[T](a: T): T {.discardable, inline.} = a
 
-template staticExecCode*(body: untyped): string =
+template staticExecCode*(body: untyped): string = # discardable
   block:
     const srcFile = instantiationInfo(-1, true).filename
     const srcFileDir = splitFile(srcFile).dir
