@@ -2773,6 +2773,21 @@ template serverLib(cfg: static Config) {.dirty.} =
       else:
         clientHandlerProcs.add appListen
 
+  proc filterCmdNode(body: var NimNode, filterCmdList: openArray[string], level: int): bool {.discardable.} =
+    for i in countdown(body.len - 1, 0):
+      var n = body[i]
+      if filterCmdNode(n, filterCmdList, level + 1):
+        body.del(i)
+      if (body.kind == nnkCall or body.kind == nnkCommand):
+        for cmd in filterCmdList:
+          if eqIdent(n, cmd):
+            return true
+    return false
+
+  proc filterCmdNode(body: NimNode, filterCmdList: openArray[string]): NimNode =
+    result = body.copy()
+    result.filterCmdNode(filterCmdList, 0)
+
   template routesMainTmpl(body: untyped) {.dirty.} =
     proc routesMain(ctx: WorkerThreadCtx, client: Client): SendResult {.inline.} =
       body
