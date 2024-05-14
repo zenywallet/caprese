@@ -2773,6 +2773,17 @@ template serverLib(cfg: static Config) {.dirty.} =
       else:
         clientHandlerProcs.add appListen
 
+  proc cmdNodeExists(body: NimNode, cmd: string): bool =
+    for n in body:
+      if (body.kind == nnkCall or body.kind == nnkCommand) and eqIdent(n, cmd):
+        return true
+      elif cmdNodeExists(n, cmd):
+        return true
+    return  false
+
+  macro postCmdNodeExists(body: untyped): bool =
+    if cmdNodeExists(body, "post"): newLit(true) else: newLit(false)
+
   proc filterCmdNode(body: var NimNode, filterCmdList: openArray[string], level: int): bool {.discardable.} =
     for i in countdown(body.len - 1, 0):
       var n = body[i]
