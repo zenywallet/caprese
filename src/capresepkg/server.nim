@@ -2799,9 +2799,22 @@ template serverLib(cfg: static Config) {.dirty.} =
     result = body.copy()
     result.filterCmdNode(filterCmdList, 0)
 
+  macro getRoutesBody(body: untyped): untyped =
+    filterCmdNode(body, ["post"])
+
+  macro postRoutesBody(body: untyped): untyped =
+    filterCmdNode(body, ["get", "stream", "public", "certificates"])
+
   template routesMainTmpl(body: untyped) {.dirty.} =
-    proc routesMain(ctx: WorkerThreadCtx, client: Client): SendResult {.inline.} =
-      body
+    const postCmdExists = postCmdNodeExists(body)
+    when postCmdExists:
+      proc routesMain(ctx: WorkerThreadCtx, client: Client): SendResult {.inline.} =
+        getRoutesBody(body)
+      proc postRoutesMain(ctx: WorkerThreadCtx, client: Client): SendResult {.inline.} =
+        postRoutesBody(body)
+    else:
+      proc routesMain(ctx: WorkerThreadCtx, client: Client): SendResult {.inline.} =
+        body
 
   when cfg.sslLib == BearSSL:
     type
