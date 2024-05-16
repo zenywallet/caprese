@@ -84,6 +84,8 @@ macro searchServerNode() =
         responceCallExists = true
       if searchNode.kind == nnkCall and eqIdent(n, "public"):
         responceCallExists = true
+      if (searchNode.kind == nnkCall or searchNode.kind == nnkCommand) and eqIdent(n, "post"):
+        postExists = true
 
   proc searchAddServer(searchNode: NimNode) =
     for n in searchNode:

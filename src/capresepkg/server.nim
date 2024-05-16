@@ -22,6 +22,7 @@ export server_types
 var routesHostParamExists* {.compileTime.}: bool = false
 var streamBlockExists* {.compileTime.}: bool = false
 var responceCallExists* {.compileTime.}: bool = false
+var postExists* {.compileTime.}: bool = false
 
 macro HttpTargetHeader(idEnumName, valListName, targetHeaders, body: untyped): untyped =
   var enumParams = nnkEnumTy.newTree(newEmptyNode())
@@ -38,6 +39,9 @@ macro HttpTargetHeader(idEnumName, valListName, targetHeaders, body: untyped): u
   if responceCallExists:
     internalEssentialHeaders.add(("InternalAcceptEncoding", "Accept-Encoding"))
     internalEssentialHeaders.add(("InternalIfNoneMatch", "If-None-Match"))
+  if postExists:
+    internalEssentialHeaders.add(("InternalContentLength", "Content-Length"))
+    #internalEssentialHeaders.add(("InternalTransferEncoding", "Transfer-Encoding"))
   var internalEssentialConst = nnkStmtList.newTree()
 
   for a in body:
