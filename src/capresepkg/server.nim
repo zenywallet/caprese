@@ -1761,6 +1761,7 @@ template serverLib(cfg: static Config) {.dirty.} =
                 next = (pos + 4.uint - cur0).int
                 break
             else:
+              inc(pos)
               let minorVer = int(cast[ptr char](cast[pointer](pos))[]) - int('0')
               if minorVer < 0 or minorVer > 9:
                 next = -1
