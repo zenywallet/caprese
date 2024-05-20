@@ -1890,6 +1890,8 @@ template serverLib(cfg: static Config) {.dirty.} =
   template post(path: string, body: untyped) {.used.} =
     when cfg.postRequestMethod:
       {.warning: "POST is not yet implemented.".}
+      if reqUrl() == path:
+        body
     else:
       {.error: "POST is disabled. It can be enabled with postRequestMethod.".}
 
