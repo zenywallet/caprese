@@ -1816,6 +1816,106 @@ template serverLib(cfg: static Config) {.dirty.} =
         next = -1
     next
 
+  template parseHeader3(buf: ptr UncheckedArray[byte], size: int,
+                  targetHeaders: var Array[ptr tuple[id: HeaderParams, val: string]],
+                  header: var ReqHeader
+                  ): int =
+    var next {.noInit.}: int
+    block parseMain:
+      let cur0 = cast[uint](addr buf[0])
+      let last = cur0 + size.uint
+      var pos = cur0 + 6
+      if pos <= last and equalMem(cast[pointer](cur0), "POST /".cstring, 6):
+        var cur = cur0 + 5
+        pos = cur + 1
+        while true:
+          if pos + 8 <= last and equalMem(cast[pointer](pos), " HTTP/1.".cstring, 8):
+            #when cfg.urlRootSafe:
+            #  if cast[ptr char](cast[pointer](cur))[] != '/':
+            #    next = -1
+            #    break
+            header.url = capbytes.toString(cast[ptr UncheckedArray[byte]](cast[pointer](cur)), pos - cur)
+            inc(pos, 7)
+            if pos + 4 > last:
+              next = -1
+              break
+            if equalMem(cast[pointer](pos), ".1\c\L".cstring, 4):
+              header.minorVer = 1
+              inc(pos, 2)
+              if pos + 4 > last:
+                next = -1
+                break
+              if equalMem(cast[pointer](pos), "\c\L\c\L".cstring, 4):
+                next = (pos + 4.uint - cur0).int
+                break
+            elif equalMem(cast[pointer](pos), ".0\c\L".cstring, 4):
+              header.minorVer = 0
+              inc(pos, 2)
+              if pos + 4 > last:
+                next = -1
+                break
+              if equalMem(cast[pointer](pos), "\c\L\c\L".cstring, 4):
+                next = (pos + 4.uint - cur0).int
+                break
+            else:
+              inc(pos)
+              let minorVer = int(cast[ptr char](cast[pointer](pos))[]) - int('0')
+              if minorVer < 0 or minorVer > 9:
+                next = -1
+                break
+              inc(pos)
+              if not equalMem(cast[pointer](pos), "\c\L".cstring, 2):
+                next = -1
+                break
+              inc(pos, 2)
+              if pos + 2 > last:
+                next = -1
+                break
+              header.minorVer = minorVer
+              if equalMem(cast[pointer](pos), "\c\L".cstring, 2):
+                next = (pos + 2.uint - cur0).int
+                break
+
+            var incompleteIdx = 0
+            while true:
+              block paramsLoop:
+                for i in incompleteIdx..<targetHeaders.len:
+                  let (headerId, targetParam) = targetHeaders[i][]
+                  if equalMem(cast[pointer](pos), targetParam.cstring, targetParam.len):
+                    inc(pos, targetParam.len)
+                    cur = pos
+                    while not equalMem(cast[pointer](pos), "\c\L".cstring, 2):
+                      inc(pos)
+                    header.params[headerId.int] = ((cur - cur0).int, (pos - cur).int)
+                    inc(pos, 2)
+                    if equalMem(cast[pointer](pos), "\c\L".cstring, 2):
+                      next = (pos + 2.uint - cur0).int
+                      break parseMain
+                    if i != incompleteIdx:
+                      swap(targetHeaders[incompleteIdx], targetHeaders[i])
+                    inc(incompleteIdx)
+                    if incompleteIdx >= targetHeaders.len:
+                      inc(pos)
+                      while(not equalMem(cast[pointer](pos), "\c\L\c\L".cstring, 4)):
+                        inc(pos)
+                      next = (pos + 4.uint - cur0).int
+                      break parseMain
+                    break paramsLoop
+                while not equalMem(cast[pointer](pos), "\c\L".cstring, 2):
+                  inc(pos)
+                inc(pos, 2)
+                if equalMem(cast[pointer](pos), "\c\L".cstring, 2):
+                  next = (pos + 2.uint - cur0).int
+                  break parseMain
+
+          elif equalMem(cast[pointer](pos), "\c\L".cstring, 2):
+            next = -1
+            break
+          inc(pos)
+      else:
+        next = -1
+    next
+
   proc getFrame(data: ptr UncheckedArray[byte],
                 size: int): tuple[find: bool, fin: bool, opcode: int8,
                                   payload: ptr UncheckedArray[byte], payloadSize: int,
@@ -3136,6 +3236,47 @@ template serverLib(cfg: static Config) {.dirty.} =
                     return
 
               elif recvlen > 0:
+                when postCmdExists:
+                  if recvlen >= 36 and equalMem(ctx.pRecvBuf0, "POST /".cstring, 6):
+                    var nextPos = 0
+                    var parseSize = recvlen
+                    ctx.recvDataSize = recvlen
+                    while true:
+                      ctx.pRecvBuf = cast[ptr UncheckedArray[byte]](addr ctx.recvBuf[nextPos])
+                      let next = parseHeader3(ctx.pRecvBuf, parseSize, ctx.targetHeaders, ctx.header)
+                      if next >= 0:
+                        var contentLength = getHeaderValue(ctx.pRecvBuf, ctx.header, InternalContentLength)
+                        let retMain = postRoutesMain(ctx, client)
+                        if retMain == SendResult.Success:
+                          if ctx.header.minorVer == 0 or getHeaderValue(ctx.pRecvBuf, ctx.header,
+                            InternalEssentialHeaderConnection) == "close":
+                            client.close()
+                            return
+                          elif next < recvlen:
+                            nextPos = next
+                            parseSize = recvlen - nextPos
+                          else:
+                            break
+                        elif retMain == SendResult.Pending:
+                          if next < recvlen:
+                            nextPos = next
+                            parseSize = recvlen - nextPos
+                          else:
+                            break
+                        else:
+                          when cfg.errorCloseMode == ErrorCloseMode.UntilConnectionTimeout:
+                            if retMain == SendResult.Error:
+                              discard client.sock.shutdown(SHUT_RD)
+                            else:
+                              client.close()
+                          else:
+                            client.close()
+                          return
+                      else:
+                        debug "parseHeader3 error"
+                        client.close()
+                        return
+
                 client.addRecvBuf(ctx.pRecvBuf0, recvlen)
                 break
 
