@@ -103,7 +103,7 @@ macro initCfg*(): untyped =
 
   discard serverConfigStmt.add quote do:
     searchServerNode()
-    when declared(cfg) or not cfg.postRequestMethod:
+    when declared(cfg) and not cfg.postRequestMethod:
       macro postExistsFlagOverride(flag: static bool) = postExists = flag
       postExistsFlagOverride(false)
     configCallsMacro()
