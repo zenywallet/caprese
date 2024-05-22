@@ -3243,9 +3243,15 @@ template serverLib(cfg: static Config) {.dirty.} =
                     ctx.recvDataSize = recvlen
                     while true:
                       ctx.pRecvBuf = cast[ptr UncheckedArray[byte]](addr ctx.recvBuf[nextPos])
-                      let next = parseHeader3(ctx.pRecvBuf, parseSize, ctx.targetHeaders, ctx.header)
+                      var next = parseHeader3(ctx.pRecvBuf, parseSize, ctx.targetHeaders, ctx.header)
                       if next >= 0:
-                        var contentLength = getHeaderValue(ctx.pRecvBuf, ctx.header, InternalContentLength)
+                        var contentLength = try:
+                          parseInt(getHeaderValue(ctx.pRecvBuf, ctx.header, InternalContentLength))
+                        except: 0
+                        if contentLength < 0:
+                          client.close()
+                          return
+                        inc(next, contentLength)
                         let retMain = postRoutesMain(ctx, client)
                         if retMain == SendResult.Success:
                           if ctx.header.minorVer == 0 or getHeaderValue(ctx.pRecvBuf, ctx.header,
