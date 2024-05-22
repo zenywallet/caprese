@@ -3231,9 +3231,62 @@ template serverLib(cfg: static Config) {.dirty.} =
                         client.close()
                       return
                   else:
-                    debug "parseHeader2 error"
-                    client.close()
-                    return
+
+                    when postCmdExists:
+                      if recvlen >= 36 and equalMem(ctx.pRecvBuf0, "POST /".cstring, 6):
+                        var nextPos = 0
+                        var parseSize = recvlen
+                        ctx.recvDataSize = recvlen
+                        while true:
+                          ctx.pRecvBuf = cast[ptr UncheckedArray[byte]](addr ctx.recvBuf[nextPos])
+                          var next = parseHeader3(ctx.pRecvBuf, parseSize, ctx.targetHeaders, ctx.header)
+                          if next >= 0:
+                            var contentLength = try:
+                              parseInt(getHeaderValue(ctx.pRecvBuf, ctx.header, InternalContentLength))
+                            except: 0
+                            if contentLength < 0:
+                              client.close()
+                              return
+                            inc(next, contentLength)
+                            let retMain = postRoutesMain(ctx, client)
+                            if retMain == SendResult.Success:
+                              if ctx.header.minorVer == 0 or getHeaderValue(ctx.pRecvBuf, ctx.header,
+                                InternalEssentialHeaderConnection) == "close":
+                                client.close()
+                                return
+                              elif next < recvlen:
+                                nextPos = next
+                                parseSize = recvlen - nextPos
+                              else:
+                                break
+                            elif retMain == SendResult.Pending:
+                              if next < recvlen:
+                                nextPos = next
+                                parseSize = recvlen - nextPos
+                              else:
+                                break
+                            else:
+                              when cfg.errorCloseMode == ErrorCloseMode.UntilConnectionTimeout:
+                                if retMain == SendResult.Error:
+                                  discard client.sock.shutdown(SHUT_RD)
+                                else:
+                                  client.close()
+                              else:
+                                client.close()
+                              return
+                          else:
+                            debug "parseHeader3 error"
+                            client.close()
+                            return
+                        break
+                      else:
+                        debug "parseHeader2 error"
+                        client.close()
+                        return
+                    else:
+                      debug "parseHeader2 error"
+                      client.close()
+                      return
 
               elif recvlen > 0:
                 when postCmdExists:
