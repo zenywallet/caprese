@@ -3344,7 +3344,7 @@ template serverLib(cfg: static Config) {.dirty.} =
 
               else:
                 if errno == EAGAIN or errno == EWOULDBLOCK:
-                  break
+                  return
                 elif errno == EINTR:
                   continue
                 client.close()
