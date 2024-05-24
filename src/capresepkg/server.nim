@@ -3,12 +3,12 @@
 import std/macros
 import std/nativesockets
 import std/posix
-import std/sha1
 import std/base64
 import std/cpuinfo
 import std/os
 import std/strutils
 import std/options
+import checksums/sha1
 import logs
 import arraylib
 import bytes
@@ -1473,10 +1473,10 @@ template serverType() {.dirty.} =
       minorVer: int
 
 template serverLib(cfg: static Config) {.dirty.} =
-  import std/sha1
   import std/re
   import std/strutils
   import std/sequtils
+  import checksums/sha1
 
   mixin addSafe, popSafe
 
