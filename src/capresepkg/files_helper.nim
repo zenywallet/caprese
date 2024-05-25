@@ -4,8 +4,8 @@ import std/os
 import std/osproc
 import std/locks
 import std/mimetypes
-import std/md5
 import std/base64
+import checksums/md5
 import nimcrypto
 import zopfli
 import brotli
