@@ -4,6 +4,7 @@ htmldocs/
 *
 !*/
 !*.*
+deps/
 src/lib/
 src/zopfli/
 src/brotli/
