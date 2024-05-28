@@ -3280,42 +3280,48 @@ template serverLib(cfg: static Config) {.dirty.} =
                   while true:
                     ctx.pRecvBuf = cast[ptr UncheckedArray[byte]](addr ctx.recvBuf[nextPos])
                     if equalMem(ctx.pRecvBuf, "GET ".cstring, 4):
-                      if equalMem(addr ctx.pRecvBuf0[ctx.recvDataSize - 4], "\c\L\c\L".cstring, 4):
-                        let cur0 {.inject.} = cast[uint](ctx.pRecvBuf)
-                        var cur {.inject.} = cur0 + 4
-                        var next {.noInit, inject.}: int
-                        parseHeader4()
-                        if next >= 0:
-                          let retMain = routesMain(ctx, client)
-                          if retMain == SendResult.Success:
-                            if ctx.header.minorVer == 0 or getHeaderValue(ctx.pRecvBuf, ctx.header,
-                              InternalEssentialHeaderConnection) == "close":
-                              client.close()
-                              return
-                            elif next < ctx.recvDataSize:
-                              nextPos = next
-                              parseSize = ctx.recvDataSize - nextPos
-                            else:
-                              break
-                          elif retMain == SendResult.Pending:
-                            if next < ctx.recvDataSize:
-                              nextPos = next
-                              parseSize = ctx.recvDataSize - nextPos
-                            else:
-                              break
-                          else:
-                            when cfg.errorCloseMode == ErrorCloseMode.UntilConnectionTimeout:
-                              if retMain == SendResult.Error:
-                                discard client.sock.shutdown(SHUT_RD)
-                              else:
-                                client.close()
-                            else:
-                              client.close()
+                      if not equalMem(addr ctx.pRecvBuf0[ctx.recvDataSize - 4], "\c\L\c\L".cstring, 4):
+                        block findBlock:
+                          for i in 0..ctx.recvDataSize - 5:
+                            if equalMem(addr ctx.pRecvBuf0[i], "\c\L\c\L".cstring, 4):
+                              break findBlock
+                          break parseBlock
+
+                      let cur0 {.inject.} = cast[uint](ctx.pRecvBuf)
+                      var cur {.inject.} = cur0 + 4
+                      var next {.noInit, inject.}: int
+                      parseHeader4()
+                      if next >= 0:
+                        let retMain = routesMain(ctx, client)
+                        if retMain == SendResult.Success:
+                          if ctx.header.minorVer == 0 or getHeaderValue(ctx.pRecvBuf, ctx.header,
+                            InternalEssentialHeaderConnection) == "close":
+                            client.close()
                             return
+                          elif next < ctx.recvDataSize:
+                            nextPos = next
+                            parseSize = ctx.recvDataSize - nextPos
+                          else:
+                            break
+                        elif retMain == SendResult.Pending:
+                          if next < ctx.recvDataSize:
+                            nextPos = next
+                            parseSize = ctx.recvDataSize - nextPos
+                          else:
+                            break
                         else:
-                          debug "parseHeader4 error"
-                          client.close()
+                          when cfg.errorCloseMode == ErrorCloseMode.UntilConnectionTimeout:
+                            if retMain == SendResult.Error:
+                              discard client.sock.shutdown(SHUT_RD)
+                            else:
+                              client.close()
+                          else:
+                            client.close()
                           return
+                      else:
+                        debug "parseHeader4 error"
+                        client.close()
+                        return
 
                     elif equalMem(ctx.pRecvBuf, "POST".cstring, 4):
                       if not equalMem(addr ctx.pRecvBuf0[ctx.recvDataSize - 4], "\c\L\c\L".cstring, 4):
