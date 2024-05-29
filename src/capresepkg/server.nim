@@ -3279,10 +3279,10 @@ template serverLib(cfg: static Config) {.dirty.} =
                 block parseBlock:
 
                   template routesMethodBase(requestMethod: static RequestMethod) {.dirty.} =
-                    if not equalMem(addr ctx.pRecvBuf0[ctx.recvDataSize - 4], "\c\L\c\L".cstring, 4):
+                    if not equalMem(addr ctx.pRecvBuf[parseSize - 4], "\c\L\c\L".cstring, 4):
                       block findBlock:
-                        for i in 0..ctx.recvDataSize - 5:
-                          if equalMem(addr ctx.pRecvBuf0[i], "\c\L\c\L".cstring, 4):
+                        for i in 0..parseSize - 5:
+                          if equalMem(addr ctx.pRecvBuf[i], "\c\L\c\L".cstring, 4):
                             break findBlock
                         break parseBlock
 
