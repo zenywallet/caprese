@@ -3285,7 +3285,7 @@ template serverLib(cfg: static Config) {.dirty.} =
                           if equalMem(addr ctx.pRecvBuf[i], "\c\L\c\L".cstring, 4):
                             break findBlock
                         client.addRecvBuf(ctx.pRecvBuf, parseSize)
-                        break parseBlock
+                        return
 
                     let cur0 {.inject.} = cast[uint](ctx.pRecvBuf)
                     var cur {.inject.} = cur0 + (when ($requestMethod).len == 3: 4 else: 5)
