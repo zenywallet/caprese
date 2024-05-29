@@ -3278,8 +3278,8 @@ template serverLib(cfg: static Config) {.dirty.} =
 
                 block parseBlock:
 
-                  template routesMethodBase(requestMethod: static RequestMethod) {.dirty.} =
-                    if not equalMem(addr ctx.pRecvBuf[parseSize - 4], "\c\L\c\L".cstring, 4):
+                  template routesMethodBase(requestMethod: static RequestMethod, crlfCheck: static bool) {.dirty.} =
+                    when crlfCheck:
                       block findBlock:
                         for i in 0..parseSize - 5:
                           if equalMem(addr ctx.pRecvBuf[i], "\c\L\c\L".cstring, 4):
@@ -3325,13 +3325,22 @@ template serverLib(cfg: static Config) {.dirty.} =
                       client.close()
                       return
 
-                  while true:
-                    ctx.pRecvBuf = cast[ptr UncheckedArray[byte]](addr ctx.recvBuf[nextPos])
-                    if equalMem(ctx.pRecvBuf, "GET ".cstring, 4):
-                      routesMethodBase(RequestMethod.GET)
+                  if equalMem(addr ctx.pRecvBuf0[ctx.recvDataSize - 4], "\c\L\c\L".cstring, 4):
+                    while true:
+                      ctx.pRecvBuf = cast[ptr UncheckedArray[byte]](addr ctx.recvBuf[nextPos])
+                      if equalMem(ctx.pRecvBuf, "GET ".cstring, 4):
+                        routesMethodBase(RequestMethod.GET, false)
 
-                    elif equalMem(ctx.pRecvBuf, "POST".cstring, 4):
-                      routesMethodBase(RequestMethod.POST)
+                      elif equalMem(ctx.pRecvBuf, "POST".cstring, 4):
+                        routesMethodBase(RequestMethod.POST, false)
+                  else:
+                    while true:
+                      ctx.pRecvBuf = cast[ptr UncheckedArray[byte]](addr ctx.recvBuf[nextPos])
+                      if equalMem(ctx.pRecvBuf, "GET ".cstring, 4):
+                        routesMethodBase(RequestMethod.GET, true)
+
+                      elif equalMem(ctx.pRecvBuf, "POST".cstring, 4):
+                        routesMethodBase(RequestMethod.POST, true)
 
               elif ctx.recvDataSize > 0:
                 client.addRecvBuf(ctx.pRecvBuf0, ctx.recvDataSize)
