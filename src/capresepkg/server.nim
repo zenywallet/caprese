@@ -3284,6 +3284,7 @@ template serverLib(cfg: static Config) {.dirty.} =
                         for i in 0..parseSize - 5:
                           if equalMem(addr ctx.pRecvBuf[i], "\c\L\c\L".cstring, 4):
                             break findBlock
+                        client.addRecvBuf(ctx.pRecvBuf, parseSize)
                         break parseBlock
 
                     let cur0 {.inject.} = cast[uint](ctx.pRecvBuf)
