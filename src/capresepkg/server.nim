@@ -3269,52 +3269,6 @@ template serverLib(cfg: static Config) {.dirty.} =
                   break
                 inc(pos)
 
-          template routesMethodBase(requestMethod: static RequestMethod; parseBlock: typed; nextPos, parseSize: int) {.dirty.} =
-            if not equalMem(addr ctx.pRecvBuf0[ctx.recvDataSize - 4], "\c\L\c\L".cstring, 4):
-              block findBlock:
-                for i in 0..ctx.recvDataSize - 5:
-                  if equalMem(addr ctx.pRecvBuf0[i], "\c\L\c\L".cstring, 4):
-                    break findBlock
-                break parseBlock
-
-            let cur0 {.inject.} = cast[uint](ctx.pRecvBuf)
-            var cur {.inject.} = cur0 + (when ($requestMethod).len == 3: 4 else: 5)
-            var next {.noInit, inject.}: int
-            parseHeader4()
-            if next >= 0:
-              let retMain = when requestMethod == RequestMethod.GET: routesMain(ctx, client)
-                elif requestMethod == RequestMethod.POST: postRoutesMain(ctx, client)
-                else: {.error: $requestMethod & " is not supported.".}
-              if retMain == SendResult.Success:
-                if ctx.header.minorVer == 0 or getHeaderValue(ctx.pRecvBuf, ctx.header,
-                  InternalEssentialHeaderConnection) == "close":
-                  client.close()
-                  return
-                elif next < ctx.recvDataSize:
-                  nextPos = next
-                  parseSize = ctx.recvDataSize - nextPos
-                else:
-                  break
-              elif retMain == SendResult.Pending:
-                if next < ctx.recvDataSize:
-                  nextPos = next
-                  parseSize = ctx.recvDataSize - nextPos
-                else:
-                  break
-              else:
-                when cfg.errorCloseMode == ErrorCloseMode.UntilConnectionTimeout:
-                  if retMain == SendResult.Error:
-                    discard client.sock.shutdown(SHUT_RD)
-                  else:
-                    client.close()
-                else:
-                  client.close()
-                return
-            else:
-              debug "parseHeader4 error"
-              client.close()
-              return
-
           if client.recvCurSize == 0:
             while true:
               ctx.recvDataSize = sock.recv(ctx.pRecvBuf0, workerRecvBufSize, 0.cint)
@@ -3323,13 +3277,60 @@ template serverLib(cfg: static Config) {.dirty.} =
                 var parseSize = ctx.recvDataSize
 
                 block parseBlock:
+
+                  template routesMethodBase(requestMethod: static RequestMethod) {.dirty.} =
+                    if not equalMem(addr ctx.pRecvBuf0[ctx.recvDataSize - 4], "\c\L\c\L".cstring, 4):
+                      block findBlock:
+                        for i in 0..ctx.recvDataSize - 5:
+                          if equalMem(addr ctx.pRecvBuf0[i], "\c\L\c\L".cstring, 4):
+                            break findBlock
+                        break parseBlock
+
+                    let cur0 {.inject.} = cast[uint](ctx.pRecvBuf)
+                    var cur {.inject.} = cur0 + (when ($requestMethod).len == 3: 4 else: 5)
+                    var next {.noInit, inject.}: int
+                    parseHeader4()
+                    if next >= 0:
+                      let retMain = when requestMethod == RequestMethod.GET: routesMain(ctx, client)
+                        elif requestMethod == RequestMethod.POST: postRoutesMain(ctx, client)
+                        else: {.error: $requestMethod & " is not supported.".}
+                      if retMain == SendResult.Success:
+                        if ctx.header.minorVer == 0 or getHeaderValue(ctx.pRecvBuf, ctx.header,
+                          InternalEssentialHeaderConnection) == "close":
+                          client.close()
+                          return
+                        elif next < ctx.recvDataSize:
+                          nextPos = next
+                          parseSize = ctx.recvDataSize - nextPos
+                        else:
+                          break
+                      elif retMain == SendResult.Pending:
+                        if next < ctx.recvDataSize:
+                          nextPos = next
+                          parseSize = ctx.recvDataSize - nextPos
+                        else:
+                          break
+                      else:
+                        when cfg.errorCloseMode == ErrorCloseMode.UntilConnectionTimeout:
+                          if retMain == SendResult.Error:
+                            discard client.sock.shutdown(SHUT_RD)
+                          else:
+                            client.close()
+                        else:
+                          client.close()
+                        return
+                    else:
+                      debug "parseHeader4 error"
+                      client.close()
+                      return
+
                   while true:
                     ctx.pRecvBuf = cast[ptr UncheckedArray[byte]](addr ctx.recvBuf[nextPos])
                     if equalMem(ctx.pRecvBuf, "GET ".cstring, 4):
-                      routesMethodBase(RequestMethod.GET, parseBlock, nextPos, parseSize)
+                      routesMethodBase(RequestMethod.GET)
 
                     elif equalMem(ctx.pRecvBuf, "POST".cstring, 4):
-                      routesMethodBase(RequestMethod.POST, parseBlock, nextPos, parseSize)
+                      routesMethodBase(RequestMethod.POST)
 
               elif ctx.recvDataSize > 0:
                 client.addRecvBuf(ctx.pRecvBuf0, ctx.recvDataSize)
