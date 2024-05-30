@@ -3300,15 +3300,15 @@ template serverLib(cfg: static Config) {.dirty.} =
                           InternalEssentialHeaderConnection) == "close":
                           client.close()
                           return
-                        elif next < ctx.recvDataSize:
+                        elif next < parseSize:
                           nextPos = next
-                          parseSize = ctx.recvDataSize - nextPos
+                          parseSize = parseSize - nextPos
                         else:
                           break
                       elif retMain == SendResult.Pending:
-                        if next < ctx.recvDataSize:
+                        if next < parseSize:
                           nextPos = next
-                          parseSize = ctx.recvDataSize - nextPos
+                          parseSize = parseSize - nextPos
                         else:
                           break
                       else:
