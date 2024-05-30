@@ -3462,15 +3462,15 @@ template serverLib(cfg: static Config) {.dirty.} =
                           InternalEssentialHeaderConnection) == "close":
                           client.close(ssl = true)
                           return
-                        elif retHeader.next < recvlen:
+                        elif retHeader.next < parseSize:
                           nextPos = retHeader.next
-                          parseSize = recvlen - nextPos
+                          parseSize = parseSize - nextPos
                         else:
                           break
                       elif retMain == SendResult.Pending:
-                        if retHeader.next < recvlen:
+                        if retHeader.next < parseSize:
                           nextPos = retHeader.next
-                          parseSize = recvlen - nextPos
+                          parseSize = parseSize - nextPos
                         else:
                           break
                       else:
