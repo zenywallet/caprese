@@ -3293,7 +3293,15 @@ template serverLib(cfg: static Config) {.dirty.} =
                     parseHeader4()
                     if next >= 0:
                       let retMain = when requestMethod == RequestMethod.GET: routesMain(ctx, client)
-                        elif requestMethod == RequestMethod.POST: postRoutesMain(ctx, client)
+                        elif requestMethod == RequestMethod.POST:
+                          var contentLength = try:
+                            parseInt(getHeaderValue(ctx.pRecvBuf, ctx.header, InternalContentLength))
+                          except: 0
+                          if contentLength < 0:
+                            client.close()
+                            return
+                          inc(next, contentLength)
+                          postRoutesMain(ctx, client)
                         else: {.error: $requestMethod & " is not supported.".}
                       if retMain == SendResult.Success:
                         if ctx.header.minorVer == 0 or getHeaderValue(ctx.pRecvBuf, ctx.header,
