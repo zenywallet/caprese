@@ -3014,7 +3014,9 @@ template serverLib(cfg: static Config) {.dirty.} =
                           else:
                             when cfg.errorCloseMode == ErrorCloseMode.UntilConnectionTimeout:
                               if retMain == SendResult.Error:
-                                discard client.sock.shutdown(SHUT_RD)
+                                var retCtl = epoll_ctl(epfd, EPOLL_CTL_DEL, cast[cint](client.sock), addr client.ev)
+                                if retCtl != 0:
+                                  logs.error "error: epoll_ctl EPOLL_CTL_DEL ret=", retCtl, " errno=", errno
                               else:
                                 client.close()
                             else:
@@ -3329,7 +3331,9 @@ template serverLib(cfg: static Config) {.dirty.} =
                       else:
                         when cfg.errorCloseMode == ErrorCloseMode.UntilConnectionTimeout:
                           if retMain == SendResult.Error:
-                            discard client.sock.shutdown(SHUT_RD)
+                            var retCtl = epoll_ctl(epfd, EPOLL_CTL_DEL, cast[cint](client.sock), addr client.ev)
+                            if retCtl != 0:
+                              logs.error "error: epoll_ctl EPOLL_CTL_DEL ret=", retCtl, " errno=", errno
                           else:
                             client.close()
                         else:
@@ -3413,7 +3417,9 @@ template serverLib(cfg: static Config) {.dirty.} =
                     else:
                       when cfg.errorCloseMode == ErrorCloseMode.UntilConnectionTimeout:
                         if retMain == SendResult.Error:
-                          discard client.sock.shutdown(SHUT_RD)
+                          var retCtl = epoll_ctl(epfd, EPOLL_CTL_DEL, cast[cint](client.sock), addr client.ev)
+                          if retCtl != 0:
+                            logs.error "error: epoll_ctl EPOLL_CTL_DEL ret=", retCtl, " errno=", errno
                         else:
                           client.close()
                       else:
@@ -3491,7 +3497,9 @@ template serverLib(cfg: static Config) {.dirty.} =
                       else:
                         when cfg.errorCloseMode == ErrorCloseMode.UntilConnectionTimeout:
                           if retMain == SendResult.Error:
-                            discard client.sock.shutdown(SHUT_RD)
+                            var retCtl = epoll_ctl(epfd, EPOLL_CTL_DEL, cast[cint](client.sock), addr client.ev)
+                            if retCtl != 0:
+                              logs.error "error: epoll_ctl EPOLL_CTL_DEL ret=", retCtl, " errno=", errno
                           else:
                             client.close(ssl = true)
                         else:
@@ -3587,7 +3595,9 @@ template serverLib(cfg: static Config) {.dirty.} =
                     else:
                       when cfg.errorCloseMode == ErrorCloseMode.UntilConnectionTimeout:
                         if retMain == SendResult.Error:
-                          discard client.sock.shutdown(SHUT_RD)
+                          var retCtl = epoll_ctl(epfd, EPOLL_CTL_DEL, cast[cint](client.sock), addr client.ev)
+                          if retCtl != 0:
+                            logs.error "error: epoll_ctl EPOLL_CTL_DEL ret=", retCtl, " errno=", errno
                         else:
                           client.close(ssl = true)
                       else:
