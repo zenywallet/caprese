@@ -3301,6 +3301,13 @@ template serverLib(cfg: static Config) {.dirty.} =
                             client.close()
                             return
                           inc(next, contentLength)
+                          if next > parseSize:
+                            if next > staticInt(cfg.recvBufExpandBreakSize):
+                              client.close()
+                              return
+                            else:
+                              client.addRecvBuf(ctx.pRecvBuf, parseSize)
+                              return
                           postRoutesMain(ctx, client)
                         else: {.error: $requestMethod & " is not supported.".}
                       if retMain == SendResult.Success:
