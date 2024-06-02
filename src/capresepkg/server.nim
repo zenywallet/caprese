@@ -3351,7 +3351,11 @@ template serverLib(cfg: static Config) {.dirty.} =
                         routesMethodBase(RequestMethod.GET)
 
                       elif equalMem(ctx.pRecvBuf, "POST".cstring, 4):
-                        routesMethodBase(RequestMethod.POST)
+                        when cfg.postRequestMethod:
+                          routesMethodBase(RequestMethod.POST)
+                        else:
+                          client.close()
+                          return
                   else:
                     while true:
                       ctx.pRecvBuf = cast[ptr UncheckedArray[byte]](addr ctx.recvBuf[nextPos])
@@ -3360,8 +3364,12 @@ template serverLib(cfg: static Config) {.dirty.} =
                         routesMethodBase(RequestMethod.GET)
 
                       elif equalMem(ctx.pRecvBuf, "POST".cstring, 4):
-                        routesCrLfCheck()
-                        routesMethodBase(RequestMethod.POST)
+                        when cfg.postRequestMethod:
+                          routesCrLfCheck()
+                          routesMethodBase(RequestMethod.POST)
+                        else:
+                          client.close()
+                          return
 
               elif ctx.recvDataSize > 0:
                 client.addRecvBuf(ctx.pRecvBuf0, ctx.recvDataSize)
