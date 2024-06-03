@@ -3475,12 +3475,11 @@ template serverLib(cfg: static Config) {.dirty.} =
           if client.recvCurSize == 0:
             while true:
               client.dirty = ClientDirtyNone
-              let recvlen = client.ssl.SSL_read(cast[pointer](ctx.pRecvBuf0), workerRecvBufSize.cint).int
-              if recvlen > 0:
-                if recvlen >= 17 and equalMem(addr ctx.pRecvBuf0[recvlen - 4], "\c\L\c\L".cstring, 4):
+              ctx.recvDataSize = client.ssl.SSL_read(cast[pointer](ctx.pRecvBuf0), workerRecvBufSize.cint).int
+              if ctx.recvDataSize > 0:
+                if ctx.recvDataSize >= 17 and equalMem(addr ctx.pRecvBuf0[ctx.recvDataSize - 4], "\c\L\c\L".cstring, 4):
                   var nextPos = 0
-                  var parseSize = recvlen
-                  ctx.recvDataSize = recvlen
+                  var parseSize = ctx.recvDataSize
                   while true:
                     ctx.pRecvBuf = cast[ptr UncheckedArray[byte]](addr ctx.recvBuf[nextPos])
                     let retHeader = parseHeader(ctx.pRecvBuf, parseSize, ctx.targetHeaders, ctx.header)
@@ -3517,15 +3516,15 @@ template serverLib(cfg: static Config) {.dirty.} =
                       client.close(ssl = true)
                       return
                 else:
-                  client.addRecvBuf(ctx.pRecvBuf0, recvlen)
+                  client.addRecvBuf(ctx.pRecvBuf0, ctx.recvDataSize)
                   break
 
-              elif recvlen == 0:
+              elif ctx.recvDataSize == 0:
                 client.close(ssl = true)
                 return
 
               else:
-                client.sslErr = SSL_get_error(client.ssl, recvlen.cint)
+                client.sslErr = SSL_get_error(client.ssl, ctx.recvDataSize.cint)
                 if client.sslErr == SSL_ERROR_WANT_READ:
                   acquire(client.spinLock)
                   if client.dirty == ClientDirtyNone:
