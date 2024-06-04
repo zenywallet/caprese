@@ -2912,6 +2912,9 @@ template serverLib(cfg: static Config) {.dirty.} =
   macro postRoutesBody(body: untyped): untyped =
     filterCmdNode(body, ["get", "stream", "public", "certificates"])
 
+  macro fallbackRoutesBody(body: untyped): untyped =
+    filterCmdNode(body, ["get", "stream", "public", "certificates", "post"])
+
   template routesMainTmpl(body: untyped) {.dirty.} =
     const postCmdExists = postCmdNodeExists(body)
     when postCmdExists:
@@ -2919,9 +2922,13 @@ template serverLib(cfg: static Config) {.dirty.} =
         getRoutesBody(body)
       proc postRoutesMain(ctx: WorkerThreadCtx, client: Client): SendResult {.inline.} =
         postRoutesBody(body)
+      proc fallbackRoutesMain(ctx: WorkerThreadCtx, client: Client): SendResult {.inline.} =
+        fallbackRoutesBody(body)
     else:
       proc routesMain(ctx: WorkerThreadCtx, client: Client): SendResult {.inline.} =
         body
+      proc fallbackRoutesMain(ctx: WorkerThreadCtx, client: Client): SendResult {.inline.} =
+        fallbackRoutesBody(body)
 
   when cfg.sslLib == BearSSL:
     type
@@ -3290,7 +3297,19 @@ template serverLib(cfg: static Config) {.dirty.} =
 
                   template routesMethodBase(requestMethod: static RequestMethod) {.dirty.} =
                     let cur0 {.inject.} = cast[uint](ctx.pRecvBuf)
-                    var cur {.inject.} = cur0 + (when ($requestMethod).len == 3: 4 else: 5)
+                    var cur {.inject.} = cur0 + (
+                      when requestMethod == RequestMethod.GET: 4
+                      elif requestMethod == RequestMethod.POST: 5
+                      else:
+                        var c: uint
+                        block findSpace:
+                          for i in 3..7:
+                            if ctx.pRecvBuf[i] == cast[byte](' '):
+                              c = cast[uint](i) + 1
+                              break findSpace
+                          client.close()
+                          return
+                        c)
                     var next {.noInit, inject.}: int
                     parseHeader4()
                     if next >= 0:
@@ -3311,7 +3330,24 @@ template serverLib(cfg: static Config) {.dirty.} =
                               client.addRecvBuf(ctx.pRecvBuf, parseSize)
                               return
                           postRoutesMain(ctx, client)
-                        else: {.error: $requestMethod & " is not supported.".}
+                        else:
+                          when requestMethod != RequestMethod.Unknown:
+                            {.error: $requestMethod & " is not supported.".}
+                          var contentLength = try:
+                            parseInt(getHeaderValue(ctx.pRecvBuf, ctx.header, InternalContentLength))
+                          except: 0
+                          if contentLength < 0:
+                            client.close()
+                            return
+                          inc(next, contentLength)
+                          if next > parseSize:
+                            if next > staticInt(cfg.recvBufExpandBreakSize):
+                              client.close()
+                              return
+                            else:
+                              client.addRecvBuf(ctx.pRecvBuf, parseSize)
+                              return
+                          fallbackRoutesMain(ctx, client)
                       if retMain == SendResult.Success:
                         if ctx.header.minorVer == 0 or getHeaderValue(ctx.pRecvBuf, ctx.header,
                           InternalEssentialHeaderConnection) == "close":
@@ -3356,6 +3392,8 @@ template serverLib(cfg: static Config) {.dirty.} =
                         else:
                           client.close()
                           return
+                      else:
+                        routesMethodBase(RequestMethod.Unknown)
                   else:
                     while true:
                       ctx.pRecvBuf = cast[ptr UncheckedArray[byte]](addr ctx.recvBuf[nextPos])
@@ -3370,6 +3408,8 @@ template serverLib(cfg: static Config) {.dirty.} =
                         else:
                           client.close()
                           return
+                      else:
+                        routesMethodBase(RequestMethod.Unknown)
 
               elif ctx.recvDataSize > 0:
                 client.addRecvBuf(ctx.pRecvBuf0, ctx.recvDataSize)
