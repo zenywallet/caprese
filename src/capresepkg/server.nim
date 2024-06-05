@@ -1495,6 +1495,8 @@ template serverLib(cfg: static Config) {.dirty.} =
       pRecvBuf0: ptr UncheckedArray[byte]
       recvDataSize: int
       threadId: int
+      reqMethodPos: int
+      reqMethodLen: int
 
     WorkerThreadCtx = ptr WorkerThreadCtxObj
     ClientHandlerProc = proc (ctx: WorkerThreadCtx) {.thread.}
@@ -2027,6 +2029,9 @@ template serverLib(cfg: static Config) {.dirty.} =
 
   template reqHeader(paramId: HeaderParams): string {.used.} =
     getHeaderValue(ctx.pRecvBuf, ctx.header, paramId)
+
+  template reqMethod(): string {.used.} =
+    cast[ptr UncheckedArray[byte]](addr ctx.pRecvBuf[ctx.reqMethodPos]).toString(ctx.reqMethodLen)
 
   template getHeaderValue(paramId: HeaderParams): string =
     getHeaderValue(ctx.pRecvBuf, ctx.header, paramId)
@@ -3305,6 +3310,8 @@ template serverLib(cfg: static Config) {.dirty.} =
                         block findSpace:
                           for i in 3..7:
                             if ctx.pRecvBuf[i] == cast[byte](' '):
+                              ctx.reqMethodPos = 0
+                              ctx.reqMethodLen = i
                               c = cast[uint](i) + 1
                               break findSpace
                           client.close()
