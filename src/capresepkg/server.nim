@@ -3418,12 +3418,12 @@ template serverLib(cfg: static Config) {.dirty.} =
                       else:
                         routesMethodBase(RequestMethod.Unknown)
 
+              elif ctx.recvDataSize == 0:
+                client.close()
+
               elif ctx.recvDataSize > 0:
                 client.addRecvBuf(ctx.pRecvBuf0, ctx.recvDataSize)
                 break
-
-              elif ctx.recvDataSize == 0:
-                client.close()
 
               else:
                 if errno == EAGAIN or errno == EWOULDBLOCK:
@@ -3484,11 +3484,11 @@ template serverLib(cfg: static Config) {.dirty.} =
                   client.close()
                   return
 
-            elif ctx.recvDataSize > 0:
-              discard
-
             elif ctx.recvDataSize == 0:
               client.close()
+
+            elif ctx.recvDataSize > 0:
+              discard
 
             else:
               if errno == EAGAIN or errno == EWOULDBLOCK:
