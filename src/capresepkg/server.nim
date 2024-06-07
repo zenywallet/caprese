@@ -3435,9 +3435,9 @@ template serverLib(cfg: static Config) {.dirty.} =
 
           while true:
             client.reserveRecvBuf(workerRecvBufSize)
-            let recvlen = sock.recv(addr client.recvBuf[client.recvCurSize], workerRecvBufSize, 0.cint)
-            if recvlen > 0:
-              client.recvCurSize = client.recvCurSize + recvlen
+            ctx.recvDataSize = sock.recv(addr client.recvBuf[client.recvCurSize], workerRecvBufSize, 0.cint)
+            if ctx.recvDataSize > 0:
+              client.recvCurSize = client.recvCurSize + ctx.recvDataSize
               if client.recvCurSize >= 17 and equalMem(addr client.recvBuf[client.recvCurSize - 4], "\c\L\c\L".cstring, 4):
                 var nextPos = 0
                 var parseSize = client.recvCurSize
@@ -3485,7 +3485,7 @@ template serverLib(cfg: static Config) {.dirty.} =
                     client.close()
                     return
 
-            elif recvlen == 0:
+            elif ctx.recvDataSize == 0:
               client.close()
 
             else:
