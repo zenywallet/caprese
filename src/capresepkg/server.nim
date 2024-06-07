@@ -3436,54 +3436,56 @@ template serverLib(cfg: static Config) {.dirty.} =
           while true:
             client.reserveRecvBuf(workerRecvBufSize)
             ctx.recvDataSize = sock.recv(addr client.recvBuf[client.recvCurSize], workerRecvBufSize, 0.cint)
-            if ctx.recvDataSize > 0:
-              client.recvCurSize = client.recvCurSize + ctx.recvDataSize
-              if client.recvCurSize >= 17 and equalMem(addr client.recvBuf[client.recvCurSize - 4], "\c\L\c\L".cstring, 4):
-                var nextPos = 0
-                var parseSize = client.recvCurSize
-                while true:
-                  ctx.pRecvBuf = cast[ptr UncheckedArray[byte]](addr client.recvBuf[nextPos])
-                  let retHeader = parseHeader(ctx.pRecvBuf, parseSize, ctx.targetHeaders, ctx.header)
-                  if retHeader.err == 0:
-                    let retMain = routesMain(ctx, client)
-                    if retMain == SendResult.Success:
-                      if client.keepAlive == true:
-                        if ctx.header.minorVer == 0 or getHeaderValue(ctx.pRecvBuf, ctx.header,
-                          InternalEssentialHeaderConnection) == "close":
-                          client.keepAlive = false
-                          client.close()
-                          return
-                        elif retHeader.next < parseSize:
-                          nextPos = retHeader.next
-                          parseSize = parseSize - nextPos
-                        else:
-                          client.recvCurSize = 0
-                          break
-                      else:
+            client.recvCurSize = client.recvCurSize + ctx.recvDataSize
+            if client.recvCurSize >= 17 and equalMem(addr client.recvBuf[client.recvCurSize - 4], "\c\L\c\L".cstring, 4):
+              var nextPos = 0
+              var parseSize = client.recvCurSize
+              while true:
+                ctx.pRecvBuf = cast[ptr UncheckedArray[byte]](addr client.recvBuf[nextPos])
+                let retHeader = parseHeader(ctx.pRecvBuf, parseSize, ctx.targetHeaders, ctx.header)
+                if retHeader.err == 0:
+                  let retMain = routesMain(ctx, client)
+                  if retMain == SendResult.Success:
+                    if client.keepAlive == true:
+                      if ctx.header.minorVer == 0 or getHeaderValue(ctx.pRecvBuf, ctx.header,
+                        InternalEssentialHeaderConnection) == "close":
+                        client.keepAlive = false
                         client.close()
                         return
-                    elif retMain == SendResult.Pending:
-                      if retHeader.next < parseSize:
+                      elif retHeader.next < parseSize:
                         nextPos = retHeader.next
                         parseSize = parseSize - nextPos
                       else:
                         client.recvCurSize = 0
                         break
                     else:
-                      when cfg.errorCloseMode == ErrorCloseMode.UntilConnectionTimeout:
-                        if retMain == SendResult.Error:
-                          var retCtl = epoll_ctl(epfd, EPOLL_CTL_DEL, cast[cint](client.sock), addr client.ev)
-                          if retCtl != 0:
-                            logs.error "error: epoll_ctl EPOLL_CTL_DEL ret=", retCtl, " errno=", errno
-                        else:
-                          client.close()
+                      client.close()
+                      return
+                  elif retMain == SendResult.Pending:
+                    if retHeader.next < parseSize:
+                      nextPos = retHeader.next
+                      parseSize = parseSize - nextPos
+                    else:
+                      client.recvCurSize = 0
+                      break
+                  else:
+                    when cfg.errorCloseMode == ErrorCloseMode.UntilConnectionTimeout:
+                      if retMain == SendResult.Error:
+                        var retCtl = epoll_ctl(epfd, EPOLL_CTL_DEL, cast[cint](client.sock), addr client.ev)
+                        if retCtl != 0:
+                          logs.error "error: epoll_ctl EPOLL_CTL_DEL ret=", retCtl, " errno=", errno
                       else:
                         client.close()
-                      return
-                  else:
-                    debug "retHeader err=", retHeader.err
-                    client.close()
+                    else:
+                      client.close()
                     return
+                else:
+                  debug "retHeader err=", retHeader.err
+                  client.close()
+                  return
+
+            elif ctx.recvDataSize > 0:
+              discard
 
             elif ctx.recvDataSize == 0:
               client.close()
