@@ -3438,59 +3438,144 @@ template serverLib(cfg: static Config) {.dirty.} =
             ctx.recvDataSize = sock.recv(addr client.recvBuf[client.recvCurSize], workerRecvBufSize, 0.cint)
             if ctx.recvDataSize > 0:
               client.recvCurSize = client.recvCurSize + ctx.recvDataSize
-              if client.recvCurSize >= 17 and equalMem(addr client.recvBuf[client.recvCurSize - 4], "\c\L\c\L".cstring, 4):
+              if client.recvCurSize >= 17:
                 var nextPos = 0
                 var parseSize = client.recvCurSize
-                while true:
-                  ctx.pRecvBuf = cast[ptr UncheckedArray[byte]](addr client.recvBuf[nextPos])
-                  let retHeader = parseHeader(ctx.pRecvBuf, parseSize, ctx.targetHeaders, ctx.header)
-                  if retHeader.err == 0:
-                    let retMain = routesMain(ctx, client)
-                    if retMain == SendResult.Success:
-                      if client.keepAlive == true:
-                        if ctx.header.minorVer == 0 or getHeaderValue(ctx.pRecvBuf, ctx.header,
-                          InternalEssentialHeaderConnection) == "close":
-                          client.keepAlive = false
+                ctx.pRecvBuf = cast[ptr UncheckedArray[byte]](addr client.recvBuf[nextPos])
+
+                block parseBlock:
+
+                  template routesCrLfCheck() {.dirty.} =
+                    block findBlock:
+                      for i in 0..parseSize - 5:
+                        if equalMem(addr ctx.pRecvBuf[i], "\c\L\c\L".cstring, 4):
+                          break findBlock
+                      return
+
+                  template routesMethodBase(requestMethod: static RequestMethod) {.dirty.} =
+                    let cur0 {.inject.} = cast[uint](ctx.pRecvBuf)
+                    var cur {.inject.} = cur0 + (
+                      when requestMethod == RequestMethod.GET: 4
+                      elif requestMethod == RequestMethod.POST: 5
+                      else:
+                        var c: uint
+                        block findSpace:
+                          for i in 3..7:
+                            if ctx.pRecvBuf[i] == cast[byte](' '):
+                              ctx.reqMethodPos = 0
+                              ctx.reqMethodLen = i
+                              c = cast[uint](i) + 1
+                              break findSpace
                           client.close()
                           return
-                        elif retHeader.next < parseSize:
-                          nextPos = retHeader.next
+                        c)
+                    var next {.noInit, inject.}: int
+                    parseHeader4()
+                    if next >= 0:
+                      let retMain = when requestMethod == RequestMethod.GET: routesMain(ctx, client)
+                        elif requestMethod == RequestMethod.POST:
+                          var contentLength = try:
+                            parseInt(getHeaderValue(ctx.pRecvBuf, ctx.header, InternalContentLength))
+                          except: 0
+                          if contentLength < 0:
+                            client.close()
+                            return
+                          inc(next, contentLength)
+                          if next > parseSize:
+                            if next > staticInt(cfg.recvBufExpandBreakSize):
+                              client.close()
+                              return
+                            else:
+                              return
+                          postRoutesMain(ctx, client)
+                        else:
+                          when requestMethod != RequestMethod.Unknown:
+                            {.error: $requestMethod & " is not supported.".}
+                          var contentLength = try:
+                            parseInt(getHeaderValue(ctx.pRecvBuf, ctx.header, InternalContentLength))
+                          except: 0
+                          if contentLength < 0:
+                            client.close()
+                            return
+                          inc(next, contentLength)
+                          if next > parseSize:
+                            if next > staticInt(cfg.recvBufExpandBreakSize):
+                              client.close()
+                              return
+                            else:
+                              return
+                          fallbackRoutesMain(ctx, client)
+                      if retMain == SendResult.Success:
+                        if ctx.header.minorVer == 0 or getHeaderValue(ctx.pRecvBuf, ctx.header,
+                          InternalEssentialHeaderConnection) == "close":
+                          client.close()
+                          return
+                        elif next < parseSize:
+                          nextPos = next
+                          parseSize = parseSize - nextPos
+                        else:
+                          client.recvCurSize = 0
+                          break
+                      elif retMain == SendResult.Pending:
+                        if next < parseSize:
+                          nextPos = next
                           parseSize = parseSize - nextPos
                         else:
                           client.recvCurSize = 0
                           break
                       else:
-                        client.close()
-                        return
-                    elif retMain == SendResult.Pending:
-                      if retHeader.next < parseSize:
-                        nextPos = retHeader.next
-                        parseSize = parseSize - nextPos
-                      else:
-                        client.recvCurSize = 0
-                        break
-                    else:
-                      when cfg.errorCloseMode == ErrorCloseMode.UntilConnectionTimeout:
-                        if retMain == SendResult.Error:
-                          var retCtl = epoll_ctl(epfd, EPOLL_CTL_DEL, cast[cint](client.sock), addr client.ev)
-                          if retCtl != 0:
-                            logs.error "error: epoll_ctl EPOLL_CTL_DEL ret=", retCtl, " errno=", errno
+                        when cfg.errorCloseMode == ErrorCloseMode.UntilConnectionTimeout:
+                          if retMain == SendResult.Error:
+                            var retCtl = epoll_ctl(epfd, EPOLL_CTL_DEL, cast[cint](client.sock), addr client.ev)
+                            if retCtl != 0:
+                              logs.error "error: epoll_ctl EPOLL_CTL_DEL ret=", retCtl, " errno=", errno
+                          else:
+                            client.close()
                         else:
                           client.close()
-                      else:
-                        client.close()
+                        return
+                    else:
+                      debug "parseHeader4 error"
+                      client.close()
                       return
-                  else:
-                    debug "retHeader err=", retHeader.err
-                    client.close()
-                    return
 
-            elif ctx.recvDataSize == 0:
+                  if equalMem(addr client.recvBuf[client.recvCurSize - 4], "\c\L\c\L".cstring, 4):
+                    while true:
+                      ctx.pRecvBuf = cast[ptr UncheckedArray[byte]](addr client.recvBuf[nextPos])
+                      if equalMem(ctx.pRecvBuf, "GET ".cstring, 4):
+                        routesMethodBase(RequestMethod.GET)
+
+                      elif equalMem(ctx.pRecvBuf, "POST".cstring, 4):
+                        when cfg.postRequestMethod:
+                          routesMethodBase(RequestMethod.POST)
+                        else:
+                          client.close()
+                          return
+                      else:
+                        routesMethodBase(RequestMethod.Unknown)
+                  else:
+                    while true:
+                      ctx.pRecvBuf = cast[ptr UncheckedArray[byte]](addr client.recvBuf[nextPos])
+                      if equalMem(ctx.pRecvBuf, "GET ".cstring, 4):
+                        routesCrLfCheck()
+                        routesMethodBase(RequestMethod.GET)
+
+                      elif equalMem(ctx.pRecvBuf, "POST".cstring, 4):
+                        when cfg.postRequestMethod:
+                          routesCrLfCheck()
+                          routesMethodBase(RequestMethod.POST)
+                        else:
+                          client.close()
+                          return
+                      else:
+                        routesMethodBase(RequestMethod.Unknown)
+
+            elif client.recvCurSize == 0:
               client.close()
 
             else:
               if errno == EAGAIN or errno == EWOULDBLOCK:
-                break
+                return
               elif errno == EINTR:
                 continue
               client.close()
