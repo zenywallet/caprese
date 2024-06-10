@@ -1497,6 +1497,8 @@ template serverLib(cfg: static Config) {.dirty.} =
       threadId: int
       reqMethodPos: int
       reqMethodLen: int
+      nextPos: int
+      parseSize: int
 
     WorkerThreadCtx = ptr WorkerThreadCtxObj
     ClientHandlerProc = proc (ctx: WorkerThreadCtx) {.thread.}
@@ -3287,17 +3289,17 @@ template serverLib(cfg: static Config) {.dirty.} =
             while true:
               ctx.recvDataSize = sock.recv(ctx.pRecvBuf0, workerRecvBufSize, 0.cint)
               if ctx.recvDataSize >= 17:
-                var nextPos = 0
-                var parseSize = ctx.recvDataSize
+                ctx.nextPos = 0
+                ctx.parseSize = ctx.recvDataSize
 
                 block parseBlock:
 
                   template routesCrLfCheck() {.dirty.} =
                     block findBlock:
-                      for i in 0..parseSize - 5:
+                      for i in 0..ctx.parseSize - 5:
                         if equalMem(addr ctx.pRecvBuf[i], "\c\L\c\L".cstring, 4):
                           break findBlock
-                      client.addRecvBuf(ctx.pRecvBuf, parseSize)
+                      client.addRecvBuf(ctx.pRecvBuf, ctx.parseSize)
                       return
 
                   template routesMethodBase(requestMethod: static RequestMethod) {.dirty.} =
@@ -3329,12 +3331,12 @@ template serverLib(cfg: static Config) {.dirty.} =
                             client.close()
                             return
                           inc(next, contentLength)
-                          if next > parseSize:
+                          if next > ctx.parseSize:
                             if next > staticInt(cfg.recvBufExpandBreakSize):
                               client.close()
                               return
                             else:
-                              client.addRecvBuf(ctx.pRecvBuf, parseSize)
+                              client.addRecvBuf(ctx.pRecvBuf, ctx.parseSize)
                               return
                           postRoutesMain(ctx, client)
                         else:
@@ -3347,12 +3349,12 @@ template serverLib(cfg: static Config) {.dirty.} =
                             client.close()
                             return
                           inc(next, contentLength)
-                          if next > parseSize:
+                          if next > ctx.parseSize:
                             if next > staticInt(cfg.recvBufExpandBreakSize):
                               client.close()
                               return
                             else:
-                              client.addRecvBuf(ctx.pRecvBuf, parseSize)
+                              client.addRecvBuf(ctx.pRecvBuf, ctx.parseSize)
                               return
                           fallbackRoutesMain(ctx, client)
                       if retMain == SendResult.Success:
@@ -3360,15 +3362,15 @@ template serverLib(cfg: static Config) {.dirty.} =
                           InternalEssentialHeaderConnection) == "close":
                           client.close()
                           return
-                        elif next < parseSize:
-                          nextPos = next
-                          parseSize = parseSize - nextPos
+                        elif next < ctx.parseSize:
+                          ctx.nextPos = next
+                          ctx.parseSize = ctx.parseSize - ctx.nextPos
                         else:
                           break
                       elif retMain == SendResult.Pending:
-                        if next < parseSize:
-                          nextPos = next
-                          parseSize = parseSize - nextPos
+                        if next < ctx.parseSize:
+                          ctx.nextPos = next
+                          ctx.parseSize = ctx.parseSize - ctx.nextPos
                         else:
                           break
                       else:
@@ -3389,7 +3391,7 @@ template serverLib(cfg: static Config) {.dirty.} =
 
                   if equalMem(addr ctx.pRecvBuf0[ctx.recvDataSize - 4], "\c\L\c\L".cstring, 4):
                     while true:
-                      ctx.pRecvBuf = cast[ptr UncheckedArray[byte]](addr ctx.recvBuf[nextPos])
+                      ctx.pRecvBuf = cast[ptr UncheckedArray[byte]](addr ctx.recvBuf[ctx.nextPos])
                       if equalMem(ctx.pRecvBuf, "GET ".cstring, 4):
                         routesMethodBase(RequestMethod.GET)
 
@@ -3403,7 +3405,7 @@ template serverLib(cfg: static Config) {.dirty.} =
                         routesMethodBase(RequestMethod.Unknown)
                   else:
                     while true:
-                      ctx.pRecvBuf = cast[ptr UncheckedArray[byte]](addr ctx.recvBuf[nextPos])
+                      ctx.pRecvBuf = cast[ptr UncheckedArray[byte]](addr ctx.recvBuf[ctx.nextPos])
                       if equalMem(ctx.pRecvBuf, "GET ".cstring, 4):
                         routesCrLfCheck()
                         routesMethodBase(RequestMethod.GET)
