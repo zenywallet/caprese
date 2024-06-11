@@ -1499,6 +1499,8 @@ template serverLib(cfg: static Config) {.dirty.} =
       reqMethodLen: int
       nextPos: int
       parseSize: int
+      data: ptr UncheckedArray[byte]
+      size: int
 
     WorkerThreadCtx = ptr WorkerThreadCtxObj
     ClientHandlerProc = proc (ctx: WorkerThreadCtx) {.thread.}
@@ -2928,13 +2930,19 @@ template serverLib(cfg: static Config) {.dirty.} =
       proc routesMain(ctx: WorkerThreadCtx, client: Client): SendResult {.inline.} =
         getRoutesBody(body)
       proc postRoutesMain(ctx: WorkerThreadCtx, client: Client): SendResult {.inline.} =
+        template data: ptr UncheckedArray[byte] = ctx.data
+        template size: int = ctx.size
         postRoutesBody(body)
       proc fallbackRoutesMain(ctx: WorkerThreadCtx, client: Client): SendResult {.inline.} =
+        template data: ptr UncheckedArray[byte] = ctx.data
+        template size: int = ctx.size
         fallbackRoutesBody(body)
     else:
       proc routesMain(ctx: WorkerThreadCtx, client: Client): SendResult {.inline.} =
         body
       proc fallbackRoutesMain(ctx: WorkerThreadCtx, client: Client): SendResult {.inline.} =
+        template data: ptr UncheckedArray[byte] = ctx.data
+        template size: int = ctx.size
         fallbackRoutesBody(body)
 
   when cfg.sslLib == BearSSL:
