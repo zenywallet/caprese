@@ -3443,7 +3443,6 @@ template serverLib(cfg: static Config) {.dirty.} =
               if client.recvCurSize >= 17:
                 var nextPos = 0
                 var parseSize = client.recvCurSize
-                ctx.pRecvBuf = cast[ptr UncheckedArray[byte]](addr client.recvBuf[nextPos])
 
                 block parseBlock:
 
