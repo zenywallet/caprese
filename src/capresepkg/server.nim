@@ -3288,6 +3288,7 @@ template serverLib(cfg: static Config) {.dirty.} =
           if client.recvCurSize == 0:
             while true:
               ctx.recvDataSize = sock.recv(ctx.pRecvBuf0, workerRecvBufSize, 0.cint)
+
               if ctx.recvDataSize >= 17:
                 ctx.nextPos = 0
                 ctx.parseSize = ctx.recvDataSize
@@ -3441,14 +3442,14 @@ template serverLib(cfg: static Config) {.dirty.} =
             if ctx.recvDataSize > 0:
               client.recvCurSize = client.recvCurSize + ctx.recvDataSize
               if client.recvCurSize >= 17:
-                var nextPos = 0
-                var parseSize = client.recvCurSize
+                ctx.nextPos = 0
+                ctx.parseSize = client.recvCurSize
 
                 block parseBlock:
 
                   template routesCrLfCheck() {.dirty.} =
                     block findBlock:
-                      for i in 0..parseSize - 5:
+                      for i in 0..ctx.parseSize - 5:
                         if equalMem(addr ctx.pRecvBuf[i], "\c\L\c\L".cstring, 4):
                           break findBlock
                       return
@@ -3482,7 +3483,7 @@ template serverLib(cfg: static Config) {.dirty.} =
                             client.close()
                             return
                           inc(next, contentLength)
-                          if next > parseSize:
+                          if next > ctx.parseSize:
                             if next > staticInt(cfg.recvBufExpandBreakSize):
                               client.close()
                               return
@@ -3499,7 +3500,7 @@ template serverLib(cfg: static Config) {.dirty.} =
                             client.close()
                             return
                           inc(next, contentLength)
-                          if next > parseSize:
+                          if next > ctx.parseSize:
                             if next > staticInt(cfg.recvBufExpandBreakSize):
                               client.close()
                               return
@@ -3511,16 +3512,16 @@ template serverLib(cfg: static Config) {.dirty.} =
                           InternalEssentialHeaderConnection) == "close":
                           client.close()
                           return
-                        elif next < parseSize:
-                          nextPos = next
-                          parseSize = parseSize - nextPos
+                        elif next < ctx.parseSize:
+                          ctx.nextPos = next
+                          ctx.parseSize = ctx.parseSize - ctx.nextPos
                         else:
                           client.recvCurSize = 0
                           break
                       elif retMain == SendResult.Pending:
-                        if next < parseSize:
-                          nextPos = next
-                          parseSize = parseSize - nextPos
+                        if next < ctx.parseSize:
+                          ctx.nextPos = next
+                          ctx.parseSize = ctx.parseSize - ctx.nextPos
                         else:
                           client.recvCurSize = 0
                           break
@@ -3542,7 +3543,7 @@ template serverLib(cfg: static Config) {.dirty.} =
 
                   if equalMem(addr client.recvBuf[client.recvCurSize - 4], "\c\L\c\L".cstring, 4):
                     while true:
-                      ctx.pRecvBuf = cast[ptr UncheckedArray[byte]](addr client.recvBuf[nextPos])
+                      ctx.pRecvBuf = cast[ptr UncheckedArray[byte]](addr client.recvBuf[ctx.nextPos])
                       if equalMem(ctx.pRecvBuf, "GET ".cstring, 4):
                         routesMethodBase(RequestMethod.GET)
 
@@ -3556,7 +3557,7 @@ template serverLib(cfg: static Config) {.dirty.} =
                         routesMethodBase(RequestMethod.Unknown)
                   else:
                     while true:
-                      ctx.pRecvBuf = cast[ptr UncheckedArray[byte]](addr client.recvBuf[nextPos])
+                      ctx.pRecvBuf = cast[ptr UncheckedArray[byte]](addr client.recvBuf[ctx.nextPos])
                       if equalMem(ctx.pRecvBuf, "GET ".cstring, 4):
                         routesCrLfCheck()
                         routesMethodBase(RequestMethod.GET)
