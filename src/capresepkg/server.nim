@@ -2037,6 +2037,30 @@ template serverLib(cfg: static Config) {.dirty.} =
   template reqMethod(): string {.used.} =
     cast[ptr UncheckedArray[byte]](addr ctx.pRecvBuf[ctx.reqMethodPos]).toString(ctx.reqMethodLen)
 
+  template head(path: string, body: untyped) {.used.} =
+    if reqUrl() == path and reqMethod() == $RequestMethod.HEAD:
+      body
+
+  template put(path: string, body: untyped) {.used.} =
+    if reqUrl() == path and reqMethod() == $RequestMethod.PUT:
+      body
+
+  template delete(path: string, body: untyped) {.used.} =
+    if reqUrl() == path and reqMethod() == $RequestMethod.DELETE:
+      body
+
+  template connect(path: string, body: untyped) {.used.} =
+    if reqUrl() == path and reqMethod() == $RequestMethod.CONNECT:
+      body
+
+  template options(path: string, body: untyped) {.used.} =
+    if reqUrl() == path and reqMethod() == $RequestMethod.OPTIONS:
+      body
+
+  template trace(path: string, body: untyped) {.used.} =
+    if reqUrl() == path and reqMethod() == $RequestMethod.TRACE:
+      body
+
   template getHeaderValue(paramId: HeaderParams): string =
     getHeaderValue(ctx.pRecvBuf, ctx.header, paramId)
 
@@ -2917,10 +2941,10 @@ template serverLib(cfg: static Config) {.dirty.} =
     result.filterCmdNode(filterCmdList, 0)
 
   macro getRoutesBody(body: untyped): untyped =
-    filterCmdNode(body, ["post"])
+    filterCmdNode(body, ["post", "head", "put", "delete", "connect", "options", "trace"])
 
   macro postRoutesBody(body: untyped): untyped =
-    filterCmdNode(body, ["get", "stream", "public", "certificates"])
+    filterCmdNode(body, ["get", "stream", "public", "certificates", "head", "put", "delete", "connect", "options", "trace"])
 
   macro fallbackRoutesBody(body: untyped): untyped =
     filterCmdNode(body, ["get", "stream", "public", "certificates", "post"])
