@@ -2906,9 +2906,10 @@ template serverLib(cfg: static Config) {.dirty.} =
       if filterCmdNode(n, filterCmdList, level + 1):
         body.del(i)
       if (body.kind == nnkCall or body.kind == nnkCommand):
-        for cmd in filterCmdList:
-          if eqIdent(n, cmd):
-            return true
+        if body.len >= 3:
+          for cmd in filterCmdList:
+            if eqIdent(body[0], cmd) and body[body.len - 1].kind == nnkStmtList:
+              return true
     return false
 
   proc filterCmdNode(body: NimNode, filterCmdList: openArray[string]): NimNode =
