@@ -2944,10 +2944,10 @@ template serverLib(cfg: static Config) {.dirty.} =
     filterCmdNode(body, ["post", "head", "put", "delete", "connect", "options", "trace"])
 
   macro postRoutesBody(body: untyped): untyped =
-    filterCmdNode(body, ["get", "stream", "public", "certificates", "head", "put", "delete", "connect", "options", "trace"])
+    filterCmdNode(body, ["get", "stream", "public", "certificates", "acme", "head", "put", "delete", "connect", "options", "trace"])
 
   macro fallbackRoutesBody(body: untyped): untyped =
-    filterCmdNode(body, ["get", "stream", "public", "certificates", "post"])
+    filterCmdNode(body, ["get", "stream", "public", "certificates", "acme", "post"])
 
   template routesMainTmpl(body: untyped) {.dirty.} =
     const postCmdExists = postCmdNodeExists(body)
