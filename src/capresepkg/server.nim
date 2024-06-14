@@ -2930,6 +2930,20 @@ template serverLib(cfg: static Config) {.dirty.} =
       if filterCmdNode(n, filterCmdList, level + 1):
         body.del(i)
       if (body.kind == nnkCall or body.kind == nnkCommand):
+
+        if "public" in filterCmdList:
+          if eqIdent(body[0], "public") and body[body.len - 1].kind == nnkBlockStmt:
+            return true
+        if "certificates" in filterCmdList:
+          if eqIdent(body[0], "certificates"):
+            return true
+        if "acme" in filterCmdList:
+          if eqIdent(body[0], "acme"):
+            return true
+        if "proxy" in filterCmdList:
+          if eqIdent(body[0], "proxy"):
+            return true
+
         if body.len >= 3:
           for cmd in filterCmdList:
             if eqIdent(body[0], cmd) and body[body.len - 1].kind == nnkStmtList:
