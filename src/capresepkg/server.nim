@@ -3378,6 +3378,7 @@ template serverLib(cfg: static Config) {.dirty.} =
                           if contentLength < 0:
                             client.close()
                             return
+                          ctx.data = cast[ptr UncheckedArray[byte]](addr ctx.recvBuf[next])
                           inc(next, contentLength)
                           if next > ctx.parseSize:
                             if next > staticInt(cfg.recvBufExpandBreakSize):
@@ -3386,6 +3387,7 @@ template serverLib(cfg: static Config) {.dirty.} =
                             else:
                               client.addRecvBuf(ctx.pRecvBuf, ctx.parseSize)
                               return
+                          ctx.size = contentLength
                           postRoutesMain(ctx, client)
                         else:
                           when requestMethod != RequestMethod.Unknown:
@@ -3396,6 +3398,7 @@ template serverLib(cfg: static Config) {.dirty.} =
                           if contentLength < 0:
                             client.close()
                             return
+                          ctx.data = cast[ptr UncheckedArray[byte]](addr ctx.recvBuf[next])
                           inc(next, contentLength)
                           if next > ctx.parseSize:
                             if next > staticInt(cfg.recvBufExpandBreakSize):
@@ -3404,6 +3407,7 @@ template serverLib(cfg: static Config) {.dirty.} =
                             else:
                               client.addRecvBuf(ctx.pRecvBuf, ctx.parseSize)
                               return
+                          ctx.size = contentLength
                           fallbackRoutesMain(ctx, client)
                       if retMain == SendResult.Success:
                         if ctx.header.minorVer == 0 or getHeaderValue(ctx.pRecvBuf, ctx.header,
@@ -3529,6 +3533,7 @@ template serverLib(cfg: static Config) {.dirty.} =
                           if contentLength < 0:
                             client.close()
                             return
+                          ctx.data = cast[ptr UncheckedArray[byte]](addr ctx.recvBuf[next])
                           inc(next, contentLength)
                           if next > ctx.parseSize:
                             if next > staticInt(cfg.recvBufExpandBreakSize):
@@ -3536,6 +3541,7 @@ template serverLib(cfg: static Config) {.dirty.} =
                               return
                             else:
                               return
+                          ctx.size = contentLength
                           postRoutesMain(ctx, client)
                         else:
                           when requestMethod != RequestMethod.Unknown:
@@ -3546,6 +3552,7 @@ template serverLib(cfg: static Config) {.dirty.} =
                           if contentLength < 0:
                             client.close()
                             return
+                          ctx.data = cast[ptr UncheckedArray[byte]](addr ctx.recvBuf[next])
                           inc(next, contentLength)
                           if next > ctx.parseSize:
                             if next > staticInt(cfg.recvBufExpandBreakSize):
@@ -3553,6 +3560,7 @@ template serverLib(cfg: static Config) {.dirty.} =
                               return
                             else:
                               return
+                          ctx.size = contentLength
                           fallbackRoutesMain(ctx, client)
                       if retMain == SendResult.Success:
                         if ctx.header.minorVer == 0 or getHeaderValue(ctx.pRecvBuf, ctx.header,
