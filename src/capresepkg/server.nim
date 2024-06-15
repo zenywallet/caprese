@@ -3372,14 +3372,14 @@ template serverLib(cfg: static Config) {.dirty.} =
                     if next >= 0:
                       let retMain = when requestMethod == RequestMethod.GET: routesMain(ctx, client)
                         elif requestMethod == RequestMethod.POST:
-                          var contentLength = try:
+                          ctx.size = try:
                             parseInt(getHeaderValue(ctx.pRecvBuf, ctx.header, InternalContentLength))
                           except: 0
-                          if contentLength < 0:
+                          if ctx.size < 0:
                             client.close()
                             return
                           ctx.data = cast[ptr UncheckedArray[byte]](addr ctx.recvBuf[next])
-                          inc(next, contentLength)
+                          inc(next, ctx.size)
                           if next > ctx.parseSize:
                             if next > staticInt(cfg.recvBufExpandBreakSize):
                               client.close()
@@ -3387,19 +3387,18 @@ template serverLib(cfg: static Config) {.dirty.} =
                             else:
                               client.addRecvBuf(ctx.pRecvBuf, ctx.parseSize)
                               return
-                          ctx.size = contentLength
                           postRoutesMain(ctx, client)
                         else:
                           when requestMethod != RequestMethod.Unknown:
                             {.error: $requestMethod & " is not supported.".}
-                          var contentLength = try:
+                          ctx.size = try:
                             parseInt(getHeaderValue(ctx.pRecvBuf, ctx.header, InternalContentLength))
                           except: 0
-                          if contentLength < 0:
+                          if ctx.size < 0:
                             client.close()
                             return
                           ctx.data = cast[ptr UncheckedArray[byte]](addr ctx.recvBuf[next])
-                          inc(next, contentLength)
+                          inc(next, ctx.size)
                           if next > ctx.parseSize:
                             if next > staticInt(cfg.recvBufExpandBreakSize):
                               client.close()
@@ -3407,7 +3406,6 @@ template serverLib(cfg: static Config) {.dirty.} =
                             else:
                               client.addRecvBuf(ctx.pRecvBuf, ctx.parseSize)
                               return
-                          ctx.size = contentLength
                           fallbackRoutesMain(ctx, client)
                       if retMain == SendResult.Success:
                         if ctx.header.minorVer == 0 or getHeaderValue(ctx.pRecvBuf, ctx.header,
@@ -3527,40 +3525,38 @@ template serverLib(cfg: static Config) {.dirty.} =
                     if next >= 0:
                       let retMain = when requestMethod == RequestMethod.GET: routesMain(ctx, client)
                         elif requestMethod == RequestMethod.POST:
-                          var contentLength = try:
+                          ctx.size = try:
                             parseInt(getHeaderValue(ctx.pRecvBuf, ctx.header, InternalContentLength))
                           except: 0
-                          if contentLength < 0:
+                          if ctx.size < 0:
                             client.close()
                             return
                           ctx.data = cast[ptr UncheckedArray[byte]](addr ctx.recvBuf[next])
-                          inc(next, contentLength)
+                          inc(next, ctx.size)
                           if next > ctx.parseSize:
                             if next > staticInt(cfg.recvBufExpandBreakSize):
                               client.close()
                               return
                             else:
                               return
-                          ctx.size = contentLength
                           postRoutesMain(ctx, client)
                         else:
                           when requestMethod != RequestMethod.Unknown:
                             {.error: $requestMethod & " is not supported.".}
-                          var contentLength = try:
+                          ctx.size = try:
                             parseInt(getHeaderValue(ctx.pRecvBuf, ctx.header, InternalContentLength))
                           except: 0
-                          if contentLength < 0:
+                          if ctx.size < 0:
                             client.close()
                             return
                           ctx.data = cast[ptr UncheckedArray[byte]](addr ctx.recvBuf[next])
-                          inc(next, contentLength)
+                          inc(next, ctx.size)
                           if next > ctx.parseSize:
                             if next > staticInt(cfg.recvBufExpandBreakSize):
                               client.close()
                               return
                             else:
                               return
-                          ctx.size = contentLength
                           fallbackRoutesMain(ctx, client)
                       if retMain == SendResult.Success:
                         if ctx.header.minorVer == 0 or getHeaderValue(ctx.pRecvBuf, ctx.header,
