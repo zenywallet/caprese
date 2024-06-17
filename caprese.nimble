@@ -26,7 +26,7 @@ task bearssl, "Build BearSSL":
 
 task openssl, "Build OpenSSL":
   withDir "deps/openssl":
-    exec "./Configure"
+    exec "./Configure no-shared"
     exec "make -j$(nproc)"
     exec "mkdir -p ../../src/lib/openssl"
     exec "cp libssl.a ../../src/lib/openssl/"
