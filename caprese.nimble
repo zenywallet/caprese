@@ -33,6 +33,7 @@ task openssl, "Build OpenSSL":
     exec "mkdir -p ../../src/lib/openssl"
     exec "cp libssl.a ../../src/lib/openssl/"
     exec "cp libcrypto.a ../../src/lib/openssl/"
+    exec "cp apps/openssl ../../src/lib/openssl/"
 
 task libressl, "Build LibreSSL":
   withDir "deps/libressl":
