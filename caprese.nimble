@@ -26,6 +26,8 @@ task bearssl, "Build BearSSL":
 
 task openssl, "Build OpenSSL":
   withDir "deps/openssl":
+    if fileExists("libssl.so"):
+      exec "make clean"
     exec "./Configure no-shared"
     exec "make -j$(nproc)"
     exec "mkdir -p ../../src/lib/openssl"
