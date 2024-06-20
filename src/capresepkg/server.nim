@@ -8,7 +8,10 @@ import std/cpuinfo
 import std/os
 import std/strutils
 import std/options
-import checksums/sha1
+when NimMajor >= 2:
+  import checksums/sha1
+else:
+  import std/sha1
 import logs
 import arraylib
 import bytes
@@ -1476,7 +1479,10 @@ template serverLib(cfg: static Config) {.dirty.} =
   import std/re
   import std/strutils
   import std/sequtils
-  import checksums/sha1
+  when NimMajor >= 2:
+    import checksums/sha1
+  else:
+    import std/sha1
 
   mixin addSafe, popSafe
 
