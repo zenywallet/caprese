@@ -3393,7 +3393,10 @@ template serverLib(cfg: static Config) {.dirty.} =
                             else:
                               client.addRecvBuf(ctx.pRecvBuf, ctx.parseSize)
                               return
-                          postRoutesMain(ctx, client)
+                          when postCmdExists:
+                            postRoutesMain(ctx, client)
+                          else:
+                            fallbackRoutesMain(ctx, client)
                         else:
                           when requestMethod != RequestMethod.Unknown:
                             {.error: $requestMethod & " is not supported.".}
@@ -3545,7 +3548,10 @@ template serverLib(cfg: static Config) {.dirty.} =
                               return
                             else:
                               return
-                          postRoutesMain(ctx, client)
+                          when postCmdExists:
+                            postRoutesMain(ctx, client)
+                          else:
+                            fallbackRoutesMain(ctx, client)
                         else:
                           when requestMethod != RequestMethod.Unknown:
                             {.error: $requestMethod & " is not supported.".}
