@@ -84,7 +84,8 @@ macro searchServerNode() =
         responceCallExists = true
       if searchNode.kind == nnkCall and eqIdent(n, "public"):
         responceCallExists = true
-      if (searchNode.kind == nnkCall or searchNode.kind == nnkCommand) and eqIdent(n, "post"):
+      if (searchNode.kind == nnkCall or searchNode.kind == nnkCommand) and
+        eqIdent(n, "post") and searchNode.len >= 3:
         postExists = true
         # postExists is tentative and may be overriden by postRequestMethod config
 
