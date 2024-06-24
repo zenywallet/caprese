@@ -50,6 +50,10 @@ Install Caprese package.
 
 It will take quite a while, so make some coffee. The Caprese body is located *~/.nimble/pkgs/caprese-0.1.0/* when installed. The version number may change, though. If you can't find it, try looking for *~/.nimble/pkgs2*.
 
+It may be easier to find the path with the following command.
+
+    nimble path caprese
+
 In some directory, create *server.nim* file with the following code.
 
 ```nim
@@ -306,6 +310,21 @@ serverStart()
 
 I hope you get the idea... This is SNI.
 
+You can also omit the `certificates:` block. The following code works the same as the above code. Just remember to prepare the certificate files.
+
+```nim
+server(ssl = true, ip = "0.0.0.0", port = 8009):
+  routes(host = "website1"):
+    get "/":
+      return send(WebSite1Html.addHeader())
+
+  routes(host = "website2"):
+    get "/":
+      return send(WebSite2Html.addHeader())
+
+serverStart()
+```
+
 #### Pending and workers
 The runnable level inside the `server:` block is called the server dispatch-level. Inside the block is called from multiple threads, it must not call functions that generate long waits and must return results immediately. If the response cannot be returned immediately, return pending first and then process it in another worker thread. Feel free to use async/await in another thread.
 
@@ -447,10 +466,10 @@ Use `onProtocol:` block.
 * **reqHost:** Hostname requested in the header from client. It may be different from the hostname negotiated by SSL. Incorrect hostnames should be rejected. If the `host` of `routes:` is specified, unmatched hosts will be ignored and will not be processed within that `routes:` block. You may use `reqHost` for custom handling without `host` of `routes:`.
 * **reqProtocol:** WebSocket protocol requested by the client. See [Check multiple protocols of the WebSocket](#check-multiple-protocols-of-the-websocket) for details.
 * **reqHeader(HeaderID):** Get the specific header parameter of the client request by *HeaderID*. See [Http Headers](#http-headers) for details.
-* **reqClient:** Pointer to the client object currently being processed in the thread context, the same as `client`. Normally, `client` should be used.
+* **reqClient:** Pointer to the `client` object currently being processed in the thread context, the same as `client`. Normally, `client` should be used.
 
 ### Client Object Custom Extension
-Custom parameters can be added to the client object. When custom pragmas `{.clientExt.}` are added to a regular object definitions, all the fields of that object are appended to the client object. However, fields that have already been defined in the client object cannot be added.
+Custom parameters can be added to the `client` object. When custom pragmas `{.clientExt.}` are added to a regular object definitions, all the fields of that object are appended to the `client` object. However, fields that have already been defined in the `client` object cannot be added.
 
 ```nim
 import caprese
@@ -482,7 +501,7 @@ server(ssl = true, ip = "0.0.0.0", port = 8009):
 serverStart()
 ```
 
-One more thing... The following function may be used to access the client extension object from workers that only know the client ID. However, the client objects are usually intended to be accessed from the `server:` blocks and are not permanently accessible from the workers. In some cases, resource management such as locking may be necessary.
+One more thing... The following function may be used to access the client extension object from workers that only know the client ID. However, the `client` objects are usually intended to be accessed from the `server:` blocks and are not permanently accessible from the workers. In some cases, resource management such as locking may be necessary.
 
 ```nim
 proc getClient(clientId: ClientId): Client
