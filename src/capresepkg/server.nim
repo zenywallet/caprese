@@ -26,6 +26,7 @@ var routesHostParamExists* {.compileTime.}: bool = false
 var streamBlockExists* {.compileTime.}: bool = false
 var responceCallExists* {.compileTime.}: bool = false
 var postExists* {.compileTime.}: bool = false
+var otherRequestMethodExists* {.compileTime.}: bool = false
 
 macro HttpTargetHeader(idEnumName, valListName, targetHeaders, body: untyped): untyped =
   var enumParams = nnkEnumTy.newTree(newEmptyNode())
@@ -42,7 +43,7 @@ macro HttpTargetHeader(idEnumName, valListName, targetHeaders, body: untyped): u
   if responceCallExists:
     internalEssentialHeaders.add(("InternalAcceptEncoding", "Accept-Encoding"))
     internalEssentialHeaders.add(("InternalIfNoneMatch", "If-None-Match"))
-  if postExists:
+  if postExists or otherRequestMethodExists:
     internalEssentialHeaders.add(("InternalContentLength", "Content-Length"))
     #internalEssentialHeaders.add(("InternalTransferEncoding", "Transfer-Encoding"))
   var internalEssentialConst = nnkStmtList.newTree()
@@ -3402,14 +3403,17 @@ template serverLib(cfg: static Config) {.dirty.} =
                         else:
                           when requestMethod != RequestMethod.Unknown:
                             {.error: $requestMethod & " is not supported.".}
-                          ctx.size = try:
-                            parseInt(getHeaderValue(ctx.pRecvBuf, ctx.header, InternalContentLength))
-                          except: 0
-                          if ctx.size < 0:
-                            client.close()
-                            return
-                          ctx.data = cast[ptr UncheckedArray[byte]](addr ctx.recvBuf[next])
-                          inc(next, ctx.size)
+                          when otherRequestMethodExists:
+                            ctx.size = try:
+                              parseInt(getHeaderValue(ctx.pRecvBuf, ctx.header, InternalContentLength))
+                            except: 0
+                            if ctx.size < 0:
+                              client.close()
+                              return
+                            ctx.data = cast[ptr UncheckedArray[byte]](addr ctx.recvBuf[next])
+                            inc(next, ctx.size)
+                          else:
+                            ctx.size = 0
                           if next > ctx.parseSize:
                             if next > staticInt(cfg.recvBufExpandBreakSize):
                               client.close()
@@ -3557,14 +3561,17 @@ template serverLib(cfg: static Config) {.dirty.} =
                         else:
                           when requestMethod != RequestMethod.Unknown:
                             {.error: $requestMethod & " is not supported.".}
-                          ctx.size = try:
-                            parseInt(getHeaderValue(ctx.pRecvBuf, ctx.header, InternalContentLength))
-                          except: 0
-                          if ctx.size < 0:
-                            client.close()
-                            return
-                          ctx.data = cast[ptr UncheckedArray[byte]](addr ctx.recvBuf[next])
-                          inc(next, ctx.size)
+                          when otherRequestMethodExists:
+                            ctx.size = try:
+                              parseInt(getHeaderValue(ctx.pRecvBuf, ctx.header, InternalContentLength))
+                            except: 0
+                            if ctx.size < 0:
+                              client.close()
+                              return
+                            ctx.data = cast[ptr UncheckedArray[byte]](addr ctx.recvBuf[next])
+                            inc(next, ctx.size)
+                          else:
+                            ctx.size = 0
                           if next > ctx.parseSize:
                             if next > staticInt(cfg.recvBufExpandBreakSize):
                               client.close()

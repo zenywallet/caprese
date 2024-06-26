@@ -88,6 +88,11 @@ macro searchServerNode() =
         eqIdent(n, "post") and searchNode.len >= 3:
         postExists = true
         # postExists is tentative and may be overriden by postRequestMethod config
+      if (searchNode.kind == nnkCall or searchNode.kind == nnkCommand) and
+        (eqIdent(n, "head") or eqIdent(n, "put") or eqIdent(n, "delete") or
+        eqIdent(n, "connect") or eqIdent(n, "options") or eqIdent(n, "trace")) and
+        searchNode.len >= 3:
+        otherRequestMethodExists = true
 
   proc searchAddServer(searchNode: NimNode) =
     for n in searchNode:
