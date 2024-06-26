@@ -2924,7 +2924,8 @@ template serverLib(cfg: static Config) {.dirty.} =
 
   proc cmdNodeExists(body: NimNode, cmd: string): bool =
     for n in body:
-      if (body.kind == nnkCall or body.kind == nnkCommand) and eqIdent(n, cmd):
+      if (body.kind == nnkCall or body.kind == nnkCommand) and
+        eqIdent(n, cmd) and body.len >= 3:
         return true
       elif cmdNodeExists(n, cmd):
         return true
