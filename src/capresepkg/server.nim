@@ -1042,6 +1042,8 @@ proc findColonNum(s: string): bool {.compileTime.} =
   if findmColonNum == 2: true else: false
 
 macro addServerMacro*(bindAddress: string, port: uint16, unix: bool, ssl: bool, sslLib: SslLib, body: untyped = newEmptyNode()): untyped =
+  if boolVal(ssl) and eqIdent("None", sslLib):
+    macros.error("server ssl = ture, but config.sslLib = None")
   inc(curSrvId)
   var srvId = curSrvId
   inc(curAppId)
