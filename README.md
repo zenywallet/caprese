@@ -462,7 +462,7 @@ Use `onProtocol:` block.
 ```
 
 #### Routes helper APIs
-* **reqUrl:** URL requested from client, always starts `/`. Caprese will reject requests that do not begin with `/`. This means that when concatenating URL strings in a request, it is guaranteed that there will always be a `/` between the strings.
+* **reqUrl:** URL requested from client, always starts `/`. Caprese will reject requests that do not begin with `/`. This means that when concatenating URL strings in a request, it is guaranteed that there will always be a `/` between the strings. You may use Nim's `/` to concatenate path strings with `reqUrl`, but it is not efficient, so I recommend concatenating with `&`.
 * **reqHost:** Hostname requested in the header from client. It may be different from the hostname negotiated by SSL. Incorrect hostnames should be rejected. If the `host` of `routes:` is specified, unmatched hosts will be ignored and will not be processed within that `routes:` block. You may use `reqHost` for custom handling without `host` of `routes:`.
 * **reqProtocol:** WebSocket protocol requested by the client. See [Check multiple protocols of the WebSocket](#check-multiple-protocols-of-the-websocket) for details.
 * **reqHeader(HeaderID):** Get the specific header parameter of the client request by *HeaderID*. See [Http Headers](#http-headers) for details.
@@ -534,7 +534,7 @@ Get the header string by specifying the header ID with the `reqHeader()` in the 
 The `reqHeader()` can only be called within the `routes:` block contexts, because the headers only manage the read position of the receive buffer, which may be in the server thread context.
 
 ### Publishing Static Files
-Use `public:` block. All files in `importPath` are statically imported into the code at compile time. Specify the `importPath` as relative path like Nim `import`, however, double quotes are necessary. The `getProjectPath()` is added internally to the `importPath`.
+Use `public:` block. All files in `importPath` are statically imported into the code at compile time. Specify the `importPath` as relative path like Nim's `import`, however, double quotes are necessary. The `getProjectPath()` is added internally to the `importPath`.
 
 ```nim
   routes:
