@@ -245,6 +245,8 @@ proc EVP_PKEY_assign_RSA*(pkey: EVP_PKEY, key: RSA): cint {.inline.} = EVP_PKEY_
 proc EVP_PKEY_set1_RSA*(pkey: EVP_PKEY, key: RSA): cint {.importc, cdecl.}
 proc EVP_sha1*(): EVP_MD {.importc, cdecl.}
 
+proc i2d_PrivateKey*(a: EVP_PKEY; pp: ptr ptr cuchar): cint {.importc, cdecl.}
+
 # include/openssl/asn1.h
 const MBSTRING_FLAG* = 0x1000.cint
 const MBSTRING_UTF8* = MBSTRING_FLAG
@@ -359,7 +361,6 @@ const
   NID_subject_alt_name* = 85
   NID_basic_constraints* = 87
   NID_authority_key_identifier* = 90
-
 
 when isMainModule:
   echo SSL_load_error_strings()
