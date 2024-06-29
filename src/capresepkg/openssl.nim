@@ -362,6 +362,23 @@ const
   NID_basic_constraints* = 87
   NID_authority_key_identifier* = 90
 
+# include/crypto/evp.h
+type
+  evp_cipher_st = ptr object
+
+# include/openssl/types.h
+type
+  EVP_CIPHER = evp_cipher_st
+
+# include/openssl/pem.h
+type
+  pem_password_cb* = proc (buf: cstring; size: cint; rwflag: cint; u: pointer): cint {.cdecl.}
+
+proc PEM_write_X509*(fp: File; x: X509): cint {.importc, cdecl.}
+proc PEM_write_PrivateKey*(fp: File; x: EVP_PKEY; enc: EVP_CIPHER;
+                          kstr: ptr cuchar; klen: cint; cb: pem_password_cb;
+                          u: pointer): cint {.importc, cdecl.}
+
 when isMainModule:
   echo SSL_load_error_strings()
   echo SSL_library_init()
