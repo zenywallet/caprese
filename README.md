@@ -160,6 +160,7 @@ config:
 
 * **sslLib:** *None*, *BearSSL*(default), *OpenSSL*, *LibreSSL*, *BoringSSL*  
 Somewhat surprisingly, Caprese supports 4 different SSL libraries. I would like to keep it a secret that *BearSSL* is the most extreme, with the smallest binary size and the fastest SSL processing speed. Enjoy the differences.  
+SSL libraries are built from source code in the *deps* folder of the repository, so there is no need to install SSL libraries on the OS. Just select the SSL library with this parameter and it will be statically linked.  
 If SSL is not required, it is recommended set to *None*. This will enable the experimental implementation of fast dispatch processing based on number of client connections and requests. At this time, it is only available for *None*.
 * **debugLog:** *true* or *false*(default). If *true*, debug messages are output to the console.
 * **sigTermQuit:** *true*(default) or *false*. If *true*, handling SIGTERM at the end of the process. The code in the `onQuit:` block is called before the process is terminated.
@@ -236,7 +237,7 @@ server(ip = "0.0.0.0", port = 8089):
 serverStart()
 ```
 
-The `host` value of the `routes:` block is actually set to your domain name.
+The `host` value of the `routes:` block is actually set to your domain name. The path of `certificates:` block is not the compile-time path, but the run-time path. If the certificate files are updated while the Caprese is running, the new certificates are automatically loaded.
 
 #### Set the certificate path for each
 
