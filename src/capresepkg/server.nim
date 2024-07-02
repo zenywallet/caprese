@@ -2725,6 +2725,10 @@ template serverLib(cfg: static Config) {.dirty.} =
 
       checkErr X509_sign(x509, pkey, EVP_sha1())
 
+      debugBlock:
+        checkErr PEM_write_PrivateKey(stdout, pkey, nil, nil, 0, nil, nil)
+        checkErr PEM_write_X509(stdout, x509)
+
       var retCert = SSL_CTX_use_certificate(ctx, x509)
       if retCert != 1:
         logs.error "error: self certificate"
