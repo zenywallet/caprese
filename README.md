@@ -103,14 +103,17 @@ Maven is used to download the closure-compiler. Caprese automatically downloads 
 
 You can find closure-compiler-vyyyyMMdd.jar in the current path. Copy the file to the *src* path or *~/.nimble/pkgs/caprese-0.1.0/* of the caprese repository, *~/.nimble/pkgs* could be *~/.nimble/pkgs2*. If several versions of a closure-compiler are found in the path, the latest version is used.
 
-Use `scriptMinifier()` to make minified javascript.
+#### Use `scriptMinifier()` to make minified javascript
 ```nim
 import caprese
 
 const HelloJs = staticScript:
   import jsffi
   var console {.importc, nodecl.}: JsObject
-  console.log("hello")
+  var helloStr = "Hello,".cstring
+  var spaceStr = " ".cstring
+  var worldStr = "world!".cstring
+  console.log(helloStr & spaceStr & worldStr)
 
 const HelloMinJs = scriptMinifier(code = HelloJs, extern = "")
 
@@ -121,9 +124,23 @@ const HelloHtml = staticHtmlDocument:
     body:
       tdiv: text "hello"
       script: verbatim HelloMinJs
+
+echo HelloHtml
 ```
 
-It's amazing. Nothing could be more wonderful. [Karax](https://github.com/karaxnim/karax) is used to generate HTML.
+#### Output
+```html
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"></head>
+<body>
+<div>hello</div>
+<script>console.log("Hello, world!");</script>
+</body>
+</html>
+```
+
+It's amazing. HTML is generated from Nim's code, and the wasteful script is simplified. Nothing could be more wonderful. [Karax](https://github.com/karaxnim/karax) is used to generate HTML. Now that the HTML has been statically generated, all we have to do is return this as a server response with a header.
 
 Register in `extern` the names of some variables and functions that should not be changed by the closure-compiler. If a string is specified for `extern`, it will be read directly into `--externs` option of the closure-compiler via a file. You can also pass `extern` a list of keywords you want to prevent the closure-compiler from replacing strings in `seq[string]`. The list of keywords will be converted to a readable format by `--externs` and passed to the closure-compiler. In addition to them, when the Nim generates javascript, some keywords that should not be changed are automatically added internally to `extern`.
 
