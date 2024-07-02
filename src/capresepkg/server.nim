@@ -3933,6 +3933,7 @@ template serverLib(cfg: static Config) {.dirty.} =
   template streamMainTmpl(messageBody: untyped, closeBody: untyped) {.dirty.} =
     proc streamMain(client: Client, opcode: WebSocketOpCode,
       data: ptr UncheckedArray[byte], size: int): SendResult =
+      template content: string = data.toString(size)
       case opcode
       of WebSocketOpcode.Binary, WebSocketOpcode.Text, WebSocketOpcode.Continue:
         messageBody
