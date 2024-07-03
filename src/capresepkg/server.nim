@@ -1267,7 +1267,7 @@ proc addCertsTable*(site: string, srvId: int, privPath: string, chainPath: strin
       certsTableData[i].val.privFileName = privFileName
       certsTableData[i].val.chainFileName = chainFileName
       macros.error "duplicate certificates for the same hostname are not yet supported"
-      return
+
   certsTableData.add((site, (certsTableIdx, srvId, privPath, chainPath,
                     privFileName, chainFileName)))
   certsTableDataIdx.add((site, certsTableIdx))
