@@ -1478,18 +1478,18 @@ template serverType() {.dirty.} =
       params: array[TargetHeaderParams.len, tuple[cur: int, size: int]]
       minorVer: int
 
-var serverCtxExtRec {.compileTime.} = nnkRecList.newTree()
+var serverThreadCtxExtRec {.compileTime.} = nnkRecList.newTree()
 
-macro serverCtxExt*(body: untyped): untyped =
+macro serverThreadCtxExt*(body: untyped): untyped =
   for n in body[2][2]:
-    serverCtxExtRec.add(n)
+    serverThreadCtxExtRec.add(n)
   body[0][1].add(ident("used"))
   body
 
-macro workerThreadCtxObjTypeMacro*(cfg: static Config): untyped =
+macro serverThreadCtxObjTypeMacro*(cfg: static Config): untyped =
   result = quote do:
     type
-      WorkerThreadCtxObj {.inject.} = object
+      ServerThreadCtxObj {.inject.} = object
         sockAddress: Sockaddr_in
         addrLen: SockLen
         recvBuf: Array[byte]
@@ -1508,8 +1508,8 @@ macro workerThreadCtxObjTypeMacro*(cfg: static Config): untyped =
         data: ptr UncheckedArray[byte]
         size: int
 
-  for n in serverCtxExtRec:
-    result[0][2][2].add(n)  # append to WorkerThreadCtxObj
+  for n in serverThreadCtxExtRec:
+    result[0][2][2].add(n)  # append to ServerThreadCtxObj
 
 template serverLib(cfg: static Config) {.dirty.} =
   import std/re
@@ -1524,13 +1524,13 @@ template serverLib(cfg: static Config) {.dirty.} =
 
   const FreePoolServerUsedCount = freePoolServerUsedCount
 
-  workerThreadCtxObjTypeMacro(cfg)
+  serverThreadCtxObjTypeMacro(cfg)
 
   type
-    WorkerThreadCtx = ptr WorkerThreadCtxObj
-    ClientHandlerProc = proc (ctx: WorkerThreadCtx) {.thread.}
+    ServerThreadCtx = ptr ServerThreadCtxObj
+    ClientHandlerProc = proc (ctx: ServerThreadCtx) {.thread.}
 
-  var workerThreadCtx {.threadvar.}: WorkerThreadCtx
+  var serverThreadCtx {.threadvar.}: ServerThreadCtx
   #var clientHandlerProcs: Array[ClientHandlerProc]
 
   when cfg.sslLib == SslLib.None and cfg.connectionPreferred != ConnectionPreferred.InternalConnection:
@@ -2102,11 +2102,11 @@ template serverLib(cfg: static Config) {.dirty.} =
       else:
         send(file.content.addHeader(EncodingType.None, file.md5, code, file.mime))
 
-  proc mainServerHandler(ctx: WorkerThreadCtx, client: Client, pRecvBuf: ptr UncheckedArray[byte], header: ReqHeader): SendResult {.inline.} =
+  proc mainServerHandler(ctx: ServerThreadCtx, client: Client, pRecvBuf: ptr UncheckedArray[byte], header: ReqHeader): SendResult {.inline.} =
     let appId = client.appId - 1
     mainServerHandlerMacro(appId)
 
-  proc appDummy(ctx: WorkerThreadCtx) {.thread.} = discard
+  proc appDummy(ctx: ServerThreadCtx) {.thread.} = discard
 
   var certsTable: ptr Table[string, tuple[idx: int, srvId: int,
                             privPath: string, chainPath: string,
@@ -2520,7 +2520,7 @@ template serverLib(cfg: static Config) {.dirty.} =
 
       case certKey.keyType
       of CertPrivateKeyType.EC:
-        workerThreadCtx.client.keyType = BR_KEYTYPE_EC
+        serverThreadCtx.client.keyType = BR_KEYTYPE_EC
         cc.chain_handler.single_ec.chain = cast[ptr br_x509_certificate](chains.cert)
         cc.chain_handler.single_ec.chain_len = chains.certLen
         cc.chain_handler.single_ec.sk = certKey.ec
@@ -2561,7 +2561,7 @@ template serverLib(cfg: static Config) {.dirty.} =
         return 0.cint
 
       of CertPrivateKeyType.RSA:
-        workerThreadCtx.client.keyType = BR_KEYTYPE_RSA
+        serverThreadCtx.client.keyType = BR_KEYTYPE_RSA
         cc.chain_handler.single_rsa.chain = cast[ptr br_x509_certificate](chains.cert)
         cc.chain_handler.single_rsa.chain_len = chains.certLen
         cc.chain_handler.single_rsa.sk = certKey.rsa
@@ -2603,7 +2603,7 @@ template serverLib(cfg: static Config) {.dirty.} =
 
     proc sa_do_keyx(pctx: ptr ptr br_ssl_server_policy_class; data: ptr uint8;
                     len: ptr csize_t): uint32 {.cdecl.}  =
-      case workerThreadCtx.client.keyType
+      case serverThreadCtx.client.keyType
       of BR_KEYTYPE_EC:
         var pc = cast[ptr br_ssl_server_policy_ec_context](pctx)
         var r = pc.iec.mul(data, len[], pc.sk.x, pc.sk.xlen, pc.sk.curve)
@@ -2622,7 +2622,7 @@ template serverLib(cfg: static Config) {.dirty.} =
 
     proc sa_do_sign(pctx: ptr ptr br_ssl_server_policy_class; algo_id: cuint;
                     data: ptr uint8; hv_len: csize_t; len: csize_t): csize_t {.cdecl.} =
-      case workerThreadCtx.client.keyType
+      case serverThreadCtx.client.keyType
       of BR_KEYTYPE_EC:
         var hv: array[64, char]
         var algo_id = (algo_id and 0xff).cint
@@ -2782,7 +2782,7 @@ template serverLib(cfg: static Config) {.dirty.} =
 
     var sslCtx: SSL_CTX
 
-  proc appListenBase(ctx: WorkerThreadCtx, sslFlag: static bool, unixFlag: static bool) {.thread, inline.} =
+  proc appListenBase(ctx: ServerThreadCtx, sslFlag: static bool, unixFlag: static bool) {.thread, inline.} =
     let clientSock = ctx.client.sock.accept4(cast[ptr SockAddr](addr ctx.sockAddress), addr ctx.addrLen, O_NONBLOCK)
     if cast[int](clientSock) > 0:
       when cfg.soKeepalive:
@@ -2838,13 +2838,13 @@ template serverLib(cfg: static Config) {.dirty.} =
             for i in 0..<serverWorkerNum:
               discard sem_post(addr throttleBody)
 
-  proc appListen(ctx: WorkerThreadCtx) {.thread.} = appListenBase(ctx, false, false)
+  proc appListen(ctx: ServerThreadCtx) {.thread.} = appListenBase(ctx, false, false)
 
-  proc appListenSsl(ctx: WorkerThreadCtx) {.thread.} = appListenBase(ctx, true, false)
+  proc appListenSsl(ctx: ServerThreadCtx) {.thread.} = appListenBase(ctx, true, false)
 
-  proc appListenUnix(ctx: WorkerThreadCtx) {.thread.} = appListenBase(ctx, false, true)
+  proc appListenUnix(ctx: ServerThreadCtx) {.thread.} = appListenBase(ctx, false, true)
 
-  proc appRoutesSend(ctx: WorkerThreadCtx) {.thread.} =
+  proc appRoutesSend(ctx: ServerThreadCtx) {.thread.} =
     let client = ctx.client
 
     acquire(client.spinLock)
@@ -2917,14 +2917,14 @@ template serverLib(cfg: static Config) {.dirty.} =
         client.threadId = 0
         release(client.spinLock)
 
-  proc appRoutesSendSsl(ctx: WorkerThreadCtx) {.thread.} =
+  proc appRoutesSendSsl(ctx: ServerThreadCtx) {.thread.} =
     echo "appRoutesSendSsl"
     raise
 
-  proc appStream(ctx: WorkerThreadCtx) {.thread.} =
+  proc appStream(ctx: ServerThreadCtx) {.thread.} =
     echo "appStream"
 
-  proc appStreamSend(ctx: WorkerThreadCtx) {.thread.} =
+  proc appStreamSend(ctx: ServerThreadCtx) {.thread.} =
     echo "appStreamSend"
 
   var clientHandlerProcs: Array[ClientHandlerProc]
@@ -2996,22 +2996,22 @@ template serverLib(cfg: static Config) {.dirty.} =
   template routesMainTmpl(body: untyped) {.dirty.} =
     const postCmdExists = postCmdNodeExists(body)
     when postCmdExists:
-      proc routesMain(ctx: WorkerThreadCtx, client: Client): SendResult {.inline.} =
+      proc routesMain(ctx: ServerThreadCtx, client: Client): SendResult {.inline.} =
         getRoutesBody(body)
-      proc postRoutesMain(ctx: WorkerThreadCtx, client: Client): SendResult {.inline.} =
+      proc postRoutesMain(ctx: ServerThreadCtx, client: Client): SendResult {.inline.} =
         template data: ptr UncheckedArray[byte] = ctx.data
         template size: int = ctx.size
         template content: string = ctx.data.toString(ctx.size)
         postRoutesBody(body)
-      proc fallbackRoutesMain(ctx: WorkerThreadCtx, client: Client): SendResult {.inline.} =
+      proc fallbackRoutesMain(ctx: ServerThreadCtx, client: Client): SendResult {.inline.} =
         template data: ptr UncheckedArray[byte] = ctx.data
         template size: int = ctx.size
         template content: string = ctx.data.toString(ctx.size)
         fallbackRoutesBody(body)
     else:
-      proc routesMain(ctx: WorkerThreadCtx, client: Client): SendResult {.inline.} =
+      proc routesMain(ctx: ServerThreadCtx, client: Client): SendResult {.inline.} =
         body
-      proc fallbackRoutesMain(ctx: WorkerThreadCtx, client: Client): SendResult {.inline.} =
+      proc fallbackRoutesMain(ctx: ServerThreadCtx, client: Client): SendResult {.inline.} =
         template data: ptr UncheckedArray[byte] = ctx.data
         template size: int = ctx.size
         template content: string = ctx.data.toString(ctx.size)
@@ -3042,7 +3042,7 @@ template serverLib(cfg: static Config) {.dirty.} =
 
   macro appRoutesMacro(ssl: bool, body: untyped): untyped =
     quote do:
-      clientHandlerProcs.add proc (ctx: WorkerThreadCtx) {.thread.} =
+      clientHandlerProcs.add proc (ctx: ServerThreadCtx) {.thread.} =
         when `ssl`:
           let client = ctx.client
 
@@ -3681,7 +3681,7 @@ template serverLib(cfg: static Config) {.dirty.} =
 
   macro appRoutesStage1Macro(ssl: bool, body: untyped): untyped {.used.} =
     quote do:
-      clientHandlerProcs.add proc (ctx: WorkerThreadCtx) {.thread.} =
+      clientHandlerProcs.add proc (ctx: ServerThreadCtx) {.thread.} =
         let client = ctx.client
 
         acquire(client.spinLock)
@@ -3860,7 +3860,7 @@ template serverLib(cfg: static Config) {.dirty.} =
 
   macro appRoutesStage2Macro(ssl: bool, body: untyped): untyped {.used.} =
     quote do:
-      clientHandlerProcs.add proc (ctx: WorkerThreadCtx) {.thread.} =
+      clientHandlerProcs.add proc (ctx: ServerThreadCtx) {.thread.} =
         when cfg.sslLib == OpenSSL or cfg.sslLib == LibreSSL or cfg.sslLib == BoringSSL:
           let client = ctx.client
 
@@ -3996,7 +3996,7 @@ template serverLib(cfg: static Config) {.dirty.} =
         streamMainTmpl(`rawStmt`)
 
     quote do:
-      clientHandlerProcs.add proc (ctx: WorkerThreadCtx) {.thread.} =
+      clientHandlerProcs.add proc (ctx: ServerThreadCtx) {.thread.} =
         when `ssl`:
           when cfg.sslLib == BearSSL:
             debug "stream bearssl"
@@ -4490,7 +4490,7 @@ template serverLib(cfg: static Config) {.dirty.} =
 
   macro appProxyMacro(ssl: bool, body: untyped): untyped {.used.} =
     quote do:
-      clientHandlerProcs.add proc (ctx: WorkerThreadCtx) {.thread.} =
+      clientHandlerProcs.add proc (ctx: ServerThreadCtx) {.thread.} =
         let client = ctx.client
 
         acquire(client.spinLock)
@@ -5020,7 +5020,7 @@ template serverLib(cfg: static Config) {.dirty.} =
         let sitename = $SSL_get_servername(ssl, TLSEXT_NAMETYPE_host_name)
         debug "sitename=", sitename
         let certs = certsTable[][sitename]
-        if certs.srvId != workerThreadCtx.client.srvId:
+        if certs.srvId != serverThreadCtx.client.srvId:
           return SSL_TLSEXT_ERR_NOACK
         let ctx = siteCtxs[certs.idx].ctx
         if SSL_set_SSL_CTX(ssl, ctx).isNil:
@@ -5033,9 +5033,9 @@ template serverLib(cfg: static Config) {.dirty.} =
     SSL_CTX_set_tlsext_servername_callback(sslCtx, serverNameCallback)
 
   proc serverWorker(arg: ThreadArg) {.thread.} =
-    var ctxObj: WorkerThreadCtxObj
-    workerThreadCtx = cast[WorkerThreadCtx](addr ctxObj)
-    var ctx = cast[WorkerThreadCtx](addr ctxObj)
+    var ctxObj: ServerThreadCtxObj
+    serverThreadCtx = cast[ServerThreadCtx](addr ctxObj)
+    var ctx = cast[ServerThreadCtx](addr ctxObj)
     ctx.addrLen = sizeof(ctx.sockAddress).SockLen
     ctx.recvBuf = newArray[byte](workerRecvBufSize)
     for i in 0..<TargetHeaders.len:
