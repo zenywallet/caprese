@@ -1478,6 +1478,39 @@ template serverType() {.dirty.} =
       params: array[TargetHeaderParams.len, tuple[cur: int, size: int]]
       minorVer: int
 
+var serverCtxExtRec {.compileTime.} = nnkRecList.newTree()
+
+macro serverCtxExt*(body: untyped): untyped =
+  for n in body[2][2]:
+    serverCtxExtRec.add(n)
+  body[0][1].add(ident("used"))
+  body
+
+macro workerThreadCtxObjTypeMacro*(cfg: static Config): untyped =
+  result = quote do:
+    type
+      WorkerThreadCtxObj {.inject.} = object
+        sockAddress: Sockaddr_in
+        addrLen: SockLen
+        recvBuf: Array[byte]
+        events: uint32
+        client: Client
+        pRecvBuf: ptr UncheckedArray[byte]
+        header: ReqHeader
+        targetHeaders: Array[ptr tuple[id: HeaderParams, val: string]]
+        pRecvBuf0: ptr UncheckedArray[byte]
+        recvDataSize: int
+        threadId: int
+        reqMethodPos: int
+        reqMethodLen: int
+        nextPos: int
+        parseSize: int
+        data: ptr UncheckedArray[byte]
+        size: int
+
+  for n in serverCtxExtRec:
+    result[0][2][2].add(n)  # append to WorkerThreadCtxObj
+
 template serverLib(cfg: static Config) {.dirty.} =
   import std/re
   import std/strutils
@@ -1491,26 +1524,9 @@ template serverLib(cfg: static Config) {.dirty.} =
 
   const FreePoolServerUsedCount = freePoolServerUsedCount
 
-  type
-    WorkerThreadCtxObj = object
-      sockAddress: Sockaddr_in
-      addrLen: SockLen
-      recvBuf: Array[byte]
-      events: uint32
-      client: Client
-      pRecvBuf: ptr UncheckedArray[byte]
-      header: ReqHeader
-      targetHeaders: Array[ptr tuple[id: HeaderParams, val: string]]
-      pRecvBuf0: ptr UncheckedArray[byte]
-      recvDataSize: int
-      threadId: int
-      reqMethodPos: int
-      reqMethodLen: int
-      nextPos: int
-      parseSize: int
-      data: ptr UncheckedArray[byte]
-      size: int
+  workerThreadCtxObjTypeMacro(cfg)
 
+  type
     WorkerThreadCtx = ptr WorkerThreadCtxObj
     ClientHandlerProc = proc (ctx: WorkerThreadCtx) {.thread.}
 
