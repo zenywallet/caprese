@@ -773,9 +773,17 @@ template serverTagLib*(cfg: static Config) {.dirty.} =
                   opcode: WebSocketOpCode = WebSocketOpCode.Binary): SendResult {.dirty, used.} =
     client.wsServerSend(data, opcode)
 
+  template wsSend(data: ptr UncheckedArray[byte], size: int,
+                  opcode: WebSocketOpCode = WebSocketOpCode.Binary): SendResult {.dirty, used.} =
+    client.wsServerSend(data.toString(size), opcode)
+
   template wsSend(clientId: ClientId, data: seq[byte] | string | Array[byte],
                   opcode: WebSocketOpCode = WebSocketOpCode.Binary): SendResult {.dirty, used.} =
     clientId.wsServerSend(data, opcode)
+
+  template wsSend(clientId: ClientId, data: ptr UncheckedArray[byte], size: int,
+                  opcode: WebSocketOpCode = WebSocketOpCode.Binary): SendResult {.dirty, used.} =
+    clientId.wsServerSend(data.toString(size), opcode)
 
   proc wsSend0(tag: Tag, data: seq[byte] | string | Array[byte],
               opcode: WebSocketOpCode = WebSocketOpCode.Binary): SendResult {.used.} =
