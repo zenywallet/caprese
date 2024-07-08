@@ -9,13 +9,13 @@ when isMainModule:
 import std/macros
 import std/nativesockets
 import std/os
-import capresepkg/server as serverlib
-import capresepkg/contents
-import capresepkg/files
-import capresepkg/statuscode
-import capresepkg/queue
-import capresepkg/rlimit
-import capresepkg/config
+import caprese/server as serverlib
+import caprese/contents
+import caprese/files
+import caprese/statuscode
+import caprese/queue
+import caprese/rlimit
+import caprese/config
 export nativesockets
 export os
 export serverlib
@@ -329,7 +329,7 @@ when isMainModule:
 
     const WsTestJs = staticScript:
       import jsffi
-      import capresepkg/jslib
+      import caprese/jslib
 
       var testDataBase = ""
       var testData = ""
