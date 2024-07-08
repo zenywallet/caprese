@@ -376,7 +376,7 @@ The send commands executed by another worker thread invoke a server dispatch-lev
 One of the reasons for creating Caprese is stream encryption. The common method of stream encryption using a reverse proxy server in a separate process seems inefficient. To reduce context switches, it would be better to handle stream encryption in the same thread context as the SSL process, like the `server:` block in the Caprese.
 
 #### Thread context variables
-Put before the `routes:` block in the `server:` block. Um, how do I access it?
+Put before the `routes:` block in the `server:` block. Um, how do I access it? In such a case, [Server Thread Context Object Extension](#server-thread-context-object-extension) may help you.
 
 ```nim
 server(ip = "0.0.0.0", port = 8089):
@@ -410,8 +410,9 @@ server(ssl = true, ip = "0.0.0.0", port = 8009):
         # opcode: WebSocketOpCode
         # data: ptr UncheckedArray[byte]
         # size: int
+        # content: string
         echo "onMessage"
-        return wsSend(data.toString(size), WebSocketOpcode.Binary)
+        return wsSend(content, WebSocketOpcode.Binary)
 
       onClose:
         # client: Client
@@ -433,14 +434,15 @@ server(ssl = true, ip = "0.0.0.0", port = 8009):
       # opcode: WebSocketOpCode
       # data: ptr UncheckedArray[byte]
       # size: int
+      # content: string
       case opcode
       of WebSocketOpcode.Binary, WebSocketOpcode.Text, WebSocketOpcode.Continue:
         echo "onMessage"
-        return wsSend(data.toString(size), WebSocketOpcode.Binary)
+        return wsSend(content, WebSocketOpcode.Binary)
       of WebSocketOpcode.Ping:
-        return wsSend(data.toString(size), WebSocketOpcode.Pong)
+        return wsSend(content, WebSocketOpcode.Pong)
       of WebSocketOpcode.Pong:
-        debug "pong ", data.toString(size)
+        debug "pong ", content
         return SendResult.Success
       else: # WebSocketOpcode.Close
         echo "onClose"
@@ -523,6 +525,35 @@ One more thing... The following function may be used to access the client extens
 
 ```nim
 proc getClient(clientId: ClientId): Client
+```
+
+### Server Thread Context Object Extension
+Custom parameters can be added to the server thread `ctx` object by the custom pragma `{.serverThreadCtxExt.}`.
+
+```nim
+import caprese
+import caprese/bearssl/bearssl_ssl
+import caprese/bearssl/bearssl_hash
+
+config:
+  postRequestMethod = true
+
+type
+  ServerThreadCtxExt {.serverThreadCtxExt.} = object
+     sha256Context: br_sha256_context
+     sha256Buf: array[br_sha256_SIZE, byte]
+
+server(ip = "0.0.0.0", port = 8089):
+  # ctx initialization here, if you need...
+
+  routes:
+    post "/":
+      br_sha256_init(addr ctx.sha256Context)
+      br_sha256_update(addr ctx.sha256Context, data, size.csize_t)
+      br_sha256_out(addr ctx.sha256Context, addr ctx.sha256Buf)
+      return ctx.sha256Buf.toHex.addHeader.send
+
+serverStart()
 ```
 
 ### Http Headers
