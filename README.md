@@ -62,9 +62,9 @@ import caprese
 server(ssl = true, ip = "0.0.0.0", port = 8009):
   routes:
     get "/":
-      return send("Hello!".addHeader())
+      send("Hello!".addHeader())
 
-    return send("Not found".addHeader(Status404))
+    send("Not found".addHeader(Status404))
 
 serverStart()
 ```
@@ -197,7 +197,7 @@ If SSL is not required, it is recommended set to *None*. This will enable the ex
 server(ip = "0.0.0.0", port = 8089):
   routes:
     get "/":
-      return send(IndexHtml.addHeader())
+      send(IndexHtml.addHeader())
 
 serverStart()
 ```
@@ -206,22 +206,22 @@ serverStart()
 
 ```nim
     get "/home":
-      return send(HomeHtml.addHeader())
+      send(HomeHtml.addHeader())
 
     get "/about":
-      return send(AboutHtml.addHeader())
+      send(AboutHtml.addHeader())
 ```
 
 ```nim
     get "/home", "/about":
-      return send(MainHtml.addHeader())
+      send(MainHtml.addHeader())
 ```
 
 #### URL path handling using Regular expression
 
 ```nim
     get re"/([a-z]+)(\d+)":
-      return send(sanitizeHtml(matches[0] & "|" & matches[1]).addHeader())
+      send(sanitizeHtml(matches[0] & "|" & matches[1]).addHeader())
 ```
 
 Considering efficiency, other methods may be better.
@@ -233,7 +233,7 @@ Considering efficiency, other methods may be better.
       ...
 
     let urlText = sanitizeHtml(reqUrl)
-    return send(fmt"Not found: {urlText}".addDocType().addHeader(Status404))
+    send(fmt"Not found: {urlText}".addDocType().addHeader(Status404))
 ```
 
 #### Multiple ports for SSL website and no SSL website
@@ -246,12 +246,12 @@ server(ssl = true, ip = "0.0.0.0", port = 8009):
       fullChain: "fullchain.pem"
 
     get "/":
-      return send(WebSite1Html.addHeader())
+      send(WebSite1Html.addHeader())
 
 server(ip = "0.0.0.0", port = 8089):
   routes(host = "website1"):
     get "/":
-      return send(WebSite1Html.addHeader())
+      send(WebSite1Html.addHeader())
 
 serverStart()
 ```
@@ -278,7 +278,7 @@ server(ssl = true, ip = "0.0.0.0", port = 8009):
     certificates(path = "./certs/website1")
 
     get "/":
-      return send(WebSite1Html.addHeader())
+      send(WebSite1Html.addHeader())
 ```
 
 #### Specify default certificate path and omit `certificates:` block
@@ -293,7 +293,7 @@ config:
 server(ssl = true, ip = "0.0.0.0", port = 8009):
   routes(host = "website1"):
     get "/":
-      return send(WebSite1Html.addHeader())
+      send(WebSite1Html.addHeader())
 ```
 
 In the above example, the following two files are loaded.
@@ -315,7 +315,7 @@ server(ssl = true, ip = "0.0.0.0", port = 8009):
       fullChain: "fullchain.pem"
 
     get "/":
-      return send(WebSite1Html.addHeader())
+      send(WebSite1Html.addHeader())
 
   routes(host = "website2"):
     certificates(path = "./certs/website2"):
@@ -323,7 +323,7 @@ server(ssl = true, ip = "0.0.0.0", port = 8009):
       fullChain: "fullchain.pem"
 
     get "/":
-      return send(WebSite2Html.addHeader())
+      send(WebSite2Html.addHeader())
 
 serverStart()
 ```
@@ -336,11 +336,11 @@ You can also omit the `certificates:` block. The following code works the same a
 server(ssl = true, ip = "0.0.0.0", port = 8009):
   routes(host = "website1"):
     get "/":
-      return send(WebSite1Html.addHeader())
+      send(WebSite1Html.addHeader())
 
   routes(host = "website2"):
     get "/":
-      return send(WebSite2Html.addHeader())
+      send(WebSite2Html.addHeader())
 
 serverStart()
 ```
@@ -365,10 +365,10 @@ worker(num = 2):
 server(ip = "0.0.0.0", port = 8089):
   routes(host = "website1"):
     get "/test":
-      return reqs.pending(PendingData(url: reqUrl))
+      reqs.pending(PendingData(url: reqUrl))
 
     let urlText = sanitizeHtml(reqUrl)
-    return send(fmt"Not found: {urlText}".addDocType().addHeader(Status404))
+    send(fmt"Not found: {urlText}".addDocType().addHeader(Status404))
 
 serverStart()
 ```
@@ -400,7 +400,7 @@ server(ssl = true, ip = "0.0.0.0", port = 8009):
       fullChain: "fullchain.pem"
 
     get "/wstest":
-      return send(WsTestHtml.addHeader())
+      send(WsTestHtml.addHeader())
 
     stream(path = "/ws", protocol = "caprese-0.1"):
       onOpen:
@@ -414,14 +414,14 @@ server(ssl = true, ip = "0.0.0.0", port = 8009):
         # size: int
         # content: string
         echo "onMessage"
-        return wsSend(content, WebSocketOpcode.Binary)
+        wsSend(content, WebSocketOpcode.Binary)
 
       onClose:
         # client: Client
         echo "onClose"
 
     get "/ws":
-      return send("WebSocket Protocol: caprese-0.1".addHeader())
+      send("WebSocket Protocol: caprese-0.1".addHeader())
 ```
 
 #### Custom WebSocket handling such as ping and pong
@@ -440,15 +440,15 @@ server(ssl = true, ip = "0.0.0.0", port = 8009):
       case opcode
       of WebSocketOpcode.Binary, WebSocketOpcode.Text, WebSocketOpcode.Continue:
         echo "onMessage"
-        return wsSend(content, WebSocketOpcode.Binary)
+        wsSend(content, WebSocketOpcode.Binary)
       of WebSocketOpcode.Ping:
-        return wsSend(content, WebSocketOpcode.Pong)
+        wsSend(content, WebSocketOpcode.Pong)
       of WebSocketOpcode.Pong:
         debug "pong ", content
-        return SendResult.Success
+        SendResult.Success
       else: # WebSocketOpcode.Close
         echo "onClose"
-        return SendResult.None
+        SendResult.None
 ```
 
 #### WebSocket without protocol check
@@ -473,11 +473,11 @@ Use `onProtocol:` block.
       onProtocol:
         let prot = reqProtocol()
         if prot == "caprese-0.2":
-          return (true, "caprese-0.2")
+          (true, "caprese-0.2")
         elif prot == "caprese-0.1":
-          return (true, "caprese-0.1")
+          (true, "caprese-0.1")
         else:
-          return (false, "")
+          (false, "")
 
       onOpen:
         ...
@@ -516,9 +516,9 @@ server(ssl = true, ip = "0.0.0.0", port = 8009):
         cipherInit(client.cipherCtx)
 
     get "/":
-      return """<script>new WebSocket("wss://localhost:8009")</script>""".addHeader.send
+      """<script>new WebSocket("wss://localhost:8009")</script>""".addHeader.send
 
-    return "Not found".addHeader(Status404).send
+    "Not found".addHeader(Status404).send
 
 serverStart()
 ```
@@ -553,7 +553,7 @@ server(ip = "0.0.0.0", port = 8089):
       br_sha256_init(addr ctx.sha256Context)
       br_sha256_update(addr ctx.sha256Context, data, size.csize_t)
       br_sha256_out(addr ctx.sha256Context, addr ctx.sha256Buf)
-      return ctx.sha256Buf.toHex.addHeader.send
+      ctx.sha256Buf.toHex.addHeader.send
 
 serverStart()
 ```
@@ -619,20 +619,20 @@ const AppMinJs = scriptMinifier(code = AppJs, extern = "")
 server(ssl = true, ip = "0.0.0.0", port = 8009):
   routes(host = "website1"):
     get "/":
-      return response(content(IndexHtml, "text/html"))
+      response(content(IndexHtml, "text/html"))
 
     get "/js/app.js":
-      return response(content(AppMinJs, "application/javascript"))
+      response(content(AppMinJs, "application/javascript"))
 ```
 
 The second argument of `content()` can be an extension such as *html* or *js* instead of formal MIME types.
 
 ```nim
     get "/":
-      return response(content(IndexHtml, "html"))
+      response(content(IndexHtml, "html"))
 
     get "/js/app.js":
-      return response(content(AppMinJs, "js"))
+      response(content(AppMinJs, "js"))
 ```
 
 ### Reverse Proxy
@@ -653,9 +653,9 @@ server(ssl = true, ip = "0.0.0.0", port = 8009):
 server(ip = "127.0.0.1", port = 8089):
   routes(host = "localhost:8009"):
     get "/":
-      return response(content("Hello!", "text/html"))
+      response(content("Hello!", "text/html"))
 
-    return send("Not found".addHeader(Status404))
+    send("Not found".addHeader(Status404))
 
 serverStart()
 ```
@@ -689,9 +689,9 @@ server(ssl = true, ip = "0.0.0.0", port = 8009):
 server(unix = "/tmp/caprese1.sock"):
   routes(host = "localhost:8009"):
     get "/":
-      return response(content("Hello!", "text/html"))
+      response(content("Hello!", "text/html"))
 
-    return send("Not found".addHeader(Status404))
+    send("Not found".addHeader(Status404))
 
 serverStart()
 ```
@@ -771,17 +771,17 @@ server(ssl = true, ip = "0.0.0.0", port = 443):
       fullChain: "fullchain.pem"
 
     get "/":
-      return send("Hello!".addHeader())
+      send("Hello!".addHeader())
 
     acme(path = "./www/YOUR_DOMAIN"):
       echo "acme ", reqUrl, " ", mime
       echo content
 
-    return send("Not Found".addHeader())
+    send("Not Found".addHeader())
 
 server(ip = "0.0.0.0", port = 80):
   routes(host = "YOUR_DOMAIN"):
-    return send(redirect301("https://YOUR_DOMAIN" & reqUrl))
+    send(redirect301("https://YOUR_DOMAIN" & reqUrl))
 
 serverStart()
 ```
