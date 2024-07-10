@@ -1413,7 +1413,7 @@ template stream*(streamAppId: int, path: string, protocol: string, body: untyped
           getOnOpenBody(body)
           return ret
 
-template public*(importPath: string, body: untyped) = return body
+template public*(importPath: string, body: untyped) = body
 
 template content*(content, mime: string): FileContent =
   createStaticFile(content, mime)
