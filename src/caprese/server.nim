@@ -1253,7 +1253,7 @@ macro mainServerHandlerMacro*(appId: typed): untyped =
 
 template routes*(host: string, body: untyped) =
   if reqHost() == host:
-    block: body
+    body
 
 template routes*(body: untyped) =
   block: body
