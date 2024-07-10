@@ -224,6 +224,8 @@ serverStart()
       return send(sanitizeHtml(matches[0] & "|" & matches[1]).addHeader())
 ```
 
+Considering efficiency, other methods may be better.
+
 #### 404 Not Found
 ```nim
   routes:
@@ -375,7 +377,7 @@ The send commands executed by another worker thread invoke a server dispatch-lev
 
 One of the reasons for creating Caprese is stream encryption. The common method of stream encryption using a reverse proxy server in a separate process seems inefficient. To reduce context switches, it would be better to handle stream encryption in the same thread context as the SSL process, like the `server:` block in the Caprese.
 
-#### Thread context variables
+#### Server thread context variables
 Put before the `routes:` block in the `server:` block. Um, how do I access it? In such a case, [Server Thread Context Object Extension](#server-thread-context-object-extension) may help you.
 
 ```nim
