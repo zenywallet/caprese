@@ -314,3 +314,5 @@ when isMainModule:
 
   # Some problems with free in case of connection errors
   # Fundamental structural changes may be needed
+  # The current implementation in server.nim does not cause the problem,
+  # but do not deviate from that method.
