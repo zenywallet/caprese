@@ -214,9 +214,9 @@ macro pendingBody*[T](reqs: var Queue[tuple[cid: ClientId, data: T]], data: T): 
         {.error: "ClientId of pending can be ommitted only in server blocks.".}
       let cid = client.markPending()
       if `reqs`.send((cid, `data`)):
-        return SendResult.Pending
+        SendResult.Pending
       else:
-        return SendResult.Error
+        SendResult.Error
 
 template pending*[T](reqs: var Queue[tuple[cid: ClientId, data: T]], data: T): SendResult {.dirty.} =
   block:
@@ -260,9 +260,9 @@ when isMainModule:
     server(ssl = true, ip = "0.0.0.0", port = 8009):
       routes:
         get "/":
-          return send("Hello!".addHeader())
+          send("Hello!".addHeader())
 
-        return send("Not found".addHeader(Status404))
+        send("Not found".addHeader(Status404))
 
     serverStart()
 
@@ -287,9 +287,9 @@ when isMainModule:
             cipherInit(client.cipherCtx)
 
         get "/":
-          return """<script>new WebSocket("wss://localhost:8009")</script>""".addHeader.send
+          """<script>new WebSocket("wss://localhost:8009")</script>""".addHeader.send
 
-        return send("Not found".addHeader(Status404))
+        send("Not found".addHeader(Status404))
 
     serverStart()
 
@@ -377,22 +377,22 @@ when isMainModule:
         # headers: Headers
 
         get "/":
-          return send(IndexHtml.addHeader())
+          send(IndexHtml.addHeader())
 
         get "/home", "/main", "/about":
-          return send(IndexHtml.addHeader())
+          send(IndexHtml.addHeader())
 
         get re"/([a-z]+)(\d+)":
-          return send(sanitizeHtml(matches[0] & "|" & matches[1]).addHeader())
+          send(sanitizeHtml(matches[0] & "|" & matches[1]).addHeader())
 
         get "/test":
-          return reqs.pending(PendingData(url: reqUrl))
+          reqs.pending(PendingData(url: reqUrl))
 
         get "/wstest":
-          return send(WsTestHtml.addHeader())
+          send(WsTestHtml.addHeader())
 
         get startsWith("/user/"):
-          return send(reqUrl[6..^1].addHeader(mimetype = "text"))
+          send(reqUrl[6..^1].addHeader(mimetype = "text"))
 
         stream(path = "/ws", protocol = "caprese-0.1"):
           # client: Client
@@ -405,7 +405,7 @@ when isMainModule:
           # size: int
           onMessage:
             echo "onMessage"
-            return wsSend(data.toString(size), WebSocketOpcode.Binary)
+            wsSend(data.toString(size), WebSocketOpcode.Binary)
 
           onClose:
             echo "onClose"
@@ -423,26 +423,26 @@ when isMainModule:
           case opcode
           of WebSocketOpcode.Binary, WebSocketOpcode.Text, WebSocketOpcode.Continue:
             echo "onMessage"
-            return wsSend(data.toString(size), WebSocketOpcode.Binary)
+            wsSend(data.toString(size), WebSocketOpcode.Binary)
           of WebSocketOpcode.Ping:
-            return wsSend(data.toString(size), WebSocketOpcode.Pong)
+            wsSend(data.toString(size), WebSocketOpcode.Pong)
           of WebSocketOpcode.Pong:
             debug "pong ", data.toString(size)
-            return SendResult.Success
+            SendResult.Success
           else: # WebSocketOpcode.Close
             echo "onClose"
-            return SendResult.None
+            SendResult.None
 
         let urlText = sanitizeHtml(reqUrl)
-        return send(fmt"Not found: {urlText}".addDocType().addHeader(Status404))
+        send(fmt"Not found: {urlText}".addDocType().addHeader(Status404))
 
     server(ip = "0.0.0.0", port = 8089):
       routes(host = "localhost"):
         get "/":
-          return send(IndexHtml.addHeader())
+          send(IndexHtml.addHeader())
 
         let urlText = sanitizeHtml(reqUrl)
-        return send(fmt"Not found: {urlText}".addDocType().addHeader(Status404))
+        send(fmt"Not found: {urlText}".addDocType().addHeader(Status404))
 
     serverStart()
 
@@ -456,8 +456,8 @@ when isMainModule:
 
     server(ip = "0.0.0.0", port = 8089):
       routes:
-        get "/": return "Hello, World!".addActiveHeader("text").send
-        return "Not found".addHeader(Status404, "text").send
+        get "/": "Hello, World!".addActiveHeader("text").send
+        "Not found".addHeader(Status404, "text").send
 
     serverStart()
 
@@ -471,8 +471,8 @@ when isMainModule:
 
     server(ip = "0.0.0.0", port = 8089):
       routes:
-        get "/": return "Hello, World!".addActiveHeader("text").send
-        return "Not found".addHeader(Status404, "text").send
+        get "/": "Hello, World!".addActiveHeader("text").send
+        "Not found".addHeader(Status404, "text").send
 
     serverStart()
 
@@ -501,7 +501,7 @@ when isMainModule:
         var fileContentResult = getDynamicFile(reqUrl())
         if fileContentResult.err == FileContentSuccess:
           var fileContent = fileContentResult.data
-          return send(fileContent.content.addHeader(EncodingType.None, fileContent.md5, Status200, fileContent.mime))
-        return send("Not found".addHeader(Status404))
+          send(fileContent.content.addHeader(EncodingType.None, fileContent.md5, Status200, fileContent.mime))
+        send("Not found".addHeader(Status404))
 
     serverStart()

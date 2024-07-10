@@ -1253,10 +1253,10 @@ macro mainServerHandlerMacro*(appId: typed): untyped =
 
 template routes*(host: string, body: untyped) =
   if reqHost() == host:
-    body
+    return body
 
 template routes*(body: untyped) =
-  block: body
+  return block: body
 
 var certsTableData {.compileTime.}: seq[tuple[key: string, val: tuple[
   idx: int, srvId: int, privPath: string, chainPath: string,
@@ -1413,7 +1413,7 @@ template stream*(streamAppId: int, path: string, protocol: string, body: untyped
           getOnOpenBody(body)
           return ret
 
-template public*(importPath: string, body: untyped) = body
+template public*(importPath: string, body: untyped) = return body
 
 template content*(content, mime: string): FileContent =
   createStaticFile(content, mime)
@@ -2010,27 +2010,27 @@ template serverLib(cfg: static Config) {.dirty.} =
 
   template get(path: string, body: untyped) {.used.} =
     if reqUrl() == path:
-      body
+      return body
 
   template get(pathArgs: varargs[string], body: untyped) {.used.} =
     if reqUrl() in pathArgs:
-      body
+      return body
 
   template get(path: Regex, body: untyped) {.used.} =
     if reqUrl() =~ path:
-      body
+      return body
 
   template startsWith(path: string): bool {.used.} = startsWith(reqUrl(), path)
 
   template get(path: bool, body: untyped) {.used.} =
     if path:
-      body
+      return body
 
   template post(path: string, body: untyped) {.used.} =
     when cfg.postRequestMethod:
       {.warning: "POST is not yet implemented.".}
       if reqUrl() == path:
-        body
+        return body
     else:
       {.error: "POST is disabled. It can be enabled with postRequestMethod.".}
 
@@ -2072,27 +2072,27 @@ template serverLib(cfg: static Config) {.dirty.} =
 
   template head(path: string, body: untyped) {.used.} =
     if reqUrl() == path and reqMethod() == $RequestMethod.HEAD:
-      body
+      return body
 
   template put(path: string, body: untyped) {.used.} =
     if reqUrl() == path and reqMethod() == $RequestMethod.PUT:
-      body
+      return body
 
   template delete(path: string, body: untyped) {.used.} =
     if reqUrl() == path and reqMethod() == $RequestMethod.DELETE:
-      body
+      return body
 
   template connect(path: string, body: untyped) {.used.} =
     if reqUrl() == path and reqMethod() == $RequestMethod.CONNECT:
-      body
+      return body
 
   template options(path: string, body: untyped) {.used.} =
     if reqUrl() == path and reqMethod() == $RequestMethod.OPTIONS:
-      body
+      return body
 
   template trace(path: string, body: untyped) {.used.} =
     if reqUrl() == path and reqMethod() == $RequestMethod.TRACE:
-      body
+      return body
 
   template getHeaderValue(paramId: HeaderParams): string =
     getHeaderValue(ctx.pRecvBuf, ctx.header, paramId)
