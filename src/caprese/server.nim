@@ -3963,13 +3963,13 @@ template serverLib(cfg: static Config) {.dirty.} =
       of WebSocketOpcode.Binary, WebSocketOpcode.Text, WebSocketOpcode.Continue:
         messageBody
       of WebSocketOpcode.Ping:
-        return client.wsServerSend(data.toString(size), WebSocketOpcode.Pong)
+        client.wsServerSend(data.toString(size), WebSocketOpcode.Pong)
       of WebSocketOpcode.Pong:
         debug "pong ", data.toString(size)
-        return SendResult.Success
+        SendResult.Success
       else: # WebSocketOpcode.Close
         closeBody
-        return SendResult.None
+        SendResult.None
 
   template onProtocol(body: untyped) {.used.} = discard
   template onOpen(body: untyped) {.used.} = discard
