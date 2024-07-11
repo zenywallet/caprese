@@ -542,8 +542,8 @@ config:
 
 type
   ServerThreadCtxExt {.serverThreadCtxExt.} = object
-     sha256Context: br_sha256_context
-     sha256Buf: array[br_sha256_SIZE, byte]
+    sha256Context: br_sha256_context
+    sha256Buf: array[br_sha256_SIZE, byte]
 
 server(ip = "0.0.0.0", port = 8089):
   # ctx initialization here, if you need...
