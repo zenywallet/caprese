@@ -1256,7 +1256,8 @@ template routes*(host: string, body: untyped) =
     return body
 
 template routes*(body: untyped) =
-  return block: body
+  block:
+    return body
 
 var certsTableData {.compileTime.}: seq[tuple[key: string, val: tuple[
   idx: int, srvId: int, privPath: string, chainPath: string,
