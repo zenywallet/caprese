@@ -1250,14 +1250,23 @@ macro mainServerHandlerMacro*(appId: typed): untyped =
   serverWorkerMainStmt[0][0] = newIdentNode($appId)
   serverWorkerMainStmt
 
+macro returnExists*(body: untyped): bool =
+  proc searchReturn(searchNode: NimNode): bool =
+    for n in searchNode:
+      if searchReturn(n):
+        return true
+      if n.kind == nnkReturnStmt:
+        return true
+    return false
+  newLit(searchReturn(body))
 
 template routes*(host: string, body: untyped) =
   if reqHost() == host:
-    return body
+    when returnExists(body): body else: return body
 
 template routes*(body: untyped) =
   block:
-    return body
+    when returnExists(body): body else: return body
 
 var certsTableData {.compileTime.}: seq[tuple[key: string, val: tuple[
   idx: int, srvId: int, privPath: string, chainPath: string,
@@ -2011,27 +2020,27 @@ template serverLib(cfg: static Config) {.dirty.} =
 
   template get(path: string, body: untyped) {.used.} =
     if reqUrl() == path:
-      return body
+      when returnExists(body): body else: return body
 
   template get(pathArgs: varargs[string], body: untyped) {.used.} =
     if reqUrl() in pathArgs:
-      return body
+      when returnExists(body): body else: return body
 
   template get(path: Regex, body: untyped) {.used.} =
     if reqUrl() =~ path:
-      return body
+      when returnExists(body): body else: return body
 
   template startsWith(path: string): bool {.used.} = startsWith(reqUrl(), path)
 
   template get(path: bool, body: untyped) {.used.} =
     if path:
-      return body
+      when returnExists(body): body else: return body
 
   template post(path: string, body: untyped) {.used.} =
     when cfg.postRequestMethod:
       {.warning: "POST is not yet implemented.".}
       if reqUrl() == path:
-        return body
+        when returnExists(body): body else: return body
     else:
       {.error: "POST is disabled. It can be enabled with postRequestMethod.".}
 
@@ -2073,27 +2082,27 @@ template serverLib(cfg: static Config) {.dirty.} =
 
   template head(path: string, body: untyped) {.used.} =
     if reqUrl() == path and reqMethod() == $RequestMethod.HEAD:
-      return body
+      when returnExists(body): body else: return body
 
   template put(path: string, body: untyped) {.used.} =
     if reqUrl() == path and reqMethod() == $RequestMethod.PUT:
-      return body
+      when returnExists(body): body else: return body
 
   template delete(path: string, body: untyped) {.used.} =
     if reqUrl() == path and reqMethod() == $RequestMethod.DELETE:
-      return body
+      when returnExists(body): body else: return body
 
   template connect(path: string, body: untyped) {.used.} =
     if reqUrl() == path and reqMethod() == $RequestMethod.CONNECT:
-      return body
+      when returnExists(body): body else: return body
 
   template options(path: string, body: untyped) {.used.} =
     if reqUrl() == path and reqMethod() == $RequestMethod.OPTIONS:
-      return body
+      when returnExists(body): body else: return body
 
   template trace(path: string, body: untyped) {.used.} =
     if reqUrl() == path and reqMethod() == $RequestMethod.TRACE:
-      return body
+      when returnExists(body): body else: return body
 
   template getHeaderValue(paramId: HeaderParams): string =
     getHeaderValue(ctx.pRecvBuf, ctx.header, paramId)
