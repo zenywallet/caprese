@@ -377,6 +377,24 @@ The send commands executed by another worker thread invoke a server dispatch-lev
 
 One of the reasons for creating Caprese is stream encryption. The common method of stream encryption using a reverse proxy server in a separate process seems inefficient. To reduce context switches, it would be better to handle stream encryption in the same thread context as the SSL process, like the `server:` block in the Caprese.
 
+#### Use `return` in `routes:` and request methods
+The `return` can be used in `routes:` and request methods. I have not found any advantages other than clarifying the return point, but it may be something useful.
+
+```nim
+server(ip = "0.0.0.0", port = 8089):
+  routes:
+    if not serviceActive:
+      return "Under Maintenance".addHeader(Status503).send
+
+    get "/api":
+      if apiEnabled:
+        return "OK".addHeader(Status200).send
+
+    return "Bad Request".addHeader(Status400).send
+
+serverStart()
+```
+
 #### Server thread context variables
 Put before the `routes:` block in the `server:` block. Um, how do I access it? In such a case, [Server Thread Context Object Extension](#server-thread-context-object-extension) may help you.
 
