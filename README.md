@@ -64,7 +64,7 @@ server(ssl = true, ip = "0.0.0.0", port = 8009):
     get "/":
       send("Hello!".addHeader())
 
-    send("Not found".addHeader(Status404))
+    send("Not Found".addHeader(Status404))
 
 serverStart()
 ```
@@ -233,7 +233,7 @@ Considering efficiency, other methods may be better.
       ...
 
     let urlText = sanitizeHtml(reqUrl)
-    send(fmt"Not found: {urlText}".addDocType().addHeader(Status404))
+    send(fmt"Not Found: {urlText}".addDocType().addHeader(Status404))
 ```
 
 #### Multiple ports for SSL website and no SSL website
@@ -368,7 +368,7 @@ server(ip = "0.0.0.0", port = 8089):
       reqs.pending(PendingData(url: reqUrl))
 
     let urlText = sanitizeHtml(reqUrl)
-    send(fmt"Not found: {urlText}".addDocType().addHeader(Status404))
+    send(fmt"Not Found: {urlText}".addDocType().addHeader(Status404))
 
 serverStart()
 ```
@@ -536,7 +536,7 @@ server(ssl = true, ip = "0.0.0.0", port = 8009):
     get "/":
       """<script>new WebSocket("wss://localhost:8009")</script>""".addHeader.send
 
-    "Not found".addHeader(Status404).send
+    "Not Found".addHeader(Status404).send
 
 serverStart()
 ```
@@ -673,7 +673,7 @@ server(ip = "127.0.0.1", port = 8089):
     get "/":
       response(content("Hello!", "text/html"))
 
-    send("Not found".addHeader(Status404))
+    send("Not Found".addHeader(Status404))
 
 serverStart()
 ```
@@ -709,7 +709,7 @@ server(unix = "/tmp/caprese1.sock"):
     get "/":
       response(content("Hello!", "text/html"))
 
-    send("Not found".addHeader(Status404))
+    send("Not Found".addHeader(Status404))
 
 serverStart()
 ```
@@ -795,7 +795,7 @@ server(ssl = true, ip = "0.0.0.0", port = 443):
       echo "acme ", reqUrl, " ", mime
       echo content
 
-    send("Not Found".addHeader())
+    send("Not Found".addHeader(Status404))
 
 server(ip = "0.0.0.0", port = 80):
   routes(host = "YOUR_DOMAIN"):
