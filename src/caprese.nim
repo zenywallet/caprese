@@ -262,7 +262,7 @@ when isMainModule:
         get "/":
           send("Hello!".addHeader())
 
-        send("Not found".addHeader(Status404))
+        send("Not Found".addHeader(Status404))
 
     serverStart()
 
@@ -289,7 +289,7 @@ when isMainModule:
         get "/":
           """<script>new WebSocket("wss://localhost:8009")</script>""".addHeader.send
 
-        send("Not found".addHeader(Status404))
+        send("Not Found".addHeader(Status404))
 
     serverStart()
 
@@ -434,7 +434,7 @@ when isMainModule:
             SendResult.None
 
         let urlText = sanitizeHtml(reqUrl)
-        send(fmt"Not found: {urlText}".addDocType().addHeader(Status404))
+        send(fmt"Not Found: {urlText}".addDocType().addHeader(Status404))
 
     server(ip = "0.0.0.0", port = 8089):
       routes(host = "localhost"):
@@ -442,7 +442,7 @@ when isMainModule:
           send(IndexHtml.addHeader())
 
         let urlText = sanitizeHtml(reqUrl)
-        send(fmt"Not found: {urlText}".addDocType().addHeader(Status404))
+        send(fmt"Not Found: {urlText}".addDocType().addHeader(Status404))
 
     serverStart()
 
@@ -457,7 +457,7 @@ when isMainModule:
     server(ip = "0.0.0.0", port = 8089):
       routes:
         get "/": "Hello, World!".addActiveHeader("text").send
-        "Not found".addHeader(Status404, "text").send
+        "Not Found".addHeader(Status404, "text").send
 
     serverStart()
 
@@ -472,7 +472,7 @@ when isMainModule:
     server(ip = "0.0.0.0", port = 8089):
       routes:
         get "/": "Hello, World!".addActiveHeader("text").send
-        "Not found".addHeader(Status404, "text").send
+        "Not Found".addHeader(Status404, "text").send
 
     serverStart()
 
@@ -502,6 +502,6 @@ when isMainModule:
         if fileContentResult.err == FileContentSuccess:
           var fileContent = fileContentResult.data
           return send(fileContent.content.addHeader(EncodingType.None, fileContent.md5, Status200, fileContent.mime))
-        return send("Not found".addHeader(Status404))
+        return send("Not Found".addHeader(Status404))
 
     serverStart()
