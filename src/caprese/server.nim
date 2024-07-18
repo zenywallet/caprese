@@ -1252,6 +1252,8 @@ macro mainServerHandlerMacro*(appId: typed): untyped =
 
 macro returnExists*(body: untyped): bool =
   proc searchReturn(searchNode: NimNode): bool =
+    if searchNode.kind == nnkReturnStmt:
+      return true
     for n in searchNode:
       if searchReturn(n):
         return true
