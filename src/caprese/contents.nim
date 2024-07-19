@@ -116,7 +116,7 @@ template contentsWithCfg*(cfg: static Config) {.dirty.} =
 
   template addHeader*(body: string, code: StatusCode, contentType: ContentType): string =
     "HTTP/" & HTTP_VERSION & " " & $code & "\c\L" &
-    "Content-Type: " & contentType.string & "\c\L" &
+    (when cfg.headerContentType: "Content-Type: " & contentType.string & "\c\L" else: "") &
     (when cfg.headerDate: "Date: " & getCurTimeStr() & "\c\L" else: "") &
     (when cfg.headerServer: "Server: " & ServerName & "\c\L" else: "") &
     "Content-Length: " & $body.len & "\c\L\c\L" &
@@ -154,7 +154,7 @@ template contentsWithCfg*(cfg: static Config) {.dirty.} =
 
   template addHeader*(body: string, encodingType: EncodingType, etag: string, code: StatusCode, mimetype: string): string =
     "HTTP/" & HTTP_VERSION & " " & $code & "\c\L" &
-    "Content-Type: " & getMime(mimetype) & "\c\L" &
+    (when cfg.headerContentType: "Content-Type: " & getMime(mimetype) & "\c\L" else: "") &
     "ETag: " & etag & "\c\L" &
     (when encodingType == EncodingType.None: "" else: "Content-Encoding: " & $encodingType & "\c\L") &
     (when cfg.headerDate: "Date: " & getCurTimeStr() & "\c\L" else: "") &
@@ -169,10 +169,11 @@ template contentsWithCfg*(cfg: static Config) {.dirty.} =
     addHeader(body, encodingType, etag, Status200, "text/html")
 
   macro activeHeaderBase(body, code, mimetype: string): Array[byte] =
-    var contentType = getMime2($mimetype)
+    when cfg.headerContentType:
+      var contentType = getMime2($mimetype)
     var blen = ($body).len
     var h = "HTTP/" & HTTP_VERSION & " " & $code & "\c\L" &
-      "Content-Type: " & contentType & "\c\L" &
+      (when cfg.headerContentType: "Content-Type: " & contentType & "\c\L" else: "") &
       (when cfg.headerDate: "Date: ddd, dd MMM yyyy HH:mm:ss GMT\c\L" else: "") &
       (when cfg.headerServer: "Server: " & ServerName & "\c\L" else: "") &
       "Content-Length: " & $blen & "\c\L\c\L" &
@@ -202,7 +203,7 @@ template contentsWithCfg*(cfg: static Config) {.dirty.} =
 
   proc redirect301*(location: string): string =
     result = "HTTP/" & HTTP_VERSION & " " & $Status301 & "\c\L" &
-            "Content-Type: text/html\c\L" &
+            (when cfg.headerContentType: "Content-Type: text/html\c\L" else: "") &
             (when cfg.headerDate: "Date: " & getCurTimeStr() & "\c\L" else: "") &
             (when cfg.headerServer: "Server: " & ServerName & "\c\L" else: "") &
             "Content-Length: 0\c\L" &

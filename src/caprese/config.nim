@@ -37,6 +37,7 @@ type
     fullChainFile*: string
     httpVersion*: float64
     serverName*: string
+    headerContentType*: bool
     headerServer*: bool
     headerDate*: bool
     errorCloseMode*: ErrorCloseMode
@@ -63,6 +64,7 @@ proc defaultConfig*(): Config {.compileTime.} =
   result.fullChainFile = "fullchain.pem"
   result.httpVersion = 1.1
   result.serverName = "Caprese"
+  result.headerContentType = true
   result.headerServer = false
   result.headerDate = false
   result.errorCloseMode = CloseImmediately
