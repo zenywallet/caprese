@@ -1255,10 +1255,11 @@ macro returnExists*(body: untyped): bool =
     if searchNode.kind == nnkReturnStmt:
       return true
     for n in searchNode:
-      if searchReturn(n):
-        return true
-      if n.kind == nnkReturnStmt:
-        return true
+      if n.kind != nnkProcDef and n.kind != nnkFuncDef:
+        if searchReturn(n):
+          return true
+        if n.kind == nnkReturnStmt:
+          return true
     return false
   newLit(searchReturn(body))
 
