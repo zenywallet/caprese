@@ -108,5 +108,6 @@ before build:
       libresslTask()
     if not fileExists("src/lib/boringssl/libssl.a") or not fileExists("src/lib/boringssl/libcrypto.a"):
       boringsslTask()
+    exec "rm -f src/lib/NOSSL.a"
   zopfliTask()
   brotliTask()
