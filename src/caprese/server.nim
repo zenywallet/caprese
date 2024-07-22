@@ -153,7 +153,7 @@ template serverInit*() {.dirty.} =
   import proxy
 
   macro noSslForceSetNone(): untyped =
-    if fileExists(currentSourcePath.parentDir() / "../../lib/NOSSL.a"):
+    if fileExists(currentSourcePath.parentDir() / "../lib/NOSSL.a"):
       quote do:
         cfg.sslLib = None
     else:
