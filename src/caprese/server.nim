@@ -156,6 +156,7 @@ template serverInit*() {.dirty.} =
     if fileExists(currentSourcePath.parentDir() / "../lib/NOSSL.a"):
       quote do:
         cfg.sslLib = None
+        {.hint: "NOSSL mode is set".}
     else:
       quote do:
         discard
