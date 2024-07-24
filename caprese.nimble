@@ -97,6 +97,7 @@ before build:
   if getEnv("NOSSL") == "1":
     exec "git submodule update --init deps/zopfli"
     exec "git submodule update --init deps/brotli"
+    exec "mkdir -p src/lib"
     exec "touch src/lib/NOSSL.a"
   else:
     exec "git submodule update --init"
