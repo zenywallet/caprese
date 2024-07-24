@@ -122,7 +122,7 @@ const HelloHtml = staticHtmlDocument:
     head:
       meta(charset="utf-8")
     body:
-      tdiv: text "hello"
+      tdiv: text "Hello"
       script: verbatim HelloMinJs
 
 echo HelloHtml
@@ -134,7 +134,7 @@ echo HelloHtml
 <html>
 <head><meta charset="utf-8"></head>
 <body>
-<div>hello</div>
+<div>Hello</div>
 <script>console.log("Hello, world!");</script>
 </body>
 </html>
@@ -167,6 +167,7 @@ config:
   fullChainFile = "fullchain.pem"
   httpVersion = 1.1
   serverName = "Caprese"
+  headerContentType = true
   headerServer = false
   headerDate = false
   errorCloseMode = CloseImmediately
@@ -185,6 +186,7 @@ If SSL is not required, it is recommended set to *None*. This will enable the ex
 * **limitOpenFiles:** *[Number of open files]*, *-1*(default, automatically set the maximum number of open files)
 * **serverWorkerNum:** *[Number of processing threads]*, *-1*(default, automatically set the number of CPUs in the system)
 * **connectionTimeout:** *[Client connection timeout in seconds]*, *-1*(disabled). The time to disconnect is not exact. Disconnection occurs between a specified second and twice the time.
+* **headerContentType:** *true*(default) or *false*, If *true*, include `Content-Type:` in the response headers. It may be possible in some cases to set false according to benchmark requirements.
 * **headerServer:** *true* or *false*(default), If *true*, include `Server:` in the response headers. Common benchmarks require this value to be *true*. In benchmark competition, even a single byte of copying can feel heavy.
 * **headerDate:** *true* or *false*(default), If *true*, include `Date:` in the response headers. Common benchmarks require this value to be *true*. It should not be the essence of benchmarking, but sometimes it is a competition of how to implement the date strings.
 * **errorCloseMode:** *CloseImmediately*(default) or *UntilConnectionTimeout*. Behavior when disconnecting clients on error.
