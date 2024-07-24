@@ -1274,13 +1274,32 @@ macro returnExists*(body: untyped): bool =
     return false
   newLit(searchReturn(body))
 
+macro returnRequired*(body: untyped): bool =
+  if body.len > 0:
+    if body.len == 1 and body.kind == nnkReturnStmt:
+      return newLit(false)
+    var n = body[^1]
+    proc searchReturn(searchNode: NimNode): bool =
+      if searchNode.kind == nnkReturnStmt:
+        return true
+      for n in searchNode:
+        if n.kind != nnkProcDef and n.kind != nnkFuncDef:
+          if searchReturn(n):
+            return true
+          if n.kind == nnkReturnStmt:
+            return true
+      return false
+    return newLit(not searchReturn(n))
+  else:
+    return newLit(false)
+
 template routes*(host: string, body: untyped) =
   if reqHost() == host:
-    when returnExists(body): body else: return body
+    when returnRequired(body): return body else: body
 
 template routes*(body: untyped) =
   block:
-    when returnExists(body): body else: return body
+    when returnRequired(body): return body else: body
 
 var certsTableData {.compileTime.}: seq[tuple[key: string, val: tuple[
   idx: int, srvId: int, privPath: string, chainPath: string,
