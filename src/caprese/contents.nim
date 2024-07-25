@@ -168,7 +168,7 @@ template contentsWithCfg*(cfg: static Config) {.dirty.} =
   template addHeader*(body: string, encodingType: EncodingType, etag: string): string =
     addHeader(body, encodingType, etag, Status200, "text/html")
 
-  macro activeHeaderBase(body, code, mimetype: string): Array[byte] =
+  macro activeHeaderBase(body, code, mimetype: static string): Array[byte] =
     when cfg.headerContentType:
       var contentType = getMime2($mimetype)
     var blen = ($body).len
@@ -192,13 +192,16 @@ template contentsWithCfg*(cfg: static Config) {.dirty.} =
 
   macro activeHeaderInit*(): untyped = activeHeaderStmt
 
-  template addActiveHeader*(body: string, code: StatusCode, mimetype: string): Array[byte] =
+  template addActiveHeader*(body: static string, code: static StatusCode, mimetype: static string): Array[byte] =
     activeHeaderBase(body, $code, mimetype)
 
-  template addActiveHeader*(body: string, mimetype: string | RawMimeType): Array[byte] =
+  template addActiveHeader*(body: static string, mimetype: static string): Array[byte] =
     addActiveHeader(body, Status200, mimetype)
 
-  template addActiveHeader*(body: string): Array[byte] =
+  template addActiveHeader*(body: static string, mimetype: static RawMimeType): Array[byte] =
+    addActiveHeader(body, Status200, mimetype)
+
+  template addActiveHeader*(body: static string): Array[byte] =
     addActiveHeader(body, Status200, "text/html")
 
   proc redirect301*(location: string): string =
