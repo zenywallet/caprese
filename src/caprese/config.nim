@@ -18,6 +18,11 @@ type
     ExternalConnection
     InternalConnection
 
+  SslRoutesHost* = enum
+    SniAndHeaderHost
+    SniOnly
+    HeaderHostOnly
+
   Config* = object
     sslLib*: SslLib
     debugLog*: bool
@@ -44,6 +49,7 @@ type
     connectionPreferred*: ConnectionPreferred
     urlRootSafe*: bool
     postRequestMethod*: bool
+    sslRoutesHost*: SslRoutesHost
 
 proc defaultConfig*(): Config {.compileTime.} =
   result.sslLib = BearSSL
@@ -71,6 +77,7 @@ proc defaultConfig*(): Config {.compileTime.} =
   result.connectionPreferred = ExternalConnection
   result.urlRootSafe = true
   result.postRequestMethod = false
+  result.sslRoutesHost = SniAndHeaderHost
 
 macro staticBool*(b: static bool): untyped = newLit(b)
 macro staticInt*(a: static int): untyped = newLit(a)
