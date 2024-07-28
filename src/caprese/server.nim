@@ -1067,6 +1067,8 @@ proc findColonNum(s: string): bool {.compileTime.} =
       break
   if findmColonNum == 2: true else: false
 
+var sslRoutesIdx {.compileTime.}: int = 1
+
 macro addServerMacro*(bindAddress: string, port: uint16, unix: bool, ssl: bool, sslLib: SslLib, body: untyped = newEmptyNode()): untyped =
   if boolVal(ssl) and eqIdent("None", sslLib):
     macros.error("server ssl = ture, but config.sslLib = None")
@@ -1110,6 +1112,9 @@ macro addServerMacro*(bindAddress: string, port: uint16, unix: bool, ssl: bool, 
         if hostname[i] == ':':
           hostname.setLen(i)
           break
+      if boolVal(ssl):
+        s.insert(1, nnkExprEqExpr.newTree(newIdentNode("internalSslIdx"), newLit(sslRoutesIdx)))
+        inc(sslRoutesIdx)
       var routesBase = s.copy()
       var routesBody = newStmtList()
       var certsBlockFlag = false
@@ -1306,6 +1311,19 @@ template routes*(host: string, body: untyped) =
 template routes*(body: untyped) =
   block:
     when returnRequired(body): return body else: body
+
+template routes*(internalSslIdx: int, host: string, body: untyped) =
+  when cfg.sslRoutesHost == SniAndHeaderHost:
+    if serverThreadCtx.client.sslIdx == internalSslIdx and reqHost() == host:
+      when returnRequired(body): return body else: body
+  elif cfg.sslRoutesHost == SniOnly:
+    if serverThreadCtx.client.sslIdx == internalSslIdx:
+      when returnRequired(body): return body else: body
+  elif cfg.sslRoutesHost == HeaderHostOnly:
+    if reqHost() == host:
+      when returnRequired(body): return body else: body
+  else:
+    raise
 
 var certsTableData {.compileTime.}: seq[tuple[key: string, val: tuple[
   idx: int, srvId: int, privPath: string, chainPath: string,
