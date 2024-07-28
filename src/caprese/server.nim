@@ -134,9 +134,11 @@ macro clientObjTypeMacro*(cfg: static Config): untyped =
         when `cfg`.sslLib == BearSSL:
           sc: ptr br_ssl_server_context
           keyType: cint
+          sslIdx: int
         elif `cfg`.sslLib == OpenSSL or `cfg`.sslLib == LibreSSL or `cfg`.sslLib == BoringSSL:
           ssl: SSL
           sslErr: int
+          sslIdx: int
         pStream*: pointer
         proxy: Proxy
 
@@ -842,9 +844,11 @@ template serverInitFreeClient() {.dirty.} =
       when cfg.sslLib == BearSSL:
         p[i].sc = nil
         p[i].keyType = 0.cint
+        p[i].sslIdx = 0
       elif cfg.sslLib == OpenSSL or cfg.sslLib == LibreSSL or cfg.sslLib == BoringSSL:
         p[i].ssl = nil
         p[i].sslErr = SSL_ERROR_NONE
+        p[i].sslIdx = 0
       p[i].ip = 0
       p[i].invoke = false
       initLock(p[i].lock)
@@ -900,11 +904,13 @@ template serverInitFreeClient() {.dirty.} =
           deallocShared(cast[pointer](client.sc))
           client.sc = nil
         client.keyType = 0.cint
+        client.sslIdx = 0
       elif ssl and (cfg.sslLib == OpenSSL or cfg.sslLib == LibreSSL or cfg.sslLib == BoringSSL):
         if not client.ssl.isNil:
           SSL_free(client.ssl)
           client.ssl = nil
           client.sslErr = SSL_ERROR_NONE
+        client.sslIdx = 0
       sock.close()
       client.recvCurSize = 0
       client.recvBufSize = 0
@@ -2596,16 +2602,19 @@ template serverLib(cfg: static Config) {.dirty.} =
             if (pc.allowed_usages and BR_KEYTYPE_KEYX) != 0 and
               pc.cert_issuer_key_type == BR_KEYTYPE_RSA:
               choices.cipher_suite = st[u][0]
+              serverThreadCtx.client.sslIdx = idx
               return 1.cint
           of BR_SSLKEYX_ECDH_ECDSA:
             if (pc.allowed_usages and BR_KEYTYPE_KEYX) != 0 and
               pc.cert_issuer_key_type == BR_KEYTYPE_EC:
               choices.cipher_suite = st[u][0]
+              serverThreadCtx.client.sslIdx = idx
               return 1.cint
           of BR_SSLKEYX_ECDHE_ECDSA:
             if (pc.allowed_usages and BR_KEYTYPE_SIGN) != 0 and hash_id != 0:
               choices.cipher_suite = st[u][0]
               choices.algo_id = hash_id + 0xFF00
+              serverThreadCtx.client.sslIdx = idx
               return 1.cint
           else:
             continue
@@ -2639,11 +2648,13 @@ template serverLib(cfg: static Config) {.dirty.} =
           of BR_SSLKEYX_RSA:
             if (pc.allowed_usages and BR_KEYTYPE_KEYX) != 0:
               choices.cipher_suite = st[u][0]
+              serverThreadCtx.client.sslIdx = idx
               return 1.cint
           of BR_SSLKEYX_ECDHE_RSA:
             if (pc.allowed_usages and BR_KEYTYPE_SIGN) != 0 and fh:
               choices.cipher_suite = st[u][0]
               choices.algo_id = hash_id + 0xFF00
+              serverThreadCtx.client.sslIdx = idx
               return 1.cint
           else:
             continue
@@ -5077,6 +5088,7 @@ template serverLib(cfg: static Config) {.dirty.} =
         if SSL_set_SSL_CTX(ssl, ctx).isNil:
           logs.error "error: SSL_set_SSL_CTX site=", sitename
           return SSL_TLSEXT_ERR_NOACK
+        serverThreadCtx.client.sslIdx = certs.idx
         return SSL_TLSEXT_ERR_OK
       except:
         return SSL_TLSEXT_ERR_OK
