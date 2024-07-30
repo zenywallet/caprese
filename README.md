@@ -167,13 +167,14 @@ config:
   fullChainFile = "fullchain.pem"
   httpVersion = 1.1
   serverName = "Caprese"
-  headerContentType = true
   headerServer = false
   headerDate = false
+  headerContentType = true
   errorCloseMode = CloseImmediately
   connectionPreferred = ExternalConnection
   urlRootSafe = true
   postRequestMethod = false
+  sslRoutesHost = SniAndHeaderHost
 ```
 
 * **sslLib:** *None*, *BearSSL*(default), *OpenSSL*, *LibreSSL*, *BoringSSL*  
@@ -186,9 +187,9 @@ If SSL is not required, it is recommended set to *None*. This will enable the ex
 * **limitOpenFiles:** *[Number of open files]*, *-1*(default, automatically set the maximum number of open files)
 * **serverWorkerNum:** *[Number of processing threads]*, *-1*(default, automatically set the number of CPUs in the system)
 * **connectionTimeout:** *[Client connection timeout in seconds]*, *-1*(disabled). The time to disconnect is not exact. Disconnection occurs between a specified second and twice the time.
-* **headerContentType:** *true*(default) or *false*, If *true*, include `Content-Type:` in the response headers. It may be possible in some cases to set false according to benchmark requirements.
 * **headerServer:** *true* or *false*(default), If *true*, include `Server:` in the response headers. Common benchmarks require this value to be *true*. In benchmark competition, even a single byte of copying can feel heavy.
 * **headerDate:** *true* or *false*(default), If *true*, include `Date:` in the response headers. Common benchmarks require this value to be *true*. It should not be the essence of benchmarking, but sometimes it is a competition of how to implement the date strings.
+* **headerContentType:** *true*(default) or *false*, If *true*, include `Content-Type:` in the response headers. It may be possible in some cases to set false according to benchmark requirements.
 * **errorCloseMode:** *CloseImmediately*(default) or *UntilConnectionTimeout*. Behavior when disconnecting clients on error.
 * **connectionPreferred:** *ExternalConnection*(default) or *InternalConnection*. Optimize server processing depending on whether the clients are connected from external or internal network connections. The situation is different when the clients and server are on separate PCs or on the same PC, therefore, the benchmarks should be evaluated separately. If the clients and server are running on the same PC using virtual technology such as *Docker* and sharing CPU resources, they should rather be considered internal connections.
 
@@ -258,7 +259,7 @@ server(ip = "0.0.0.0", port = 8089):
 serverStart()
 ```
 
-The `host` value of the `routes:` block is actually set to your domain name. The path of `certificates:` block is not the compile-time path, but the run-time path. If the certificate files are updated while the Caprese is running, the new certificates are automatically loaded.
+ The `server:` block can have more than one before `serverStart()`. The `host` value of the `routes:` block is actually set to your domain name. The path of `certificates:` block is not the compile-time path, but the run-time path. If the certificate files are updated while the Caprese is running, the new certificates are automatically loaded.
 
 #### Set the certificate path for each
 
@@ -330,7 +331,7 @@ server(ssl = true, ip = "0.0.0.0", port = 8009):
 serverStart()
 ```
 
-I hope you get the idea... This is SNI.
+I hope you get the idea... This is SNI. There are multiple `routes:` blocks in a `server:` block. Like the `server:` block, the `routes:` block can have multiple blocks.
 
 You can also omit the `certificates:` block. The following code works the same as the above code. Just remember to prepare the certificate files.
 
