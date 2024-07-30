@@ -5316,3 +5316,4 @@ template serverStop*() =
 
 {.passC: "-flto".}
 {.passL: "-flto".}
+{.passL: "-Wno-stringop-overflow".}
