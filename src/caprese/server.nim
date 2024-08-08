@@ -764,19 +764,18 @@ template serverTagLib*(cfg: static Config) {.dirty.} =
 
   proc wsServerSend*(clientId: ClientId, data: seq[byte] | string | Array[byte],
                     opcode: WebSocketOpCode = WebSocketOpCode.Binary): SendResult =
-    var frame: seq[byte]
     var dataLen = data.len
     when data is Array:
       var data = data.toSeq
     else:
       var data = data.toBytes
     var finOp = 0x80.byte or opcode.byte
-    if dataLen < 126:
-      frame = capbytes.BytesBE(finOp, dataLen.byte, data)
+    var frame = if dataLen < 126:
+      capbytes.BytesBE(finOp, dataLen.byte, data)
     elif dataLen <= 0xffff:
-      frame = capbytes.BytesBE(finOp, 126.byte, dataLen.uint16, data)
+      capbytes.BytesBE(finOp, 126.byte, dataLen.uint16, data)
     else:
-      frame = capbytes.BytesBE(finOp, 127.byte, dataLen.uint64, data)
+      capbytes.BytesBE(finOp, 127.byte, dataLen.uint64, data)
     result = clientId.send(frame.toString())
 
   template send(data: seq[byte] | string | Array[byte]): SendResult {.dirty, used.} = ctx.client.send(data)
