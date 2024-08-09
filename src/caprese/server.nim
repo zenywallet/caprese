@@ -762,7 +762,7 @@ template serverTagLib*(cfg: static Config) {.dirty.} =
     result = client.send(frame)
 
   proc wsServerSend*(clientId: ClientId, data: seq[byte] | string | Array[byte],
-                    opcode: WebSocketOpCode = WebSocketOpCode.Binary): SendResult =
+                    opcode: WebSocketOpCode = WebSocketOpCode.Binary): SendResult {.discardable.} =
     var dataLen = data.len
     when data is Array:
       var data = data.toSeq
