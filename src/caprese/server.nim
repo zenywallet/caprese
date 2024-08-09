@@ -256,8 +256,7 @@ type
     idx: int
 
 proc getErrnoStr*(): string =
-  case errno
-  of EADDRINUSE: "errno=EADDRINUSE(" & $errno & ")"
+  if errno == EADDRINUSE: "errno=EADDRINUSE(" & $errno & ")"
   else: "errno=" & $errno
 
 template serverTagLib*(cfg: static Config) {.dirty.} =
