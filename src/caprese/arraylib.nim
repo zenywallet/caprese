@@ -109,47 +109,41 @@ else:
   proc len*[T](x: Array[T]): int {.inline.} = x.len
 
   proc newArray*[T](len: Natural): Array[T] =
-    let size = sizeof(T) * len
-    result.data = cast[typeof(result.data)](allocShared0(size))
+    result.data = cast[typeof(result.data)](allocShared0(sizeof(T) * len))
     result.len = len
-    result.cap = size
+    result.cap = len
 
   proc newArray*[T](a: var Array[T], len: Natural) =
-    let size = sizeof(T) * len
-    a.data = cast[typeof(a.data)](allocShared0(size))
+    a.data = cast[typeof(a.data)](allocShared0(sizeof(T) * len))
     a.len = len
-    a.cap = size
+    a.cap = len
 
   proc newArrayUninitialized*[T](len: Natural): Array[T] =
-    let size = sizeof(T) * len
-    result.data = cast[typeof(result.data)](allocShared(size))
+    result.data = cast[typeof(result.data)](allocShared(sizeof(T) * len))
     result.len = len
-    result.cap = size
+    result.cap = len
 
   proc newArrayUninitialized*[T](a: var Array[T], len: Natural): Array[T] =
-    let size = sizeof(T) * len
-    a.data = cast[typeof(a.data)](allocShared(size))
+    a.data = cast[typeof(a.data)](allocShared(sizeof(T) * len))
     a.len = len
-    a.cap = size
+    a.cap = len
 
   proc newArrayOfCap*[T](len: Natural): Array[T] =
-    let size = sizeof(T) * len
-    result.data = cast[typeof(result.data)](allocShared0(size))
+    result.data = cast[typeof(result.data)](allocShared0(sizeof(T) * len))
     result.len = 0
-    result.cap = size
+    result.cap = len
 
   proc newArrayOfCap*[T](a: var Array[T], len: Natural) =
-    let size = sizeof(T) * len
-    a.data = cast[typeof(a.data)](allocShared0(size))
+    a.data = cast[typeof(a.data)](allocShared0(sizeof(T) * len))
     a.len = 0
-    a.cap = size
+    a.cap = len
 
   proc newArray*[T](buf: ptr UncheckedArray[T], len: Natural): Array[T] =
     let size = sizeof(T) * len
     result.data = cast[typeof(result.data)](allocShared0(size))
     copyMem(result.data, buf, size)
     result.len = len
-    result.cap = size
+    result.cap = len
 
   proc toArray*[T](x: openArray[T]): Array[T] =
     if x.len > 0:
@@ -157,7 +151,7 @@ else:
       result.data = cast[typeof(result.data)](allocShared0(size))
       copyMem(result.data, unsafeAddr x[0], size)
       result.len = x.len
-      result.cap = size
+      result.cap = x.len
 
   proc toArray*[T](x: seq[T]): Array[T] =
     if x.len > 0:
@@ -165,7 +159,7 @@ else:
       result.data = cast[typeof(result.data)](allocShared0(size))
       copyMem(result.data, unsafeAddr x[0], size)
       result.len = x.len
-      result.cap = size
+      result.cap = x.len
 
   proc toSeq*[T](x: Array[T]): seq[T] =
     result.newSeq(x.len)
