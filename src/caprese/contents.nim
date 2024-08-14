@@ -37,7 +37,7 @@ proc updateTimeStamp2() {.inline.} =
   var timeStr = now().utc().format("ddd, dd MMM yyyy HH:mm:ss 'GMT'")
   copyMem(timeStrArrays[shiftTimeStrArray].data, addr timeStr[0], 29)
   pTimeStrArray = addr timeStrArrays[shiftTimeStrArray]
-  var a = activeHeaderContents[shiftTimeStrArray]
+  var a = addr activeHeaderContents[shiftTimeStrArray]
   for i in 0..<a.len:
     copyMem(addr a[i][activeHeaderDatePos[i]], addr timeStr[0], 29)
   pActiveHeaderContents = addr activeHeaderContents[shiftTimeStrArray]
