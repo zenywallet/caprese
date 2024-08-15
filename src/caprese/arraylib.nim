@@ -34,6 +34,9 @@ else:
 
   proc `=destroy`*[T](x: var Array[T]) =
     if x.data != nil:
+      when T is not Ordinal:
+        for i in 0..<x.len:
+          `=destroy`(x.data[i])
       x.data.deallocShared()
       x.data = nil
       x.len = 0
@@ -47,7 +50,11 @@ else:
     a.cap = b.cap
     if b.data != nil:
       a.data = cast[typeof(a.data)](allocShared0(sizeof(T) * a.cap))
-      copyMem(a.data, b.data, sizeof(T) * a.len)
+      when T is Ordinal:
+        copyMem(a.data, b.data, sizeof(T) * a.len)
+      else:
+        for i in 0..<a.len:
+          a.data[i] = b.data[i]
 
   proc `=sink`*[T](a: var Array[T]; b: Array[T]) =
     `=destroy`(a)
