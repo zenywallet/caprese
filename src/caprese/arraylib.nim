@@ -139,25 +139,40 @@ else:
     a.cap = len
 
   proc newArray*[T](buf: ptr UncheckedArray[T], len: Natural): Array[T] =
-    let size = sizeof(T) * len
-    result.data = cast[typeof(result.data)](allocShared0(size))
-    copyMem(result.data, buf, size)
+    when T is Ordinal:
+      let size = sizeof(T) * len
+      result.data = cast[typeof(result.data)](allocShared0(size))
+      copyMem(result.data, buf, size)
+    else:
+      result.data = cast[typeof(result.data)](allocShared0(sizeof(T) * len))
+      for i in 0..<len:
+        result.data[i] = buf[i]
     result.len = len
     result.cap = len
 
   proc toArray*[T](x: openArray[T]): Array[T] =
     if x.len > 0:
-      let size = sizeof(T) * x.len
-      result.data = cast[typeof(result.data)](allocShared0(size))
-      copyMem(result.data, unsafeAddr x[0], size)
+      when T is Ordinal:
+        let size = sizeof(T) * x.len
+        result.data = cast[typeof(result.data)](allocShared0(size))
+        copyMem(result.data, unsafeAddr x[0], size)
+      else:
+        result.data = cast[typeof(result.data)](allocShared0(sizeof(T) * x.len))
+        for i in 0..<x.len:
+          result.data[i] = x[i]
       result.len = x.len
       result.cap = x.len
 
   proc toArray*[T](x: seq[T]): Array[T] =
     if x.len > 0:
-      let size = sizeof(T) * x.len
-      result.data = cast[typeof(result.data)](allocShared0(size))
-      copyMem(result.data, unsafeAddr x[0], size)
+      when T is Ordinal:
+        let size = sizeof(T) * x.len
+        result.data = cast[typeof(result.data)](allocShared0(size))
+        copyMem(result.data, unsafeAddr x[0], size)
+      else:
+        result.data = cast[typeof(result.data)](allocShared0(sizeof(T) * x.len))
+        for i in 0..<x.len:
+          result.data[i] = x[i]
       result.len = x.len
       result.cap = x.len
 
