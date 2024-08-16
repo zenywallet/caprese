@@ -32,7 +32,7 @@ else:
       len*, cap*: int
       data*: ptr UncheckedArray[T]
 
-  proc `=destroy`*[T](x: var Array[T]) =
+  proc `=destroy`*[T](x: Array[T]) =
     if x.data != nil:
       when T is not Ordinal:
         for i in 0..<x.len:
