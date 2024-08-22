@@ -1,6 +1,6 @@
 # Copyright (c) 2022 zenywallet
 
-import locks
+import std/locks
 
 type
   Queue*[T] = object
