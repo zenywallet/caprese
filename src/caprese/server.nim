@@ -1109,7 +1109,7 @@ macro addServerMacro*(bindAddress: string, port: uint16, unix: bool, ssl: bool, 
         if hostname[i] == ':':
           hostname.setLen(i)
           break
-      if boolVal(ssl):
+      if boolVal(ssl) and hostname.len > 0:
         s.insert(1, nnkExprEqExpr.newTree(newIdentNode("internalSslIdx"), newLit(sslRoutesIdx)))
         inc(sslRoutesIdx)
       var routesBase = s.copy()
