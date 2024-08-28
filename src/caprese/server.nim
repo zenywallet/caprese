@@ -24,7 +24,7 @@ export server_types
 
 var routesHostParamExists* {.compileTime.}: bool = false
 var streamBlockExists* {.compileTime.}: bool = false
-var responceCallExists* {.compileTime.}: bool = false
+var responseCallExists* {.compileTime.}: bool = false
 var postExists* {.compileTime.}: bool = false
 var otherRequestMethodExists* {.compileTime.}: bool = false
 
@@ -40,7 +40,7 @@ macro HttpTargetHeader(idEnumName, valListName, targetHeaders, body: untyped): u
     internalEssentialHeaders.add(("InternalSecWebSocketKey", "Sec-WebSocket-Key"))
     internalEssentialHeaders.add(("InternalSecWebSocketProtocol", "Sec-WebSocket-Protocol"))
     internalEssentialHeaders.add(("InternalSecWebSocketVersion", "Sec-WebSocket-Version"))
-  if responceCallExists:
+  if responseCallExists:
     internalEssentialHeaders.add(("InternalAcceptEncoding", "Accept-Encoding"))
     internalEssentialHeaders.add(("InternalIfNoneMatch", "If-None-Match"))
   if postExists or otherRequestMethodExists:

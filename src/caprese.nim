@@ -81,9 +81,9 @@ macro searchServerNode() =
       if n.kind == nnkIdent and eqIdent(n, "reqProtocol"):
         streamBlockExists = true
       if (searchNode.kind == nnkCall or searchNode.kind == nnkDotExpr) and eqIdent(n, "response"):
-        responceCallExists = true
+        responseCallExists = true
       if searchNode.kind == nnkCall and eqIdent(n, "public"):
-        responceCallExists = true
+        responseCallExists = true
       if (searchNode.kind == nnkCall or searchNode.kind == nnkCommand) and
         eqIdent(n, "post") and searchNode.len >= 3:
         postExists = true
