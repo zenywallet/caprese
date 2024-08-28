@@ -613,7 +613,7 @@ Use `public:` block. All files in `importPath` are statically imported into the 
     public(importPath = "../public")
 ```
 
- Inside the `public:` block, `responce()` is used, which sends compressed files if the client allows to receive *Brotli* or *Deflate*. It also checks the *If-None-Match* header and return *304 Not Modified* if the file has not been changed.
+ Inside the `public:` block, `response()` is used, which sends compressed files if the client allows to receive *Brotli* or *Deflate*. It also checks the *If-None-Match* header and return *304 Not Modified* if the file has not been changed.
 
 Custom handling such as changing the base URL.
 
