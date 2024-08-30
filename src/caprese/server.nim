@@ -2860,8 +2860,7 @@ template serverLib(cfg: static Config) {.dirty.} =
     var sslCtx: SSL_CTX
 
   proc appListenBase(ctx: ServerThreadCtx, sslFlag: static bool, unixFlag: static bool) {.thread, inline.} =
-    let clientSock = ctx.client.sock.accept4(cast[ptr SockAddr](addr ctx.sockAddress), addr ctx.addrLen, O_NONBLOCK)
-    if cast[int](clientSock) > 0:
+    template acceptNewClient(clientSock: SocketHandle) =
       when cfg.soKeepalive:
         clientSock.setSockOptInt(SOL_SOCKET, SO_KEEPALIVE, 1)
       when cfg.tcpNodelay and not unixFlag:
@@ -2914,6 +2913,18 @@ template serverLib(cfg: static Config) {.dirty.} =
             highGear = true
             for i in 0..<serverWorkerNum:
               discard sem_post(addr throttleBody)
+
+    when cfg.acceptFirst:
+      while true:
+        let clientSock = ctx.client.sock.accept4(cast[ptr SockAddr](addr ctx.sockAddress), addr ctx.addrLen, O_NONBLOCK)
+        if cast[int](clientSock) > 0:
+          acceptNewClient(clientSock)
+        else:
+          break
+    else:
+      let clientSock = ctx.client.sock.accept4(cast[ptr SockAddr](addr ctx.sockAddress), addr ctx.addrLen, O_NONBLOCK)
+      if cast[int](clientSock) > 0:
+        acceptNewClient(clientSock)
 
   proc appListen(ctx: ServerThreadCtx) {.thread.} = appListenBase(ctx, false, false)
 

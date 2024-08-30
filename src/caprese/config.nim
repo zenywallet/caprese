@@ -50,6 +50,7 @@ type
     urlRootSafe*: bool
     postRequestMethod*: bool
     sslRoutesHost*: SslRoutesHost
+    acceptFirst*: bool
 
 proc defaultConfig*(): Config {.compileTime.} =
   result.sslLib = BearSSL
@@ -78,6 +79,7 @@ proc defaultConfig*(): Config {.compileTime.} =
   result.urlRootSafe = true
   result.postRequestMethod = false
   result.sslRoutesHost = SniAndHeaderHost
+  result.acceptFirst = false
 
 macro staticBool*(b: static bool): untyped = newLit(b)
 macro staticInt*(a: static int): untyped = newLit(a)
