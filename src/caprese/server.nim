@@ -2100,7 +2100,7 @@ template serverLib(cfg: static Config) {.dirty.} =
 
   template acme(path: static string, body: untyped) {.used.} =
     block:
-      var (acmeFlag, content, mime) = getAcmeChallenge(path, ctx.header.url)
+      var (acmeFlag, content {.inject.}, mime {.inject.}) = getAcmeChallenge(path, ctx.header.url)
       if acmeFlag:
         body
         if content.len > 0:
