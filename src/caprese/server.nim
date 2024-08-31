@@ -2072,8 +2072,28 @@ template serverLib(cfg: static Config) {.dirty.} =
   template reqUrl: string {.used.} = ctx.header.url
   template headerUrl(): string {.used.} = ctx.header.url # deprecated
 
+  macro checkUrlPath(path: static string, body: untyped): untyped =
+    result = newStmtList()
+    for i in 0..<path.len:
+      if path[i] == ':':
+        var cmpPath = path[0..i-1]
+        var id = path[i+1..^1]
+        if id.len > 0 and find(id, '/') < 0 and find(id, ':') < 0:
+          var idVar = ident(id)
+          var reqUrlLast = quote do: reqUrl[`i`..^1]
+          result.add quote do:
+            if startsWith(reqUrl(), `cmpPath`):
+              var `idVar` = `reqUrlLast`
+              `body`
+          return
+        break
+    if result.len == 0:
+      result.add quote do:
+        if reqUrl() == `path`:
+          `body`
+
   template get(path: string, body: untyped) {.used.} =
-    if reqUrl() == path:
+    checkUrlPath(path):
       when returnExists(body): body else: return body
 
   template get(pathArgs: varargs[string], body: untyped) {.used.} =
