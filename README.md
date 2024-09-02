@@ -229,6 +229,13 @@ serverStart()
 
 Considering efficiency, other methods may be better.
 
+#### URL path handling using special tag
+
+```nim
+    get "/user/:username":
+      send(sanitizeHtml(username).addHeader())
+```
+
 #### 404 Not Found
 ```nim
   routes:
