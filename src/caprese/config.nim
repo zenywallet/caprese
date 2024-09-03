@@ -45,6 +45,7 @@ type
     headerServer*: bool
     headerDate*: bool
     headerContentType*: bool
+    activeHeader*: bool
     errorCloseMode*: ErrorCloseMode
     connectionPreferred*: ConnectionPreferred
     urlRootSafe*: bool
@@ -74,6 +75,7 @@ proc defaultConfig*(): Config {.compileTime.} =
   result.headerServer = false
   result.headerDate = false
   result.headerContentType = true
+  result.activeHeader = false
   result.errorCloseMode = CloseImmediately
   result.connectionPreferred = ExternalConnection
   result.urlRootSafe = true

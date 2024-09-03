@@ -227,6 +227,10 @@ template contentsWithCfg*(cfg: static Config) {.dirty.} =
   template addActiveHeader*(body: static string): Array[byte] =
     addActiveHeader(body, Status200, "text/html")
 
+  when cfg.activeHeader:
+    proc addHeader*(body: static string, mimetype: static string = "text/html"): Array[byte] =
+      addActiveHeader(body, Status200, mimetype)
+
   proc redirect301*(location: string): string =
     result = "HTTP/" & HTTP_VERSION & " " & $Status301 & "\c\L" &
             (when cfg.headerContentType: "Content-Type: text/html\c\L" else: "") &
