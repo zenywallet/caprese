@@ -170,14 +170,14 @@ template contentsWithCfg*(cfg: static Config) {.dirty.} =
 
   macro activeHeaderBase(body, code, mimetype: static string): Array[byte] =
     when cfg.headerContentType:
-      var contentType = getMime2($mimetype)
-    var blen = ($body).len
-    var h = "HTTP/" & HTTP_VERSION & " " & $code & "\c\L" &
+      var contentType = getMime2(mimetype)
+    var blen = body.len
+    var h = "HTTP/" & HTTP_VERSION & " " & code & "\c\L" &
       (when cfg.headerContentType: "Content-Type: " & contentType & "\c\L" else: "") &
       (when cfg.headerDate: "Date: ddd, dd MMM yyyy HH:mm:ss GMT\c\L" else: "") &
       (when cfg.headerServer: "Server: " & ServerName & "\c\L" else: "") &
       "Content-Length: " & $blen & "\c\L\c\L" &
-      $body
+      body
 
     var last = h.len - blen - 4 - 1
     activeHeaderStmt.add quote do:
