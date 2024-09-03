@@ -221,6 +221,9 @@ template contentsWithCfg*(cfg: static Config) {.dirty.} =
   template addActiveHeader*(body: static string, mimetype: static RawMimeType): Array[byte] =
     activeHeaderBase(body, $Status200, mimetype)
 
+  template addActiveHeader*(body: static string, code: static StatusCode): Array[byte] =
+    addActiveHeader(body, code, "text/html")
+
   template addActiveHeader*(body: static string): Array[byte] =
     addActiveHeader(body, Status200, "text/html")
 
