@@ -190,6 +190,26 @@ template contentsWithCfg*(cfg: static Config) {.dirty.} =
     quote do:
       pActiveHeaderContents[][`aid`]
 
+  macro activeHeaderBase(body, code: static string, mimetype: static RawMimeType): Array[byte] =
+    var blen = body.len
+    var h = "HTTP/" & HTTP_VERSION & " " & code & "\c\L" &
+      (when cfg.headerContentType: "Content-Type: " & mimetype.string & "\c\L" else: "") &
+      (when cfg.headerDate: "Date: ddd, dd MMM yyyy HH:mm:ss GMT\c\L" else: "") &
+      (when cfg.headerServer: "Server: " & ServerName & "\c\L" else: "") &
+      "Content-Length: " & $blen & "\c\L\c\L" &
+      body
+
+    var last = h.len - blen - 4 - 1
+    activeHeaderStmt.add quote do:
+      for i in 0..1:
+        activeHeaderContents[i].add(cast[Array[byte]](`h`.toArray()))
+      activeHeaderDatePos.add(`h`.find("Date: ", 0, `last`) + "Date: ".len)
+
+    var aid = curActiveHeaderId
+    inc(curActiveHeaderId)
+    quote do:
+      pActiveHeaderContents[][`aid`]
+
   macro activeHeaderInit*(): untyped = activeHeaderStmt
 
   template addActiveHeader*(body: static string, code: static StatusCode, mimetype: static string): Array[byte] =
@@ -199,7 +219,7 @@ template contentsWithCfg*(cfg: static Config) {.dirty.} =
     addActiveHeader(body, Status200, mimetype)
 
   template addActiveHeader*(body: static string, mimetype: static RawMimeType): Array[byte] =
-    addActiveHeader(body, Status200, mimetype)
+    activeHeaderBase(body, $Status200, mimetype)
 
   template addActiveHeader*(body: static string): Array[byte] =
     addActiveHeader(body, Status200, "text/html")
