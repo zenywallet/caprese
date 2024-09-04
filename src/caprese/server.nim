@@ -3404,7 +3404,7 @@ template serverLib(cfg: static Config) {.dirty.} =
                 if equalMem(cast[pointer](pos), " HTTP/1.".cstring, 8):
                   when cfg.urlRootSafe:
                     if cast[ptr char](cast[pointer](cur))[] != '/':
-                      next = -1
+                      nextParse = -1
                       break
                   ctx.header.url = capbytes.toString(cast[ptr UncheckedArray[byte]](cast[pointer](cur)), pos - cur)
                   inc(pos, 7)
@@ -3412,28 +3412,28 @@ template serverLib(cfg: static Config) {.dirty.} =
                     ctx.header.minorVer = 1
                     inc(pos, 2)
                     if equalMem(cast[pointer](pos), "\c\L\c\L".cstring, 4):
-                      next = (pos + 4.uint - cur0).int
+                      nextParse = (pos + 4.uint - cur0).int
                       break
                   elif equalMem(cast[pointer](pos), ".0\c\L".cstring, 4):
                     ctx.header.minorVer = 0
                     inc(pos, 2)
                     if equalMem(cast[pointer](pos), "\c\L\c\L".cstring, 4):
-                      next = (pos + 4.uint - cur0).int
+                      nextParse = (pos + 4.uint - cur0).int
                       break
                   else:
                     inc(pos)
                     let minorVer = int(cast[ptr char](cast[pointer](pos))[]) - int('0')
                     if minorVer < 0 or minorVer > 9:
-                      next = -1
+                      nextParse = -1
                       break
                     inc(pos)
                     if not equalMem(cast[pointer](pos), "\c\L".cstring, 2):
-                      next = -1
+                      nextParse = -1
                       break
                     inc(pos, 2)
                     ctx.header.minorVer = minorVer
                     if equalMem(cast[pointer](pos), "\c\L".cstring, 2):
-                      next = (pos + 2.uint - cur0).int
+                      nextParse = (pos + 2.uint - cur0).int
                       break
 
                   var incompleteIdx = 0
@@ -3449,7 +3449,7 @@ template serverLib(cfg: static Config) {.dirty.} =
                           ctx.header.params[headerId.int] = ((cur - cur0).int, (pos - cur).int)
                           inc(pos, 2)
                           if equalMem(cast[pointer](pos), "\c\L".cstring, 2):
-                            next = (pos + 2.uint - cur0).int
+                            nextParse = (pos + 2.uint - cur0).int
                             break parseMain
                           if i != incompleteIdx:
                             swap(ctx.targetHeaders[incompleteIdx], ctx.targetHeaders[i])
@@ -3458,18 +3458,18 @@ template serverLib(cfg: static Config) {.dirty.} =
                             inc(pos)
                             while(not equalMem(cast[pointer](pos), "\c\L\c\L".cstring, 4)):
                               inc(pos)
-                            next = (pos + 4.uint - cur0).int
+                            nextParse = (pos + 4.uint - cur0).int
                             break parseMain
                           break paramsLoop
                       while not equalMem(cast[pointer](pos), "\c\L".cstring, 2):
                         inc(pos)
                       inc(pos, 2)
                       if equalMem(cast[pointer](pos), "\c\L".cstring, 2):
-                        next = (pos + 2.uint - cur0).int
+                        nextParse = (pos + 2.uint - cur0).int
                         break parseMain
 
                 elif equalMem(cast[pointer](pos), "\c\L".cstring, 2):
-                  next = -1
+                  nextParse = -1
                   break
                 inc(pos)
 
@@ -3508,9 +3508,9 @@ template serverLib(cfg: static Config) {.dirty.} =
                           client.close()
                           return
                         c)
-                    var next {.noInit, inject.}: int
+                    var nextParse {.noInit, inject.}: int
                     parseHeader4()
-                    if next >= 0:
+                    if nextParse >= 0:
                       let retMain = when requestMethod == RequestMethod.GET: routesMain(ctx, client)
                         elif requestMethod == RequestMethod.POST:
                           ctx.size = try:
@@ -3519,10 +3519,10 @@ template serverLib(cfg: static Config) {.dirty.} =
                           if ctx.size < 0:
                             client.close()
                             return
-                          ctx.data = cast[ptr UncheckedArray[byte]](addr ctx.recvBuf[next])
-                          inc(next, ctx.size)
-                          if next > ctx.parseSize:
-                            if next > staticInt(cfg.recvBufExpandBreakSize):
+                          ctx.data = cast[ptr UncheckedArray[byte]](addr ctx.recvBuf[nextParse])
+                          inc(nextParse, ctx.size)
+                          if nextParse > ctx.parseSize:
+                            if nextParse > staticInt(cfg.recvBufExpandBreakSize):
                               client.close()
                               return
                             else:
@@ -3542,12 +3542,12 @@ template serverLib(cfg: static Config) {.dirty.} =
                             if ctx.size < 0:
                               client.close()
                               return
-                            ctx.data = cast[ptr UncheckedArray[byte]](addr ctx.recvBuf[next])
-                            inc(next, ctx.size)
+                            ctx.data = cast[ptr UncheckedArray[byte]](addr ctx.recvBuf[nextParse])
+                            inc(nextParse, ctx.size)
                           else:
                             ctx.size = 0
-                          if next > ctx.parseSize:
-                            if next > staticInt(cfg.recvBufExpandBreakSize):
+                          if nextParse > ctx.parseSize:
+                            if nextParse > staticInt(cfg.recvBufExpandBreakSize):
                               client.close()
                               return
                             else:
@@ -3559,14 +3559,14 @@ template serverLib(cfg: static Config) {.dirty.} =
                           InternalEssentialHeaderConnection) == "close":
                           client.close()
                           return
-                        elif next < ctx.parseSize:
-                          ctx.nextPos = next
+                        elif nextParse < ctx.parseSize:
+                          ctx.nextPos = nextParse
                           ctx.parseSize = ctx.parseSize - ctx.nextPos
                         else:
                           break
                       elif retMain == SendResult.Pending:
-                        if next < ctx.parseSize:
-                          ctx.nextPos = next
+                        if nextParse < ctx.parseSize:
+                          ctx.nextPos = nextParse
                           ctx.parseSize = ctx.parseSize - ctx.nextPos
                         else:
                           break
@@ -3667,9 +3667,9 @@ template serverLib(cfg: static Config) {.dirty.} =
                           client.close()
                           return
                         c)
-                    var next {.noInit, inject.}: int
+                    var nextParse {.noInit, inject.}: int
                     parseHeader4()
-                    if next >= 0:
+                    if nextParse >= 0:
                       let retMain = when requestMethod == RequestMethod.GET: routesMain(ctx, client)
                         elif requestMethod == RequestMethod.POST:
                           ctx.size = try:
@@ -3678,10 +3678,10 @@ template serverLib(cfg: static Config) {.dirty.} =
                           if ctx.size < 0:
                             client.close()
                             return
-                          ctx.data = cast[ptr UncheckedArray[byte]](addr ctx.recvBuf[next])
-                          inc(next, ctx.size)
-                          if next > ctx.parseSize:
-                            if next > staticInt(cfg.recvBufExpandBreakSize):
+                          ctx.data = cast[ptr UncheckedArray[byte]](addr ctx.recvBuf[nextParse])
+                          inc(nextParse, ctx.size)
+                          if nextParse > ctx.parseSize:
+                            if nextParse > staticInt(cfg.recvBufExpandBreakSize):
                               client.close()
                               return
                             else:
@@ -3700,12 +3700,12 @@ template serverLib(cfg: static Config) {.dirty.} =
                             if ctx.size < 0:
                               client.close()
                               return
-                            ctx.data = cast[ptr UncheckedArray[byte]](addr ctx.recvBuf[next])
-                            inc(next, ctx.size)
+                            ctx.data = cast[ptr UncheckedArray[byte]](addr ctx.recvBuf[nextParse])
+                            inc(nextParse, ctx.size)
                           else:
                             ctx.size = 0
-                          if next > ctx.parseSize:
-                            if next > staticInt(cfg.recvBufExpandBreakSize):
+                          if nextParse > ctx.parseSize:
+                            if nextParse > staticInt(cfg.recvBufExpandBreakSize):
                               client.close()
                               return
                             else:
@@ -3716,15 +3716,15 @@ template serverLib(cfg: static Config) {.dirty.} =
                           InternalEssentialHeaderConnection) == "close":
                           client.close()
                           return
-                        elif next < ctx.parseSize:
-                          ctx.nextPos = next
+                        elif nextParse < ctx.parseSize:
+                          ctx.nextPos = nextParse
                           ctx.parseSize = ctx.parseSize - ctx.nextPos
                         else:
                           client.recvCurSize = 0
                           break
                       elif retMain == SendResult.Pending:
-                        if next < ctx.parseSize:
-                          ctx.nextPos = next
+                        if nextParse < ctx.parseSize:
+                          ctx.nextPos = nextParse
                           ctx.parseSize = ctx.parseSize - ctx.nextPos
                         else:
                           client.recvCurSize = 0
