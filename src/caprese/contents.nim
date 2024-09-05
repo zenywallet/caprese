@@ -204,8 +204,15 @@ template contentsWithCfg*(cfg: static Config) {.dirty.} =
     addActiveHeader(body, Status200, "text/html")
 
 
-  template addHeader*(body: string, code: StatusCode, mimetype: string): string =
+  when cfg.activeHeader:
+    template addHeader_bcm_selector*(body: static string, code: static StatusCode, mimetype: static string): Array[byte] =
+      addActiveHeader(body, code, mimetype)
+
+  template addHeader_bcm_selector*(body: string, code: StatusCode, mimetype: string): string =
     addHeaderBase(body, code, getMime(mimetype).ContentType)
+
+  template addHeader*(body: string, code: StatusCode, mimetype: string): string | Array[byte] =
+    addHeader_bcm_selector(body, code, mimetype)
 
   template addHeader*(body: string, code: StatusCode, mimetype: RawMimeType): string =
     addHeaderBase(body, code, mimetype.ContentType)
@@ -219,19 +226,22 @@ template contentsWithCfg*(cfg: static Config) {.dirty.} =
   template addHeader*(body: string, code: StatusCode): string =
     addHeaderBase(body, code, "text/html".ContentType)
 
-  template addHeader*(body: string, mimetype: string | RawMimeType): string =
+  template addHeader*(body: string, mimetype: string | RawMimeType): string | Array[byte] =
     addHeader(body, Status200, mimetype)
 
   template addHeader*(body: string, mimetype: string | RawMimeType, charset: string): string =
     addHeader(body, Status200, mimetype, charset)
 
-  template addHeader*(body: string): string =
+  when cfg.activeHeader:
+    template addHeader_b_selector*(body: static string): Array[byte] =
+      addActiveHeader(body, Status200, "text/html")
+
+  template addHeader_b_selector*(body: string): string =
     addHeaderBase(body, Status200, "text/html".ContentType)
 
+  template addHeader*(body: string): string | Array[byte] =
+    addHeader_b_selector(body)
 
-  when cfg.activeHeader:
-    proc addHeader*(body: static string, mimetype: static string = "text/html"): Array[byte] =
-      addActiveHeader(body, Status200, mimetype)
 
   proc redirect301*(location: string): string =
     result = "HTTP/" & HTTP_VERSION & " " & $Status301 & "\c\L" &
