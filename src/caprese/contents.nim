@@ -122,30 +122,6 @@ template contentsWithCfg*(cfg: static Config) {.dirty.} =
     "Content-Length: " & $body.len & "\c\L\c\L" &
     body
 
-  template addHeader*(body: string, code: StatusCode, mimetype: string): string =
-    addHeaderBase(body, code, getMime(mimetype).ContentType)
-
-  template addHeader*(body: string, code: StatusCode, mimetype: RawMimeType): string =
-    addHeaderBase(body, code, mimetype.ContentType)
-
-  template addHeader*(body: string, code: StatusCode, mimetype: string, charset: string): string =
-    addHeaderBase(body, code, (getMime(mimetype) & "; charset=" & charset).ContentType)
-
-  template addHeader*(body: string, code: StatusCode, mimetype: RawMimeType, charset: string): string =
-    addHeaderBase(body, code, (mimetype.string & "; charset=" & charset).ContentType)
-
-  template addHeader*(body: string, code: StatusCode): string =
-    addHeaderBase(body, code, "text/html".ContentType)
-
-  template addHeader*(body: string, mimetype: string | RawMimeType): string =
-    addHeader(body, Status200, mimetype)
-
-  template addHeader*(body: string, mimetype: string | RawMimeType, charset: string): string =
-    addHeader(body, Status200, mimetype, charset)
-
-  template addHeader*(body: string): string =
-    addHeaderBase(body, Status200, "text/html".ContentType)
-
   type
     EncodingType* {.pure.} = enum
       None = ""
@@ -226,6 +202,32 @@ template contentsWithCfg*(cfg: static Config) {.dirty.} =
 
   template addActiveHeader*(body: static string): Array[byte] =
     addActiveHeader(body, Status200, "text/html")
+
+
+  template addHeader*(body: string, code: StatusCode, mimetype: string): string =
+    addHeaderBase(body, code, getMime(mimetype).ContentType)
+
+  template addHeader*(body: string, code: StatusCode, mimetype: RawMimeType): string =
+    addHeaderBase(body, code, mimetype.ContentType)
+
+  template addHeader*(body: string, code: StatusCode, mimetype: string, charset: string): string =
+    addHeaderBase(body, code, (getMime(mimetype) & "; charset=" & charset).ContentType)
+
+  template addHeader*(body: string, code: StatusCode, mimetype: RawMimeType, charset: string): string =
+    addHeaderBase(body, code, (mimetype.string & "; charset=" & charset).ContentType)
+
+  template addHeader*(body: string, code: StatusCode): string =
+    addHeaderBase(body, code, "text/html".ContentType)
+
+  template addHeader*(body: string, mimetype: string | RawMimeType): string =
+    addHeader(body, Status200, mimetype)
+
+  template addHeader*(body: string, mimetype: string | RawMimeType, charset: string): string =
+    addHeader(body, Status200, mimetype, charset)
+
+  template addHeader*(body: string): string =
+    addHeaderBase(body, Status200, "text/html".ContentType)
+
 
   when cfg.activeHeader:
     proc addHeader*(body: static string, mimetype: static string = "text/html"): Array[byte] =
