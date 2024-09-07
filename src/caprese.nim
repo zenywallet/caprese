@@ -251,8 +251,8 @@ template recvLoop*(reqs: auto, body: untyped) =
 
 template recvLoop*(reqs: auto, req: untyped, body: untyped) =
   while true:
-    let `req` {.inject.} = `reqs`.getPending()
-    `body`
+    let req {.inject.} = reqs.getPending()
+    body
 
 
 when isMainModule:
