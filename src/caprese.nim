@@ -455,12 +455,13 @@ when isMainModule:
       sslLib = None
       headerServer = true
       headerDate = true
+      activeHeader = true
       connectionPreferred = InternalConnection
       urlRootSafe = false
 
     server(ip = "0.0.0.0", port = 8089):
       routes:
-        get "/": "Hello, World!".addActiveHeader("text").send
+        get "/": "Hello, World!".addHeader("text").send
         "Not Found".addHeader(Status404, "text").send
 
     serverStart()
@@ -470,12 +471,13 @@ when isMainModule:
       sslLib = None
       headerServer = true
       headerDate = true
+      activeHeader = true
       connectionPreferred = ExternalConnection
       urlRootSafe = false
 
     server(ip = "0.0.0.0", port = 8089):
       routes:
-        get "/": "Hello, World!".addActiveHeader("text").send
+        get "/": "Hello, World!".addHeader("text").send
         "Not Found".addHeader(Status404, "text").send
 
     serverStart()
