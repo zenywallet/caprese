@@ -254,6 +254,10 @@ template recvLoop*(reqs: auto, req: untyped, body: untyped) =
     let req {.inject.} = reqs.getPending()
     body
 
+template onRecv*(reqs: auto, body: untyped) = recvLoop(reqs, body)
+
+template onRecv*(reqs: auto, req: untyped, body: untyped) = recvLoop(reqs, req, body)
+
 
 when isMainModule:
   when defined(EXAMPLE1):
