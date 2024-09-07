@@ -395,8 +395,12 @@ when isMainModule:
         get "/wstest":
           send(WsTestHtml.addHeader())
 
-        get startsWith("/user/"):
-          send(reqUrl[6..^1].addHeader(mimetype = "text"))
+        when defined(USE_STARTSWITH):
+          get startsWith("/user/"):
+            send(reqUrl[6..^1].addHeader(mimetype = "text"))
+        else:
+          get "/user/:username":
+            send(sanitizeHtml(username).addHeader(mimetype = "text"))
 
         stream(path = "/ws", protocol = "caprese-0.1"):
           # client: Client
