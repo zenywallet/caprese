@@ -3497,7 +3497,7 @@ template serverLib(cfg: static Config) {.dirty.} =
                       when requestMethod == RequestMethod.GET: 4
                       elif requestMethod == RequestMethod.POST: 5
                       else:
-                        var c: uint
+                        var c {.noInit.}: uint
                         block findSpace:
                           for i in 3..7:
                             if ctx.pRecvBuf[i] == cast[byte](' '):
@@ -3656,7 +3656,7 @@ template serverLib(cfg: static Config) {.dirty.} =
                       when requestMethod == RequestMethod.GET: 4
                       elif requestMethod == RequestMethod.POST: 5
                       else:
-                        var c: uint
+                        var c {.noInit.}: uint
                         block findSpace:
                           for i in 3..7:
                             if ctx.pRecvBuf[i] == cast[byte](' '):
