@@ -343,6 +343,8 @@ type
     crl*: X509_CRL
     db_meth*: X509V3_CONF_METHOD
     db*: pointer
+    issuer_pkey*: EVP_PKEY
+    # Maybe more here
 
 # include/openssl/type.h
 type
