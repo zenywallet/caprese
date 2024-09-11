@@ -347,6 +347,10 @@ type
     issuer_pkey*: EVP_PKEY
     # Maybe more here
 
+const
+  X509V3_CTX_TEST* = 0x1
+  X509V3_CTX_REPLACE* = 0x2
+
 # include/openssl/type.h
 type
   X509V3_CTX* = ptr v3_ext_ctx
