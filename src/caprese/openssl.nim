@@ -322,6 +322,7 @@ proc X509_NAME_add_entry_by_txt*(name: X509_NAME , field: cstring, stype: cint,
                                bytes: cstring, len: cint, loc: cint,
                                set: cint): cint {.importc, cdecl.}
 proc X509_sign*(x: X509, pkey: EVP_PKEY, md: EVP_MD): cint {.importc, cdecl.}
+proc i2d_X509*(x: X509; ppout: ptr ptr cuchar): cint {.importc, cdecl.}
 
 # SAN
 # include/openssl/x509.h
