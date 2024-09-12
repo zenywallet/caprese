@@ -12,3 +12,4 @@ src/src/
 certs/
 public/
 src/nimcache/
+src/caprese/bearssl/generated_*
