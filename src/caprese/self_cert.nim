@@ -3,6 +3,7 @@
 import std/algorithm
 import std/times
 import std/os
+import logs
 import bytes
 import openssl
 import bearssl/bearssl_ssl
@@ -49,7 +50,9 @@ proc generateCert() =
   checkErr X509_set_serialNumber(x509, serial)
   checkErr EVP_PKEY_assign_RSA(pkey, rsa)
   rsa = nil
-  checkErr PEM_write_PrivateKey(stdout, pkey, nil, nil, 0, nil, nil)
+
+  debugBlock:
+    checkErr PEM_write_PrivateKey(stdout, pkey, nil, nil, 0, nil, nil)
 
 
   checkErr X509_set_version(x509, 2)
@@ -79,7 +82,9 @@ proc generateCert() =
   X509_EXTENSION_free(authorityKeyIdentifier)
 
   checkErr X509_sign(x509, pkey, EVP_sha1())
-  checkErr PEM_write_X509(stdout, x509)
+
+  debugBlock:
+    checkErr PEM_write_X509(stdout, x509)
 
 
   var x509DataLen = i2d_X509(x509, nil)
@@ -113,7 +118,7 @@ let CHAIN* = [
 const
   CHAIN_LEN* = 1
 """
-  echo "x509Str=", x509Str
+  debug "x509Str=", x509Str
 
 
   var keyDataLen = i2d_PrivateKey(pkey, nil)
@@ -208,7 +213,7 @@ let RSA* = br_rsa_private_key(n_bitlen: 2048.cuint,
                               dq: cast[ptr uint8](unsafeAddr RSA_DQ[0]), dqlen: RSA_DQ.len.csize_t,
                               iq: cast[ptr uint8](unsafeAddr RSA_IQ[0]), iqlen: RSA_IQ.len.csize_t)
 """
-    echo rsaStr
+    debug rsaStr
     zeroMem(addr dc, sizeof(br_skey_decoder_context))
 
     writeFile(curSrcPath / "bearssl/generated_chain_rsa.nim", x509Str)
