@@ -187,8 +187,13 @@ template serverInit*() {.dirty.} =
       import bearssl/chain_ec
       import bearssl/key_ec
     else:
-      import bearssl/chain_rsa
-      import bearssl/key_rsa
+      when (compiles do: import bearssl/generated_chain_rsa) or (compiles do: import bearssl/generated_key_rsa):
+        # If you get "cannot open: ../generated_chain_rsa.nim [IOError]", compile with --forceBuild
+        import bearssl/generated_chain_rsa
+        import bearssl/generated_key_rsa
+      else:
+        import bearssl/chain_rsa
+        import bearssl/key_rsa
 
   elif cfg.sslLib == OpenSSL or cfg.sslLib == LibreSSL or cfg.sslLib == BoringSSL:
     const sslLib = $cfg.sslLib
