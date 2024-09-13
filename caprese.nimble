@@ -61,6 +61,9 @@ task boringssl, "Build BoringSSL":
     exec "cp build/ssl/libssl.a ../../src/lib/boringssl/"
     exec "cp build/crypto/libcrypto.a ../../src/lib/boringssl/"
 
+task selfcert, "Generate Self-Signed Certificate":
+  exec "nim c -r src/caprese/self_cert.nim"
+
 task zopfli, "Copy zopfli":
   withDir "deps/zopfli":
     exec "mkdir -p ../../src/zopfli"
@@ -77,6 +80,7 @@ task depsAll, "Build deps":
   opensslTask()
   libresslTask()
   boringsslTask()
+  selfcertTask()
   zopfliTask()
   brotliTask()
 
@@ -109,6 +113,7 @@ before build:
       libresslTask()
     if not fileExists("src/lib/boringssl/libssl.a") or not fileExists("src/lib/boringssl/libcrypto.a"):
       boringsslTask()
+    selfcertTask()
     exec "rm -f src/lib/NOSSL.a"
   zopfliTask()
   brotliTask()
