@@ -1,7 +1,7 @@
 # Copyright (c) 2022 zenywallet
 
-import macros
-import locks
+import std/macros
+import std/locks
 
 type
   Queue*[T] = object
