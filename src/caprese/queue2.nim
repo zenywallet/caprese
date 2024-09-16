@@ -24,13 +24,21 @@ proc atomic_compare_exchange_n(p: ptr uint64, expected: ptr uint64, desired: uin
 #                        {.importc: "__atomic_fetch_sub", nodecl, discardable.}
 
 
-proc `=destroy`*[T](queue: var Queue[T]) =
-  if likely(not queue.buf.isNil):
-    queue.buf.deallocShared()
-    queue.buf = nil
-    deinitLock(queue.addLock)
-    deinitLock(queue.popLock)
-    deinitCond(queue.cond)
+when NimMajor >= 2:
+  proc `=destroy`*[T](queue: Queue[T]) =
+    if likely(not queue.buf.isNil):
+      queue.buf.deallocShared()
+      deinitLock((unsafeAddr queue).addLock)
+      deinitLock((unsafeAddr queue).popLock)
+      deinitCond((unsafeAddr queue).cond)
+else:
+  proc `=destroy`*[T](queue: var Queue[T]) =
+    if likely(not queue.buf.isNil):
+      queue.buf.deallocShared()
+      queue.buf = nil
+      deinitLock(queue.addLock)
+      deinitLock(queue.popLock)
+      deinitCond(queue.cond)
 
 proc `=copy`*[T](a: var Queue[T]; b: Queue[T]) {.error: "=copy is not supported".}
 
