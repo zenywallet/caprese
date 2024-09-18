@@ -35,7 +35,10 @@ when DYNAMIC_FILES:
   import std/mimetypes
   import std/base64
   when NimMajor >= 2:
-    import checksums/md5
+    when NimMinor >= 1: # workaround
+      import std/md5
+    else:
+      import checksums/md5
   else:
     import std/md5
 

@@ -5,7 +5,13 @@ import std/osproc
 import std/locks
 import std/mimetypes
 import std/base64
-import checksums/md5
+when NimMajor >= 2:
+  when NimMinor >= 1: # workaround
+    import std/md5
+  else:
+    import checksums/md5
+else:
+  import std/md5
 import nimcrypto
 import zopfli
 import brotli
