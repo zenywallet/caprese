@@ -3490,7 +3490,7 @@ template serverLib(cfg: static Config) {.dirty.} =
 
                   template routesCrLfCheck() {.dirty.} =
                     block findBlock:
-                      for i in 0..ctx.parseSize - 5:
+                      for i in 0..ctx.parseSize - 4:
                         if equalMem(addr ctx.pRecvBuf[i], "\c\L\c\L".cstring, 4):
                           break findBlock
                       client.addRecvBuf(ctx.pRecvBuf, ctx.parseSize)
@@ -3650,7 +3650,7 @@ template serverLib(cfg: static Config) {.dirty.} =
 
                   template routesCrLfCheck() {.dirty.} =
                     block findBlock:
-                      for i in 0..ctx.parseSize - 5:
+                      for i in 0..ctx.parseSize - 4:
                         if equalMem(addr ctx.pRecvBuf[i], "\c\L\c\L".cstring, 4):
                           break findBlock
                       return
