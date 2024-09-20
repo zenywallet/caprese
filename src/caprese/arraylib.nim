@@ -33,7 +33,7 @@ else:
       data*: ptr UncheckedArray[T]
 
   when NimMajor >= 2:
-    proc `=destroy`*[T](x: Array[T]) =
+    proc `=destroy`*[T](x: Array[T]) {.enforceNoRaises.} =
       if x.data != nil:
         when T is not Ordinal:
           for i in 0..<x.len:
