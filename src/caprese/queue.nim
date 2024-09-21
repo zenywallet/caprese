@@ -134,12 +134,19 @@ proc clear*[T](queue: var Queue[T]) =
   queue.count = 0
   queue.next = 0
 
-proc `=destroy`*[T](queue: var Queue[T]) =
-  if likely(not queue.buf.isNil):
-    queue.buf.deallocShared()
-    queue.buf = nil
-    deinitLock(queue.lock)
-    deinitCond(queue.cond)
+when NimMajor >= 2:
+  proc `=destroy`*[T](queue: Queue[T]) =
+    if likely(not queue.buf.isNil):
+      queue.buf.deallocShared()
+      deinitLock((unsafeAddr queue).lock)
+      deinitCond((unsafeAddr queue).cond)
+else:
+  proc `=destroy`*[T](queue: var Queue[T]) =
+    if likely(not queue.buf.isNil):
+      queue.buf.deallocShared()
+      queue.buf = nil
+      deinitLock(queue.lock)
+      deinitCond(queue.cond)
 
 proc `=copy`*[T](a: var Queue[T]; b: Queue[T]) =
   raise newException(QueueError, "=copy")
