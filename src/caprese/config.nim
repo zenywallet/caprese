@@ -83,6 +83,45 @@ proc defaultConfig*(): Config {.compileTime.} =
   result.sslRoutesHost = SniAndHeaderHost
   result.acceptFirst = false
 
+var defaultConfigStmt* {.compileTime.}: NimNode
+
+macro defaultConfigMacro(body: untyped): untyped =
+  defaultConfigStmt = body
+  result = nnkObjConstr.newTree(newIdentNode("Config"))
+  for i in 0..<body.len:
+    if body[i].kind == nnkAsgn:
+      result.add(nnkExprColonExpr.newTree(body[i][0], body[i][1]))
+
+const defaultConfig0* = defaultConfigMacro:
+  sslLib = BearSSL
+  debugLog = false
+  sigTermQuit = true
+  sigPipeIgnore = true
+  limitOpenFiles = -1
+  serverWorkerNum = -1
+  epollEventsSize = 10
+  soKeepalive = false
+  tcpNodelay = true
+  clientMax = 32000
+  connectionTimeout = 120
+  recvBufExpandBreakSize = 131072 * 5
+  maxFrameSize = 131072 * 5
+  certsPath = "./certs"
+  privKeyFile = "privkey.pem"
+  fullChainFile = "fullchain.pem"
+  httpVersion = 1.1
+  serverName = "Caprese"
+  headerServer = false
+  headerDate = false
+  headerContentType = true
+  activeHeader = false
+  errorCloseMode = CloseImmediately
+  connectionPreferred = ExternalConnection
+  urlRootSafe = true
+  postRequestMethod = false
+  sslRoutesHost = SniAndHeaderHost
+  acceptFirst = false
+
 macro staticBool*(b: static bool): untyped = newLit(b)
 macro staticInt*(a: static int): untyped = newLit(a)
 macro staticFloat64*(a: static float64): untyped = newLit(a)
