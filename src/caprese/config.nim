@@ -53,36 +53,6 @@ type
     sslRoutesHost*: SslRoutesHost
     acceptFirst*: bool
 
-proc defaultConfig*(): Config {.compileTime.} =
-  result.sslLib = BearSSL
-  result.debugLog = false
-  result.sigTermQuit = true
-  result.sigPipeIgnore = true
-  result.limitOpenFiles = -1
-  result.serverWorkerNum = -1
-  result.epollEventsSize = 10
-  result.soKeepalive = false
-  result.tcpNodelay = true
-  result.clientMax = 32000
-  result.connectionTimeout = 120
-  result.recvBufExpandBreakSize = 131072 * 5
-  result.maxFrameSize = 131072 * 5
-  result.certsPath = "./certs"
-  result.privKeyFile = "privkey.pem"
-  result.fullChainFile = "fullchain.pem"
-  result.httpVersion = 1.1
-  result.serverName = "Caprese"
-  result.headerServer = false
-  result.headerDate = false
-  result.headerContentType = true
-  result.activeHeader = false
-  result.errorCloseMode = CloseImmediately
-  result.connectionPreferred = ExternalConnection
-  result.urlRootSafe = true
-  result.postRequestMethod = false
-  result.sslRoutesHost = SniAndHeaderHost
-  result.acceptFirst = false
-
 var defaultConfigStmt* {.compileTime.}: NimNode
 
 macro defaultConfigMacro(body: untyped): untyped =
@@ -92,7 +62,7 @@ macro defaultConfigMacro(body: untyped): untyped =
     if body[i].kind == nnkAsgn:
       result.add(nnkExprColonExpr.newTree(body[i][0], body[i][1]))
 
-const defaultConfig0* = defaultConfigMacro:
+const defaultConfig* = defaultConfigMacro:
   sslLib = BearSSL
   debugLog = false
   sigTermQuit = true

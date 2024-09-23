@@ -33,20 +33,16 @@ macro onSigTermQuit(body: untyped) = discard onSigTermQuitBody.add(body)
 
 template onQuit*(body: untyped) = onSigTermQuit(body)
 
-macro addCfgDotExpr*(body: untyped): untyped =
-  var addCfgBody = nnkStmtList.newTree()
-  for i in 0..<body.len:
-    if body[i].kind == nnkAsgn:
-      var a = body[i]
-      a[0] = nnkDotExpr.newTree(
-        newIdentNode("cfg"),
-        a[0]
-      )
-      addCfgBody.add(a)
-  quote do:
-    macro addCfg() {.gensym.} =
-      `addCfgBody`
-    addCfg()
+macro configMacro*(body: untyped): untyped =
+  var configStmt = defaultConfigStmt.copy()
+  for i in 0..<configStmt.len:
+    for j in 0..<body.len:
+      if body[j].kind == nnkAsgn:
+        if configStmt[i][0] == body[j][0]:
+          configStmt[i][1] = body[j][1]
+  result = nnkObjConstr.newTree(newIdentNode("Config"))
+  for i in 0..<configStmt.len:
+    result.add(nnkExprColonExpr.newTree(configStmt[i][0], configStmt[i][1]))
 
 var configCallsStmt {.compileTime.} = newStmtList()
 
@@ -60,13 +56,12 @@ macro configCalls*(body: untyped): untyped =
       configCallsStmt.add(body[i])
 
 template config*(body: untyped) =
-  var cfg* {.compileTime, inject.}: Config = defaultConfig()
-  addCfgDotExpr(body)
+  const cfg* {.inject.}: Config = configMacro(body)
   configCalls(body)
 
 template cfgDefault() =
   when not declared(cfg):
-    var cfg* {.compileTime, inject.}: Config = defaultConfig()
+    const cfg* {.inject.}: Config = defaultConfig
 
 macro searchServerNode() =
   proc search(searchNode: NimNode) =
