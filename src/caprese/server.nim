@@ -157,7 +157,8 @@ template serverInit*() {.dirty.} =
   macro noSslForceSetNone(): untyped =
     if fileExists(currentSourcePath.parentDir() / "../lib/NOSSL.a"):
       quote do:
-        cfg.sslLib = None
+        when cfg.sslLib != None:
+          {.hint: "sslLib is not None".}
         {.hint: "NOSSL mode is set".}
     else:
       quote do:
