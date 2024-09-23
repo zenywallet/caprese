@@ -63,40 +63,6 @@ template cfgDefault() =
   when not declared(cfg):
     const cfg* {.inject.}: Config = defaultConfig
 
-macro searchServerNode() =
-  proc search(searchNode: NimNode) =
-    for n in searchNode:
-      search(n)
-      if searchNode.kind == nnkCall and eqIdent(n, "routes") and searchNode.len >= 3:
-        routesHostParamExists = true
-      if n.kind == nnkIdent and eqIdent(n, "reqHost"):
-        routesHostParamExists = true
-      if (searchNode.kind == nnkCall or searchNode.kind == nnkCommand) and eqIdent(n, "stream"):
-        streamBlockExists = true
-      if n.kind == nnkIdent and eqIdent(n, "reqProtocol"):
-        streamBlockExists = true
-      if (searchNode.kind == nnkCall or searchNode.kind == nnkDotExpr) and eqIdent(n, "response"):
-        responseCallExists = true
-      if searchNode.kind == nnkCall and eqIdent(n, "public"):
-        responseCallExists = true
-      if (searchNode.kind == nnkCall or searchNode.kind == nnkCommand) and
-        eqIdent(n, "post") and searchNode.len >= 3:
-        postExists = true
-        # postExists is tentative and may be overriden by postRequestMethod config
-      if (searchNode.kind == nnkCall or searchNode.kind == nnkCommand) and
-        (eqIdent(n, "head") or eqIdent(n, "put") or eqIdent(n, "delete") or
-        eqIdent(n, "connect") or eqIdent(n, "options") or eqIdent(n, "trace")) and
-        searchNode.len >= 3:
-        otherRequestMethodExists = true
-
-  proc searchAddServer(searchNode: NimNode) =
-    for n in searchNode:
-      searchAddServer(n)
-      if searchNode.kind == nnkCall and eqIdent(n, "addServer"):
-        search(searchNode[searchNode.len - 1])
-
-  searchAddServer(serverStmt)
-
 var initCfgFlag {.compileTime.}: bool
 macro initCfg*(): untyped =
   if initCfgFlag: return
