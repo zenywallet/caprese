@@ -154,18 +154,6 @@ template serverInit*() {.dirty.} =
   import logs
   import proxy
 
-  macro noSslForceSetNone(): untyped =
-    if fileExists(currentSourcePath.parentDir() / "../lib/NOSSL.a"):
-      quote do:
-        when cfg.sslLib != None:
-          {.hint: "sslLib is not None".}
-        {.hint: "NOSSL mode is set".}
-    else:
-      quote do:
-        discard
-
-  noSslForceSetNone()
-
   when cfg.sslLib == BearSSL:
     {.define: USE_BEARSSL.}
   elif cfg.sslLib == OpenSSL:

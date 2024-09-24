@@ -34,12 +34,17 @@ macro onSigTermQuit(body: untyped) = discard onSigTermQuitBody.add(body)
 template onQuit*(body: untyped) = onSigTermQuit(body)
 
 macro configMacro*(body: untyped): untyped =
+  var noSslForceSet = fileExists(currentSourcePath.parentDir() / "../lib/NOSSL.a")
   var configStmt = defaultConfigStmt.copy()
   for i in 0..<configStmt.len:
     for j in 0..<body.len:
       if body[j].kind == nnkAsgn:
         if configStmt[i][0] == body[j][0]:
           configStmt[i][1] = body[j][1]
+          if noSslForceSet and $configStmt[i][0] == "sslLib":
+            if $configStmt[i][1] != "None":
+              configStmt[i][1] = newIdentNode("None")
+              {.hint: "NOSSL mode is set".}
   result = nnkObjConstr.newTree(newIdentNode("Config"))
   for i in 0..<configStmt.len:
     result.add(nnkExprColonExpr.newTree(configStmt[i][0], configStmt[i][1]))
