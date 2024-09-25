@@ -1027,6 +1027,32 @@ sockTmp.close()
 var serverWorkerNum*: int
 var highGear* = false
 
+var configCallsStmt {.compileTime.} = newStmtList()
+
+macro configCallsMacro(): untyped = configCallsStmt
+
+macro configCalls*(body: untyped): untyped =
+  for i in 0..<body.len:
+    if body[i].kind == nnkCall:
+      if $body[i][0] == "httpHeader":
+        body[i][0] = newIdentNode("HttpTargetHeader")
+      configCallsStmt.add(body[i])
+
+var initCfgFlag {.compileTime.}: bool
+macro initCfg*(): untyped =
+  if initCfgFlag: return
+  initCfgFlag = true
+
+  discard serverConfigStmt.add quote do:
+    searchServerNode()
+    when declared(cfg):
+      when staticBool(cfg.postRequestMethod):
+        macro postExistsFlagOverride(flag: static bool) = postExists = flag
+        postExistsFlagOverride(true)
+    configCallsMacro()
+    cfgDefault()
+    when cfg.debugLog: {.define: DEBUG_LOG.}
+
 macro initServer*(): untyped =
   if not initServerFlag:
     initServerFlag = true

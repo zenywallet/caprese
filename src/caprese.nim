@@ -49,16 +49,8 @@ macro configMacro*(body: untyped): untyped =
   for i in 0..<configStmt.len:
     result.add(nnkExprColonExpr.newTree(configStmt[i][0], configStmt[i][1]))
 
-var configCallsStmt {.compileTime.} = newStmtList()
 
-macro configCallsMacro(): untyped = configCallsStmt
 
-macro configCalls*(body: untyped): untyped =
-  for i in 0..<body.len:
-    if body[i].kind == nnkCall:
-      if $body[i][0] == "httpHeader":
-        body[i][0] = newIdentNode("HttpTargetHeader")
-      configCallsStmt.add(body[i])
 
 template config*(body: untyped) =
   const cfg* {.inject.}: Config = configMacro(body)
@@ -67,21 +59,6 @@ template config*(body: untyped) =
 template cfgDefault() =
   when not declared(cfg):
     const cfg* {.inject.}: Config = defaultConfig
-
-var initCfgFlag {.compileTime.}: bool
-macro initCfg*(): untyped =
-  if initCfgFlag: return
-  initCfgFlag = true
-
-  discard serverConfigStmt.add quote do:
-    searchServerNode()
-    when declared(cfg):
-      when staticBool(cfg.postRequestMethod):
-        macro postExistsFlagOverride(flag: static bool) = postExists = flag
-        postExistsFlagOverride(true)
-    configCallsMacro()
-    cfgDefault()
-    when cfg.debugLog: {.define: DEBUG_LOG.}
 
 var initFlag {.compileTime.}: bool
 macro init*(): untyped =
