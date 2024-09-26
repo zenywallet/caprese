@@ -1038,7 +1038,7 @@ macro configCalls*(body: untyped): untyped =
         body[i][0] = newIdentNode("HttpTargetHeader")
       configCallsStmt.add(body[i])
 
-template cfgDefault() =
+template cfgDefault*() =
   when not declared(cfg):
     const cfg* {.inject.}: Config = defaultConfig
 
