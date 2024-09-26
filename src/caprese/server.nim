@@ -5330,6 +5330,7 @@ macro searchServerNode*() =
 var serverWaitThread: Thread[WrapperThreadArg]
 
 template serverStart*(wait: bool = true) =
+  initCfg()
   serverConfigMacro()
   contentsWithCfg(cfg)
   serverMacro()

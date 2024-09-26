@@ -85,14 +85,12 @@ macro init*(): untyped =
         `onSigTermQuitBody`
 
 macro server*(ssl: bool, ip: string, port: uint16, body: untyped): untyped =
-  initCfg()
   discard serverStmt.add quote do:
     init()
     echo "server: ", `ip`, ":", `port`, (if `ssl`: " SSL" else: "")
     addServer(`ip`, `port`, false, `ssl`, `body`)
 
 macro server*(ip: string, port: uint16, body: untyped): untyped =
-  initCfg()
   discard serverStmt.add quote do:
     init()
     echo "server: ", `ip`, ":", `port`
@@ -100,7 +98,6 @@ macro server*(ip: string, port: uint16, body: untyped): untyped =
 
 
 macro server*(unix: string, body: untyped): untyped =
-  initCfg()
   discard serverStmt.add quote do:
     init()
     echo "server: unix:", `unix`
