@@ -56,10 +56,6 @@ template config*(body: untyped) =
   const cfg* {.inject.}: Config = configMacro(body)
   configCalls(body)
 
-template cfgDefault() =
-  when not declared(cfg):
-    const cfg* {.inject.}: Config = defaultConfig
-
 var initFlag {.compileTime.}: bool
 macro init*(): untyped =
   if initFlag: return
