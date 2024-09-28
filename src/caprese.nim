@@ -50,9 +50,31 @@ macro configMacro*(body: untyped): untyped =
     result.add(nnkExprColonExpr.newTree(configStmt[i][0], configStmt[i][1]))
 
 
+var joli_configStmt {.compileTime.} = newStmtList()
+var joli_serverStmt {.compileTime.} = newStmtList()
+
+macro joli_configMacro(body: untyped) =
+  discard joli_configStmt.add body
+
+macro joli_addServer*(bindAddress: string, port: uint16, unix: bool, ssl: bool, body: untyped): untyped =
+  quote do:
+    discard
+
+template joli_serverTmpl(bindAddress, port, unix, ssl: typed, body: untyped) {.dirty.} =
+  discard joli_serverStmt.add quote do:
+    joli_addServer(`bindAddress`, `port`, `unix`, `ssl`, `body`)
+
+macro joli_addWorker*(num: int, body: untyped): untyped =
+  quote do:
+    discard
+
+template joli_workerTmpl(num: typed, body: untyped) {.dirty.} =
+  discard joli_serverStmt.add quote do:
+    joli_addWorker(`num`, `body`)
 
 
 template config*(body: untyped) =
+  joli_configMacro(body)
   const cfg* {.inject.}: Config = configMacro(body)
   configCalls(body)
 
@@ -81,12 +103,14 @@ macro init*(): untyped =
         `onSigTermQuitBody`
 
 macro server*(ssl: bool, ip: string, port: uint16, body: untyped): untyped =
+  joli_serverTmpl(ip, port, false, ssl, body)
   discard serverStmt.add quote do:
     init()
     echo "server: ", `ip`, ":", `port`, (if `ssl`: " SSL" else: "")
     addServer(`ip`, `port`, false, `ssl`, `body`)
 
 macro server*(ip: string, port: uint16, body: untyped): untyped =
+  joli_serverTmpl(ip, port, false, false, body)
   discard serverStmt.add quote do:
     init()
     echo "server: ", `ip`, ":", `port`
@@ -94,6 +118,7 @@ macro server*(ip: string, port: uint16, body: untyped): untyped =
 
 
 macro server*(unix: string, body: untyped): untyped =
+  joli_serverTmpl(unix, 0, true, false, body)
   discard serverStmt.add quote do:
     init()
     echo "server: unix:", `unix`
@@ -108,6 +133,7 @@ template serverHttps*(ip: string, body: untyped) =
 var workerThreadWaitProc: seq[proc()]
 
 macro worker*(num: int, body: untyped): untyped =
+  joli_workerTmpl(num, body)
   var workerRootBlockBody = nnkStmtList.newTree(
     nnkBlockStmt.newTree(
       newIdentNode("workerRoot"),
