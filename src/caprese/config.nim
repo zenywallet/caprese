@@ -2,6 +2,41 @@
 
 import macros
 
+var paramNamesStmt {.compileTime.} = newStmtList()
+
+proc findNodeKind(n: NimNode; nodeKind: NimNodeKind): NimNode {.compileTime.} =
+  var res: NimNode
+  for c in n.children:
+    var ret = findNodeKind(c, nodeKind)
+    if ret.kind != nnkNilLit:
+      return ret
+    if c.kind == nodeKind:
+      res = c
+      break
+  res
+
+macro paramNames*(constName: string; body: untyped): untyped =
+  var param = ident($constName)
+  var recList = findNodeKind(body, nnkRecList)
+  var bracket = nnkBracket.newTree()
+  for d in recList:
+    if d.kind == nnkIdentDefs:
+      var n = d[0]
+      if n.len > 0:
+        n = n[n.len - 1]
+      bracket.add(newLit($n))
+  paramNamesStmt.add quote do:
+    const `param` = `bracket`
+  body
+
+macro paramNamesConst*(): untyped = paramNamesStmt
+
+macro paramNamesConst*(paramName: string): untyped =
+  result = newStmtList()
+  for n in paramNamesStmt:
+    if $n[0][0] == $paramName:
+      result.add(n)
+
 type
   SslLib* = enum
     None
@@ -23,7 +58,7 @@ type
     SniOnly
     HeaderHostOnly
 
-  Config* = object
+  Config* {.paramNames: "configNames".} = object
     sslLib*: SslLib
     debugLog*: bool
     sigTermQuit*: bool
@@ -52,6 +87,8 @@ type
     postRequestMethod*: bool
     sslRoutesHost*: SslRoutesHost
     acceptFirst*: bool
+
+paramNamesConst("configNames")
 
 var defaultConfigStmt* {.compileTime.}: NimNode
 
