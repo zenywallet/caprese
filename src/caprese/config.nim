@@ -97,9 +97,9 @@ var defaultConfigStmt* {.compileTime.}: NimNode
 macro defaultConfigMacro(body: untyped): untyped =
   defaultConfigStmt = body
   result = nnkObjConstr.newTree(newIdentNode("Config"))
-  for i in 0..<body.len:
-    if body[i].kind == nnkAsgn:
-      result.add(nnkExprColonExpr.newTree(body[i][0], body[i][1]))
+  for n in body:
+    if n.kind == nnkAsgn:
+      result.add(nnkExprColonExpr.newTree(n[0], n[1]))
   cfgNode = result
 
 const defaultConfig* = defaultConfigMacro:
