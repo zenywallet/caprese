@@ -1,6 +1,7 @@
 # Copyright (c) 2023 zenywallet
 
 import std/macros
+import std/os
 
 var paramNamesStmt {.compileTime.} = newStmtList()
 
@@ -171,6 +172,20 @@ macro config*(body: untyped): untyped =
     updateCfgNode(`cfgNodeTmp`)
     proc `retConfig`(): Config {.discardable.} = getConfig()
     `retConfig`()
+
+macro noSslForceSet*(): untyped =
+  var setNossl = fileExists(currentSourcePath.parentDir() / "../lib/NOSSL.a")
+  if setNossl:
+    var cfgNodeTmp = cfgNode.copy()
+    for i in 0..<cfgNodeTmp.len:
+      if cfgNodeTmp[i].kind == nnkExprColonExpr:
+        if $cfgNodeTmp[i][0] == "sslLib" and $cfgNodeTmp[i][1] != "None":
+          cfgNodeTmp[i][1] = newIdentNode("None")
+          hint("NOSSL mode is set")
+    quote do:
+      updateCfgNode(`cfgNodeTmp`)
+  else:
+    newEmptyNode()
 
 macro staticBool*(b: static bool): untyped = newLit(b)
 macro staticInt*(a: static int): untyped = newLit(a)
