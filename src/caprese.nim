@@ -44,7 +44,7 @@ macro configMacro*(body: untyped): untyped =
           if noSslForceSet and $configStmt[i][0] == "sslLib":
             if $configStmt[i][1] != "None":
               configStmt[i][1] = newIdentNode("None")
-              {.hint: "NOSSL mode is set".}
+              hint("NOSSL mode is set")
   result = nnkObjConstr.newTree(newIdentNode("Config"))
   for i in 0..<configStmt.len:
     result.add(nnkExprColonExpr.newTree(configStmt[i][0], configStmt[i][1]))
