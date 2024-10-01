@@ -90,6 +90,8 @@ type
 
 paramNamesConst("configNames")
 
+var cfgNode {.compileTime.}: NimNode
+
 var defaultConfigStmt* {.compileTime.}: NimNode
 
 macro defaultConfigMacro(body: untyped): untyped =
@@ -98,6 +100,7 @@ macro defaultConfigMacro(body: untyped): untyped =
   for i in 0..<body.len:
     if body[i].kind == nnkAsgn:
       result.add(nnkExprColonExpr.newTree(body[i][0], body[i][1]))
+  cfgNode = result
 
 const defaultConfig* = defaultConfigMacro:
   sslLib = BearSSL
