@@ -1,6 +1,6 @@
 # Copyright (c) 2023 zenywallet
 
-import macros
+import std/macros
 
 var paramNamesStmt {.compileTime.} = newStmtList()
 
