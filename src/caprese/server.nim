@@ -1053,6 +1053,7 @@ macro initCfg*(): untyped =
       when staticBool(cfg.postRequestMethod):
         macro postExistsFlagOverride(flag: static bool) = postExists = flag
         postExistsFlagOverride(true)
+    configCalls(configStmt)
     configCallsMacro()
     cfgDefault()
     when cfg.debugLog: {.define: DEBUG_LOG.}

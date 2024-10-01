@@ -50,11 +50,7 @@ macro configMacro*(body: untyped): untyped =
     result.add(nnkExprColonExpr.newTree(configStmt[i][0], configStmt[i][1]))
 
 
-var joli_configStmt {.compileTime.} = newStmtList()
 var joli_serverStmt {.compileTime.} = newStmtList()
-
-macro joli_configMacro(body: untyped) =
-  discard joli_configStmt.add body
 
 macro joli_addServer*(bindAddress: string, port: uint16, unix: bool, ssl: bool, body: untyped): untyped =
   quote do:
@@ -72,11 +68,6 @@ template joli_workerTmpl(num: typed, body: untyped) {.dirty.} =
   discard joli_serverStmt.add quote do:
     joli_addWorker(`num`, `body`)
 
-
-template config*(body: untyped) =
-  joli_configMacro(body)
-  const cfg* {.inject.}: Config = configMacro(body)
-  configCalls(body)
 
 var initFlag {.compileTime.}: bool
 macro init*(): untyped =

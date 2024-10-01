@@ -132,6 +132,46 @@ const defaultConfig* = defaultConfigMacro:
   sslRoutesHost = SniAndHeaderHost
   acceptFirst = false
 
+var configStmt* {.compileTime.} = newStmtList()
+
+macro httpHeader*(body: untyped): untyped = quote do: discard
+
+macro updateCfgNode(cfg: static Config) =
+  var cfgNodeTmp = nnkObjConstr.newTree(newIdentNode("Config"))
+  var p = parseExpr($cfg)
+  for expr in p:
+    cfgNodeTmp.add(expr)
+  cfgNode = cfgNodeTmp
+
+macro getConfig*(): untyped = cfgNode
+
+template cfg*: Config = getConfig()
+
+macro config*(body: untyped): untyped =
+  for n in body:
+    configStmt.add(n)
+  var cfgTmp = genSym(nskVar, "cfg")
+  var bodyTmp = body
+  proc parseChange(n: NimNode) =
+    for i in 0..<n.len:
+      parseChange(n[i])
+      if n.kind == nnkStmtList and n[i].kind == nnkAsgn:
+        var n0 = n[i][0]
+        if $n0 in configNames:
+          var n1 = n[i][1]
+          n[i] = nnkAsgn.newTree(nnkDotExpr.newTree(cfgTmp, n0), n1)
+  parseChange(bodyTmp)
+  var cfgNodeTmp = quote do:
+    block:
+      var `cfgTmp` = `cfgNode`
+      `bodyTmp`
+      `cfgTmp`
+  var retConfig = genSym(nskProc, "retConfig")
+  quote do:
+    updateCfgNode(`cfgNodeTmp`)
+    proc `retConfig`(): Config {.discardable.} = getConfig()
+    `retConfig`()
+
 macro staticBool*(b: static bool): untyped = newLit(b)
 macro staticInt*(a: static int): untyped = newLit(a)
 macro staticFloat64*(a: static float64): untyped = newLit(a)
