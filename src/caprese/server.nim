@@ -594,7 +594,7 @@ template serverTagLib*(cfg: static Config) {.dirty.} =
     var left = client.recvBufSize - client.recvCurSize
     if size > left:
       var nextSize = client.recvCurSize + size + workerRecvBufSize
-      if nextSize > staticInt(cfg.recvBufExpandBreakSize):
+      if nextSize > cfg.recvBufExpandBreakSize:
         raise newException(ServerError, "client request too large")
       client.recvBuf = reallocClientBuf(client.recvBuf, nextSize)
       client.recvBufSize = nextSize
@@ -1063,7 +1063,7 @@ macro initServer*(): untyped =
       else:
         import std/tables
       serverInitFreeClient()
-      initClient(staticInt(cfg.clientMax), ClientObj, Client)
+      initClient(cfg.clientMax, ClientObj, Client)
   else:
     quote do:
       discard
@@ -2073,7 +2073,7 @@ template serverLib(cfg: static Config) {.dirty.} =
       return (false, fin, opcode, nil, 0, data, size)
 
     var frameSize = frameHeadSize + payloadLen
-    if frameSize > staticInt(cfg.maxFrameSize):
+    if frameSize > cfg.maxFrameSize:
       raise newException(ServerError, "websocket frame size is too big frameSize=" & $frameSize)
 
     if size < frameSize:
@@ -2949,7 +2949,7 @@ template serverLib(cfg: static Config) {.dirty.} =
         errorRaise "error: epoll_ctl ret=", retCtl, " errno=", errno
 
       when cfg.sslLib == SslLib.None:
-        if (staticInt(cfg.clientMax) - FreePoolServerUsedCount) - clientFreePool.count >= highGearThreshold:
+        if (cfg.clientMax - FreePoolServerUsedCount) - clientFreePool.count >= highGearThreshold:
           if highGearManagerAssigned == 0:
             highGear = true
             for i in 0..<serverWorkerNum:
@@ -3543,7 +3543,7 @@ template serverLib(cfg: static Config) {.dirty.} =
                           ctx.data = cast[ptr UncheckedArray[byte]](addr ctx.recvBuf[nextParse])
                           inc(nextParse, ctx.size)
                           if nextParse > ctx.parseSize:
-                            if nextParse > staticInt(cfg.recvBufExpandBreakSize):
+                            if nextParse > cfg.recvBufExpandBreakSize:
                               client.close()
                               return
                             else:
@@ -3568,7 +3568,7 @@ template serverLib(cfg: static Config) {.dirty.} =
                           else:
                             ctx.size = 0
                           if nextParse > ctx.parseSize:
-                            if nextParse > staticInt(cfg.recvBufExpandBreakSize):
+                            if nextParse > cfg.recvBufExpandBreakSize:
                               client.close()
                               return
                             else:
@@ -3702,7 +3702,7 @@ template serverLib(cfg: static Config) {.dirty.} =
                           ctx.data = cast[ptr UncheckedArray[byte]](addr ctx.recvBuf[nextParse])
                           inc(nextParse, ctx.size)
                           if nextParse > ctx.parseSize:
-                            if nextParse > staticInt(cfg.recvBufExpandBreakSize):
+                            if nextParse > cfg.recvBufExpandBreakSize:
                               client.close()
                               return
                             else:
@@ -3726,7 +3726,7 @@ template serverLib(cfg: static Config) {.dirty.} =
                           else:
                             ctx.size = 0
                           if nextParse > ctx.parseSize:
-                            if nextParse > staticInt(cfg.recvBufExpandBreakSize):
+                            if nextParse > cfg.recvBufExpandBreakSize:
                               client.close()
                               return
                             else:
@@ -4905,7 +4905,7 @@ template serverLib(cfg: static Config) {.dirty.} =
             else:
               client.dirty = ClientDirtyMole
         inc(clientConnectionCheckPos)
-        if clientConnectionCheckPos >= staticInt(cfg.clientMax):
+        if clientConnectionCheckPos >= cfg.clientMax:
           clientConnectionCheckPos = 0
 
   createCertsTable()
@@ -5175,14 +5175,14 @@ template serverLib(cfg: static Config) {.dirty.} =
 
     serverWorkerInit()
 
-    var events: array[staticInt(cfg.epollEventsSize), EpollEvent]
+    var events: array[cfg.epollEventsSize, EpollEvent]
     var pevents: ptr UncheckedArray[EpollEvent] = cast[ptr UncheckedArray[EpollEvent]](addr events[0])
     var nfd: cint
 
     when cfg.sslLib != SslLib.None or cfg.connectionPreferred == ConnectionPreferred.InternalConnection:
       while active:
         nfd = epoll_wait(epfd, cast[ptr EpollEvent](addr events),
-                        staticInt(cfg.epollEventsSize).cint, -1.cint)
+                        cfg.epollEventsSize.cint, -1.cint)
         for i in 0..<nfd:
           try:
             ctx.events = pevents[i].events
@@ -5198,14 +5198,14 @@ template serverLib(cfg: static Config) {.dirty.} =
       while active:
         if ctx.threadId == 1:
           nfd = epoll_wait(epfd, cast[ptr EpollEvent](addr events),
-                          staticInt(cfg.epollEventsSize).cint, -1.cint)
+                          cfg.epollEventsSize.cint, -1.cint)
           if not throttleChanged and nfd >= 7:
             throttleChanged = true
             discard sem_post(addr throttleBody)
         else:
           if skip:
             nfd = epoll_wait(epfd, cast[ptr EpollEvent](addr events),
-                            staticInt(cfg.epollEventsSize).cint, 10.cint)
+                            cfg.epollEventsSize.cint, 10.cint)
           else:
             discard sem_wait(addr throttleBody)
             if highGear:
@@ -5213,7 +5213,7 @@ template serverLib(cfg: static Config) {.dirty.} =
             else:
               skip = true
               nfd = epoll_wait(epfd, cast[ptr EpollEvent](addr events),
-                              staticInt(cfg.epollEventsSize).cint, 0.cint)
+                              cfg.epollEventsSize.cint, 0.cint)
               throttleChanged = false
           if nfd == 0 and not highGear:
             skip = false
@@ -5232,7 +5232,7 @@ template serverLib(cfg: static Config) {.dirty.} =
           if assigned == 0:
             while highGear:
               var nfd = epoll_wait(epfd, cast[ptr EpollEvent](addr events),
-                                  staticInt(cfg.epollEventsSize).cint, 1000.cint)
+                                  cfg.epollEventsSize.cint, 1000.cint)
               if nfd > 0:
                 var i = 0
                 while true:
@@ -5243,7 +5243,7 @@ template serverLib(cfg: static Config) {.dirty.} =
                     except:
                       let e = getCurrentException()
                       logs.error e.name, ": ", e.msg
-                    if highGear and (staticInt(cfg.clientMax) - FreePoolServerUsedCount) - clientFreePool.count < highGearThreshold:
+                    if highGear and (cfg.clientMax - FreePoolServerUsedCount) - clientFreePool.count < highGearThreshold:
                       highGear = false
                   else:
                     clientQueue.send(ctx.client)
@@ -5357,7 +5357,7 @@ template serverStart*(wait: bool = true) =
     when cfg.serverWorkerNum < 0:
       serverWorkerNum = cpuCount
     else:
-      serverWorkerNum = staticInt(cfg.serverWorkerNum)
+      serverWorkerNum = cfg.serverWorkerNum
     echo "server workers: ", serverWorkerNum, "/", cpuCount
 
     highGearThreshold = serverWorkerNum * 3
@@ -5372,7 +5372,7 @@ template serverStart*(wait: bool = true) =
       let retEpfdClose = releaseOnQuitEpfds[i].close()
       if retEpfdClose != 0:
         logs.error "error: close epfd=", epfd, " ret=", retEpfdClose, " ", getErrnoStr()
-    freeClient(staticInt(cfg.clientMax))
+    freeClient(cfg.clientMax)
     when cfg.sslLib != SslLib.None:
       freeFileWatcher()
       joinThread(fileWatcherThread)
