@@ -1045,10 +1045,9 @@ macro initCfg*(): untyped =
 
   discard serverConfigStmt.add quote do:
     searchServerNode()
-    when declared(cfg):
-      when cfg.postRequestMethod:
-        macro postExistsFlagOverride(flag: static bool) = postExists = flag
-        postExistsFlagOverride(true)
+    when cfg.postRequestMethod:
+      macro postExistsFlagOverride(flag: static bool) = postExists = flag
+      postExistsFlagOverride(true)
     configCalls(configStmt)
     configCallsMacro()
     noSslForceSet()
