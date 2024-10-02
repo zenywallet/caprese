@@ -1038,10 +1038,6 @@ macro configCalls*(body: untyped): untyped =
         body[i][0] = newIdentNode("HttpTargetHeader")
       configCallsStmt.add(body[i])
 
-template cfgDefault() =
-  when not declared(cfg):
-    const cfg* {.inject.}: Config = defaultConfig
-
 var initCfgFlag {.compileTime.}: bool
 macro initCfg*(): untyped =
   if initCfgFlag: return
@@ -1056,7 +1052,6 @@ macro initCfg*(): untyped =
     configCalls(configStmt)
     configCallsMacro()
     noSslForceSet()
-    cfgDefault()
     when cfg.debugLog: {.define: DEBUG_LOG.}
 
 macro initServer*(): untyped =
