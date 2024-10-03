@@ -1266,18 +1266,9 @@ macro addServerMacro*(bindAddress: string, port: uint16, unix: bool, ssl: bool, 
     if retCtl != 0:
       errorRaise "error: addServer epoll_ctl ret=", retCtl, " ", getErrnoStr()
 
-
-macro evalSslLib(val: SslLib): SslLib =
-  quote do:
-    when `val` == BearSSL: BearSSL
-    elif `val` == OpenSSL: OpenSSL
-    elif `val` == LibreSSL: LibreSSL
-    elif `val` == BoringSSL: BoringSSL
-    else: None
-
 template addServer*(bindAddress: string, port: uint16, unix: bool, ssl: bool, body: untyped) =
   initServer()
-  addServerMacro(bindAddress, port, unix, ssl, evalSslLib(cfg.sslLib), body)
+  addServerMacro(bindAddress, port, unix, ssl, cfg.sslLib, body)
 
 macro serverConfigMacro*(): untyped = serverConfigStmt
 
