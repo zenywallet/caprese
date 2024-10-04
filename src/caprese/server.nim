@@ -5426,11 +5426,6 @@ template serverStop*() =
   var retCtl = epoll_ctl(epfd, EPOLL_CTL_ADD, sockCtl, addr abortClient.ev)
   if retCtl != 0:
     errorRaise "error: abort epoll_ctl ret=", retCtl, " ", getErrnoStr()
-
-  for i in countdown(releaseOnQuitSocks.high, 0):
-    let retShutdown = releaseOnQuitSocks[i].shutdown(SHUT_RD)
-    if retShutdown != 0:
-      logs.error "error: quit shutdown ret=", retShutdown, " ", getErrnoStr()
   stopTimeStampUpdater()
 
 {.passC: "-flto".}
