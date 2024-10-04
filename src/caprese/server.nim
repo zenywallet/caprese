@@ -1021,9 +1021,9 @@ var serverWorkerMainStmt {.compileTime.} =
 var serverHandlerList* {.compileTime.} = @[("appDummy", ident("false"), ident("false"), newStmtList())]
 var appIdTypeList* {.compileTime.} = @[AppDummy]
 var freePoolServerUsedCount* {.compileTime.} = 0
-var sockTmp = createNativeSocket()
-var workerRecvBufSize*: int = sockTmp.getSockOptInt(SOL_SOCKET, SO_RCVBUF)
-sockTmp.close()
+var sockCtl* = createNativeSocket()
+var workerRecvBufSize*: int = sockCtl.getSockOptInt(SOL_SOCKET, SO_RCVBUF)
+#sockCtl.close()
 var serverWorkerNum*: int
 var highGear* = false
 
