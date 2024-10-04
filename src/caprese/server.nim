@@ -1029,7 +1029,7 @@ incCurAppId()
 var freePoolServerUsedCount* {.compileTime.} = 0
 var sockCtl* = createNativeSocket()
 var workerRecvBufSize*: int = sockCtl.getSockOptInt(SOL_SOCKET, SO_RCVBUF)
-#sockCtl.close()
+addReleaseOnQuit(sockCtl)
 var serverWorkerNum*: int
 var highGear* = false
 
