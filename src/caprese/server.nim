@@ -988,6 +988,7 @@ proc addReleaseOnQuit(epfd: cint) = releaseOnQuitEpfds.add(epfd)
 type
   AppType* = enum
     AppDummy
+    AppAbort
     AppListen
     AppRoutes
     AppRoutesStage1
@@ -1018,8 +1019,12 @@ var serverWorkerMainStmt {.compileTime.} =
       )
     )
   )
-var serverHandlerList* {.compileTime.} = @[("appDummy", ident("false"), ident("false"), newStmtList())]
-var appIdTypeList* {.compileTime.} = @[AppDummy]
+var serverHandlerList* {.compileTime.} = @[
+  ("appDummy", ident("false"), ident("false"), newStmtList()),
+  ("appAbort", ident("false"), ident("false"), newStmtList())]
+var appIdTypeList* {.compileTime.} = @[AppDummy, AppAbort]
+macro incCurAppId() = inc(curAppId)
+incCurAppId()
 var freePoolServerUsedCount* {.compileTime.} = 0
 var sockCtl* = createNativeSocket()
 var workerRecvBufSize*: int = sockCtl.getSockOptInt(SOL_SOCKET, SO_RCVBUF)
@@ -2211,6 +2216,9 @@ template serverLib(cfg: static Config) {.dirty.} =
 
   proc appDummy(ctx: ServerThreadCtx) {.thread.} = discard
 
+  proc appAbort(ctx: ServerThreadCtx) {.thread.} =
+    echo "appAbort"
+
   var certsTable: ptr Table[string, tuple[idx: int, srvId: int,
                             privPath: string, chainPath: string,
                             privFileName: string, chainFileName: string]]
@@ -3051,6 +3059,10 @@ template serverLib(cfg: static Config) {.dirty.} =
   macro appDummyMacro(ssl: bool, body: untyped): untyped =
     quote do:
       clientHandlerProcs.add appDummy
+
+  macro appAbortMacro(ssl: bool, body: untyped): untyped =
+    quote do:
+      clientHandlerProcs.add appAbort
 
   macro appListenMacro(ssl: bool, unix: bool, body: untyped): untyped =
     quote do:
