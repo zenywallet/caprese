@@ -217,6 +217,7 @@ type
 
   ServerError* = object of CatchableError
   ServerSslCertError* = object of CatchableError
+  ServerAbortError* = object of CatchableError
 
 template errorRaise*(x: varargs[string, `$`]) = errorException(x, ServerError)
 
@@ -2217,7 +2218,7 @@ template serverLib(cfg: static Config) {.dirty.} =
   proc appDummy(ctx: ServerThreadCtx) {.thread.} = discard
 
   proc appAbort(ctx: ServerThreadCtx) {.thread.} =
-    echo "appAbort"
+    raise newException(ServerAbortError, "server abort")
 
   var certsTable: ptr Table[string, tuple[idx: int, srvId: int,
                             privPath: string, chainPath: string,
