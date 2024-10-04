@@ -5184,7 +5184,7 @@ template serverLib(cfg: static Config) {.dirty.} =
 
     when cfg.sslLib != SslLib.None or cfg.connectionPreferred == ConnectionPreferred.InternalConnection:
       block WaitLoop:
-        while active:
+        while true:
           nfd = epoll_wait(epfd, cast[ptr EpollEvent](addr events),
                           cfg.epollEventsSize.cint, -1.cint)
           for i in 0..<nfd:
@@ -5202,7 +5202,7 @@ template serverLib(cfg: static Config) {.dirty.} =
       var skip = false
 
       block WaitLoop:
-        while active:
+        while true:
           if ctx.threadId == 1:
             nfd = epoll_wait(epfd, cast[ptr EpollEvent](addr events),
                             cfg.epollEventsSize.cint, -1.cint)
