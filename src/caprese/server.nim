@@ -5183,112 +5183,135 @@ template serverLib(cfg: static Config) {.dirty.} =
     var nfd: cint
 
     when cfg.sslLib != SslLib.None or cfg.connectionPreferred == ConnectionPreferred.InternalConnection:
-      while active:
-        nfd = epoll_wait(epfd, cast[ptr EpollEvent](addr events),
-                        cfg.epollEventsSize.cint, -1.cint)
-        for i in 0..<nfd:
-          try:
-            ctx.events = pevents[i].events
-            ctx.client = cast[Client](pevents[i].data)
-            cast[ClientHandlerProc](clientHandlerProcs[ctx.client.appId])(ctx)
-          except:
-            let e = getCurrentException()
-            logs.error e.name, ": ", e.msg
+      block WaitLoop:
+        while active:
+          nfd = epoll_wait(epfd, cast[ptr EpollEvent](addr events),
+                          cfg.epollEventsSize.cint, -1.cint)
+          for i in 0..<nfd:
+            try:
+              ctx.events = pevents[i].events
+              ctx.client = cast[Client](pevents[i].data)
+              cast[ClientHandlerProc](clientHandlerProcs[ctx.client.appId])(ctx)
+            except ServerAbortError:
+              break WaitLoop
+            except:
+              let e = getCurrentException()
+              logs.error e.name, ": ", e.msg
 
     else:
       var skip = false
 
-      while active:
-        if ctx.threadId == 1:
-          nfd = epoll_wait(epfd, cast[ptr EpollEvent](addr events),
-                          cfg.epollEventsSize.cint, -1.cint)
-          if not throttleChanged and nfd >= 7:
-            throttleChanged = true
-            discard sem_post(addr throttleBody)
-        else:
-          if skip:
+      block WaitLoop:
+        while active:
+          if ctx.threadId == 1:
             nfd = epoll_wait(epfd, cast[ptr EpollEvent](addr events),
-                            cfg.epollEventsSize.cint, 10.cint)
+                            cfg.epollEventsSize.cint, -1.cint)
+            if not throttleChanged and nfd >= 7:
+              throttleChanged = true
+              discard sem_post(addr throttleBody)
           else:
-            discard sem_wait(addr throttleBody)
-            if highGear:
-              nfd = 0
-            else:
-              skip = true
+            if skip:
               nfd = epoll_wait(epfd, cast[ptr EpollEvent](addr events),
-                              cfg.epollEventsSize.cint, 0.cint)
-              throttleChanged = false
-          if nfd == 0 and not highGear:
-            skip = false
-            continue
-
-        for i in 0..<nfd:
-          try:
-            ctx.client = cast[Client](pevents[i].data)
-            cast[ClientHandlerProc](clientHandlerProcs[ctx.client.appId])(ctx)
-          except:
-            let e = getCurrentException()
-            logs.error e.name, ": ", e.msg
-
-        if highGear:
-          var assigned = atomic_fetch_add(addr highGearManagerAssigned, 1, 0)
-          if assigned == 0:
-            while highGear:
-              var nfd = epoll_wait(epfd, cast[ptr EpollEvent](addr events),
-                                  cfg.epollEventsSize.cint, 1000.cint)
-              if nfd > 0:
-                var i = 0
-                while true:
-                  ctx.client = cast[Client](pevents[i].data)
-                  if ctx.client.listenFlag:
-                    try:
-                      cast[ClientHandlerProc](clientHandlerProcs[ctx.client.appId])(ctx)
-                    except:
-                      let e = getCurrentException()
-                      logs.error e.name, ": ", e.msg
-                    if highGear and (cfg.clientMax - FreePoolServerUsedCount) - clientFreePool.count < highGearThreshold:
-                      highGear = false
-                  else:
-                    clientQueue.send(ctx.client)
-                  inc(i)
-                  if i >= nfd: break
+                              cfg.epollEventsSize.cint, 10.cint)
+            else:
+              discard sem_wait(addr throttleBody)
+              if highGear:
+                nfd = 0
               else:
-                if clientQueue.count > 0:
+                skip = true
+                nfd = epoll_wait(epfd, cast[ptr EpollEvent](addr events),
+                                cfg.epollEventsSize.cint, 0.cint)
+                throttleChanged = false
+            if nfd == 0 and not highGear:
+              skip = false
+              continue
+
+          for i in 0..<nfd:
+            try:
+              ctx.client = cast[Client](pevents[i].data)
+              cast[ClientHandlerProc](clientHandlerProcs[ctx.client.appId])(ctx)
+            except ServerAbortError:
+              break WaitLoop
+            except:
+              let e = getCurrentException()
+              logs.error e.name, ": ", e.msg
+
+          if highGear:
+            var assigned = atomic_fetch_add(addr highGearManagerAssigned, 1, 0)
+            if assigned == 0:
+              while highGear:
+                var nfd = epoll_wait(epfd, cast[ptr EpollEvent](addr events),
+                                    cfg.epollEventsSize.cint, 1000.cint)
+                if nfd > 0:
+                  var i = 0
+                  while true:
+                    ctx.client = cast[Client](pevents[i].data)
+                    if ctx.client.listenFlag:
+                      try:
+                        cast[ClientHandlerProc](clientHandlerProcs[ctx.client.appId])(ctx)
+                      except ServerAbortError:
+                        break WaitLoop
+                      except:
+                        let e = getCurrentException()
+                        logs.error e.name, ": ", e.msg
+                      if highGear and (cfg.clientMax - FreePoolServerUsedCount) - clientFreePool.count < highGearThreshold:
+                        highGear = false
+                    else:
+                      clientQueue.send(ctx.client)
+                    inc(i)
+                    if i >= nfd: break
+                else:
+                  if clientQueue.count > 0:
+                    for i in 0..<serverWorkerNum:
+                      clientQueue.sendFlush()
+
+              if clientQueue.count > 0:
+                for i in 0..<serverWorkerNum:
+                  clientQueue.sendFlush()
+              while true:
+                ctx.client = clientQueue.popSafe()
+                if ctx.client.isNil:
+                  break
+                try:
+                  cast[ClientHandlerProc](clientHandlerProcs[ctx.client.appId])(ctx)
+                except ServerAbortError:
+
                   for i in 0..<serverWorkerNum:
                     clientQueue.sendFlush()
+                  while true:
+                    if highGearManagerAssigned == 1:
+                      atomic_fetch_sub(addr highGearManagerAssigned, 1, 0)
+                      break
+                    sleep(10)
+                    clientQueue.sendFlush()
 
-            if clientQueue.count > 0:
+                  break WaitLoop
+                except:
+                  let e = getCurrentException()
+                  logs.error e.name, ": ", e.msg
+
               for i in 0..<serverWorkerNum:
                 clientQueue.sendFlush()
-            while true:
-              ctx.client = clientQueue.popSafe()
-              if ctx.client.isNil:
-                break
-              try:
-                cast[ClientHandlerProc](clientHandlerProcs[ctx.client.appId])(ctx)
-              except:
-                let e = getCurrentException()
-                logs.error e.name, ": ", e.msg
+              while true:
+                if highGearManagerAssigned == 1:
+                  atomic_fetch_sub(addr highGearManagerAssigned, 1, 0)
+                  break
+                sleep(10)
+                clientQueue.sendFlush()
 
-            for i in 0..<serverWorkerNum:
-              clientQueue.sendFlush()
-            while true:
-              if highGearManagerAssigned == 1:
-                atomic_fetch_sub(addr highGearManagerAssigned, 1, 0)
-                break
-              sleep(10)
-              clientQueue.sendFlush()
-
-          else:
-            while true:
-              ctx.client = clientQueue.recv(highGear)
-              if ctx.client.isNil: break
-              try:
-                cast[ClientHandlerProc](clientHandlerProcs[ctx.client.appId])(ctx)
-              except:
-                let e = getCurrentException()
-                logs.error e.name, ": ", e.msg
-            atomic_fetch_sub(addr highGearManagerAssigned, 1, 0)
+            else:
+              while true:
+                ctx.client = clientQueue.recv(highGear)
+                if ctx.client.isNil: break
+                try:
+                  cast[ClientHandlerProc](clientHandlerProcs[ctx.client.appId])(ctx)
+                except ServerAbortError:
+                  atomic_fetch_sub(addr highGearManagerAssigned, 1, 0)
+                  break WaitLoop
+                except:
+                  let e = getCurrentException()
+                  logs.error e.name, ": ", e.msg
+              atomic_fetch_sub(addr highGearManagerAssigned, 1, 0)
 
       discard sem_post(addr throttleBody)
 
@@ -5395,6 +5418,15 @@ template serverWait*() = joinThread(serverWaitThread)
 template serverStop*() =
   active = false
   highGear = false
+  var abortClient: ClientObj
+  abortClient.sock = sockCtl
+  abortClient.appId = 1
+  abortClient.ev.events = EPOLLIN
+  abortClient.ev.data = cast[EpollData](addr abortClient)
+  var retCtl = epoll_ctl(epfd, EPOLL_CTL_ADD, sockCtl, addr abortClient.ev)
+  if retCtl != 0:
+    errorRaise "error: abort epoll_ctl ret=", retCtl, " ", getErrnoStr()
+
   for i in countdown(releaseOnQuitSocks.high, 0):
     let retShutdown = releaseOnQuitSocks[i].shutdown(SHUT_RD)
     if retShutdown != 0:
