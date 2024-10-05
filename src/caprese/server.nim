@@ -1267,7 +1267,10 @@ macro addServerMacro*(bindAddress: string, port: uint16, unix: bool, ssl: bool, 
     newClient.appId = `appId`
     when cfg.sslLib == SslLib.None:
       newClient.listenFlag = true
-    newClient.ev.events = EPOLLIN or EPOLLEXCLUSIVE
+    when cfg.acceptFirst:
+      newClient.ev.events = EPOLLIN or EPOLLET
+    else:
+      newClient.ev.events = EPOLLIN or EPOLLEXCLUSIVE
     var retCtl = epoll_ctl(epfd, EPOLL_CTL_ADD, serverSock, addr newClient.ev)
     if retCtl != 0:
       errorRaise "error: addServer epoll_ctl ret=", retCtl, " ", getErrnoStr()
@@ -5275,7 +5278,6 @@ template serverLib(cfg: static Config) {.dirty.} =
                 try:
                   cast[ClientHandlerProc](clientHandlerProcs[ctx.client.appId])(ctx)
                 except ServerAbortError:
-
                   for i in 0..<serverWorkerNum:
                     clientQueue.sendFlush()
                   while true:
