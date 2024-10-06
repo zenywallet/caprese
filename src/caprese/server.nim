@@ -1307,6 +1307,15 @@ macro returnRequired*(body: untyped): bool =
     if body.len == 1 and body.kind == nnkReturnStmt:
       return newLit(false)
     var n = body[^1]
+    while n.kind == nnkStmtList:
+      if n.len > 0:
+        n = n[^1]
+      else:
+        return newLit(false)
+    if (n.kind == nnkCall or n.kind == nnkCommand) and
+      $n[0] in ["get", "stream", "public", "certificates", "acme", "post",
+                "proxy", "head", "put", "delete", "connect", "options", "trace"]:
+      return newLit(false)
     proc searchReturn(searchNode: NimNode): bool =
       if searchNode.kind == nnkReturnStmt:
         return true
