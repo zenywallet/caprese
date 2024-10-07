@@ -939,6 +939,7 @@ proc createServer(bindAddress: string, port: uint16, reusePort: bool = false): S
     errorRaise "error: getaddrinfo ", getErrnoStr(), " bind=", bindAddress, " port=", port
   let domain = aiList.ai_family.toKnownDomain.get
   let sock = createNativeSocket(domain)
+  if sock == osInvalidSocket: raise
   sock.setSockOptInt(SOL_SOCKET, SO_REUSEADDR, 1)
   if reusePort:
     sock.setSockOptInt(SOL_SOCKET, SO_REUSEPORT, 1)
@@ -954,6 +955,7 @@ proc createServer(bindAddress: string, port: uint16, reusePort: bool = false): S
 
 proc createServer(unixDomainSockFile: string): SocketHandle =
   let sock = socket(Domain.AF_UNIX.cint, posix.SOCK_STREAM, 0)
+  if sock == osInvalidSocket: raise
   var sa: Sockaddr_un
   sa.sun_family = Domain.AF_UNIX.TSa_Family
   if unixDomainSockFile.len > sa.sun_path.len:
@@ -1028,6 +1030,7 @@ macro incCurAppId() = inc(curAppId)
 incCurAppId()
 var freePoolServerUsedCount* {.compileTime.} = 0
 var sockCtl* = createNativeSocket()
+if sockCtl == osInvalidSocket: raise
 var workerRecvBufSize*: int = sockCtl.getSockOptInt(SOL_SOCKET, SO_RCVBUF)
 addReleaseOnQuit(sockCtl)
 var serverWorkerNum*: int
@@ -1274,7 +1277,6 @@ macro addServerMacro*(bindAddress: string, port: uint16, unix: bool, ssl: bool, 
     var retCtl = epoll_ctl(epfd, EPOLL_CTL_ADD, serverSock, addr newClient.ev)
     if retCtl != 0:
       errorRaise "error: addServer epoll_ctl ret=", retCtl, " ", getErrnoStr()
-
 
 macro evalSslLib(val: SslLib): SslLib =
   quote do:
