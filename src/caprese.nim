@@ -28,12 +28,6 @@ export config
 var active* = true
 var workerNum = 0
 
-var onSigTermQuitBody {.compileTime.} = newStmtList()
-macro onSigTermQuit(body: untyped) = discard onSigTermQuitBody.add(body)
-
-template onQuit*(body: untyped) = onSigTermQuit(body)
-
-
 var joli_serverStmt {.compileTime.} = newStmtList()
 
 macro joli_addServer*(bindAddress: string, port: uint16, unix: bool, ssl: bool, body: untyped): untyped =

@@ -5376,6 +5376,11 @@ macro searchServerNode*() =
 
   searchAddServer(serverStmt)
 
+var onSigTermQuitBody* {.compileTime.} = newStmtList()
+macro onSigTermQuit(body: untyped) = discard onSigTermQuitBody.add(body)
+
+template onQuit*(body: untyped) = onSigTermQuit(body)
+
 var serverWaitThread: Thread[WrapperThreadArg]
 
 template serverStart*(wait: bool = true) =
