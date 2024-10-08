@@ -238,7 +238,7 @@ proc toWebSocketOpCode*(opcode: int8): WebSocketOpCode =
 template reallocClientBuf*(buf: ptr UncheckedArray[byte], size: int): ptr UncheckedArray[byte] =
   cast[ptr UncheckedArray[byte]](reallocShared(buf, size))
 
-var active = true
+var active* = true
 var epfd*: cint = -1
 
 type

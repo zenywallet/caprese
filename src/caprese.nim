@@ -25,7 +25,6 @@ export statuscode
 export queue
 export config
 
-var active* = true
 var workerNum = 0
 
 var joli_serverStmt {.compileTime.} = newStmtList()
