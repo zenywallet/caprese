@@ -5381,6 +5381,8 @@ macro onSigTermQuit(body: untyped) = discard onSigTermQuitBody.add(body)
 
 template onQuit*(body: untyped) = onSigTermQuit(body)
 
+var abortClientPtr: pointer
+
 var serverWaitThread: Thread[WrapperThreadArg]
 
 template serverStart*(wait: bool = true) =
@@ -5395,6 +5397,12 @@ template serverStart*(wait: bool = true) =
   serverLib(cfg)
   activeHeaderInit()
   startTimeStampUpdater(cfg)
+  abortClientPtr = allocShared0(sizeof(ClientObj))
+  var abortClient = cast[ptr ClientObj](abortClientPtr)
+  abortClient.sock = sockCtl
+  abortClient.appId = 1
+  abortClient.ev.events = EPOLLIN
+  abortClient.ev.data = cast[EpollData](abortClient)
 
   template serverStartBody() =
     var params: ProxyParams
@@ -5431,6 +5439,7 @@ template serverStart*(wait: bool = true) =
       joinThread(fileWatcherThread)
     proxyThread.QuitProxyManager()
     joinThread(contents.timeStampThread)
+    abortClientPtr.deallocShared()
 
   when wait:
     serverStartBody()
@@ -5445,11 +5454,7 @@ template serverWait*() = joinThread(serverWaitThread)
 template serverStop*() =
   active = false
   highGear = false
-  var abortClient: ClientObj
-  abortClient.sock = sockCtl
-  abortClient.appId = 1
-  abortClient.ev.events = EPOLLIN
-  abortClient.ev.data = cast[EpollData](addr abortClient)
+  var abortClient = cast[ptr ClientObj](abortClientPtr)
   var retCtl = epoll_ctl(epfd, EPOLL_CTL_ADD, sockCtl, addr abortClient.ev)
   if retCtl != 0:
     errorRaise "error: abort epoll_ctl ret=", retCtl, " ", getErrnoStr()
