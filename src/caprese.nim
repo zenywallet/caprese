@@ -17,7 +17,6 @@ import caprese/contents
 import caprese/files
 import caprese/statuscode
 import caprese/queue
-import caprese/rlimit
 import caprese/config
 export serverlib
 export contents
@@ -46,30 +45,6 @@ template joli_workerTmpl(num: typed, body: untyped) {.dirty.} =
   discard joli_serverStmt.add quote do:
     joli_addWorker(`num`, `body`)
 
-
-var initFlag {.compileTime.}: bool
-macro init*(): untyped =
-  if initFlag: return
-  initFlag = true
-
-  quote do:
-    serverInit()
-    serverTagLib(cfg)
-
-    when cfg.limitOpenFiles < 0:
-      setMaxRlimitOpenFiles()
-    else:
-      const limitOpenFiles = cfg.limitOpenFiles
-      setRlimitOpenFiles(limitOpenFiles)
-    when cfg.sigPipeIgnore: signal(SIGPIPE, SIG_IGN)
-    serverlib.abort = proc() {.thread.} =
-      serverlib.serverStop()
-      active = false
-    when cfg.sigTermQuit:
-      onSignal(SIGINT, SIGTERM):
-        echo "bye from signal ", sig
-        serverlib.abort()
-        `onSigTermQuitBody`
 
 macro server*(ssl: bool, ip: string, port: uint16, body: untyped): untyped =
   joli_serverTmpl(ip, port, false, ssl, body)

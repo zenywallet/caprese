@@ -17,6 +17,7 @@ import arraylib
 import bytes
 import files
 import server_types
+import rlimit
 import config
 export arraylib
 export bytes
@@ -5459,6 +5460,30 @@ template serverStop*() =
   if retCtl != 0:
     errorRaise "error: abort epoll_ctl ret=", retCtl, " ", getErrnoStr()
   stopTimeStampUpdater()
+
+var initFlag {.compileTime.}: bool
+macro init*(): untyped =
+  if initFlag: return
+  initFlag = true
+
+  quote do:
+    serverInit()
+    serverTagLib(cfg)
+
+    when cfg.limitOpenFiles < 0:
+      setMaxRlimitOpenFiles()
+    else:
+      const limitOpenFiles = cfg.limitOpenFiles
+      setRlimitOpenFiles(limitOpenFiles)
+    when cfg.sigPipeIgnore: signal(SIGPIPE, SIG_IGN)
+    abort = proc() {.thread.} =
+      serverStop()
+      active = false
+    when cfg.sigTermQuit:
+      onSignal(SIGINT, SIGTERM):
+        echo "bye from signal ", sig
+        abort()
+        `onSigTermQuitBody`
 
 {.passC: "-flto".}
 {.passL: "-flto".}
