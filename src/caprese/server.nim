@@ -5390,6 +5390,7 @@ template serverStart*(wait: bool = true) =
   initCfg()
   serverConfigMacro()
   contentsWithCfg(cfg)
+  init()
   serverMacro()
   when not initServerFlag:
     {.error: "No server block to start.".}

@@ -49,14 +49,12 @@ template joli_workerTmpl(num: typed, body: untyped) {.dirty.} =
 macro server*(ssl: bool, ip: string, port: uint16, body: untyped): untyped =
   joli_serverTmpl(ip, port, false, ssl, body)
   discard serverStmt.add quote do:
-    init()
     echo "server: ", `ip`, ":", `port`, (if `ssl`: " SSL" else: "")
     addServer(`ip`, `port`, false, `ssl`, `body`)
 
 macro server*(ip: string, port: uint16, body: untyped): untyped =
   joli_serverTmpl(ip, port, false, false, body)
   discard serverStmt.add quote do:
-    init()
     echo "server: ", `ip`, ":", `port`
     addServer(`ip`, `port`, false, false, `body`)
 
@@ -64,7 +62,6 @@ macro server*(ip: string, port: uint16, body: untyped): untyped =
 macro server*(unix: string, body: untyped): untyped =
   joli_serverTmpl(unix, 0, true, false, body)
   discard serverStmt.add quote do:
-    init()
     echo "server: unix:", `unix`
     addServer(`unix`, 0, true, false, `body`)
 
@@ -85,7 +82,6 @@ macro worker*(num: int, body: untyped): untyped =
     )
   )
   discard serverStmt.add quote do:
-    init()
     atomicInc(workerNum, `num`)
     var workerThreads: array[`num`, Thread[void]]
     block:
@@ -101,6 +97,7 @@ template workerStart*() =
   when not initServerFlag:
     initCfg()
     serverConfigMacro()
+    init()
     serverMacro()
   for i in countdown(workerThreadWaitProc.high, 0):
     workerThreadWaitProc[i]()
