@@ -9,6 +9,9 @@ when isMainModule:
 import std/macros
 import std/nativesockets
 import std/os
+export nativesockets
+export os
+
 import caprese/server as serverlib
 import caprese/contents
 import caprese/files
@@ -16,8 +19,6 @@ import caprese/statuscode
 import caprese/queue
 import caprese/rlimit
 import caprese/config
-export nativesockets
-export os
 export serverlib
 export contents
 export files
