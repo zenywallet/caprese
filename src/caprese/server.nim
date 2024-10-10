@@ -1287,7 +1287,7 @@ macro evalSslLib(val: SslLib): SslLib =
     elif `val` == BoringSSL: BoringSSL
     else: None
 
-template addServer*(bindAddress: string, port: uint16, unix: bool, ssl: bool, body: untyped) =
+template addServer1*(bindAddress: string, port: uint16, unix: bool, ssl: bool, body: untyped) =
   addServerMacro(bindAddress, port, unix, ssl, evalSslLib(cfg.sslLib), body)
 
 macro serverConfigMacro*(): untyped = serverConfigStmt
@@ -5391,6 +5391,8 @@ template serverStart*(wait: bool = true) =
   contentsWithCfg(cfg)
   init()
   initServer()
+  template addServer*(bindAddress: string, port: uint16, unix: bool, ssl: bool, body: untyped) =
+    addServer1(bindAddress, port, unix, ssl, body)
   serverMacro()
   when curSrvId == 0:
     {.error: "No server block to start.".}
