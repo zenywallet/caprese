@@ -196,3 +196,11 @@ macro staticConfig*(cfg: static Config): untyped =
   var p = parseExpr($cfg)
   for expr in p:
     result.add(expr)
+
+macro evalSslLib*(val: SslLib): SslLib =
+  quote do:
+    when `val` == BearSSL: BearSSL
+    elif `val` == OpenSSL: OpenSSL
+    elif `val` == LibreSSL: LibreSSL
+    elif `val` == BoringSSL: BoringSSL
+    else: None
