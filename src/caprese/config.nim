@@ -191,7 +191,7 @@ macro staticBool*(b: static bool): untyped = newLit(b)
 macro staticInt*(a: static int): untyped = newLit(a)
 macro staticFloat64*(a: static float64): untyped = newLit(a)
 macro staticString*(s: static string): untyped = newLit(s)
-macro staticConfig(cfg: static Config): untyped =
+macro staticConfig*(cfg: static Config): untyped =
   result = nnkObjConstr.newTree(newIdentNode("Config"))
   var p = parseExpr($cfg)
   for expr in p:
