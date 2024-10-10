@@ -1288,7 +1288,6 @@ macro evalSslLib(val: SslLib): SslLib =
     else: None
 
 template addServer*(bindAddress: string, port: uint16, unix: bool, ssl: bool, body: untyped) =
-  initServer()
   addServerMacro(bindAddress, port, unix, ssl, evalSslLib(cfg.sslLib), body)
 
 macro serverConfigMacro*(): untyped = serverConfigStmt
@@ -5391,6 +5390,7 @@ template serverStart*(wait: bool = true) =
   serverConfigMacro()
   contentsWithCfg(cfg)
   init()
+  initServer()
   serverMacro()
   when not initServerFlag:
     {.error: "No server block to start.".}
