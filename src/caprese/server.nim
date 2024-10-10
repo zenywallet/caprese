@@ -5392,7 +5392,7 @@ template serverStart*(wait: bool = true) =
   init()
   initServer()
   serverMacro()
-  when not initServerFlag:
+  when curSrvId == 0:
     {.error: "No server block to start.".}
   httpTargetHeaderDefault()
   serverType()
