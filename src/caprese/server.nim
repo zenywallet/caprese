@@ -5457,7 +5457,7 @@ template serverStop*() =
   var abortClient = cast[ptr ClientObj](abortClientPtr)
   var retCtl = epoll_ctl(epfd, EPOLL_CTL_ADD, sockCtl, addr abortClient.ev)
   if retCtl != 0:
-    errorRaise "error: abort epoll_ctl ret=", retCtl, " ", getErrnoStr()
+    logs.error "error: abort epoll_ctl ret=", retCtl, " ", getErrnoStr()
   stopTimeStampUpdater()
 
 var initFlag {.compileTime.}: bool
