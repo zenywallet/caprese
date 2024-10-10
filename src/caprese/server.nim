@@ -5391,11 +5391,15 @@ template serverStart*(wait: bool = true) =
   contentsWithCfg(cfg)
   init()
   initServer()
-  template addServer*(bindAddress: string, port: uint16, unix: bool, ssl: bool, body: untyped) =
-    addServer1(bindAddress, port, unix, ssl, body)
-  serverMacro()
-  when curSrvId == 0:
-    {.error: "No server block to start.".}
+  when defined(SERVER2):
+    import server2
+    serverMacro()
+  else:
+    template addServer*(bindAddress: string, port: uint16, unix: bool, ssl: bool, body: untyped) =
+      addServer1(bindAddress, port, unix, ssl, body)
+    serverMacro()
+    when curSrvId == 0:
+      {.error: "No server block to start.".}
   httpTargetHeaderDefault()
   serverType()
   serverLib(cfg)
