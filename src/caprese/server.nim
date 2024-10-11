@@ -5392,62 +5392,62 @@ template serverStart*(wait: bool = true) =
     serverMacro()
     when curSrvId == 0:
       {.error: "No server block to start.".}
-  httpTargetHeaderDefault()
-  serverType()
-  serverLib(cfg)
-  activeHeaderInit()
-  startTimeStampUpdater(cfg)
-  abortClientPtr = allocShared0(sizeof(ClientObj))
-  var abortClient = cast[ptr ClientObj](abortClientPtr)
-  abortClient.sock = sockCtl
-  abortClient.appId = 1
-  abortClient.ev.events = EPOLLIN
-  abortClient.ev.data = cast[EpollData](abortClient)
+    httpTargetHeaderDefault()
+    serverType()
+    serverLib(cfg)
+    activeHeaderInit()
+    startTimeStampUpdater(cfg)
+    abortClientPtr = allocShared0(sizeof(ClientObj))
+    var abortClient = cast[ptr ClientObj](abortClientPtr)
+    abortClient.sock = sockCtl
+    abortClient.appId = 1
+    abortClient.ev.events = EPOLLIN
+    abortClient.ev.data = cast[EpollData](abortClient)
 
-  template serverStartBody() =
-    var params: ProxyParams
-    params.abortCallback = proc() =
-      errorQuit "error: proxy dispatcher"
-    var proxyThread = proxyManager(params)
+    template serverStartBody() =
+      var params: ProxyParams
+      params.abortCallback = proc() =
+        errorQuit "error: proxy dispatcher"
+      var proxyThread = proxyManager(params)
 
-    when cfg.sslLib != SslLib.None:
-      var fileWatcherThread: Thread[WrapperThreadArg]
-      createThread(fileWatcherThread, threadWrapper, (fileWatcher, ThreadArg(argType: ThreadArgType.Void)))
+      when cfg.sslLib != SslLib.None:
+        var fileWatcherThread: Thread[WrapperThreadArg]
+        createThread(fileWatcherThread, threadWrapper, (fileWatcher, ThreadArg(argType: ThreadArgType.Void)))
 
-    let cpuCount = countProcessors()
-    when cfg.serverWorkerNum < 0:
-      serverWorkerNum = cpuCount
-    else:
-      serverWorkerNum = cfg.serverWorkerNum
-    echo "server workers: ", serverWorkerNum, "/", cpuCount
+      let cpuCount = countProcessors()
+      when cfg.serverWorkerNum < 0:
+        serverWorkerNum = cpuCount
+      else:
+        serverWorkerNum = cfg.serverWorkerNum
+      echo "server workers: ", serverWorkerNum, "/", cpuCount
 
-    highGearThreshold = serverWorkerNum * 3
+      highGearThreshold = serverWorkerNum * 3
 
-    var threads = newSeq[Thread[WrapperThreadArg]](serverWorkerNum)
-    for i in 0..<serverWorkerNum:
-      createThread(threads[i], threadWrapper, (serverWorker,
-        ThreadArg(argType: ThreadArgType.WorkerParams, workerParams: (i + 1, workerRecvBufSize))))
+      var threads = newSeq[Thread[WrapperThreadArg]](serverWorkerNum)
+      for i in 0..<serverWorkerNum:
+        createThread(threads[i], threadWrapper, (serverWorker,
+          ThreadArg(argType: ThreadArgType.WorkerParams, workerParams: (i + 1, workerRecvBufSize))))
 
-    joinThreads(threads)
-    for i in countdown(releaseOnQuitEpfds.high, 0):
-      let retEpfdClose = releaseOnQuitEpfds[i].close()
-      if retEpfdClose != 0:
-        logs.error "error: close epfd=", epfd, " ret=", retEpfdClose, " ", getErrnoStr()
-    freeClient(cfg.clientMax)
-    when cfg.sslLib != SslLib.None:
-      freeFileWatcher()
-      joinThread(fileWatcherThread)
-    proxyThread.QuitProxyManager()
-    joinThread(contents.timeStampThread)
-    abortClientPtr.deallocShared()
+      joinThreads(threads)
+      for i in countdown(releaseOnQuitEpfds.high, 0):
+        let retEpfdClose = releaseOnQuitEpfds[i].close()
+        if retEpfdClose != 0:
+          logs.error "error: close epfd=", epfd, " ret=", retEpfdClose, " ", getErrnoStr()
+      freeClient(cfg.clientMax)
+      when cfg.sslLib != SslLib.None:
+        freeFileWatcher()
+        joinThread(fileWatcherThread)
+      proxyThread.QuitProxyManager()
+      joinThread(contents.timeStampThread)
+      abortClientPtr.deallocShared()
 
-  when wait:
-    serverStartBody()
-  else:
-    proc waitProc(arg: ThreadArg) {.thread.} =
+    when wait:
       serverStartBody()
+    else:
+      proc waitProc(arg: ThreadArg) {.thread.} =
+        serverStartBody()
 
-    createThread(serverWaitThread, threadWrapper, (waitProc, ThreadArg(argType: ThreadArgType.Void)))
+      createThread(serverWaitThread, threadWrapper, (waitProc, ThreadArg(argType: ThreadArgType.Void)))
 
 template serverWait*() = joinThread(serverWaitThread)
 
