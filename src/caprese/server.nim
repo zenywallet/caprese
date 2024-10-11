@@ -5385,7 +5385,7 @@ template serverStart*(wait: bool = true) =
   initServer()
   when defined(SERVER2):
     import server2
-    serverMacro()
+    parseServers(serverStmt)
   else:
     template addServer*(bindAddress: string, port: uint16, unix: bool, ssl: bool, body: untyped) =
       addServer1(bindAddress, port, unix, ssl, body)
