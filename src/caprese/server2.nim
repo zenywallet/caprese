@@ -68,3 +68,17 @@ template parseServers*(serverBody: untyped) =
   genAppIdEnum()
   for a in AppId:
     echo a
+
+  type
+    ClientObj = object
+      sock: SocketHandle
+      appId: AppId
+      ev: EpollEvent
+      ev2: EpollEvent
+      sendBuf: ptr UncheckedArray[byte]
+      sendPos: ptr UncheckedArray[byte]
+      sendLen: int
+      threadId: int
+      whackaMole: bool
+
+    Client = ptr ClientObj
