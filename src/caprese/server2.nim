@@ -40,14 +40,14 @@ macro genAppIdEnum(): untyped =
 template parseServers*(serverBody: untyped) =
   macro parseBody() =
     macro addServer(bindAddress: string, port: uint16, unix: bool, ssl: bool, body: untyped): untyped =
-      echo "server ", newAppId(AppListen)
-      body
+      var ret = newStmtList quote do:
+        echo "server ", newAppId(AppListen)
+      ret.add(body)
+      ret
 
     macro routes(routesBody: untyped): untyped =
-      var ret = newStmtList()
-      ret.add quote do:
-        echo "routes "
-      ret[0].add(newLit(newAppId(AppRoutes)))
+      var ret = newStmtList quote do:
+        echo "routes ", newAppId(AppRoutes)
       ret.add(routesBody)
       ret
 
