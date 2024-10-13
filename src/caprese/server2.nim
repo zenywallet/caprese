@@ -60,7 +60,8 @@ template parseServers*(serverBody: untyped) =
         echo "post ", newAppId(AppPost)
 
     macro serverBodyMacro(): untyped =
-      serverBody
+      var parseServerBody = serverBody.copy()
+      parseServerBody
     serverBodyMacro()
 
   parseBody()
@@ -82,3 +83,31 @@ template parseServers*(serverBody: untyped) =
       whackaMole: bool
 
     Client = ptr ClientObj
+
+  proc extractBody() =
+    macro addServer(bindAddress: string, port: uint16, unix: bool, ssl: bool, body: untyped): untyped =
+      var ret = newStmtList quote do:
+        echo "server"
+      ret.add(body)
+      ret
+
+    macro routes(routesBody: untyped): untyped =
+      var ret = newStmtList quote do:
+        echo "routes"
+      ret.add(routesBody)
+      ret
+
+    macro get(url: string, getBody: untyped): untyped =
+      quote do:
+        echo "get"
+
+    macro post(url: string, postBody: untyped): untyped =
+      quote do:
+        echo "post"
+
+    macro serverBodyMacro(): untyped =
+      var extractServerBody = serverBody.copy()
+      extractServerBody
+    serverBodyMacro()
+
+  extractBody()
