@@ -16,12 +16,12 @@ type
 var curAppId {.compileTime.} = 1
 var appIdTypeList {.compileTime.} = @[AppEmpty, AppAbort]
 
-macro newAppId(appType: static AppType): int =
+proc newAppId(appType: static AppType): int =
   appIdTypeList.add(appType)
   inc(curAppId)
   echo "newAppId: appId=", curAppId, " appType=", appType
   echo "appIdTypeList=", appIdTypeList, " "
-  newLit(curAppId)
+  curAppId
 
 macro genAppIdEnum(): untyped =
   var appIdEnum = nnkTypeSection.newTree(
