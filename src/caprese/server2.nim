@@ -1,6 +1,7 @@
 # Copyright (c) 2024 zenywallet
 
 import std/macros
+import std/epoll
 
 echo "welcome server2!"
 
@@ -83,6 +84,9 @@ template parseServers*(serverBody: untyped) =
       whackaMole: bool
 
     Client = ptr ClientObj
+
+  var epfd: cint = epoll_create1(O_CLOEXEC)
+  if epfd < 0: raise
 
   proc extractBody() =
     macro addServer(bindAddress: string, port: uint16, unix: bool, ssl: bool, body: untyped): untyped =
