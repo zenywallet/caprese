@@ -91,6 +91,9 @@ template parseServers*(serverBody: untyped) =
   var epfd: cint = epoll_create1(O_CLOEXEC)
   if epfd < 0: raise
 
+  var sockCtl = createNativeSocket()
+  if sockCtl == osInvalidSocket: raise
+
   proc extractBody() =
     macro addServer(bindAddress {.inject.}: string, port {.inject.}: uint16, unix: bool, ssl: bool, body: untyped): untyped =
       var appId {.inject.} = ident("AppId2_AppListen")
@@ -144,3 +147,7 @@ template parseServers*(serverBody: untyped) =
     serverBodyMacro()
 
   extractBody()
+
+  var retSockCtlClose = sockCtl.cint.close()
+  if retSockCtlClose != 0:
+    echo "error: close sockCtl"
