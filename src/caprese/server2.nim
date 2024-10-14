@@ -89,9 +89,9 @@ template parseServers*(serverBody: untyped) =
   if epfd < 0: raise
 
   proc extractBody() =
-    macro addServer(bindAddress: string, port: uint16, unix: bool, ssl: bool, body: untyped): untyped =
+    macro addServer(bindAddress {.inject.}: string, port {.inject.}: uint16, unix: bool, ssl: bool, body: untyped): untyped =
       var ret = newStmtList quote do:
-        echo "server"
+        echo "server: ", `bindAddress`, ":", `port`
       ret.add(body)
       ret
 
