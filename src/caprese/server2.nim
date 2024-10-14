@@ -2,6 +2,9 @@
 
 import std/macros
 import std/epoll
+import std/nativesockets
+import std/posix
+import std/options
 
 echo "welcome server2!"
 
@@ -90,8 +93,34 @@ template parseServers*(serverBody: untyped) =
 
   proc extractBody() =
     macro addServer(bindAddress {.inject.}: string, port {.inject.}: uint16, unix: bool, ssl: bool, body: untyped): untyped =
+      var appId {.inject.} = ident("AppId2_AppListen")
+
       var ret = newStmtList quote do:
         echo "server: ", `bindAddress`, ":", `port`
+
+        var aiList: ptr AddrInfo = nativesockets.getAddrInfo(`bindAddress`, `port`.Port, Domain.AF_UNSPEC)
+        let domain = aiList.ai_family.toKnownDomain.get
+        let sock = createNativeSocket(domain)
+        if sock == osInvalidSocket: raise
+        var optval = 1.cint
+        if sock.setsockopt(SOL_SOCKET.cint, SO_REUSEADDR.cint, addr optval, sizeof(optval).SockLen) < 0:
+          raise
+
+        let retBind = sock.bindAddr(aiList.ai_addr, aiList.ai_addrlen.SockLen)
+        if retBind < 0: raise
+        freeaddrinfo(aiList)
+        let retListen = sock.listen()
+        if retListen < 0: raise
+        sock.setBlocking(false)
+
+        var listenObj: ClientObj
+        listenObj.sock = sock
+        listenObj.appId = `appId`
+        listenObj.ev.events = EPOLLIN or EPOLLET
+        listenObj.ev.data = cast[EpollData](addr listenObj)
+        var retCtl = epoll_ctl(epfd, EPOLL_CTL_ADD, sock, addr listenObj.ev)
+        if retCtl != 0: raise
+
       ret.add(body)
       ret
 
