@@ -151,3 +151,7 @@ template parseServers*(serverBody: untyped) =
   var retSockCtlClose = sockCtl.cint.close()
   if retSockCtlClose != 0:
     echo "error: close sockCtl"
+
+  var retEpfdClose = epfd.close()
+  if retEpfdClose != 0:
+    echo "error: close epfd"
