@@ -5,6 +5,7 @@ import std/epoll
 import std/nativesockets
 import std/posix
 import std/options
+import std/cpuinfo
 
 echo "welcome server2!"
 
@@ -170,6 +171,42 @@ template parseServers*(serverBody: untyped) =
     serverBodyMacro()
 
   extractBody()
+
+  type
+    ThreadArgType {.pure.} = enum
+      Void
+      ThreadId
+
+    ThreadArg = object
+      case argType: ThreadArgType
+      of ThreadArgType.Void:
+        discard
+      of ThreadArgType.ThreadId:
+        threadId: int
+
+    WrapperThreadArg = tuple[threadProc: proc (arg: ThreadArg) {.thread.}, threadArg: ThreadArg]
+
+  proc threadWrapper(wrapperArg: WrapperThreadArg) {.thread.} =
+    try:
+      wrapperArg.threadProc(wrapperArg.threadArg)
+    except:
+      let e = getCurrentException()
+      echo e.name, ": ", e.msg
+
+  template createThreadWrapper(t: var Thread[WrapperThreadArg]; threadProc: proc (arg: ThreadArg) {.thread.}; threadArg: ThreadArg) =
+    createThread(t, threadWrapper, (threadProc, threadArg))
+
+  proc serverWorker(arg: ThreadArg) {.thread.} =
+    echo "serverWorker ", arg.threadId
+
+  let cpuCount = countProcessors()
+  var serverWorkerNum = when cfg.serverWorkerNum < 0: cpuCount else: cfg.serverWorkerNum
+  echo "server workers: ", serverWorkerNum, "/", cpuCount
+
+  var threads = newSeq[Thread[WrapperThreadArg]](serverWorkerNum)
+  for i in 0..<serverWorkerNum:
+    createThreadWrapper(threads[i], serverWorker, ThreadArg(argType: ThreadArgType.ThreadId, threadId: i))
+  joinThreads(threads)
 
   var retSockCtlClose = sockCtl.cint.close()
   if retSockCtlClose != 0:
