@@ -94,6 +94,13 @@ template parseServers*(serverBody: untyped) =
   var sockCtl = createNativeSocket()
   if sockCtl == osInvalidSocket: raise
 
+  var rcvBufRes: cint
+  var rcvBufSize = sizeof(rcvBufRes).SockLen
+  var retGetSockOpt = sockCtl.getsockopt(SOL_SOCKET.cint, SO_RCVBUF.cint, addr rcvBufRes, addr rcvBufSize)
+  if retGetSockOpt < 0: raise
+  var workerRecvBufSize = rcvBufRes.int
+  echo "workerRecvBufSize=", workerRecvBufSize
+
   proc extractBody() =
     macro addServer(bindAddress {.inject.}: string, port {.inject.}: uint16, unix: bool, ssl: bool, body: untyped): untyped =
       var appId {.inject.} = ident("AppId2_AppListen")
