@@ -101,6 +101,22 @@ template parseServers*(serverBody: untyped) =
   var workerRecvBufSize = rcvBufRes.int
   echo "workerRecvBufSize=", workerRecvBufSize
 
+  var abortClient: ClientObj
+  abortClient.sock = sockCtl
+  abortClient.appId = AppId1_AppAbort
+  abortClient.ev.events = EPOLLIN
+  abortClient.ev.data = cast[EpollData](addr abortClient)
+
+  proc abortServer() =
+    if epfd > 0:
+      var e = epoll_ctl(epfd, EPOLL_CTL_ADD, sockCtl.cint, addr abortClient.ev)
+      if e != 0:
+        echo "error: abort epoll"
+
+  onSignal(SIGINT, SIGTERM):
+    echo "bye from signal ", sig
+    abortServer()
+
   proc extractBody() =
     macro addServer(bindAddress {.inject.}: string, port {.inject.}: uint16, unix: bool, ssl: bool, body: untyped): untyped =
       var appId {.inject.} = ident("AppId2_AppListen")
