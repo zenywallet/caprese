@@ -198,6 +198,33 @@ template parseServers*(serverBody: untyped) =
 
   proc serverWorker(arg: ThreadArg) {.thread.} =
     echo "serverWorker ", arg.threadId
+    var events: array[cfg.epollEventsSize, EpollEvent]
+    template pevents: ptr UncheckedArray[EpollEvent] = cast[ptr UncheckedArray[EpollEvent]](addr events)
+    var nfd: cint
+    var nfdCond: bool
+    var evIdx: int
+    var client {.inject.}: Client
+
+    template nextEv() =
+      inc(evIdx); if evIdx >= nfd: break
+
+    block WaitLoop:
+      while true:
+        nfd = epoll_wait(epfd, cast[ptr EpollEvent](addr events), cfg.epollEventsSize.cint, -1.cint)
+        nfdCond = likely(nfd > 0)
+        if nfdCond:
+          evIdx = 0
+          while true:
+            client = cast[Client](pevents[evIdx].data)
+            #{.computedGoto.}
+            case client.appId
+            of AppId0_AppEmpty:
+              nextEv()
+            of AppId1_AppAbort:
+              echo "AppAbort"
+              break WaitLoop
+            else:
+              nextEv()
 
   let cpuCount = countProcessors()
   var serverWorkerNum = when cfg.serverWorkerNum < 0: cpuCount else: cfg.serverWorkerNum
