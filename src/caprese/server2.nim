@@ -266,6 +266,25 @@ template parseServers*(serverBody: untyped) =
   macro AppListenMacro(appId {.inject.}: AppId): untyped =
     quote do:
       echo `appId`
+      while true:
+        let clientSock = client.sock.accept4(cast[ptr SockAddr](addr sockAddress), addr addrLen, O_NONBLOCK)
+        if cast[int](clientSock) > 0:
+          if clientSock.setsockopt(Protocol.IPPROTO_TCP.cint, TCP_NODELAY.cint, addr optval, sizeof(optval).SockLen) < 0:
+            raise
+          while true:
+            var newClient = clientFreePool.pop()
+            if not newClient.isNil:
+              newClient.sock = clientSock
+              newClient.appId = (client.appId.ord + 1).AppId
+              let e = epoll_ctl(epfd, EPOLL_CTL_ADD, clientSock.cint, addr newClient.ev)
+              if e != 0: raise
+              break
+            if clientFreePool.count == 0:
+              var retClose = clientSock.cint.close()
+              if retClose != 0: raise
+              break
+        else:
+          break
 
   macro AppRoutesMacro(appId {.inject.}: AppId): untyped =
     quote do:
@@ -287,6 +306,8 @@ template parseServers*(serverBody: untyped) =
     var nfdCond: bool
     var evIdx: int
     var client {.inject.}: Client
+    var sockAddress {.inject.}: Sockaddr_in
+    var addrLen {.inject.}: SockLen = sizeof(sockAddress).SockLen
 
     template nextEv() =
       inc(evIdx); if evIdx >= nfd: break
