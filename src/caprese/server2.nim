@@ -142,6 +142,29 @@ template parseServers*(serverBody: untyped) =
 
   var optval = 1.cint
 
+  macro listenCountMacro(): untyped =
+    var listenCount = 0
+    for appType in appIdTypeList:
+      if appType == AppListen:
+        inc(listenCount)
+    newLit(listenCount)
+  const listenCount = listenCountMacro()
+
+  var listenServers = cast[ptr UncheckedArray[ClientObj]](allocShared0(sizeof(ClientObj) * listenCount))
+  for i in 0..<listenCount:
+    var listenServer = addr listenServers[i]
+    listenServer.sock = osInvalidSocket
+    listenServer.appId = AppId0_AppEmpty
+    listenServer.ev.events = EPOLLIN or EPOLLET
+    listenServer.ev.data = cast[EpollData](listenServer)
+    listenServer.ev2.events = EPOLLIN or EPOLLEXCLUSIVE
+    listenServer.ev2.data = cast[EpollData](listenServer)
+    listenServer.sendBuf = nil
+    listenServer.sendPos = nil
+    listenServer.sendLen = 0
+    listenServer.threadId = -1
+    listenServer.whackaMole = false
+
   proc extractBody() =
     macro addServer(bindAddress {.inject.}: string, port {.inject.}: uint16, unix: bool, ssl: bool, body: untyped): untyped =
       var appId {.inject.} = ident("AppId2_AppListen")
@@ -163,12 +186,9 @@ template parseServers*(serverBody: untyped) =
         if retListen < 0: raise
         sock.setBlocking(false)
 
-        var listenObj: ClientObj
-        listenObj.sock = sock
-        listenObj.appId = `appId`
-        listenObj.ev.events = EPOLLIN or EPOLLET
-        listenObj.ev.data = cast[EpollData](addr listenObj)
-        var retCtl = epoll_ctl(epfd, EPOLL_CTL_ADD, sock, addr listenObj.ev)
+        listenServers[0].sock = sock
+        listenServers[0].appId = `appId`
+        var retCtl = epoll_ctl(epfd, EPOLL_CTL_ADD, sock, addr listenServers[0].ev)
         if retCtl != 0: raise
 
       ret.add(body)
