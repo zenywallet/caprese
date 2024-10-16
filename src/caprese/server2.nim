@@ -219,6 +219,66 @@ template parseServers*(serverBody: untyped) =
   template createThreadWrapper(t: var Thread[WrapperThreadArg]; threadProc: proc (arg: ThreadArg) {.thread.}; threadArg: ThreadArg) =
     createThread(t, threadWrapper, (threadProc, threadArg))
 
+  macro appCaseBody(abortBlock {.inject.}: typed): untyped =
+    var ret = nnkCaseStmt.newTree(
+      nnkDotExpr.newTree(
+        newIdentNode("client"),
+        newIdentNode("appId")
+      )
+    )
+    for i, appType in appIdTypeList:
+      echo "#", i.AppId, " ", $appType
+      var appStmt = if appType == AppAbort:
+        nnkStmtList.newTree(
+          nnkCall.newTree(
+            newIdentNode($appType & "Macro"),
+            newIdentNode($i.AppId),
+            abortBlock
+          )
+        )
+      else:
+        nnkStmtList.newTree(
+          nnkCall.newTree(
+            newIdentNode($appType & "Macro"),
+            newIdentNode($i.AppId)
+          ),
+          nnkCall.newTree(
+            newIdentNode("nextEv")
+          )
+        )
+      ret.add nnkOfBranch.newTree(
+        newIdentNode($i.AppId),
+        appStmt
+      )
+
+    echo "ret=", ret.astGenRepr
+    ret
+
+  macro AppEmptyMacro(appId {.inject.}: AppId): untyped =
+    quote do:
+      echo `appId`
+
+  macro AppAbortMacro(appId {.inject.}: AppId, abortBlock {.inject.}: typed): untyped =
+    quote do:
+      echo `appId`
+      break `abortBlock`
+
+  macro AppListenMacro(appId {.inject.}: AppId): untyped =
+    quote do:
+      echo `appId`
+
+  macro AppRoutesMacro(appId {.inject.}: AppId): untyped =
+    quote do:
+      echo `appId`
+
+  macro AppGetMacro(appId {.inject.}: AppId): untyped =
+    quote do:
+      echo `appId`
+
+  macro AppPostMacro(appId {.inject.}: AppId): untyped =
+    quote do:
+      echo `appId`
+
   proc serverWorker(arg: ThreadArg) {.thread.} =
     echo "serverWorker ", arg.threadId
     var events: array[cfg.epollEventsSize, EpollEvent]
@@ -239,15 +299,8 @@ template parseServers*(serverBody: untyped) =
           evIdx = 0
           while true:
             client = cast[Client](pevents[evIdx].data)
-            #{.computedGoto.}
-            case client.appId
-            of AppId0_AppEmpty:
-              nextEv()
-            of AppId1_AppAbort:
-              echo "AppAbort"
-              break WaitLoop
-            else:
-              nextEv()
+            {.computedGoto.}
+            appCaseBody(abortBlock = WaitLoop)
 
   let cpuCount = countProcessors()
   var serverWorkerNum = when cfg.serverWorkerNum < 0: cpuCount else: cfg.serverWorkerNum
