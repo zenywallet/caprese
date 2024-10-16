@@ -120,6 +120,8 @@ template parseServers*(serverBody: untyped) =
 
   when cfg.sigPipeIgnore: signal(SIGPIPE, SIG_IGN)
 
+  var optval = 1.cint
+
   proc extractBody() =
     macro addServer(bindAddress {.inject.}: string, port {.inject.}: uint16, unix: bool, ssl: bool, body: untyped): untyped =
       var appId {.inject.} = ident("AppId2_AppListen")
@@ -131,7 +133,6 @@ template parseServers*(serverBody: untyped) =
         let domain = aiList.ai_family.toKnownDomain.get
         let sock = createNativeSocket(domain)
         if sock == osInvalidSocket: raise
-        var optval = 1.cint
         if sock.setsockopt(SOL_SOCKET.cint, SO_REUSEADDR.cint, addr optval, sizeof(optval).SockLen) < 0:
           raise
 
