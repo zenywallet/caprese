@@ -118,6 +118,8 @@ template parseServers*(serverBody: untyped) =
     echo "bye from signal ", sig
     abortServer()
 
+  when cfg.sigPipeIgnore: signal(SIGPIPE, SIG_IGN)
+
   proc extractBody() =
     macro addServer(bindAddress {.inject.}: string, port {.inject.}: uint16, unix: bool, ssl: bool, body: untyped): untyped =
       var appId {.inject.} = ident("AppId2_AppListen")
