@@ -6,6 +6,7 @@ import std/nativesockets
 import std/posix
 import std/options
 import std/cpuinfo
+import queue2
 
 echo "welcome server2!"
 
@@ -88,6 +89,25 @@ template parseServers*(serverBody: untyped) =
       whackaMole: bool
 
     Client = ptr ClientObj
+
+  var clients = cast[ptr UncheckedArray[ClientObj]](allocShared0(sizeof(ClientObj) * cfg.clientMax))
+  var clientFreePool = queue2.newQueue[Client]()
+
+  for i in 0..<cfg.clientMax:
+    var client = addr clients[i]
+    client.sock = osInvalidSocket
+    client.appId = AppId0_AppEmpty
+    client.ev.events = EPOLLIN or EPOLLRDHUP or EPOLLET
+    client.ev.data = cast[EpollData](client)
+    client.ev2.events = EPOLLRDHUP or EPOLLET or EPOLLOUT
+    client.ev2.data = cast[EpollData](client)
+    client.sendBuf = nil
+    client.sendPos = nil
+    client.sendLen = 0
+    client.threadId = -1
+    client.whackaMole = false
+    var retAddFreePool = clientFreePool.add(client)
+    if not retAddFreePool: raise
 
   var epfd: cint = epoll_create1(O_CLOEXEC)
   if epfd < 0: raise
@@ -245,3 +265,5 @@ template parseServers*(serverBody: untyped) =
   var retEpfdClose = epfd.close()
   if retEpfdClose != 0:
     echo "error: close epfd"
+
+  clients.deallocShared()
