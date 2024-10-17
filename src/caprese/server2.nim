@@ -367,6 +367,11 @@ template parseServers*(serverBody: untyped) =
     createThreadWrapper(threads[i], serverWorker, ThreadArg(argType: ThreadArgType.ThreadId, threadId: i))
   joinThreads(threads)
 
+  for i in 0..<listenCount:
+    var listenServer = addr listenServers[i]
+    var retlistenServerClose = listenServer.sock.cint.close()
+    if retlistenServerClose != 0:
+      echo "error: listen server close #", i
   listenServers.deallocShared()
 
   var retSockCtlClose = sockCtl.cint.close()
