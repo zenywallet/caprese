@@ -165,12 +165,16 @@ template parseServers*(serverBody: untyped) =
     listenServer.threadId = -1
     listenServer.whackaMole = false
 
+  var curSrvId {.compileTime.} = 0
+
   proc extractBody() =
     macro addServer(bindAddress {.inject.}: string, port {.inject.}: uint16, unix: bool, ssl: bool, body: untyped): untyped =
       var appId {.inject.} = ident("AppId2_AppListen")
+      var srvId {.inject.} = curSrvId
+      inc(curSrvId)
 
       var ret = newStmtList quote do:
-        echo "server: ", `bindAddress`, ":", `port`
+        echo "server: ", `bindAddress`, ":", `port`, " srvId=", `srvId`
 
         var aiList: ptr AddrInfo = nativesockets.getAddrInfo(`bindAddress`, `port`.Port, Domain.AF_UNSPEC)
         let domain = aiList.ai_family.toKnownDomain.get
@@ -186,9 +190,9 @@ template parseServers*(serverBody: untyped) =
         if retListen < 0: raise
         sock.setBlocking(false)
 
-        listenServers[0].sock = sock
-        listenServers[0].appId = `appId`
-        var retCtl = epoll_ctl(epfd, EPOLL_CTL_ADD, sock, addr listenServers[0].ev)
+        listenServers[`srvId`].sock = sock
+        listenServers[`srvId`].appId = `appId`
+        var retCtl = epoll_ctl(epfd, EPOLL_CTL_ADD, sock, addr listenServers[`srvId`].ev)
         if retCtl != 0: raise
 
       ret.add(body)
