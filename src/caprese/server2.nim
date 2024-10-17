@@ -32,7 +32,18 @@ proc newAppId(appType: static AppType): int =
 macro genAppIdEnum(): untyped =
   var appIdEnum = nnkTypeSection.newTree(
     nnkTypeDef.newTree(
-      newIdentNode("AppId"),
+      nnkPragmaExpr.newTree(
+        newIdentNode("AppId"),
+        nnkPragma.newTree(
+          nnkExprColonExpr.newTree(
+            newIdentNode("size"),
+            nnkCall.newTree(
+              newIdentNode("sizeof"),
+              newIdentNode("cint")
+            )
+          )
+        )
+      ),
       newEmptyNode(),
       nnkEnumTy.newTree(
         newEmptyNode()
@@ -299,7 +310,7 @@ template parseServers*(serverBody: untyped) =
             var newClient = clientFreePool.pop()
             if not newClient.isNil:
               newClient.sock = clientSock
-              newClient.appId = (client.appId.ord + 1).AppId
+              newClient.appId = (client.appId.cint + 1).AppId
               let e = epoll_ctl(epfd, EPOLL_CTL_ADD, clientSock.cint, addr newClient.ev)
               if e != 0: raise
               break
