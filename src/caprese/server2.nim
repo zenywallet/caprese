@@ -367,6 +367,8 @@ template parseServers*(serverBody: untyped) =
     createThreadWrapper(threads[i], serverWorker, ThreadArg(argType: ThreadArgType.ThreadId, threadId: i))
   joinThreads(threads)
 
+  listenServers.deallocShared()
+
   var retSockCtlClose = sockCtl.cint.close()
   if retSockCtlClose != 0:
     echo "error: close sockCtl"
