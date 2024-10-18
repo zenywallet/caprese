@@ -120,6 +120,18 @@ template parseServers*(serverBody: untyped) =
     var retAddFreePool = clientFreePool.add(client)
     if not retAddFreePool: raise
 
+  proc close(client: Client) {.inline.} =
+    var retClose = client.sock.cint.close()
+    if retClose != 0: raise
+    if not client.sendBuf.isNil:
+      client.sendBuf.deallocShared()
+      client.sendBuf = nil
+      client.sendPos = nil
+      client.sendLen = 0
+    client.whackaMole = false
+    client.sock = osInvalidSocket
+    clientFreePool.addSafe(client)
+
   var epfd: cint = epoll_create1(O_CLOEXEC)
   if epfd < 0: raise
 
