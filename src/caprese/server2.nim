@@ -234,13 +234,17 @@ template parseServers*(serverBody: untyped) =
       ret.add(routesBody)
       newEmptyNode()
 
-    macro get(url: string, getBody: untyped): untyped =
+    macro get(url {.inject.}: string, getBody {.inject.}: untyped): untyped =
       quote do:
-        echo "get"
+        if `url`.len > 0:
+          echo "get"
+          `getBody`
 
-    macro post(url: string, postBody: untyped): untyped =
+    macro post(url {.inject.}: string, postBody {.inject.}: untyped): untyped =
       quote do:
-        echo "post"
+        if `url`.len > 0:
+          echo "post"
+          `postBody`
 
     proc send(data: seq[byte] | string | Array[byte]): SendResult {.discardable.} =
       echo "send data.len=", data.len
