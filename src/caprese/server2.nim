@@ -242,6 +242,10 @@ template parseServers*(serverBody: untyped) =
       quote do:
         echo "post"
 
+    proc send(data: seq[byte] | string | Array[byte]): SendResult {.discardable.} =
+      echo "send data.len=", data.len
+      SendResult.Success
+
     macro serverBodyMacro(): untyped =
       var extractServerBody = serverBody.copy()
       extractServerBody
