@@ -192,9 +192,8 @@ template parseServers*(serverBody: untyped) =
 
   proc extractBody() =
     macro addServer(bindAddress {.inject.}: string, port {.inject.}: uint16, unix: bool, ssl: bool, body: untyped): untyped =
+      var srvId {.inject.} = curSrvId; inc(curSrvId)
       var appId {.inject.} = ident("AppId2_AppListen")
-      var srvId {.inject.} = curSrvId
-      inc(curSrvId)
 
       var ret = newStmtList quote do:
         echo "server: ", `bindAddress`, ":", `port`, " srvId=", `srvId`
