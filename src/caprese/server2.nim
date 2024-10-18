@@ -189,6 +189,13 @@ template parseServers*(serverBody: untyped) =
     listenServer.whackaMole = false
 
   var curSrvId {.compileTime.} = 0
+  var curRoutesId {.compileTime.} = 0
+  var routesBodyList {.compileTime.}: seq[NimNode]
+
+  macro getRoutesBody(): untyped =
+    var ret = routesBodyList[curRoutesId]
+    inc(curRoutesId)
+    ret
 
   var listenAppIdList {.compileTime.}: seq[AppId]
   macro listenAppIdMacro() =
@@ -232,6 +239,7 @@ template parseServers*(serverBody: untyped) =
       var ret = newStmtList quote do:
         echo "routes"
       ret.add(routesBody)
+      routesBodyList.add(ret)
       newEmptyNode()
 
     macro get(url {.inject.}: string, getBody {.inject.}: untyped): untyped =
@@ -351,6 +359,7 @@ template parseServers*(serverBody: untyped) =
   macro AppRoutesMacro(appId {.inject.}: AppId): untyped =
     quote do:
       echo `appId`
+      getRoutesBody()
 
   macro AppGetMacro(appId {.inject.}: AppId): untyped =
     quote do:
