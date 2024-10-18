@@ -232,7 +232,7 @@ template parseServers*(serverBody: untyped) =
       var ret = newStmtList quote do:
         echo "routes"
       ret.add(routesBody)
-      ret
+      newEmptyNode()
 
     macro get(url: string, getBody: untyped): untyped =
       quote do:
