@@ -190,10 +190,18 @@ template parseServers*(serverBody: untyped) =
 
   var curSrvId {.compileTime.} = 0
 
+  var listenAppIdList {.compileTime.}: seq[AppId]
+  macro listenAppIdMacro() =
+    for i, appType in appIdTypeList:
+      if appType == AppListen:
+        listenAppIdList.add(i.AppId)
+    echo "listenAppIdList=", listenAppIdList
+  listenAppIdMacro()
+
   proc extractBody() =
     macro addServer(bindAddress {.inject.}: string, port {.inject.}: uint16, unix: bool, ssl: bool, body: untyped): untyped =
       var srvId {.inject.} = curSrvId; inc(curSrvId)
-      var appId {.inject.} = ident("AppId2_AppListen")
+      var appId {.inject.} = ident($listenAppIdList[srvId])
 
       var ret = newStmtList quote do:
         echo "server: ", `bindAddress`, ":", `port`, " srvId=", `srvId`
