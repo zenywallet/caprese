@@ -1,17 +1,11 @@
 # Copyright (c) 2024 zenywallet
 
 import std/macros
-import std/epoll
-import std/nativesockets
-import std/posix
-import std/options
-import std/cpuinfo
-import queue2
 
 echo "welcome server2!"
 
 type
-  AppType = enum
+  AppType2* = enum
     AppEmpty
     AppAbort
     AppListen
@@ -20,16 +14,16 @@ type
     AppPost
 
 var curAppId {.compileTime.} = 1
-var appIdTypeList {.compileTime.} = @[AppEmpty, AppAbort]
+var appIdTypeList2* {.compileTime.} = @[AppType2.AppEmpty, AppType2.AppAbort]
 
-proc newAppId(appType: static AppType): int =
-  appIdTypeList.add(appType)
+proc newAppId*(appType: static AppType2): int =
+  appIdTypeList2.add(appType)
   inc(curAppId)
   echo "newAppId: appId=", curAppId, " appType=", appType
-  echo "appIdTypeList=", appIdTypeList, " "
+  echo "appIdTypeList2=", appIdTypeList2, " "
   curAppId
 
-macro genAppIdEnum(): untyped =
+macro genAppIdEnum*(): untyped =
   var appIdEnum = nnkTypeSection.newTree(
     nnkTypeDef.newTree(
       nnkPragmaExpr.newTree(
@@ -50,27 +44,30 @@ macro genAppIdEnum(): untyped =
       )
     )
   )
-  for i, appType in appIdTypeList:
+  for i, appType in appIdTypeList2:
     appIdEnum[0][2].add(ident("AppId" & $i & "_" & $appType))
   appIdEnum
 
-template parseServers*(serverBody: untyped) =
+template parseServers*(serverBody: untyped) {.dirty.} =
+  import std/options
+  import std/cpuinfo
+
   macro parseBody() =
     macro addServer(bindAddress: string, port: uint16, unix: bool, ssl: bool, body: untyped): untyped =
       var ret = newStmtList quote do:
-        echo "server ", newAppId(AppListen)
+        echo "server ", newAppId(AppType2.AppListen)
       ret.add(body)
       ret
 
     macro routes(routesBody: untyped): untyped =
       var ret = newStmtList quote do:
-        echo "routes ", newAppId(AppRoutes)
+        echo "routes ", newAppId(AppType2.AppRoutes)
       ret.add(routesBody)
       ret
 
     macro get(url: string, getBody: untyped): untyped =
       quote do:
-        echo "get ", newAppId(AppGet)
+        echo "get ", newAppId(AppType2.AppGet)
 
     macro post(url: string, postBody: untyped): untyped =
       quote do:
@@ -88,7 +85,7 @@ template parseServers*(serverBody: untyped) =
     echo a
 
   type
-    ClientObj = object
+    ClientObj2 = object
       sock: SocketHandle
       appId: AppId
       ev: EpollEvent
@@ -99,13 +96,13 @@ template parseServers*(serverBody: untyped) =
       threadId: int
       whackaMole: bool
 
-    Client = ptr ClientObj
+    Client2 = ptr ClientObj2
 
-  var clients = cast[ptr UncheckedArray[ClientObj]](allocShared0(sizeof(ClientObj) * cfg.clientMax))
-  var clientFreePool = queue2.newQueue[Client]()
+  var clients2 = cast[ptr UncheckedArray[ClientObj2]](allocShared0(sizeof(ClientObj2) * cfg.clientMax))
+  var clientFreePool2 = queue2.newQueue[Client2]()
 
   for i in 0..<cfg.clientMax:
-    var client = addr clients[i]
+    var client = addr clients2[i]
     client.sock = osInvalidSocket
     client.appId = AppId0_AppEmpty
     client.ev.events = EPOLLIN or EPOLLRDHUP or EPOLLET
@@ -117,10 +114,10 @@ template parseServers*(serverBody: untyped) =
     client.sendLen = 0
     client.threadId = -1
     client.whackaMole = false
-    var retAddFreePool = clientFreePool.add(client)
+    var retAddFreePool = clientFreePool2.add(client)
     if not retAddFreePool: raise
 
-  proc close(client: Client) {.inline.} =
+  proc close(client: Client2) {.inline.} =
     var retClose = client.sock.cint.close()
     if retClose != 0: raise
     if not client.sendBuf.isNil:
@@ -130,7 +127,7 @@ template parseServers*(serverBody: untyped) =
       client.sendLen = 0
     client.whackaMole = false
     client.sock = osInvalidSocket
-    clientFreePool.addSafe(client)
+    clientFreePool2.addSafe(client)
 
   var epfd: cint = epoll_create1(O_CLOEXEC)
   if epfd < 0: raise
@@ -145,7 +142,7 @@ template parseServers*(serverBody: untyped) =
   var workerRecvBufSize = rcvBufRes.int
   echo "workerRecvBufSize=", workerRecvBufSize
 
-  var abortClient: ClientObj
+  var abortClient: ClientObj2
   abortClient.sock = sockCtl
   abortClient.appId = AppId1_AppAbort
   abortClient.ev.events = EPOLLIN
@@ -167,13 +164,13 @@ template parseServers*(serverBody: untyped) =
 
   macro listenCountMacro(): untyped =
     var listenCount = 0
-    for appType in appIdTypeList:
-      if appType == AppListen:
+    for appType in appIdTypeList2:
+      if appType == AppType2.AppListen:
         inc(listenCount)
     newLit(listenCount)
   const listenCount = listenCountMacro()
 
-  var listenServers = cast[ptr UncheckedArray[ClientObj]](allocShared0(sizeof(ClientObj) * listenCount))
+  var listenServers = cast[ptr UncheckedArray[ClientObj2]](allocShared0(sizeof(ClientObj2) * listenCount))
   for i in 0..<listenCount:
     var listenServer = addr listenServers[i]
     listenServer.sock = osInvalidSocket
@@ -199,16 +196,16 @@ template parseServers*(serverBody: untyped) =
 
   var listenAppIdList {.compileTime.}: seq[AppId]
   macro listenAppIdMacro() =
-    for i, appType in appIdTypeList:
-      if appType == AppListen:
+    for i, appType in appIdTypeList2:
+      if appType == AppType2.AppListen:
         listenAppIdList.add(i.AppId)
     echo "listenAppIdList=", listenAppIdList
   listenAppIdMacro()
 
   proc extractBody() =
-    macro addServer(bindAddress {.inject.}: string, port {.inject.}: uint16, unix: bool, ssl: bool, body: untyped): untyped =
-      var srvId {.inject.} = curSrvId; inc(curSrvId)
-      var appId {.inject.} = ident($listenAppIdList[srvId])
+    macro addServer(bindAddress: string, port: uint16, unix: bool, ssl: bool, body: untyped): untyped =
+      var srvId = curSrvId; inc(curSrvId)
+      var appId = ident($listenAppIdList[srvId])
 
       var ret = newStmtList quote do:
         echo "server: ", `bindAddress`, ":", `port`, " srvId=", `srvId`
@@ -242,13 +239,13 @@ template parseServers*(serverBody: untyped) =
       routesBodyList.add(ret)
       newEmptyNode()
 
-    macro get(url {.inject.}: string, getBody {.inject.}: untyped): untyped =
+    macro get(url: string, getBody: untyped): untyped =
       quote do:
         if `url`.len > 0:
           echo "get"
           `getBody`
 
-    macro post(url {.inject.}: string, postBody {.inject.}: untyped): untyped =
+    macro post(url: string, postBody: untyped): untyped =
       quote do:
         if `url`.len > 0:
           echo "post"
@@ -289,14 +286,14 @@ template parseServers*(serverBody: untyped) =
   template createThreadWrapper(t: var Thread[WrapperThreadArg]; threadProc: proc (arg: ThreadArg) {.thread.}; threadArg: ThreadArg) =
     createThread(t, threadWrapper, (threadProc, threadArg))
 
-  macro appCaseBody(abortBlock {.inject.}: typed): untyped =
+  macro appCaseBody(abortBlock: typed): untyped =
     var ret = nnkCaseStmt.newTree(
       nnkDotExpr.newTree(
         newIdentNode("client"),
         newIdentNode("appId")
       )
     )
-    for i, appType in appIdTypeList:
+    for i, appType in appIdTypeList2:
       echo "#", i.AppId, " ", $appType
       var appStmt = if appType == AppAbort:
         nnkStmtList.newTree(
@@ -324,16 +321,16 @@ template parseServers*(serverBody: untyped) =
     echo "ret=", ret.astGenRepr
     ret
 
-  macro AppEmptyMacro(appId {.inject.}: AppId): untyped =
+  macro AppEmptyMacro(appId: AppId): untyped =
     quote do:
       echo `appId`
 
-  macro AppAbortMacro(appId {.inject.}: AppId, abortBlock {.inject.}: typed): untyped =
+  macro AppAbortMacro(appId: AppId, abortBlock: typed): untyped =
     quote do:
       echo `appId`
       break `abortBlock`
 
-  macro AppListenMacro(appId {.inject.}: AppId): untyped =
+  macro AppListenMacro(appId: AppId): untyped =
     quote do:
       echo `appId`
       while true:
@@ -342,30 +339,30 @@ template parseServers*(serverBody: untyped) =
           if clientSock.setsockopt(Protocol.IPPROTO_TCP.cint, TCP_NODELAY.cint, addr optval, sizeof(optval).SockLen) < 0:
             raise
           while true:
-            var newClient = clientFreePool.pop()
+            var newClient = clientFreePool2.pop()
             if not newClient.isNil:
               newClient.sock = clientSock
               newClient.appId = (client.appId.cint + 1).AppId
               let e = epoll_ctl(epfd, EPOLL_CTL_ADD, clientSock.cint, addr newClient.ev)
               if e != 0: raise
               break
-            if clientFreePool.count == 0:
+            if clientFreePool2.count == 0:
               var retClose = clientSock.cint.close()
               if retClose != 0: raise
               break
         else:
           break
 
-  macro AppRoutesMacro(appId {.inject.}: AppId): untyped =
+  macro AppRoutesMacro(appId: AppId): untyped =
     quote do:
       echo `appId`
       getRoutesBody()
 
-  macro AppGetMacro(appId {.inject.}: AppId): untyped =
+  macro AppGetMacro(appId: AppId): untyped =
     quote do:
       echo `appId`
 
-  macro AppPostMacro(appId {.inject.}: AppId): untyped =
+  macro AppPostMacro(appId: AppId): untyped =
     quote do:
       echo `appId`
 
@@ -376,9 +373,9 @@ template parseServers*(serverBody: untyped) =
     var nfd: cint
     var nfdCond: bool
     var evIdx: int
-    var client {.inject.}: Client
-    var sockAddress {.inject.}: Sockaddr_in
-    var addrLen {.inject.}: SockLen = sizeof(sockAddress).SockLen
+    var client: Client2
+    var sockAddress: Sockaddr_in
+    var addrLen: SockLen = sizeof(sockAddress).SockLen
 
     template nextEv() =
       inc(evIdx); if evIdx >= nfd: break
@@ -390,7 +387,7 @@ template parseServers*(serverBody: untyped) =
         if nfdCond:
           evIdx = 0
           while true:
-            client = cast[Client](pevents[evIdx].data)
+            client = cast[Client2](pevents[evIdx].data)
             {.computedGoto.}
             appCaseBody(abortBlock = WaitLoop)
 
@@ -418,4 +415,4 @@ template parseServers*(serverBody: untyped) =
   if retEpfdClose != 0:
     echo "error: close epfd"
 
-  clients.deallocShared()
+  clients2.deallocShared()
