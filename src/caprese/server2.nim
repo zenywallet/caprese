@@ -54,16 +54,14 @@ template parseServers*(serverBody: untyped) {.dirty.} =
 
   macro parseBody() =
     macro addServer(bindAddress: string, port: uint16, unix: bool, ssl: bool, body: untyped): untyped =
-      var ret = newStmtList quote do:
+      quote do:
         echo "server ", newAppId(AppType2.AppListen)
-      ret.add(body)
-      ret
+        `body`
 
     macro routes(routesBody: untyped): untyped =
-      var ret = newStmtList quote do:
+      quote do:
         echo "routes ", newAppId(AppType2.AppRoutes)
-      ret.add(routesBody)
-      ret
+        `routesBody`
 
     macro get(url: string, getBody: untyped): untyped =
       quote do:
@@ -207,7 +205,7 @@ template parseServers*(serverBody: untyped) {.dirty.} =
       var srvId = curSrvId; inc(curSrvId)
       var appId = ident($listenAppIdList[srvId])
 
-      var ret = newStmtList quote do:
+      quote do:
         echo "server: ", `bindAddress`, ":", `port`, " srvId=", `srvId`
 
         var aiList: ptr AddrInfo = nativesockets.getAddrInfo(`bindAddress`, `port`.Port, Domain.AF_UNSPEC)
@@ -229,14 +227,12 @@ template parseServers*(serverBody: untyped) {.dirty.} =
         var retCtl = epoll_ctl(epfd, EPOLL_CTL_ADD, sock, addr listenServers[`srvId`].ev)
         if retCtl != 0: raise
 
-      ret.add(body)
-      ret
+        `body`
 
     macro routes(routesBody: untyped): untyped =
-      var ret = newStmtList quote do:
+      routesBodyList.add quote do:
         echo "routes"
-      ret.add(routesBody)
-      routesBodyList.add(ret)
+        `routesBody`
       newEmptyNode()
 
     macro get(url: string, getBody: untyped): untyped =
