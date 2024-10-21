@@ -54,16 +54,16 @@ template parseServers*(serverBody: untyped) {.dirty.} =
 
   macro parseBody() =
     macro addServer(bindAddress: string, port: uint16, unix: bool, ssl: bool, body: untyped): untyped =
-      quote do:
-        echo "server ", newAppId(AppType2.AppListen)
-        `body`
-
-    macro routes(routesBody: untyped): untyped =
       var routesProc = genSym(nskProc, "routesProc")
       quote do:
-        echo "routes ", newAppId(AppType2.AppRoutes)
-        proc `routesProc`(): SendResult = `routesBody`
+        echo "server ", newAppId(AppType2.AppListen)
+        proc `routesProc`(): SendResult = `body`
         discard `routesProc`()
+
+    macro routes(routesBody: untyped): untyped =
+      quote do:
+        echo "routes ", newAppId(AppType2.AppRoutes)
+        `routesBody`
 
     macro get(url: string, getBody: untyped): untyped =
       quote do:
