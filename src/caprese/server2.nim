@@ -232,9 +232,11 @@ template parseServers*(serverBody: untyped) {.dirty.} =
         `body`
 
     macro routes(routesBody: untyped): untyped =
+      var routesProc = genSym(nskProc, "routesProc")
       routesBodyList.add quote do:
         echo "routes"
-        `routesBody`
+        proc `routesProc`(): SendResult = `routesBody`
+        discard `routesProc`()
       newEmptyNode()
 
     macro get(url: string, getBody: untyped): untyped =
