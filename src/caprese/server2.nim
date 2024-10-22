@@ -206,10 +206,30 @@ template parseServers*(serverBody: untyped) {.dirty.} =
     echo "send data.len=", data.len
     SendResult.Success
 
+  macro routes(routesBody: untyped): untyped = routesBody
+
+  macro get(url: string, getBody: untyped): untyped =
+    quote do:
+      if `url`.len > 0:
+        echo "get"
+        `getBody`
+
+  macro post(url: string, postBody: untyped): untyped =
+    quote do:
+      if `url`.len > 0:
+        echo "post"
+        `postBody`
+
   proc extractBody() =
     macro addServer(bindAddress: string, port: uint16, unix: bool, ssl: bool, body: untyped): untyped =
       var srvId = curSrvId; inc(curSrvId)
       var appId = ident($listenAppIdList[srvId])
+      var routesProc = genSym(nskProc, "routesProc")
+
+      routesBodyList.add quote do:
+        echo "routes"
+        proc `routesProc`(): SendResult = `body`
+        `routesProc`()
 
       quote do:
         echo "server: ", `bindAddress`, ":", `port`, " srvId=", `srvId`
@@ -232,28 +252,6 @@ template parseServers*(serverBody: untyped) {.dirty.} =
         listenServers[`srvId`].appId = `appId`
         var retCtl = epoll_ctl(epfd, EPOLL_CTL_ADD, sock, addr listenServers[`srvId`].ev)
         if retCtl != 0: raise
-
-        `body`
-
-    macro routes(routesBody: untyped): untyped =
-      var routesProc = genSym(nskProc, "routesProc")
-      routesBodyList.add quote do:
-        echo "routes"
-        proc `routesProc`(): SendResult = `routesBody`
-        discard `routesProc`()
-      newEmptyNode()
-
-    macro get(url: string, getBody: untyped): untyped =
-      quote do:
-        if `url`.len > 0:
-          echo "get"
-          `getBody`
-
-    macro post(url: string, postBody: untyped): untyped =
-      quote do:
-        if `url`.len > 0:
-          echo "post"
-          `postBody`
 
     macro serverBodyMacro(): untyped =
       var extractServerBody = serverBody.copy()
@@ -356,7 +354,8 @@ template parseServers*(serverBody: untyped) {.dirty.} =
   macro AppRoutesMacro(appId: AppId): untyped =
     quote do:
       echo `appId`
-      getRoutesBody()
+      var ret = getRoutesBody()
+      echo "getRoutesBody ret=", ret
 
   macro AppGetMacro(appId: AppId): untyped =
     quote do:
