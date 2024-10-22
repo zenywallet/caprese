@@ -366,6 +366,10 @@ template parseServers*(serverBody: untyped) {.dirty.} =
     quote do:
       echo `appId`
 
+  import std/strutils
+  activeHeaderInit()
+  startTimeStampUpdater(cfg)
+
   proc serverWorker(arg: ThreadArg) {.thread.} =
     echo "serverWorker ", arg.threadId
     var events: array[cfg.epollEventsSize, EpollEvent]
@@ -399,6 +403,8 @@ template parseServers*(serverBody: untyped) {.dirty.} =
   for i in 0..<serverWorkerNum:
     createThreadWrapper(threads[i], serverWorker, ThreadArg(argType: ThreadArgType.ThreadId, threadId: i))
   joinThreads(threads)
+
+  stopTimeStampUpdater()
 
   for i in 0..<listenCount:
     var listenServer = addr listenServers[i]
