@@ -773,7 +773,8 @@ template serverTagLib*(cfg: static Config) {.dirty.} =
       capbytes.BytesBE(finOp, 127.byte, dataLen.uint64, data)
     result = clientId.send(frame.toString())
 
-  template send(data: seq[byte] | string | Array[byte]): SendResult {.dirty, used.} = ctx.client.send(data)
+  when not defined(SERVER2):
+    template send(data: seq[byte] | string | Array[byte]): SendResult {.dirty, used.} = ctx.client.send(data)
 
   template wsSend(data: seq[byte] | string | Array[byte],
                   opcode: WebSocketOpCode = WebSocketOpCode.Binary): SendResult {.dirty, used.} =

@@ -202,6 +202,10 @@ template parseServers*(serverBody: untyped) {.dirty.} =
     echo "listenAppIdList=", listenAppIdList
   listenAppIdMacro()
 
+  proc send(data: seq[byte] | string | Array[byte]): SendResult {.discardable.} =
+    echo "send data.len=", data.len
+    SendResult.Success
+
   proc extractBody() =
     macro addServer(bindAddress: string, port: uint16, unix: bool, ssl: bool, body: untyped): untyped =
       var srvId = curSrvId; inc(curSrvId)
@@ -250,10 +254,6 @@ template parseServers*(serverBody: untyped) {.dirty.} =
         if `url`.len > 0:
           echo "post"
           `postBody`
-
-    proc send(data: seq[byte] | string | Array[byte]): SendResult {.discardable.} =
-      echo "send data.len=", data.len
-      SendResult.Success
 
     macro serverBodyMacro(): untyped =
       var extractServerBody = serverBody.copy()
