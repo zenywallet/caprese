@@ -206,20 +206,6 @@ template parseServers*(serverBody: untyped) {.dirty.} =
     echo "send data.len=", data.len
     SendResult.Success
 
-  macro routes(routesBody: untyped): untyped = routesBody
-
-  macro get(url: string, getBody: untyped): untyped =
-    quote do:
-      if `url`.len > 0:
-        echo "get"
-        `getBody`
-
-  macro post(url: string, postBody: untyped): untyped =
-    quote do:
-      if `url`.len > 0:
-        echo "post"
-        `postBody`
-
   proc extractBody() =
     macro addServer(bindAddress: string, port: uint16, unix: bool, ssl: bool, body: untyped): untyped =
       var srvId = curSrvId; inc(curSrvId)
@@ -259,6 +245,20 @@ template parseServers*(serverBody: untyped) {.dirty.} =
     serverBodyMacro()
 
   extractBody()
+
+  macro routes(routesBody: untyped): untyped = routesBody
+
+  macro get(url: string, getBody: untyped): untyped =
+    quote do:
+      if `url`.len > 0:
+        echo "get"
+        `getBody`
+
+  macro post(url: string, postBody: untyped): untyped =
+    quote do:
+      if `url`.len > 0:
+        echo "post"
+        `postBody`
 
   type
     ThreadArgType {.pure.} = enum
