@@ -52,6 +52,30 @@ template parseServers*(serverBody: untyped) {.dirty.} =
   import std/options
   import std/cpuinfo
 
+  var cmdList {.compileTime.} = ["get", "stream", "public", "certificates", "acme",
+        "post", "head", "put", "delete", "connect", "options", "trace"]
+
+  macro genRoutesCmdFlagType(): untyped =
+    result = nnkTypeSection.newTree(
+      nnkTypeDef.newTree(
+        newIdentNode("RoutesCmdFlag"),
+        newEmptyNode(),
+        nnkObjectTy.newTree(
+          newEmptyNode(),
+          newEmptyNode(),
+          nnkRecList.newTree()
+        )
+      )
+    )
+    for cmd in cmdList:
+      result[0][2][2].add nnkIdentDefs.newTree(
+        newIdentNode(cmd),
+        newIdentNode("bool"),
+        newEmptyNode()
+      )
+
+  genRoutesCmdFlagType()
+
   macro parseBody() =
     macro addServer(bindAddress: string, port: uint16, unix: bool, ssl: bool, body: untyped): untyped =
       var routesProc = genSym(nskProc, "routesProc")
