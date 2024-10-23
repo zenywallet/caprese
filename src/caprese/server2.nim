@@ -52,8 +52,8 @@ template parseServers*(serverBody: untyped) {.dirty.} =
   import std/options
   import std/cpuinfo
 
-  var cmdList {.compileTime.} = ["get", "stream", "public", "certificates", "acme",
-        "post", "head", "put", "delete", "connect", "options", "trace"]
+  const cmdList = ["get", "stream", "public", "certificates", "acme",
+          "post", "head", "put", "delete", "connect", "options", "trace"]
 
   macro genRoutesCmdFlagType(): untyped =
     result = nnkTypeSection.newTree(
