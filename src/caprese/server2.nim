@@ -79,8 +79,7 @@ template parseServers*(serverBody: untyped) {.dirty.} =
   var routesCmdFlagList {.compileTime.}: seq[RoutesCmdFlag]
 
   proc newRoutesFlag() =
-    var rcf: RoutesCmdFlag
-    routesCmdFlagList.add(rcf)
+    routesCmdFlagList.add(RoutesCmdFlag())
     echo "new routesCmdFlagList=", routesCmdFlagList
 
   macro getField(obj: object, field: static string): untyped =
