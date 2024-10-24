@@ -416,7 +416,7 @@ template parseServers*(serverBody: untyped) {.dirty.} =
     template pevents: ptr UncheckedArray[EpollEvent] = cast[ptr UncheckedArray[EpollEvent]](addr events)
     var nfd: cint
     var nfdCond: bool
-    var evIdx: int
+    var evIdx: int = 0
     var client: Client2
     var sockAddress: Sockaddr_in
     var addrLen: SockLen = sizeof(sockAddress).SockLen
@@ -429,11 +429,11 @@ template parseServers*(serverBody: untyped) {.dirty.} =
         nfd = epoll_wait(epfd, cast[ptr EpollEvent](addr events), cfg.epollEventsSize.cint, -1.cint)
         nfdCond = likely(nfd > 0)
         if nfdCond:
-          evIdx = 0
           while true:
             client = cast[Client2](pevents[evIdx].data)
             {.computedGoto.}
             appCaseBody(abortBlock = WaitLoop)
+          evIdx = 0
 
   let cpuCount = countProcessors()
   var serverWorkerNum = when cfg.serverWorkerNum < 0: cpuCount else: cfg.serverWorkerNum
