@@ -55,10 +55,10 @@ template parseServers*(serverBody: untyped) {.dirty.} =
   const cmdList = ["get", "stream", "public", "certificates", "acme",
           "post", "head", "put", "delete", "connect", "options", "trace"]
 
-  macro genRoutesCmdFlagType(): untyped =
+  macro genCmdListType(objName, varType: untyped): untyped =
     result = nnkTypeSection.newTree(
       nnkTypeDef.newTree(
-        newIdentNode("RoutesCmdFlag"),
+        objName,
         newEmptyNode(),
         nnkObjectTy.newTree(
           newEmptyNode(),
@@ -70,11 +70,11 @@ template parseServers*(serverBody: untyped) {.dirty.} =
     for cmd in cmdList:
       result[0][2][2].add nnkIdentDefs.newTree(
         newIdentNode(cmd),
-        newIdentNode("bool"),
+        varType,
         newEmptyNode()
       )
 
-  genRoutesCmdFlagType()
+  genCmdListType(RoutesCmdFlag, bool)
 
   var routesCmdFlagList {.compileTime.}: seq[RoutesCmdFlag]
 
