@@ -76,6 +76,22 @@ template parseServers*(serverBody: untyped) {.dirty.} =
 
   genRoutesCmdFlagType()
 
+  var routesCmdFlagList {.compileTime.}: seq[RoutesCmdFlag]
+
+  proc newRoutesFlag() =
+    var rcf: RoutesCmdFlag
+    routesCmdFlagList.add(rcf)
+    echo "new routesCmdFlagList=", routesCmdFlagList
+
+  macro getField(obj: object, field: static string): untyped =
+    newDotExpr(obj, ident(field))
+
+  macro staticIdentStr(s: untyped): untyped = newLit($s)
+
+  template setRoutesMap(cmd: untyped, flag: bool = true) =
+    routesCmdFlagList[routesCmdFlagList.len - 1].getField(staticIdentStr(cmd)) = flag
+    echo "routesCmdFlagList=", routesCmdFlagList
+
   macro parseBody() =
     macro addServer(bindAddress: string, port: uint16, unix: bool, ssl: bool, body: untyped): untyped =
       var routesProc = genSym(nskProc, "routesProc")
@@ -86,11 +102,13 @@ template parseServers*(serverBody: untyped) {.dirty.} =
 
     macro routes(routesBody: untyped): untyped =
       quote do:
+        newRoutesFlag()
         echo "routes ", newAppId(AppType2.AppRoutes)
         `routesBody`
 
     macro get(url: string, getBody: untyped): untyped =
       quote do:
+        setRoutesMap(get)
         echo "get ", newAppId(AppType2.AppGet)
 
     macro post(url: string, postBody: untyped): untyped =
