@@ -117,6 +117,7 @@ template parseServers*(serverBody: untyped) {.dirty.} =
 
     macro post(url: string, postBody: untyped): untyped =
       quote do:
+        setRoutesMap(post)
         echo "post ", newAppId(AppType2.AppPost)
 
     macro serverBodyMacro(): untyped =
