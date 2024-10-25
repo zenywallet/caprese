@@ -18,7 +18,7 @@ type
 var curAppId {.compileTime.} = 1
 var appIdTypeList2* {.compileTime.} = @[AppType2.AppEmpty, AppType2.AppAbort]
 
-proc newAppId*(appType: static AppType2): int =
+proc newAppId*(appType: static AppType2): int {.discardable.} =
   appIdTypeList2.add(appType)
   inc(curAppId)
   echo "newAppId: appId=", curAppId, " appType=", appType
