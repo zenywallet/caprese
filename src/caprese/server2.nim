@@ -75,11 +75,14 @@ template parseServers*(serverBody: untyped) {.dirty.} =
       )
 
   genCmdListType(RoutesCmdFlag, bool)
+  genCmdListType(RoutesCmdCount, int)
 
   var routesCmdFlagList {.compileTime.}: seq[RoutesCmdFlag]
+  var routesCmdCountList {.compileTime.}: seq[RoutesCmdCount]
 
   proc newRoutesFlag() =
     routesCmdFlagList.add(RoutesCmdFlag())
+    routesCmdCountList.add(RoutesCmdCount())
     echo "new routesCmdFlagList=", routesCmdFlagList
 
   macro getField(obj: object, field: static string): untyped =
@@ -89,7 +92,9 @@ template parseServers*(serverBody: untyped) {.dirty.} =
 
   template setRoutesMap(cmd: untyped, flag: bool = true) =
     routesCmdFlagList[routesCmdFlagList.len - 1].getField(staticIdentStr(cmd)) = flag
+    inc(routesCmdCountList[routesCmdFlagList.len - 1].getField(staticIdentStr(cmd)))
     echo "routesCmdFlagList=", routesCmdFlagList
+    echo "routesCmdCountList=", routesCmdCountList
 
   macro parseBody() =
     macro addServer(bindAddress: string, port: uint16, unix: bool, ssl: bool, body: untyped): untyped =
