@@ -110,17 +110,30 @@ template parseServers*(serverBody: untyped) {.dirty.} =
       quote do:
         newRoutesFlag()
         echo "routes ", newAppId(AppType2.AppRoutes)
+        defer:
+          var cmdFlag = routesCmdFlagList[^1]
+          var cmdCount = routesCmdCountList[^1]
+          echo cmdFlag
+          echo cmdCount
+          if cmdFlag.get:
+            for _ in 0..<cmdCount.get:
+              newAppId(AppType2.AppGet)
+            newAppId(AppType2.AppGetSend)
+          if cmdFlag.post:
+            for _ in 0..<cmdCount.post:
+              newAppId(AppType2.AppPost)
+            newAppId(AppType2.AppPostSend)
         `routesBody`
 
     macro get(url: string, getBody: untyped): untyped =
       quote do:
         setRoutesMap(get)
-        echo "get ", newAppId(AppType2.AppGet)
+        echo "get"
 
     macro post(url: string, postBody: untyped): untyped =
       quote do:
         setRoutesMap(post)
-        echo "post ", newAppId(AppType2.AppPost)
+        echo "post"
 
     macro serverBodyMacro(): untyped =
       var parseServerBody = serverBody.copy()
@@ -410,7 +423,15 @@ template parseServers*(serverBody: untyped) {.dirty.} =
     quote do:
       echo `appId`
 
+  macro AppGetSendMacro(appId: AppId): untyped =
+    quote do:
+      echo `appId`
+
   macro AppPostMacro(appId: AppId): untyped =
+    quote do:
+      echo `appId`
+
+  macro AppPostSendMacro(appId: AppId): untyped =
     quote do:
       echo `appId`
 
