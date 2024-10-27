@@ -273,10 +273,11 @@ template parseServers*(serverBody: untyped) {.dirty.} =
       var srvId = curSrvId; inc(curSrvId)
       var appId = ident($listenAppIdList[srvId])
       var routesProc = genSym(nskProc, "routesProc")
+      var body0 = body[0]
 
       routesBodyList.add quote do:
         echo "routes"
-        proc `routesProc`(): SendResult = `body`
+        proc `routesProc`(): SendResult = `body0`
         `routesProc`()
 
       quote do:
