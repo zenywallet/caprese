@@ -252,9 +252,12 @@ template parseServers*(serverBody: untyped) {.dirty.} =
   var routesBodyList {.compileTime.}: seq[NimNode]
 
   macro getRoutesBody(): untyped =
-    var ret = routesBodyList[curRoutesId]
+    var body = routesBodyList[curRoutesId]
     inc(curRoutesId)
-    ret
+    var routesProc = genSym(nskProc, "routesProc")
+    quote do:
+      proc `routesProc`(): SendResult = `body`
+      `routesProc`()
 
   var listenAppIdList {.compileTime.}: seq[AppId]
   macro listenAppIdMacro() =
@@ -272,13 +275,11 @@ template parseServers*(serverBody: untyped) {.dirty.} =
     macro addServer(bindAddress: string, port: uint16, unix: bool, ssl: bool, body: untyped): untyped =
       var srvId = curSrvId; inc(curSrvId)
       var appId = ident($listenAppIdList[srvId])
-      var routesProc = genSym(nskProc, "routesProc")
       var body0 = body[0]
 
       routesBodyList.add quote do:
         echo "routes"
-        proc `routesProc`(): SendResult = `body0`
-        `routesProc`()
+        `body0`
 
       quote do:
         echo "server: ", `bindAddress`, ":", `port`, " srvId=", `srvId`
