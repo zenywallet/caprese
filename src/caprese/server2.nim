@@ -253,11 +253,13 @@ template parseServers*(serverBody: untyped) {.dirty.} =
 
   macro getRoutesBody(): untyped =
     var body = routesBodyList[curRoutesId]
-    inc(curRoutesId)
     var routesProc = genSym(nskProc, "routesProc")
     quote do:
       proc `routesProc`(): SendResult = `body`
       `routesProc`()
+
+  macro nextRoutesBody() =
+    inc(curRoutesId)
 
   var listenAppIdList {.compileTime.}: seq[AppId]
   macro listenAppIdMacro() =
