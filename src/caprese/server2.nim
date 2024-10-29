@@ -167,7 +167,7 @@ template parseServers*(serverBody: untyped) {.dirty.} =
   for i in 0..<cfg.clientMax:
     var client = addr clients2[i]
     client.sock = osInvalidSocket
-    client.sockUpperReserved = 0.cint
+    client.sockUpperReserved = -1.cint
     client.appId = AppId0_AppEmpty
     client.ev.events = EPOLLIN or EPOLLRDHUP or EPOLLET
     client.ev.data = cast[EpollData](client)
@@ -186,13 +186,12 @@ template parseServers*(serverBody: untyped) {.dirty.} =
                                 {.importc: "__atomic_compare_exchange_n", nodecl, discardable.}
 
   proc close(client: Client2) {.inline.} =
-    var sockInt = client.sock.int
+    var sockInt = cast[ptr int](addr client.sock)[] # sock + sockUpperReserved(-1) = 8 bytes
     if client.sock != osInvalidSocket and
-      atomic_compare_exchange_n(cast[ptr int](addr client.sock), # sock + sockUpperReserved = 8 bytes
+      atomic_compare_exchange_n(cast[ptr int](addr client.sock),
                                 cast[ptr int](addr sockInt),
                                 osInvalidSocket.int, false, 0, 0):
-      client.sockUpperReserved = 0.cint
-      var retClose = sockInt.cint.close()
+      var retClose = cast[cint](sockInt).close() # cast lower only
       if retClose != 0: raise
       if not client.sendBuf.isNil:
         client.sendBuf.deallocShared()
