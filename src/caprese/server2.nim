@@ -149,6 +149,7 @@ template parseServers*(serverBody: untyped) {.dirty.} =
   type
     ClientObj2 = object
       sock: SocketHandle
+      sockUpperReserved: cint
       appId: AppId
       ev: EpollEvent
       ev2: EpollEvent
@@ -166,6 +167,7 @@ template parseServers*(serverBody: untyped) {.dirty.} =
   for i in 0..<cfg.clientMax:
     var client = addr clients2[i]
     client.sock = osInvalidSocket
+    client.sockUpperReserved = 0.cint
     client.appId = AppId0_AppEmpty
     client.ev.events = EPOLLIN or EPOLLRDHUP or EPOLLET
     client.ev.data = cast[EpollData](client)
@@ -179,17 +181,26 @@ template parseServers*(serverBody: untyped) {.dirty.} =
     var retAddFreePool = clientFreePool2.add(client)
     if not retAddFreePool: raise
 
+  proc atomic_compare_exchange_n(p: ptr int, expected: ptr int, desired: int, weak: bool,
+                                success_memmodel: int, failure_memmodel: int): bool
+                                {.importc: "__atomic_compare_exchange_n", nodecl, discardable.}
+
   proc close(client: Client2) {.inline.} =
-    var retClose = client.sock.cint.close()
-    if retClose != 0: raise
-    if not client.sendBuf.isNil:
-      client.sendBuf.deallocShared()
-      client.sendBuf = nil
-      client.sendPos = nil
-      client.sendLen = 0
-    client.whackaMole = false
-    client.sock = osInvalidSocket
-    clientFreePool2.addSafe(client)
+    var sockInt = client.sock.int
+    if client.sock != osInvalidSocket and
+      atomic_compare_exchange_n(cast[ptr int](addr client.sock), # sock + sockUpperReserved = 8 bytes
+                                cast[ptr int](addr sockInt),
+                                osInvalidSocket.int, false, 0, 0):
+      client.sockUpperReserved = 0.cint
+      var retClose = sockInt.cint.close()
+      if retClose != 0: raise
+      if not client.sendBuf.isNil:
+        client.sendBuf.deallocShared()
+        client.sendBuf = nil
+        client.sendPos = nil
+        client.sendLen = 0
+      client.whackaMole = false
+      clientFreePool2.addSafe(client)
 
   var epfd: cint = epoll_create1(O_CLOEXEC)
   if epfd < 0: raise
