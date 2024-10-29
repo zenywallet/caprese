@@ -191,7 +191,8 @@ template parseServers*(serverBody: untyped) {.dirty.} =
       atomic_compare_exchange_n(cast[ptr int](addr client.sock),
                                 cast[ptr int](addr sockInt),
                                 osInvalidSocket.int, false, 0, 0):
-      var retClose = cast[cint](sockInt).close() # cast lower only
+      var sockCint = cast[cint](sockInt) # cast lower only
+      var retClose = sockCint.close()
       if retClose != 0: raise
       if not client.sendBuf.isNil:
         client.sendBuf.deallocShared()
