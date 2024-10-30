@@ -88,6 +88,7 @@ type
     postRequestMethod*: bool
     sslRoutesHost*: SslRoutesHost
     acceptFirst*: bool
+    reusePort*: bool
 
 paramNamesConst("configNames")
 
@@ -132,6 +133,7 @@ const defaultConfig* = defaultConfigMacro:
   postRequestMethod = false
   sslRoutesHost = SniAndHeaderHost
   acceptFirst = false
+  reusePort = false
 
 var configStmt* {.compileTime.} = newStmtList()
 

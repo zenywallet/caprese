@@ -304,6 +304,9 @@ template parseServers*(serverBody: untyped) {.dirty.} =
         if sock == osInvalidSocket: raise
         if sock.setsockopt(SOL_SOCKET.cint, SO_REUSEADDR.cint, addr optval, sizeof(optval).SockLen) < 0:
           raise
+        when cfg.reusePort:
+          if sock.setsockopt(SOL_SOCKET.cint, SO_REUSEPORT.cint, addr optval, sizeof(optval).SockLen) < 0:
+            raise
 
         let retBind = sock.bindAddr(aiList.ai_addr, aiList.ai_addrlen.SockLen)
         if retBind < 0: raise
