@@ -454,7 +454,9 @@ template parseServers*(serverBody: untyped) {.dirty.} =
                       else:
                         SendResult.Pending
 
-                    echo "getRoutesBody() #1=", getRoutesBody()
+                    var retRoutes = getRoutesBody()
+                    if retRoutes <= SendResult.None:
+                      client.close()
                     break RecvLoop
                   else:
                     proc send(data: seq[byte] | string | Array[byte]): SendResult {.discardable.} =
@@ -463,7 +465,10 @@ template parseServers*(serverBody: untyped) {.dirty.} =
                       curSendBufSize += data.len
                       SendResult.Pending
 
-                    echo "getRoutesBody() #2=", getRoutesBody()
+                    var retRoutes = getRoutesBody()
+                    if retRoutes <= SendResult.None:
+                      client.close()
+                      break RecvLoop
 
                     while true:
                       if equalMem(addr recvBuf[j], "\c\L\c\L".cstring, 4):
@@ -479,7 +484,9 @@ template parseServers*(serverBody: untyped) {.dirty.} =
                             else:
                               SendResult.Pending
 
-                          echo "getRoutesBody() #3=", getRoutesBody()
+                          var retRoutes = getRoutesBody()
+                          if retRoutes <= SendResult.None:
+                            client.close()
                           break RecvLoop
                         else:
                           proc send(data: seq[byte] | string | Array[byte]): SendResult {.discardable.} =
@@ -488,7 +495,11 @@ template parseServers*(serverBody: untyped) {.dirty.} =
                             curSendBufSize += data.len
                             SendResult.Pending
 
-                          echo "getRoutesBody() #4=", getRoutesBody()
+                          var retRoutes = getRoutesBody()
+                          if retRoutes <= SendResult.None:
+                            client.close()
+                            break RecvLoop
+
                       inc(j); if j >= retRecv: break RecvLoop
                 else:
                   inc(j); if j >= retRecv: break RecvLoop
