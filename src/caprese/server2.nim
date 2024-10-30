@@ -214,6 +214,7 @@ template parseServers*(serverBody: untyped) {.dirty.} =
   if retGetSockOpt < 0: raise
   var workerRecvBufSize = rcvBufRes.int
   echo "workerRecvBufSize=", workerRecvBufSize
+  var workerSendBufSize = workerRecvBufSize
 
   var abortClient: ClientObj2
   abortClient.sock = sockCtl
@@ -431,8 +432,81 @@ template parseServers*(serverBody: untyped) {.dirty.} =
   macro AppRoutesMacro(appId: AppId): untyped =
     quote do:
       echo `appId`
-      var ret = getRoutesBody()
-      echo "getRoutesBody ret=", ret
+      block RecvLoop:
+        while true:
+          retRecv = client.sock.recv(recvBuf, workerRecvBufSize, 0.cint)
+          if retRecv >= 17:
+            if equalMem(addr recvBuf[0], "GET ".cstring, 4):
+              var j = 4
+              curSendBufSize = 0
+              while true:
+                if equalMem(addr recvBuf[j], "\c\L\c\L".cstring, 4):
+                  inc(j, 4)
+                  if j == retRecv:
+                    proc send(data: seq[byte] | string | Array[byte]): SendResult {.discardable.} =
+                      echo "send1 data.len=", data.len
+                      let sendlen = client.sock.send(data.cstring, data.len.cint,  MSG_NOSIGNAL)
+                      if sendlen > 0:
+                        SendResult.Success
+                      else:
+                        SendResult.Pending
+
+                    echo "getRoutesBody() #1=", getRoutesBody()
+                    break RecvLoop
+                  else:
+                    proc send(data: seq[byte] | string | Array[byte]): SendResult {.discardable.} =
+                      echo "send2 data.len=", data.len
+                      copyMem(addr sendBuf[curSendBufSize], data.cstring, data.len)
+                      curSendBufSize += data.len
+                      SendResult.Pending
+
+                    echo "getRoutesBody() #2=", getRoutesBody()
+
+                    while true:
+                      if equalMem(addr recvBuf[j], "\c\L\c\L".cstring, 4):
+                        inc(j, 4)
+                        if j == retRecv:
+                          proc send(data: seq[byte] | string | Array[byte]): SendResult {.discardable.} =
+                            echo "send3 data.len=", data.len
+                            copyMem(addr sendBuf[curSendBufSize], data.cstring, data.len)
+                            curSendBufSize += data.len
+                            let sendlen = client.sock.send(sendBuf, curSendBufSize.cint,  MSG_NOSIGNAL)
+                            if sendlen  == curSendBufSize:
+                              SendResult.Success
+                            else:
+                              SendResult.Pending
+
+                          echo "getRoutesBody() #3=", getRoutesBody()
+                          break RecvLoop
+                        else:
+                          proc send(data: seq[byte] | string | Array[byte]): SendResult {.discardable.} =
+                            echo "send4 data.len=", data.len
+                            copyMem(addr sendBuf[curSendBufSize], data.cstring, data.len)
+                            curSendBufSize += data.len
+                            SendResult.Pending
+
+                          echo "getRoutesBody() #4=", getRoutesBody()
+                      inc(j); if j >= retRecv: break RecvLoop
+                else:
+                  inc(j); if j >= retRecv: break RecvLoop
+
+            elif equalMem(addr recvBuf[0], "POST".cstring, 4):
+              var j = 5
+              break RecvLoop
+
+          elif retRecv == 0:
+            client.close()
+            break
+
+          else: # retRecv < 17
+            if errno == EAGAIN or errno == EWOULDBLOCK:
+              break
+            elif errno == EINTR:
+              continue
+            else:
+              echo "errno=", errno, " ", client.sock.cint
+              client.close()
+              break
 
   macro AppGetMacro(appId: AppId): untyped =
     quote do:
@@ -464,6 +538,10 @@ template parseServers*(serverBody: untyped) {.dirty.} =
     var client: Client2
     var sockAddress: Sockaddr_in
     var addrLen: SockLen = sizeof(sockAddress).SockLen
+    var retRecv: int
+    var recvBuf = cast[ptr UncheckedArray[byte]](allocShared0(workerRecvBufSize))
+    var sendBuf = cast[ptr UncheckedArray[byte]](allocShared0(workerSendBufSize))
+    var curSendBufSize: int
 
     template nextEv() =
       inc(evIdx); if evIdx >= nfd: break
