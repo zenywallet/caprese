@@ -292,7 +292,6 @@ template parseServers*(serverBody: untyped) {.dirty.} =
       var body0 = body[0]
 
       routesBodyList.add quote do:
-        echo "routes"
         `body0`
 
       quote do:
@@ -332,13 +331,11 @@ template parseServers*(serverBody: untyped) {.dirty.} =
   macro get(url: string, getBody: untyped): untyped =
     quote do:
       if `url`.len > 0:
-        echo "get"
         `getBody`
 
   macro post(url: string, postBody: untyped): untyped =
     quote do:
       if `url`.len > 0:
-        echo "post"
         `postBody`
 
   type
@@ -411,7 +408,6 @@ template parseServers*(serverBody: untyped) {.dirty.} =
 
   macro AppListenMacro(appId: AppId): untyped =
     quote do:
-      echo `appId`
       while true:
         let clientSock = client.sock.accept4(cast[ptr SockAddr](addr sockAddress), addr addrLen, O_NONBLOCK)
         if cast[int](clientSock) > 0:
@@ -434,7 +430,6 @@ template parseServers*(serverBody: untyped) {.dirty.} =
 
   macro AppRoutesMacro(appId: AppId): untyped =
     quote do:
-      echo `appId`
       block RecvLoop:
         while true:
           retRecv = client.sock.recv(recvBuf, workerRecvBufSize, 0.cint)
@@ -447,7 +442,6 @@ template parseServers*(serverBody: untyped) {.dirty.} =
                   inc(j, 4)
                   if j == retRecv:
                     proc send(data: seq[byte] | string | Array[byte]): SendResult {.discardable.} =
-                      echo "send1 data.len=", data.len
                       let sendlen = client.sock.send(data.cstring, data.len.cint,  MSG_NOSIGNAL)
                       if sendlen > 0:
                         SendResult.Success
@@ -460,7 +454,6 @@ template parseServers*(serverBody: untyped) {.dirty.} =
                     break RecvLoop
                   else:
                     proc send(data: seq[byte] | string | Array[byte]): SendResult {.discardable.} =
-                      echo "send2 data.len=", data.len
                       copyMem(addr sendBuf[curSendBufSize], data.cstring, data.len)
                       curSendBufSize += data.len
                       SendResult.Pending
@@ -475,7 +468,6 @@ template parseServers*(serverBody: untyped) {.dirty.} =
                         inc(j, 4)
                         if j == retRecv:
                           proc send(data: seq[byte] | string | Array[byte]): SendResult {.discardable.} =
-                            echo "send3 data.len=", data.len
                             copyMem(addr sendBuf[curSendBufSize], data.cstring, data.len)
                             curSendBufSize += data.len
                             let sendlen = client.sock.send(sendBuf, curSendBufSize.cint,  MSG_NOSIGNAL)
@@ -490,7 +482,6 @@ template parseServers*(serverBody: untyped) {.dirty.} =
                           break RecvLoop
                         else:
                           proc send(data: seq[byte] | string | Array[byte]): SendResult {.discardable.} =
-                            echo "send4 data.len=", data.len
                             copyMem(addr sendBuf[curSendBufSize], data.cstring, data.len)
                             curSendBufSize += data.len
                             SendResult.Pending
@@ -518,7 +509,6 @@ template parseServers*(serverBody: untyped) {.dirty.} =
             elif errno == EINTR:
               continue
             else:
-              echo "errno=", errno, " ", client.sock.cint
               client.close()
               break
 
