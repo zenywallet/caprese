@@ -99,6 +99,8 @@ template parseServers*(serverBody: untyped) {.dirty.} =
     echo "routesCmdCountList=", routesCmdCountList
 
   macro parseBody() =
+    macro send(dummy: untyped): untyped = quote do: SendResult.None
+
     macro addServer(bindAddress: string, port: uint16, unix: bool, ssl: bool, body: untyped): untyped =
       var routesProc = genSym(nskProc, "routesProc")
       quote do:
