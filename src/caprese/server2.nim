@@ -436,13 +436,14 @@ template parseServers*(serverBody: untyped) {.dirty.} =
         while true:
           retRecv = client.sock.recv(recvBuf, workerRecvBufSize, 0.cint)
           if retRecv >= 17:
+            var endPos = cast[uint](recvBuf) + cast[uint](retRecv)
             if equalMem(recvBuf, "GET ".cstring, 4):
-              var j = 4
+              var pos = cast[uint](recvBuf) + 4
               curSendBufSize = 0
               while true:
-                if equalMem(addr recvBuf[j], "\c\L\c\L".cstring, 4):
-                  inc(j, 4)
-                  if j == retRecv:
+                if equalMem(cast[pointer](pos), "\c\L\c\L".cstring, 4):
+                  inc(pos, 4)
+                  if pos == endPos:
                     proc send(data: seq[byte] | string | Array[byte]): SendResult {.discardable.} =
                       let sendlen = client.sock.send(data.cstring, data.len.cint,  MSG_NOSIGNAL)
                       if sendlen > 0:
@@ -466,9 +467,9 @@ template parseServers*(serverBody: untyped) {.dirty.} =
                       break RecvLoop
 
                     while true:
-                      if equalMem(addr recvBuf[j], "\c\L\c\L".cstring, 4):
-                        inc(j, 4)
-                        if j == retRecv:
+                      if equalMem(cast[pointer](pos), "\c\L\c\L".cstring, 4):
+                        inc(pos, 4)
+                        if pos == endPos:
                           proc send(data: seq[byte] | string | Array[byte]): SendResult {.discardable.} =
                             copyMem(addr sendBuf[curSendBufSize], data.cstring, data.len)
                             curSendBufSize += data.len
@@ -493,12 +494,12 @@ template parseServers*(serverBody: untyped) {.dirty.} =
                             client.close()
                             break RecvLoop
 
-                      inc(j); if j >= retRecv: break RecvLoop
+                      inc(pos); if pos >= endPos: break RecvLoop
                 else:
-                  inc(j); if j >= retRecv: break RecvLoop
+                  inc(pos); if pos >= endPos: break RecvLoop
 
             elif equalMem(recvBuf, "POST".cstring, 4):
-              var j = 5
+              var pos = cast[uint](recvBuf) + 5
               break RecvLoop
 
           elif retRecv == 0:
