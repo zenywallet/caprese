@@ -436,7 +436,7 @@ template parseServers*(serverBody: untyped) {.dirty.} =
         while true:
           retRecv = client.sock.recv(recvBuf, workerRecvBufSize, 0.cint)
           if retRecv >= 17:
-            if equalMem(addr recvBuf[0], "GET ".cstring, 4):
+            if equalMem(recvBuf, "GET ".cstring, 4):
               var j = 4
               curSendBufSize = 0
               while true:
@@ -497,7 +497,7 @@ template parseServers*(serverBody: untyped) {.dirty.} =
                 else:
                   inc(j); if j >= retRecv: break RecvLoop
 
-            elif equalMem(addr recvBuf[0], "POST".cstring, 4):
+            elif equalMem(recvBuf, "POST".cstring, 4):
               var j = 5
               break RecvLoop
 
