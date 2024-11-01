@@ -89,6 +89,7 @@ type
     sslRoutesHost*: SslRoutesHost
     acceptFirst*: bool
     reusePort*: bool
+    multiProcess*: bool
 
 paramNamesConst("configNames")
 
@@ -134,6 +135,7 @@ const defaultConfig* = defaultConfigMacro:
   sslRoutesHost = SniAndHeaderHost
   acceptFirst = false
   reusePort = false
+  multiProcess = false
 
 var configStmt* {.compileTime.} = newStmtList()
 

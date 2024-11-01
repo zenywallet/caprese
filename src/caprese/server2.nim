@@ -163,6 +163,22 @@ template parseServers*(serverBody: untyped) {.dirty.} =
 
     Client2 = ptr ClientObj2
 
+  let cpuCount = countProcessors()
+  var serverWorkerNum = when cfg.serverWorkerNum < 0: cpuCount else: cfg.serverWorkerNum
+
+  when cfg.multiProcess:
+    var processWorkerId = 0
+    if serverWorkerNum > 1:
+      var forkCount = 1
+      var pid = fork()
+      while pid != 0:
+        inc(forkCount)
+        if forkCount >= serverWorkerNum:
+          break
+        pid = fork()
+      if pid == 0:
+        processWorkerId = forkCount
+
   var clients2 = cast[ptr UncheckedArray[ClientObj2]](allocShared0(sizeof(ClientObj2) * cfg.clientMax))
   var clientFreePool2 = queue2.newQueue[Client2]()
 
@@ -305,7 +321,7 @@ template parseServers*(serverBody: untyped) {.dirty.} =
         if sock == osInvalidSocket: raise
         if sock.setsockopt(SOL_SOCKET.cint, SO_REUSEADDR.cint, addr optval, sizeof(optval).SockLen) < 0:
           raise
-        when cfg.reusePort:
+        when cfg.reusePort or cfg.multiProcess:
           if sock.setsockopt(SOL_SOCKET.cint, SO_REUSEPORT.cint, addr optval, sizeof(optval).SockLen) < 0:
             raise
 
@@ -318,7 +334,10 @@ template parseServers*(serverBody: untyped) {.dirty.} =
 
         listenServers[`srvId`].sock = sock
         listenServers[`srvId`].appId = `appId`
-        var retCtl = epoll_ctl(epfd, EPOLL_CTL_ADD, sock, addr listenServers[`srvId`].ev)
+        when cfg.multiProcess:
+          var retCtl = epoll_ctl(epfd, EPOLL_CTL_ADD, sock, addr listenServers[`srvId`].ev2)
+        else:
+          var retCtl = epoll_ctl(epfd, EPOLL_CTL_ADD, sock, addr listenServers[`srvId`].ev)
         if retCtl != 0: raise
 
     macro serverBodyMacro(): untyped =
@@ -564,14 +583,18 @@ template parseServers*(serverBody: untyped) {.dirty.} =
             appCaseBody(abortBlock = WaitLoop)
           evIdx = 0
 
-  let cpuCount = countProcessors()
-  var serverWorkerNum = when cfg.serverWorkerNum < 0: cpuCount else: cfg.serverWorkerNum
-  echo "server workers: ", serverWorkerNum, "/", cpuCount
-
-  var threads = newSeq[Thread[WrapperThreadArg]](serverWorkerNum)
-  for i in 0..<serverWorkerNum:
-    createThreadWrapper(threads[i], serverWorker, ThreadArg(argType: ThreadArgType.ThreadId, threadId: i))
-  joinThreads(threads)
+  when cfg.multiProcess:
+    echo "server process workers: ", serverWorkerNum, "/", cpuCount
+    var threads = newSeq[Thread[WrapperThreadArg]](1)
+    for i in 0..<1:
+      createThreadWrapper(threads[i], serverWorker, ThreadArg(argType: ThreadArgType.ThreadId, threadId: processWorkerId))
+    joinThreads(threads)
+  else:
+    echo "server thread workers: ", serverWorkerNum, "/", cpuCount
+    var threads = newSeq[Thread[WrapperThreadArg]](serverWorkerNum)
+    for i in 0..<serverWorkerNum:
+      createThreadWrapper(threads[i], serverWorker, ThreadArg(argType: ThreadArgType.ThreadId, threadId: i))
+    joinThreads(threads)
 
   stopTimeStampUpdater()
 
