@@ -584,7 +584,8 @@ template parseServers*(serverBody: untyped) {.dirty.} =
           evIdx = 0
 
   when cfg.multiProcess:
-    echo "server process workers: ", serverWorkerNum, "/", cpuCount
+    if processWorkerId == 0:
+      echo "server process workers: ", serverWorkerNum, "/", cpuCount
     var threads = newSeq[Thread[WrapperThreadArg]](1)
     for i in 0..<1:
       createThreadWrapper(threads[i], serverWorker, ThreadArg(argType: ThreadArgType.ThreadId, threadId: processWorkerId))
