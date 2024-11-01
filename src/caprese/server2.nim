@@ -165,6 +165,7 @@ template parseServers*(serverBody: untyped) {.dirty.} =
 
   let cpuCount = countProcessors()
   var serverWorkerNum = when cfg.serverWorkerNum < 0: cpuCount else: cfg.serverWorkerNum
+  var multiProcessThreadNum = when cfg.multiProcessThreadNum < 0: cpuCount else: cfg.multiProcessThreadNum
 
   when cfg.multiProcess:
     var processWorkerId = 0
@@ -177,7 +178,7 @@ template parseServers*(serverBody: untyped) {.dirty.} =
           break
         pid = fork()
       if pid == 0:
-        processWorkerId = forkCount
+        processWorkerId = forkCount * multiProcessThreadNum
 
   var clients2 = cast[ptr UncheckedArray[ClientObj2]](allocShared0(sizeof(ClientObj2) * cfg.clientMax))
   var clientFreePool2 = queue2.newQueue[Client2]()
@@ -586,9 +587,9 @@ template parseServers*(serverBody: untyped) {.dirty.} =
   when cfg.multiProcess:
     if processWorkerId == 0:
       echo "server process workers: ", serverWorkerNum, "/", cpuCount
-    var threads = newSeq[Thread[WrapperThreadArg]](1)
-    for i in 0..<1:
-      createThreadWrapper(threads[i], serverWorker, ThreadArg(argType: ThreadArgType.ThreadId, threadId: processWorkerId))
+    var threads = newSeq[Thread[WrapperThreadArg]](multiProcessThreadNum)
+    for i in 0..<multiProcessThreadNum:
+      createThreadWrapper(threads[i], serverWorker, ThreadArg(argType: ThreadArgType.ThreadId, threadId: processWorkerId + i))
     joinThreads(threads)
   else:
     echo "server thread workers: ", serverWorkerNum, "/", cpuCount

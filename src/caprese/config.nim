@@ -90,6 +90,7 @@ type
     acceptFirst*: bool
     reusePort*: bool
     multiProcess*: bool
+    multiProcessThreadNum*: int
 
 paramNamesConst("configNames")
 
@@ -136,6 +137,7 @@ const defaultConfig* = defaultConfigMacro:
   acceptFirst = false
   reusePort = false
   multiProcess = false
+  multiProcessThreadNum = 1
 
 var configStmt* {.compileTime.} = newStmtList()
 
