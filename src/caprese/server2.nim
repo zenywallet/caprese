@@ -352,13 +352,13 @@ template parseServers*(serverBody: untyped) {.dirty.} =
 
   macro get(url: string, getBody: untyped): untyped =
     quote do:
-      if `url`.len > 0:
-        `getBody`
+      if `url`.len == reqHeaderUrlSize and equalMem(cast[pointer](reqHeaderUrlPos), `url`.cstring,  `url`.len):
+        when returnExists(body): `getBody` else: return `getBody`
 
   macro post(url: string, postBody: untyped): untyped =
     quote do:
-      if `url`.len > 0:
-        `postBody`
+      if `url`.len == reqHeaderUrlSize and equalMem(cast[pointer](reqHeaderUrlPos), `url`.cstring,  `url`.len):
+        when returnExists(body): `postBody` else: return `postBody`
 
   type
     ThreadArgType {.pure.} = enum
@@ -459,6 +459,34 @@ template parseServers*(serverBody: untyped) {.dirty.} =
             var endPos = cast[uint](recvBuf) + cast[uint](retRecv)
             if equalMem(recvBuf, "GET ".cstring, 4):
               var pos = cast[uint](recvBuf) + 4
+
+              reqHeaderUrlPos = pos
+              while true:
+                if equalMem(cast[pointer](pos), " HTTP/1.".cstring, 8):
+                  reqHeaderUrlSize = pos - reqHeaderUrlPos
+                  inc(pos, 7)
+                  if equalMem(cast[pointer](pos), ".1\c\L".cstring, 4):
+                    reqHeaderMinorVer = 1
+                    inc(pos, 2)
+                    break
+                  elif equalMem(cast[pointer](pos), ".0\c\L".cstring, 4):
+                    reqHeaderMinorVer = 0
+                    inc(pos, 2)
+                    break
+                  else:
+                    inc(pos)
+                    reqHeaderMinorVer = int(cast[ptr char](cast[pointer](pos))[]) - int('0')
+                    inc(pos)
+                    if reqHeaderMinorVer < 0 or reqHeaderMinorVer > 9 or not equalMem(cast[pointer](pos), "\c\L".cstring, 2):
+                      client.close()
+                      break RecvLoop
+                    inc(pos, 2)
+                    break
+                elif equalMem(cast[pointer](pos), "\c\L".cstring, 2):
+                  client.close()
+                  break RecvLoop
+                inc(pos); if pos == endPos: break RecvLoop
+
               curSendBufSize = 0
               while true:
                 if equalMem(cast[pointer](pos), "\c\L\c\L".cstring, 4):
@@ -569,6 +597,9 @@ template parseServers*(serverBody: untyped) {.dirty.} =
     var recvBuf = cast[ptr UncheckedArray[byte]](allocShared0(workerRecvBufSize))
     var sendBuf = cast[ptr UncheckedArray[byte]](allocShared0(workerSendBufSize))
     var curSendBufSize: int
+    var reqHeaderUrlPos: uint
+    var reqHeaderUrlSize: uint
+    var reqHeaderMinorVer: int
 
     template nextEv() =
       inc(evIdx); if evIdx >= nfd: break
