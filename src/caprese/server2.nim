@@ -583,7 +583,8 @@ template parseServers*(serverBody: untyped) {.dirty.} =
 
   import std/strutils
   activeHeaderInit()
-  startTimeStampUpdater(cfg)
+  when cfg.headerDate:
+    startTimeStampUpdater(cfg)
 
   proc serverWorker(arg: ThreadArg) {.thread.} =
     echo "serverWorker ", arg.threadId
@@ -631,7 +632,8 @@ template parseServers*(serverBody: untyped) {.dirty.} =
       createThreadWrapper(threads[i], serverWorker, ThreadArg(argType: ThreadArgType.ThreadId, threadId: i))
     joinThreads(threads)
 
-  stopTimeStampUpdater()
+  when cfg.headerDate:
+    stopTimeStampUpdater()
 
   for i in 0..<listenCount:
     var listenServer = addr listenServers[i]
