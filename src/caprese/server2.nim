@@ -581,11 +581,6 @@ template parseServers*(serverBody: untyped) {.dirty.} =
     quote do:
       echo `appId`
 
-  import std/strutils
-  activeHeaderInit()
-  when cfg.headerDate:
-    startTimeStampUpdater(cfg)
-
   proc serverWorker(arg: ThreadArg) {.thread.} =
     echo "serverWorker ", arg.threadId
     var events: array[cfg.epollEventsSize, EpollEvent]
@@ -617,6 +612,11 @@ template parseServers*(serverBody: untyped) {.dirty.} =
             {.computedGoto.}
             appCaseBody(abortBlock = WaitLoop)
           evIdx = 0
+
+  import std/strutils
+  activeHeaderInit()
+  when cfg.headerDate:
+    startTimeStampUpdater(cfg)
 
   when cfg.multiProcess:
     if processWorkerId == 0:
