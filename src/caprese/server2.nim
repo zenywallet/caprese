@@ -495,7 +495,7 @@ template parseServers*(serverBody: untyped) {.dirty.} =
                   inc(pos, 4)
                   if pos == endPos:
                     proc send(data: seq[byte] | string | Array[byte]): SendResult {.discardable.} =
-                      let sendlen = client.sock.send(data.cstring, data.len.cint,  MSG_NOSIGNAL)
+                      let sendlen = client.sock.send(addr data[0], data.len.cint,  MSG_NOSIGNAL)
                       if sendlen > 0:
                         SendResult.Success
                       else:
@@ -507,7 +507,7 @@ template parseServers*(serverBody: untyped) {.dirty.} =
                     break RecvLoop
                   else:
                     proc send(data: seq[byte] | string | Array[byte]): SendResult {.discardable.} =
-                      copyMem(addr sendBuf[curSendBufSize], data.cstring, data.len)
+                      copyMem(addr sendBuf[curSendBufSize], addr data[0], data.len)
                       curSendBufSize += data.len
                       SendResult.Pending
 
@@ -521,7 +521,7 @@ template parseServers*(serverBody: untyped) {.dirty.} =
                         inc(pos, 4)
                         if pos == endPos:
                           proc send(data: seq[byte] | string | Array[byte]): SendResult {.discardable.} =
-                            copyMem(addr sendBuf[curSendBufSize], data.cstring, data.len)
+                            copyMem(addr sendBuf[curSendBufSize], addr data[0], data.len)
                             curSendBufSize += data.len
                             let sendlen = client.sock.send(sendBuf, curSendBufSize.cint,  MSG_NOSIGNAL)
                             if sendlen  == curSendBufSize:
@@ -535,7 +535,7 @@ template parseServers*(serverBody: untyped) {.dirty.} =
                           break RecvLoop
                         else:
                           proc send(data: seq[byte] | string | Array[byte]): SendResult {.discardable.} =
-                            copyMem(addr sendBuf[curSendBufSize], data.cstring, data.len)
+                            copyMem(addr sendBuf[curSendBufSize], addr data[0], data.len)
                             curSendBufSize += data.len
                             SendResult.Pending
 
