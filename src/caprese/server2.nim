@@ -55,7 +55,7 @@ template parseServers*(serverBody: untyped) {.dirty.} =
   import std/cpuinfo
 
   const cmdList = ["get", "stream", "public", "certificates", "acme",
-          "post", "head", "put", "delete", "connect", "options", "trace"]
+          "post", "head", "put", "delete", "connect", "options", "trace", "patch"]
 
   macro genCmdListType(objName, varType: untyped): untyped =
     result = nnkTypeSection.newTree(
