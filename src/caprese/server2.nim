@@ -453,8 +453,6 @@ template parseServers*(serverBody: untyped) {.dirty.} =
               var retClose = clientSock.cint.close()
               if retClose != 0: raise
               break
-        when cfg.multiProcess:
-          break
         else:
           break
 
