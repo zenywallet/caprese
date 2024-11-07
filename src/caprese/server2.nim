@@ -449,7 +449,7 @@ template parseServers*(serverBody: untyped) {.dirty.} =
               let e = epoll_ctl(epfd, EPOLL_CTL_ADD, clientSock.cint, addr newClient.ev)
               if e != 0: raise
               break
-            if clientFreePool2.count == 0:
+            elif clientFreePool2.count == 0:
               var retClose = clientSock.cint.close()
               if retClose != 0: raise
               break
