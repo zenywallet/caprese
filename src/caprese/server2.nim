@@ -596,7 +596,6 @@ template parseServers*(serverBody: untyped) {.dirty.} =
                     if reqHeaderMinorVer < 0 or reqHeaderMinorVer > 9 or not equalMem(cast[pointer](pos), "\c\L".cstring, 2):
                       client.close()
                       break RecvLoop
-                    inc(pos, 2)
                     break
                 elif equalMem(cast[pointer](pos), "\c\L".cstring, 2):
                   client.close()
