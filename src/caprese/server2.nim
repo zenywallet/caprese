@@ -254,8 +254,49 @@ template parseServers*(serverBody: untyped) {.dirty.} =
         client.sendBuf = nil
         client.sendPos = nil
         client.sendLen = 0
-      client.whackaMole = false
+      #client.whackaMole = false
+      delClientRing(client)
       clientFreePool2.addSafe(client)
+
+  proc eventfd(initval: cuint, flags: cint): cint {.importc.}
+
+  var clientMonitorFd = eventfd(0, O_CLOEXEC or O_NONBLOCK)
+  var fds: array[1, TPollfd]
+  fds[0].events = posix.POLLIN
+  fds[0].fd = clientMonitorFd
+
+  var clientMonitorThread: Thread[void]
+
+  proc clientMonitor() {.thread.} =
+    var checkTimeout = cfg.connectionTimeout * 1000
+    while true:
+      var num = poll(addr fds[0], 1, checkTimeout)
+      if num == 0:
+        var clientRing = clientRingRoot.next
+        while clientRing != clientRingRoot:
+          if clientRing.whackaMole:
+            clientRing.close()
+          else:
+            clientRing.whackaMole = true
+          clientRing = clientRing.next
+      else:
+        break
+
+  proc abortClientMonitor() =
+    var value: uint64 = 1
+    var retWrite = write(fds[0].fd, addr value, sizeof(value))
+    if retWrite != sizeof(value):
+      echo "error: abort client monitor"
+
+  proc startClientMonitor() =
+    createThread(clientMonitorThread, clientMonitor)
+
+  proc stopClientMonitor() =
+    abortClientMonitor()
+    joinThread(clientMonitorThread)
+    var retClose = clientMonitorFd.close()
+    if retClose != 0:
+      echo "error: close client monitor"
 
   var epfd: cint = epoll_create1(O_CLOEXEC)
   if epfd < 0: raise
@@ -484,6 +525,8 @@ template parseServers*(serverBody: untyped) {.dirty.} =
               newClient.appId = (client.appId.cint + 1).AppId
               let e = epoll_ctl(epfd, EPOLL_CTL_ADD, clientSock.cint, addr newClient.ev)
               if e != 0: raise
+              newClient.whackaMole = false
+              addClientRing(newClient)
               break
             elif clientFreePool2.count == 0:
               var retClose = clientSock.cint.close()
@@ -568,6 +611,8 @@ template parseServers*(serverBody: untyped) {.dirty.} =
                     var retRoutes = `routesProc`(SendProc1)
                     if retRoutes <= SendResult.None:
                       client.close()
+                    else:
+                      client.whackaMole = false
                     break RecvLoop
                   else:
                     var retRoutes = `routesProc`(SendProc2)
@@ -582,6 +627,8 @@ template parseServers*(serverBody: untyped) {.dirty.} =
                           var retRoutes = `routesProc`(SendProc3)
                           if retRoutes <= SendResult.None:
                             client.close()
+                          else:
+                            client.whackaMole = false
                           break RecvLoop
                         else:
                           var retRoutes = `routesProc`(SendProc2)
@@ -665,6 +712,7 @@ template parseServers*(serverBody: untyped) {.dirty.} =
   activeHeaderInit()
   when cfg.headerDate:
     startTimeStampUpdater(cfg)
+  startClientMonitor()
 
   when cfg.multiProcess:
     if processWorkerId == 0:
@@ -680,6 +728,7 @@ template parseServers*(serverBody: untyped) {.dirty.} =
       createThreadWrapper(threads[i], serverWorker, ThreadArg(argType: ThreadArgType.ThreadId, threadId: i))
     joinThreads(threads)
 
+  stopClientMonitor()
   when cfg.headerDate:
     stopTimeStampUpdater()
 
