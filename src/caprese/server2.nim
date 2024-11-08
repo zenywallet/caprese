@@ -160,6 +160,8 @@ template parseServers*(serverBody: untyped) {.dirty.} =
       sendLen: int
       threadId: int
       whackaMole: bool
+      prev: ptr ClientObj2
+      next: ptr ClientObj2
 
     Client2 = ptr ClientObj2
 
@@ -199,6 +201,40 @@ template parseServers*(serverBody: untyped) {.dirty.} =
     client.whackaMole = false
     var retAddFreePool = clientFreePool2.add(client)
     if not retAddFreePool: raise
+
+  var clientRingLock: Lock
+  var clientRingRootObj: ClientObj2
+  var clientRingRoot: Client2
+  var clientRingCount: int
+
+  proc initClientRing() =
+    initLock(clientRingLock)
+    clientRingRootObj.sock = osInvalidSocket
+    clientRingRootObj.sockUpperReserved = -1.cint
+    clientRingRootObj.appId = AppId0_AppEmpty
+    clientRingRootObj.prev = addr clientRingRootObj
+    clientRingRootObj.next = addr clientRingRootObj
+    clientRingRoot = addr clientRingRootObj
+    clientRingCount = 0
+
+  proc freeClientRing() =
+    deinitLock(clientRingLock)
+
+  proc addClientRing(client: Client2) {.inline.} =
+    acquire(clientRingLock)
+    client.prev = clientRingRoot.prev
+    client.next = clientRingRoot
+    clientRingRoot.prev.next = client
+    clientRingRoot.prev = client
+    inc(clientRingCount)
+    release(clientRingLock)
+
+  proc delClientRing(client: Client2) {.inline.} =
+    acquire(clientRingLock)
+    client.prev.next = client.next
+    client.next.prev = client.prev
+    dec(clientRingCount)
+    release(clientRingLock)
 
   proc atomic_compare_exchange_n(p: ptr int, expected: ptr int, desired: int, weak: bool,
                                 success_memmodel: int, failure_memmodel: int): bool
@@ -624,6 +660,7 @@ template parseServers*(serverBody: untyped) {.dirty.} =
             appCaseBody(abortBlock = WaitLoop)
           evIdx = 0
 
+  initClientRing()
   import std/strutils
   activeHeaderInit()
   when cfg.headerDate:
@@ -661,4 +698,5 @@ template parseServers*(serverBody: untyped) {.dirty.} =
   if retEpfdClose != 0:
     echo "error: close epfd"
 
+  freeClientRing()
   clients2.deallocShared()
