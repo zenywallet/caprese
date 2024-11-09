@@ -597,9 +597,6 @@ template parseServers*(serverBody: untyped) {.dirty.} =
                       client.close()
                       break RecvLoop
                     break
-                elif equalMem(cast[pointer](pos), "\c\L".cstring, 2):
-                  client.close()
-                  break RecvLoop
                 inc(pos); if pos == endPos: break RecvLoop
 
               curSendBufSize = 0
