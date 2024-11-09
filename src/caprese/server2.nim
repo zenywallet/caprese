@@ -572,7 +572,7 @@ template parseServers*(serverBody: untyped) {.dirty.} =
         while true:
           retRecv = client.sock.recv(recvBuf, workerRecvBufSize, 0.cint)
           if retRecv >= 17:
-            var endPos = cast[uint](recvBuf) + cast[uint](retRecv)
+            var endPos = cast[uint](recvBuf) + cast[uint](retRecv) - 4
             if equalMem(recvBuf, "GET ".cstring, 4):
               var pos = cast[uint](recvBuf) + 4
 
@@ -605,7 +605,6 @@ template parseServers*(serverBody: untyped) {.dirty.} =
               curSendBufSize = 0
               while true:
                 if equalMem(cast[pointer](pos), "\c\L\c\L".cstring, 4):
-                  inc(pos, 4)
                   if pos == endPos:
                     var retRoutes = `routesProc`(SendProc1)
                     if retRoutes <= SendResult.None:
@@ -618,10 +617,11 @@ template parseServers*(serverBody: untyped) {.dirty.} =
                     if retRoutes <= SendResult.None:
                       client.close()
                       break RecvLoop
+                    else:
+                      inc(pos, 4)
 
                     while true:
                       if equalMem(cast[pointer](pos), "\c\L\c\L".cstring, 4):
-                        inc(pos, 4)
                         if pos == endPos:
                           var retRoutes = `routesProc`(SendProc3)
                           if retRoutes <= SendResult.None:
@@ -634,10 +634,14 @@ template parseServers*(serverBody: untyped) {.dirty.} =
                           if retRoutes <= SendResult.None:
                             client.close()
                             break RecvLoop
+                          else:
+                            inc(pos, 4)
 
-                      inc(pos); if pos >= endPos: break RecvLoop
+                      if pos >= endPos: break RecvLoop
+                      inc(pos)
                 else:
-                  inc(pos); if pos >= endPos: break RecvLoop
+                  if pos >= endPos: break RecvLoop
+                  inc(pos)
 
             elif equalMem(recvBuf, "POST".cstring, 4):
               var pos = cast[uint](recvBuf) + 5
