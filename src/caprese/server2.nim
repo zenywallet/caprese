@@ -568,9 +568,9 @@ template parseServers*(serverBody: untyped) {.dirty.} =
         curSendProcType = sendProcType
         `routesBody`
 
+      retRecv = client.sock.recv(recvBuf, workerRecvBufSize, 0.cint)
       block RecvLoop:
         while true:
-          retRecv = client.sock.recv(recvBuf, workerRecvBufSize, 0.cint)
           if retRecv >= 17:
             var endPos = cast[uint](recvBuf) + cast[uint](retRecv) - 4
             if equalMem(recvBuf, "GET ".cstring, 4):
