@@ -467,6 +467,11 @@ template parseServers*(serverBody: untyped) {.dirty.} =
   template createThreadWrapper(t: var Thread[WrapperThreadArg]; threadProc: proc (arg: ThreadArg) {.thread.}; threadArg: ThreadArg) =
     createThread(t, threadWrapper, (threadProc, threadArg))
 
+  proc camel(s: string): string {.compileTime.} =
+    result = s
+    if result.len > 0 and result[0] >= 'A' and result[0] <= 'Z':
+      result[0] = char(result[0].uint8 + 32'u8)
+
   macro appCaseBody(abortBlock: typed): untyped =
     var ret = nnkCaseStmt.newTree(
       nnkDotExpr.newTree(
@@ -479,7 +484,7 @@ template parseServers*(serverBody: untyped) {.dirty.} =
       var appStmt = if appType == AppAbort:
         nnkStmtList.newTree(
           nnkCall.newTree(
-            newIdentNode($appType & "Macro"),
+            newIdentNode(camel($appType) & "Macro"),
             newIdentNode($i.AppId),
             abortBlock
           )
@@ -487,7 +492,7 @@ template parseServers*(serverBody: untyped) {.dirty.} =
       else:
         nnkStmtList.newTree(
           nnkCall.newTree(
-            newIdentNode($appType & "Macro"),
+            newIdentNode(camel($appType) & "Macro"),
             newIdentNode($i.AppId)
           ),
           nnkCall.newTree(
@@ -502,16 +507,16 @@ template parseServers*(serverBody: untyped) {.dirty.} =
     echo "ret=", ret.astGenRepr
     ret
 
-  macro AppEmptyMacro(appId: AppId): untyped =
+  macro appEmptyMacro(appId: AppId): untyped =
     quote do:
       echo `appId`
 
-  macro AppAbortMacro(appId: AppId, abortBlock: typed): untyped =
+  macro appAbortMacro(appId: AppId, abortBlock: typed): untyped =
     quote do:
       echo `appId`
       break `abortBlock`
 
-  macro AppListenMacro(appId: AppId): untyped =
+  macro appListenMacro(appId: AppId): untyped =
     quote do:
       while true:
         let clientSock = client.sock.accept4(cast[ptr SockAddr](addr sockAddress), addr addrLen, O_NONBLOCK)
@@ -537,7 +542,7 @@ template parseServers*(serverBody: untyped) {.dirty.} =
         else:
           break
 
-  macro AppRoutesMacro(appId: AppId): untyped =
+  macro appRoutesMacro(appId: AppId): untyped =
     var routesBody = routesBodyList[curRoutesId]
     var routesProc = genSym(nskProc, "routesProc")
 
@@ -658,19 +663,19 @@ template parseServers*(serverBody: untyped) {.dirty.} =
               break
 
 
-  macro AppGetMacro(appId: AppId): untyped =
+  macro appGetMacro(appId: AppId): untyped =
     quote do:
       echo `appId`
 
-  macro AppGetSendMacro(appId: AppId): untyped =
+  macro appGetSendMacro(appId: AppId): untyped =
     quote do:
       echo `appId`
 
-  macro AppPostMacro(appId: AppId): untyped =
+  macro appPostMacro(appId: AppId): untyped =
     quote do:
       echo `appId`
 
-  macro AppPostSendMacro(appId: AppId): untyped =
+  macro appPostSendMacro(appId: AppId): untyped =
     quote do:
       echo `appId`
 
