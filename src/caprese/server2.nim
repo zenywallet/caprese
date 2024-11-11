@@ -373,6 +373,7 @@ template parseServers*(serverBody: untyped) {.dirty.} =
   var curSrvId {.compileTime.} = 0
   var curRoutesId {.compileTime.} = 0
   var routesBodyList {.compileTime.}: seq[NimNode]
+  var routesProcList {.compileTime.}: seq[NimNode]
 
   type
     SendProcType {.size: sizeof(cint).} = enum
@@ -410,6 +411,8 @@ template parseServers*(serverBody: untyped) {.dirty.} =
 
       routesBodyList.add quote do:
         `body0`
+
+      routesProcList.add genSym(nskProc, "routesProc")
 
       quote do:
         echo "server: ", `bindAddress`, ":", `port`, " srvId=", `srvId`
@@ -559,7 +562,7 @@ template parseServers*(serverBody: untyped) {.dirty.} =
 
   macro appRoutesMacro(appId: AppId): untyped =
     var routesBody = routesBodyList[curRoutesId]
-    var routesProc = genSym(nskProc, "routesProc")
+    var routesProc = routesProcList[curRoutesId]
 
     quote do:
       proc send(data: seq[byte] | string | Array[byte]): SendResult {.discardable.} =
@@ -686,7 +689,7 @@ template parseServers*(serverBody: untyped) {.dirty.} =
 
   macro appRoutesRecvMacro(appId: AppId): untyped =
     var routesBody = routesBodyList[curRoutesId]
-    var routesProc = genSym(nskProc, "routesProc")
+    var routesProc = routesProcList[curRoutesId]
 
     quote do:
       echo `appId`
