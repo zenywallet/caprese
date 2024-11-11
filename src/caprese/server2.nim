@@ -10,6 +10,8 @@ type
     AppAbort
     AppListen
     AppRoutes
+    AppRoutesRecv
+    AppRoutesSend
     AppGet
     AppGetSend
     AppPost
@@ -112,6 +114,8 @@ template parseServers*(serverBody: untyped) {.dirty.} =
       quote do:
         newRoutesFlag()
         echo "routes ", newAppId(AppType2.AppRoutes)
+        echo "routes recv ", newAppId(AppType2.AppRoutesRecv)
+        echo "routes send ", newAppId(AppType2.AppRoutesSend)
         defer:
           var cmdFlag = routesCmdFlagList[^1]
           var cmdCount = routesCmdCountList[^1]
@@ -155,6 +159,9 @@ template parseServers*(serverBody: untyped) {.dirty.} =
       appId: AppId
       ev: EpollEvent
       ev2: EpollEvent
+      recvBuf: ptr UncheckedArray[byte]
+      recvPos: ptr UncheckedArray[byte]
+      recvLen: int
       sendBuf: ptr UncheckedArray[byte]
       sendPos: ptr UncheckedArray[byte]
       sendLen: int
@@ -194,6 +201,9 @@ template parseServers*(serverBody: untyped) {.dirty.} =
     client.ev.data = cast[EpollData](client)
     client.ev2.events = EPOLLRDHUP or EPOLLET or EPOLLOUT
     client.ev2.data = cast[EpollData](client)
+    client.recvBuf = nil
+    client.recvPos = nil
+    client.recvLen = 0
     client.sendBuf = nil
     client.sendPos = nil
     client.sendLen = 0
@@ -249,6 +259,11 @@ template parseServers*(serverBody: untyped) {.dirty.} =
       var sockCint = cast[cint](sockInt) # cast lower only
       var retClose = sockCint.close()
       if retClose != 0: raise
+      if not client.recvBuf.isNil:
+        client.recvBuf.deallocShared()
+        client.recvBuf = nil
+        client.recvPos = nil
+        client.recvLen = 0
       if not client.sendBuf.isNil:
         client.sendBuf.deallocShared()
         client.sendBuf = nil
@@ -653,7 +668,14 @@ template parseServers*(serverBody: untyped) {.dirty.} =
             client.close()
             break
 
-          else: # retRecv < 17
+          elif retRecv > 0:
+            client.recvBuf = recvBuf
+            #client.recvPos
+            client.recvLen = retRecv
+            recvBuf = cast[ptr UncheckedArray[byte]](allocShared0(workerRecvBufSize))
+            client.appId = (client.appId.cint + 1).AppId # AppRoutesRecv
+            break
+          else:
             if errno == EAGAIN or errno == EWOULDBLOCK:
               break
             elif errno == EINTR:
@@ -662,6 +684,139 @@ template parseServers*(serverBody: untyped) {.dirty.} =
               client.close()
               break
 
+  macro appRoutesRecvMacro(appId: AppId): untyped =
+    var routesBody = routesBodyList[curRoutesId]
+    var routesProc = genSym(nskProc, "routesProc")
+
+    quote do:
+      echo `appId`
+
+      proc send(data: seq[byte] | string | Array[byte]): SendResult {.discardable.} =
+        {.computedGoto.}
+        case curSendProcType
+        of SendProc1:
+          let sendlen = client.sock.send(addr data[0], data.len.cint,  MSG_NOSIGNAL)
+          if sendlen > 0:
+            SendResult.Success
+          else:
+            SendResult.Pending
+        of SendProc2:
+          copyMem(addr sendBuf[curSendBufSize], addr data[0], data.len)
+          curSendBufSize += data.len
+          SendResult.Pending
+        of SendProc3:
+          copyMem(addr sendBuf[curSendBufSize], addr data[0], data.len)
+          curSendBufSize += data.len
+          let sendlen = client.sock.send(sendBuf, curSendBufSize.cint,  MSG_NOSIGNAL)
+          if sendlen  == curSendBufSize:
+            SendResult.Success
+          else:
+            SendResult.Pending
+
+      proc `routesProc`(sendProcType: SendProcType): SendResult =
+        curSendProcType = sendProcType
+        `routesBody`
+
+      var recvSize = workerRecvBufSize - client.recvLen
+      if recvSize <= 0:
+        client.close()
+        break
+
+      retRecv = client.sock.recv(addr client.recvBuf[client.recvLen], recvSize, 0.cint)
+      if retRecv > 0:
+        client.recvLen += retRecv
+
+        block RecvLoop:
+          while true:
+            if client.recvLen >= 17:
+              var endPos = cast[uint](client.recvBuf) + cast[uint](client.recvLen) - 4
+              if equalMem(client.recvBuf, "GET ".cstring, 4):
+                var pos = cast[uint](client.recvBuf) + 4
+
+                reqHeaderUrlPos = pos
+                while true:
+                  if equalMem(cast[pointer](pos), " HTTP/1.".cstring, 8):
+                    reqHeaderUrlSize = pos - reqHeaderUrlPos
+                    inc(pos, 7)
+                    if equalMem(cast[pointer](pos), ".1\c\L".cstring, 4):
+                      reqHeaderMinorVer = 1
+                      inc(pos, 2)
+                      break
+                    elif equalMem(cast[pointer](pos), ".0\c\L".cstring, 4):
+                      reqHeaderMinorVer = 0
+                      inc(pos, 2)
+                      break
+                    else:
+                      inc(pos)
+                      reqHeaderMinorVer = int(cast[ptr char](cast[pointer](pos))[]) - int('0')
+                      inc(pos)
+                      if reqHeaderMinorVer < 0 or reqHeaderMinorVer > 9 or not equalMem(cast[pointer](pos), "\c\L".cstring, 2):
+                        client.close()
+                        break RecvLoop
+                      break
+                  inc(pos); if pos == endPos: break RecvLoop
+
+                curSendBufSize = 0
+                while true:
+                  if equalMem(cast[pointer](pos), "\c\L\c\L".cstring, 4):
+                    if pos == endPos:
+                      var retRoutes = `routesProc`(SendProc1)
+                      if retRoutes <= SendResult.None:
+                        client.close()
+                      else:
+                        client.whackaMole = false
+                        client.recvLen = 0
+                      break RecvLoop
+                    else:
+                      var retRoutes = `routesProc`(SendProc2)
+                      if retRoutes <= SendResult.None:
+                        client.close()
+                        break RecvLoop
+                      else:
+                        inc(pos, 4)
+
+                      while true:
+                        if equalMem(cast[pointer](pos), "\c\L\c\L".cstring, 4):
+                          if pos == endPos:
+                            var retRoutes = `routesProc`(SendProc3)
+                            if retRoutes <= SendResult.None:
+                              client.close()
+                            else:
+                              client.whackaMole = false
+                              client.recvLen = 0
+                            break RecvLoop
+                          else:
+                            var retRoutes = `routesProc`(SendProc2)
+                            if retRoutes <= SendResult.None:
+                              client.close()
+                              break RecvLoop
+                            else:
+                              inc(pos, 4)
+
+                        if pos >= endPos: break RecvLoop
+                        inc(pos)
+                  else:
+                    if pos >= endPos: break RecvLoop
+                    inc(pos)
+
+      elif retRecv == 0:
+        client.close()
+        break
+
+      else:
+        if errno == EAGAIN or errno == EWOULDBLOCK:
+          break
+        elif errno == EINTR:
+          continue
+        else:
+          client.close()
+          break
+
+      echo "AppRoutesRecvMacro retRecv=", retRecv
+
+  macro appRoutesSendMacro(appId: AppId): untyped =
+    quote do:
+      echo `appId`
 
   macro appGetMacro(appId: AppId): untyped =
     quote do:
