@@ -485,6 +485,41 @@ template parseServers*(serverBody: untyped) {.dirty.} =
   template createThreadWrapper(t: var Thread[WrapperThreadArg]; threadProc: proc (arg: ThreadArg) {.thread.}; threadArg: ThreadArg) =
     createThread(t, threadWrapper, (threadProc, threadArg))
 
+  macro appRoutesBase(): untyped =
+    result = quote do:
+      echo "appRoutesBase"
+
+      proc send(data: seq[byte] | string | Array[byte]): SendResult {.discardable.} =
+        {.computedGoto.}
+        case curSendProcType
+        of SendProc1:
+          let sendlen = client.sock.send(addr data[0], data.len.cint,  MSG_NOSIGNAL)
+          if sendlen > 0:
+            SendResult.Success
+          else:
+            SendResult.Pending
+        of SendProc2:
+          copyMem(addr sendBuf[curSendBufSize], addr data[0], data.len)
+          curSendBufSize += data.len
+          SendResult.Pending
+        of SendProc3:
+          copyMem(addr sendBuf[curSendBufSize], addr data[0], data.len)
+          curSendBufSize += data.len
+          let sendlen = client.sock.send(sendBuf, curSendBufSize.cint,  MSG_NOSIGNAL)
+          if sendlen  == curSendBufSize:
+            SendResult.Success
+          else:
+            SendResult.Pending
+
+    for i in 0..<routesBodyList.len:
+      var routesBody = routesBodyList[i]
+      var routesProc = routesProcList[i]
+
+      result.add quote do:
+        proc `routesProc`(sendProcType: SendProcType): SendResult =
+          curSendProcType = sendProcType
+          `routesBody`
+
   proc camel(s: string): string {.compileTime.} =
     result = s
     if result.len > 0 and result[0] >= 'A' and result[0] <= 'Z':
@@ -561,36 +596,9 @@ template parseServers*(serverBody: untyped) {.dirty.} =
           break
 
   macro appRoutesMacro(appId: AppId): untyped =
-    var routesBody = routesBodyList[curRoutesId]
     var routesProc = routesProcList[curRoutesId]
 
     quote do:
-      proc send(data: seq[byte] | string | Array[byte]): SendResult {.discardable.} =
-        {.computedGoto.}
-        case curSendProcType
-        of SendProc1:
-          let sendlen = client.sock.send(addr data[0], data.len.cint,  MSG_NOSIGNAL)
-          if sendlen > 0:
-            SendResult.Success
-          else:
-            SendResult.Pending
-        of SendProc2:
-          copyMem(addr sendBuf[curSendBufSize], addr data[0], data.len)
-          curSendBufSize += data.len
-          SendResult.Pending
-        of SendProc3:
-          copyMem(addr sendBuf[curSendBufSize], addr data[0], data.len)
-          curSendBufSize += data.len
-          let sendlen = client.sock.send(sendBuf, curSendBufSize.cint,  MSG_NOSIGNAL)
-          if sendlen  == curSendBufSize:
-            SendResult.Success
-          else:
-            SendResult.Pending
-
-      proc `routesProc`(sendProcType: SendProcType): SendResult =
-        curSendProcType = sendProcType
-        `routesBody`
-
       retRecv = client.sock.recv(recvBuf, workerRecvBufSize, 0.cint)
       block RecvLoop:
         while true:
@@ -955,6 +963,8 @@ template parseServers*(serverBody: untyped) {.dirty.} =
     var reqHeaderUrlSize: uint
     var reqHeaderMinorVer: int
     var curSendProcType: SendProcType
+
+    appRoutesBase()
 
     template nextEv() =
       inc(evIdx); if evIdx >= nfd: break
