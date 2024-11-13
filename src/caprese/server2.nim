@@ -377,9 +377,12 @@ template parseServers*(serverBody: untyped) {.dirty.} =
 
   type
     SendProcType {.size: sizeof(cint).} = enum
-      SendProc1
-      SendProc2
-      SendProc3
+      SendProc1_Prev2
+      SendProc2_Prev2
+      SendProc3_Prev2
+      SendProc1_Prev1
+      SendProc2_Prev1
+      SendProc3_Prev1
 
   macro getRoutesBody(): untyped =
     var body = routesBodyList[curRoutesId]
@@ -492,17 +495,35 @@ template parseServers*(serverBody: untyped) {.dirty.} =
       proc send(data: seq[byte] | string | Array[byte]): SendResult {.discardable.} =
         {.computedGoto.}
         case curSendProcType
-        of SendProc1:
+        of SendProc1_Prev2:
           let sendlen = client.sock.send(addr data[0], data.len.cint,  MSG_NOSIGNAL)
           if sendlen > 0:
             SendResult.Success
           else:
             SendResult.Pending
-        of SendProc2:
+        of SendProc2_Prev2:
           copyMem(addr sendBuf[curSendBufSize], addr data[0], data.len)
           curSendBufSize += data.len
           SendResult.Pending
-        of SendProc3:
+        of SendProc3_Prev2:
+          copyMem(addr sendBuf[curSendBufSize], addr data[0], data.len)
+          curSendBufSize += data.len
+          let sendlen = client.sock.send(sendBuf, curSendBufSize.cint,  MSG_NOSIGNAL)
+          if sendlen  == curSendBufSize:
+            SendResult.Success
+          else:
+            SendResult.Pending
+        of SendProc1_Prev1:
+          let sendlen = client.sock.send(addr data[0], data.len.cint,  MSG_NOSIGNAL)
+          if sendlen > 0:
+            SendResult.Success
+          else:
+            SendResult.Pending
+        of SendProc2_Prev1:
+          copyMem(addr sendBuf[curSendBufSize], addr data[0], data.len)
+          curSendBufSize += data.len
+          SendResult.Pending
+        of SendProc3_Prev1:
           copyMem(addr sendBuf[curSendBufSize], addr data[0], data.len)
           curSendBufSize += data.len
           let sendlen = client.sock.send(sendBuf, curSendBufSize.cint,  MSG_NOSIGNAL)
@@ -636,14 +657,14 @@ template parseServers*(serverBody: untyped) {.dirty.} =
               while true:
                 if equalMem(cast[pointer](pos), "\c\L\c\L".cstring, 4):
                   if pos == endPos:
-                    var retRoutes = `routesProc`(SendProc1)
+                    var retRoutes = `routesProc`(SendProc1_Prev2)
                     if retRoutes <= SendResult.None:
                       client.close()
                     else:
                       client.whackaMole = false
                     break RecvLoop
                   else:
-                    var retRoutes = `routesProc`(SendProc2)
+                    var retRoutes = `routesProc`(SendProc2_Prev2)
                     if retRoutes <= SendResult.None:
                       client.close()
                       break RecvLoop
@@ -657,14 +678,14 @@ template parseServers*(serverBody: untyped) {.dirty.} =
                     while true:
                       if equalMem(cast[pointer](pos), "\c\L\c\L".cstring, 4):
                         if pos == endPos:
-                          var retRoutes = `routesProc`(SendProc3)
+                          var retRoutes = `routesProc`(SendProc3_Prev2)
                           if retRoutes <= SendResult.None:
                             client.close()
                           else:
                             client.whackaMole = false
                           break RecvLoop
                         else:
-                          var retRoutes = `routesProc`(SendProc2)
+                          var retRoutes = `routesProc`(SendProc2_Prev2)
                           if retRoutes <= SendResult.None:
                             client.close()
                             break RecvLoop
@@ -712,28 +733,6 @@ template parseServers*(serverBody: untyped) {.dirty.} =
     quote do:
       echo `appId`
 
-      proc send(data: seq[byte] | string | Array[byte]): SendResult {.discardable.} =
-        {.computedGoto.}
-        case curSendProcType
-        of SendProc1:
-          let sendlen = client.sock.send(addr data[0], data.len.cint,  MSG_NOSIGNAL)
-          if sendlen > 0:
-            SendResult.Success
-          else:
-            SendResult.Pending
-        of SendProc2:
-          copyMem(addr sendBuf[curSendBufSize], addr data[0], data.len)
-          curSendBufSize += data.len
-          SendResult.Pending
-        of SendProc3:
-          copyMem(addr sendBuf[curSendBufSize], addr data[0], data.len)
-          curSendBufSize += data.len
-          let sendlen = client.sock.send(sendBuf, curSendBufSize.cint,  MSG_NOSIGNAL)
-          if sendlen  == curSendBufSize:
-            SendResult.Success
-          else:
-            SendResult.Pending
-
       proc `routesProc`(sendProcType: SendProcType): SendResult =
         curSendProcType = sendProcType
         `routesBody`
@@ -759,7 +758,7 @@ template parseServers*(serverBody: untyped) {.dirty.} =
                 while true:
                   if equalMem(cast[pointer](pos), "\c\L\c\L".cstring, 4):
                     if pos == endPos:
-                      var retRoutes = `routesProc`(SendProc1)
+                      var retRoutes = `routesProc`(SendProc1_Prev1)
                       if retRoutes <= SendResult.None:
                         client.close()
                       else:
@@ -767,7 +766,7 @@ template parseServers*(serverBody: untyped) {.dirty.} =
                         client.recvLen = 0
                       break RecvLoop
                     else:
-                      var retRoutes = `routesProc`(SendProc2)
+                      var retRoutes = `routesProc`(SendProc2_Prev1)
                       if retRoutes <= SendResult.None:
                         client.close()
                         break RecvLoop
@@ -781,7 +780,7 @@ template parseServers*(serverBody: untyped) {.dirty.} =
                       while true:
                         if equalMem(cast[pointer](pos), "\c\L\c\L".cstring, 4):
                           if pos == endPos:
-                            var retRoutes = `routesProc`(SendProc3)
+                            var retRoutes = `routesProc`(SendProc3_Prev1)
                             if retRoutes <= SendResult.None:
                               client.close()
                             else:
@@ -789,7 +788,7 @@ template parseServers*(serverBody: untyped) {.dirty.} =
                               client.recvLen = 0
                             break RecvLoop
                           else:
-                            var retRoutes = `routesProc`(SendProc2)
+                            var retRoutes = `routesProc`(SendProc2_Prev1)
                             if retRoutes <= SendResult.None:
                               client.close()
                               break RecvLoop
