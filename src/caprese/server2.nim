@@ -511,6 +511,30 @@ template parseServers*(serverBody: untyped) {.dirty.} =
           else:
             SendResult.Pending
 
+      template parseHeaderUrl(pos, endPos: uint, RecvLoop: typed) =
+        reqHeaderUrlPos = pos
+        while true:
+          if equalMem(cast[pointer](pos), " HTTP/1.".cstring, 8):
+            reqHeaderUrlSize = pos - reqHeaderUrlPos
+            inc(pos, 7)
+            if equalMem(cast[pointer](pos), ".1\c\L".cstring, 4):
+              reqHeaderMinorVer = 1
+              inc(pos, 2)
+              break
+            elif equalMem(cast[pointer](pos), ".0\c\L".cstring, 4):
+              reqHeaderMinorVer = 0
+              inc(pos, 2)
+              break
+            else:
+              inc(pos)
+              reqHeaderMinorVer = int(cast[ptr char](cast[pointer](pos))[]) - int('0')
+              inc(pos)
+              if reqHeaderMinorVer < 0 or reqHeaderMinorVer > 9 or not equalMem(cast[pointer](pos), "\c\L".cstring, 2):
+                client.close()
+                break RecvLoop
+              break
+          inc(pos); if pos == endPos: break RecvLoop
+
     for i in 0..<routesBodyList.len:
       var routesBody = routesBodyList[i]
       var routesProc = routesProcList[i]
@@ -606,29 +630,7 @@ template parseServers*(serverBody: untyped) {.dirty.} =
             var endPos = cast[uint](recvBuf) + cast[uint](retRecv) - 4
             if equalMem(recvBuf, "GET ".cstring, 4):
               var pos = cast[uint](recvBuf) + 4
-
-              reqHeaderUrlPos = pos
-              while true:
-                if equalMem(cast[pointer](pos), " HTTP/1.".cstring, 8):
-                  reqHeaderUrlSize = pos - reqHeaderUrlPos
-                  inc(pos, 7)
-                  if equalMem(cast[pointer](pos), ".1\c\L".cstring, 4):
-                    reqHeaderMinorVer = 1
-                    inc(pos, 2)
-                    break
-                  elif equalMem(cast[pointer](pos), ".0\c\L".cstring, 4):
-                    reqHeaderMinorVer = 0
-                    inc(pos, 2)
-                    break
-                  else:
-                    inc(pos)
-                    reqHeaderMinorVer = int(cast[ptr char](cast[pointer](pos))[]) - int('0')
-                    inc(pos)
-                    if reqHeaderMinorVer < 0 or reqHeaderMinorVer > 9 or not equalMem(cast[pointer](pos), "\c\L".cstring, 2):
-                      client.close()
-                      break RecvLoop
-                    break
-                inc(pos); if pos == endPos: break RecvLoop
+              parseHeaderUrl(pos, endPos, RecvLoop)
 
               curSendBufSize = 0
               while true:
@@ -650,28 +652,7 @@ template parseServers*(serverBody: untyped) {.dirty.} =
 
                     if equalMem(cast[pointer](pos), "GET ".cstring, 4):
                       inc(pos, 4)
-                      reqHeaderUrlPos = pos
-                      while true:
-                        if equalMem(cast[pointer](pos), " HTTP/1.".cstring, 8):
-                          reqHeaderUrlSize = pos - reqHeaderUrlPos
-                          inc(pos, 7)
-                          if equalMem(cast[pointer](pos), ".1\c\L".cstring, 4):
-                            reqHeaderMinorVer = 1
-                            inc(pos, 2)
-                            break
-                          elif equalMem(cast[pointer](pos), ".0\c\L".cstring, 4):
-                            reqHeaderMinorVer = 0
-                            inc(pos, 2)
-                            break
-                          else:
-                            inc(pos)
-                            reqHeaderMinorVer = int(cast[ptr char](cast[pointer](pos))[]) - int('0')
-                            inc(pos)
-                            if reqHeaderMinorVer < 0 or reqHeaderMinorVer > 9 or not equalMem(cast[pointer](pos), "\c\L".cstring, 2):
-                              client.close()
-                              break RecvLoop
-                            break
-                        inc(pos); if pos == endPos: break RecvLoop
+                      parseHeaderUrl(pos, endPos, RecvLoop)
 
                     while true:
                       if equalMem(cast[pointer](pos), "\c\L\c\L".cstring, 4):
@@ -692,28 +673,7 @@ template parseServers*(serverBody: untyped) {.dirty.} =
 
                         if equalMem(cast[pointer](pos), "GET ".cstring, 4):
                           inc(pos, 4)
-                          reqHeaderUrlPos = pos
-                          while true:
-                            if equalMem(cast[pointer](pos), " HTTP/1.".cstring, 8):
-                              reqHeaderUrlSize = pos - reqHeaderUrlPos
-                              inc(pos, 7)
-                              if equalMem(cast[pointer](pos), ".1\c\L".cstring, 4):
-                                reqHeaderMinorVer = 1
-                                inc(pos, 2)
-                                break
-                              elif equalMem(cast[pointer](pos), ".0\c\L".cstring, 4):
-                                reqHeaderMinorVer = 0
-                                inc(pos, 2)
-                                break
-                              else:
-                                inc(pos)
-                                reqHeaderMinorVer = int(cast[ptr char](cast[pointer](pos))[]) - int('0')
-                                inc(pos)
-                                if reqHeaderMinorVer < 0 or reqHeaderMinorVer > 9 or not equalMem(cast[pointer](pos), "\c\L".cstring, 2):
-                                  client.close()
-                                  break RecvLoop
-                                break
-                            inc(pos); if pos == endPos: break RecvLoop
+                          parseHeaderUrl(pos, endPos, RecvLoop)
 
                       if pos >= endPos: break RecvLoop
                       inc(pos)
@@ -793,29 +753,7 @@ template parseServers*(serverBody: untyped) {.dirty.} =
               var endPos = cast[uint](client.recvBuf) + cast[uint](client.recvLen) - 4
               if equalMem(client.recvBuf, "GET ".cstring, 4):
                 var pos = cast[uint](client.recvBuf) + 4
-
-                reqHeaderUrlPos = pos
-                while true:
-                  if equalMem(cast[pointer](pos), " HTTP/1.".cstring, 8):
-                    reqHeaderUrlSize = pos - reqHeaderUrlPos
-                    inc(pos, 7)
-                    if equalMem(cast[pointer](pos), ".1\c\L".cstring, 4):
-                      reqHeaderMinorVer = 1
-                      inc(pos, 2)
-                      break
-                    elif equalMem(cast[pointer](pos), ".0\c\L".cstring, 4):
-                      reqHeaderMinorVer = 0
-                      inc(pos, 2)
-                      break
-                    else:
-                      inc(pos)
-                      reqHeaderMinorVer = int(cast[ptr char](cast[pointer](pos))[]) - int('0')
-                      inc(pos)
-                      if reqHeaderMinorVer < 0 or reqHeaderMinorVer > 9 or not equalMem(cast[pointer](pos), "\c\L".cstring, 2):
-                        client.close()
-                        break RecvLoop
-                      break
-                  inc(pos); if pos == endPos: break RecvLoop
+                parseHeaderUrl(pos, endPos, RecvLoop)
 
                 curSendBufSize = 0
                 while true:
@@ -838,28 +776,7 @@ template parseServers*(serverBody: untyped) {.dirty.} =
 
                       if equalMem(cast[pointer](pos), "GET ".cstring, 4):
                         inc(pos, 4)
-                        reqHeaderUrlPos = pos
-                        while true:
-                          if equalMem(cast[pointer](pos), " HTTP/1.".cstring, 8):
-                            reqHeaderUrlSize = pos - reqHeaderUrlPos
-                            inc(pos, 7)
-                            if equalMem(cast[pointer](pos), ".1\c\L".cstring, 4):
-                              reqHeaderMinorVer = 1
-                              inc(pos, 2)
-                              break
-                            elif equalMem(cast[pointer](pos), ".0\c\L".cstring, 4):
-                              reqHeaderMinorVer = 0
-                              inc(pos, 2)
-                              break
-                            else:
-                              inc(pos)
-                              reqHeaderMinorVer = int(cast[ptr char](cast[pointer](pos))[]) - int('0')
-                              inc(pos)
-                              if reqHeaderMinorVer < 0 or reqHeaderMinorVer > 9 or not equalMem(cast[pointer](pos), "\c\L".cstring, 2):
-                                client.close()
-                                break RecvLoop
-                              break
-                          inc(pos); if pos == endPos: break RecvLoop
+                        parseHeaderUrl(pos, endPos, RecvLoop)
 
                       while true:
                         if equalMem(cast[pointer](pos), "\c\L\c\L".cstring, 4):
@@ -881,28 +798,7 @@ template parseServers*(serverBody: untyped) {.dirty.} =
 
                           if equalMem(cast[pointer](pos), "GET ".cstring, 4):
                             inc(pos, 4)
-                            reqHeaderUrlPos = pos
-                            while true:
-                              if equalMem(cast[pointer](pos), " HTTP/1.".cstring, 8):
-                                reqHeaderUrlSize = pos - reqHeaderUrlPos
-                                inc(pos, 7)
-                                if equalMem(cast[pointer](pos), ".1\c\L".cstring, 4):
-                                  reqHeaderMinorVer = 1
-                                  inc(pos, 2)
-                                  break
-                                elif equalMem(cast[pointer](pos), ".0\c\L".cstring, 4):
-                                  reqHeaderMinorVer = 0
-                                  inc(pos, 2)
-                                  break
-                                else:
-                                  inc(pos)
-                                  reqHeaderMinorVer = int(cast[ptr char](cast[pointer](pos))[]) - int('0')
-                                  inc(pos)
-                                  if reqHeaderMinorVer < 0 or reqHeaderMinorVer > 9 or not equalMem(cast[pointer](pos), "\c\L".cstring, 2):
-                                    client.close()
-                                    break RecvLoop
-                                  break
-                              inc(pos); if pos == endPos: break RecvLoop
+                            parseHeaderUrl(pos, endPos, RecvLoop)
 
                         if pos >= endPos: break RecvLoop
                         inc(pos)
