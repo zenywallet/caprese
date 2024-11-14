@@ -378,10 +378,9 @@ template parseServers*(serverBody: untyped) {.dirty.} =
   type
     SendProcType {.size: sizeof(cuint).} = enum
       SendProc1_Prev2
-      SendProc2_Prev2
-      SendProc3_Prev2
       SendProc1_Prev1
-      SendProc2_Prev1
+      SendProc2
+      SendProc3_Prev2
       SendProc3_Prev1
 
   macro getRoutesBody(): untyped =
@@ -501,7 +500,7 @@ template parseServers*(serverBody: untyped) {.dirty.} =
             SendResult.Success
           else:
             SendResult.Pending
-        of SendProc2_Prev2:
+        of SendProc2:
           copyMem(addr sendBuf[curSendSize], addr data[0], data.len)
           curSendSize += data.len
           SendResult.Pending
@@ -519,10 +518,6 @@ template parseServers*(serverBody: untyped) {.dirty.} =
             SendResult.Success
           else:
             SendResult.Pending
-        of SendProc2_Prev1:
-          copyMem(addr sendBuf[curSendSize], addr data[0], data.len)
-          curSendSize += data.len
-          SendResult.Pending
         of SendProc3_Prev1:
           copyMem(addr sendBuf[curSendSize], addr data[0], data.len)
           curSendSize += data.len
@@ -664,7 +659,7 @@ template parseServers*(serverBody: untyped) {.dirty.} =
                       client.whackaMole = false
                     break RecvLoop
                   else:
-                    var retRoutes = `routesProc`(SendProc2_Prev2)
+                    var retRoutes = `routesProc`(SendProc2)
                     if retRoutes <= SendResult.None:
                       client.close()
                       break RecvLoop
@@ -685,7 +680,7 @@ template parseServers*(serverBody: untyped) {.dirty.} =
                             client.whackaMole = false
                           break RecvLoop
                         else:
-                          var retRoutes = `routesProc`(SendProc2_Prev2)
+                          var retRoutes = `routesProc`(SendProc2)
                           if retRoutes <= SendResult.None:
                             client.close()
                             break RecvLoop
@@ -766,7 +761,7 @@ template parseServers*(serverBody: untyped) {.dirty.} =
                         client.recvLen = 0
                       break RecvLoop
                     else:
-                      var retRoutes = `routesProc`(SendProc2_Prev1)
+                      var retRoutes = `routesProc`(SendProc2)
                       if retRoutes <= SendResult.None:
                         client.close()
                         break RecvLoop
@@ -788,7 +783,7 @@ template parseServers*(serverBody: untyped) {.dirty.} =
                               client.recvLen = 0
                             break RecvLoop
                           else:
-                            var retRoutes = `routesProc`(SendProc2_Prev1)
+                            var retRoutes = `routesProc`(SendProc2)
                             if retRoutes <= SendResult.None:
                               client.close()
                               break RecvLoop
