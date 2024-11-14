@@ -500,9 +500,12 @@ template parseServers*(serverBody: untyped) {.dirty.} =
             SendResult.Pending
 
         template sendProc2(): SendResult =
-          copyMem(addr sendBuf[curSendSize], addr data[0], data.len)
-          curSendSize += data.len
-          SendResult.Pending
+          var nextSize = curSendSize + data.len
+          if nextSize <= workerSendBufSize:
+            copyMem(addr sendBuf[curSendSize], addr data[0], data.len)
+            curSendSize = nextSize
+            SendResult.Pending
+          else: SendResult.Error
 
         template sendProc3(): SendResult =
           copyMem(addr sendBuf[curSendSize], addr data[0], data.len)
