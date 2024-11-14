@@ -492,19 +492,19 @@ template parseServers*(serverBody: untyped) {.dirty.} =
       echo "appRoutesBase"
 
       proc send(data: seq[byte] | string | Array[byte]): SendResult {.discardable.} =
-        {.computedGoto.}
-        case curSendProcType
-        of SendProc1_Prev2:
+        template sendProc1(): SendResult =
           let sendlen = client.sock.send(addr data[0], data.len.cint,  MSG_NOSIGNAL)
           if sendlen > 0:
             SendResult.Success
           else:
             SendResult.Pending
-        of SendProc2:
+
+        template sendProc2(): SendResult =
           copyMem(addr sendBuf[curSendSize], addr data[0], data.len)
           curSendSize += data.len
           SendResult.Pending
-        of SendProc3_Prev2:
+
+        template sendProc3(): SendResult =
           copyMem(addr sendBuf[curSendSize], addr data[0], data.len)
           curSendSize += data.len
           let sendlen = client.sock.send(sendBuf, curSendSize.cint,  MSG_NOSIGNAL)
@@ -512,20 +512,14 @@ template parseServers*(serverBody: untyped) {.dirty.} =
             SendResult.Success
           else:
             SendResult.Pending
-        of SendProc1_Prev1:
-          let sendlen = client.sock.send(addr data[0], data.len.cint,  MSG_NOSIGNAL)
-          if sendlen > 0:
-            SendResult.Success
-          else:
-            SendResult.Pending
-        of SendProc3_Prev1:
-          copyMem(addr sendBuf[curSendSize], addr data[0], data.len)
-          curSendSize += data.len
-          let sendlen = client.sock.send(sendBuf, curSendSize.cint,  MSG_NOSIGNAL)
-          if sendlen  == curSendSize:
-            SendResult.Success
-          else:
-            SendResult.Pending
+
+        {.computedGoto.}
+        case curSendProcType
+        of SendProc1_Prev2: sendProc1()
+        of SendProc1_Prev1: sendProc1()
+        of SendProc2: sendProc2()
+        of SendProc3_Prev2: sendProc3()
+        of SendProc3_Prev1: sendProc3()
 
       template parseHeaderUrl(pos, endPos: uint, RecvLoop: typed) =
         reqHeaderUrlPos = pos
