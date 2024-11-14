@@ -502,14 +502,14 @@ template parseServers*(serverBody: untyped) {.dirty.} =
           else:
             SendResult.Pending
         of SendProc2_Prev2:
-          copyMem(addr sendBuf[curSendBufSize], addr data[0], data.len)
-          curSendBufSize += data.len
+          copyMem(addr sendBuf[curSendSize], addr data[0], data.len)
+          curSendSize += data.len
           SendResult.Pending
         of SendProc3_Prev2:
-          copyMem(addr sendBuf[curSendBufSize], addr data[0], data.len)
-          curSendBufSize += data.len
-          let sendlen = client.sock.send(sendBuf, curSendBufSize.cint,  MSG_NOSIGNAL)
-          if sendlen  == curSendBufSize:
+          copyMem(addr sendBuf[curSendSize], addr data[0], data.len)
+          curSendSize += data.len
+          let sendlen = client.sock.send(sendBuf, curSendSize.cint,  MSG_NOSIGNAL)
+          if sendlen  == curSendSize:
             SendResult.Success
           else:
             SendResult.Pending
@@ -520,14 +520,14 @@ template parseServers*(serverBody: untyped) {.dirty.} =
           else:
             SendResult.Pending
         of SendProc2_Prev1:
-          copyMem(addr sendBuf[curSendBufSize], addr data[0], data.len)
-          curSendBufSize += data.len
+          copyMem(addr sendBuf[curSendSize], addr data[0], data.len)
+          curSendSize += data.len
           SendResult.Pending
         of SendProc3_Prev1:
-          copyMem(addr sendBuf[curSendBufSize], addr data[0], data.len)
-          curSendBufSize += data.len
-          let sendlen = client.sock.send(sendBuf, curSendBufSize.cint,  MSG_NOSIGNAL)
-          if sendlen  == curSendBufSize:
+          copyMem(addr sendBuf[curSendSize], addr data[0], data.len)
+          curSendSize += data.len
+          let sendlen = client.sock.send(sendBuf, curSendSize.cint,  MSG_NOSIGNAL)
+          if sendlen  == curSendSize:
             SendResult.Success
           else:
             SendResult.Pending
@@ -653,7 +653,7 @@ template parseServers*(serverBody: untyped) {.dirty.} =
               var pos = cast[uint](recvBuf) + 4
               parseHeaderUrl(pos, endPos, RecvLoop)
 
-              curSendBufSize = 0
+              curSendSize = 0
               while true:
                 if equalMem(cast[pointer](pos), "\c\L\c\L".cstring, 4):
                   if pos == endPos:
@@ -754,7 +754,7 @@ template parseServers*(serverBody: untyped) {.dirty.} =
                 var pos = cast[uint](client.recvBuf) + 4
                 parseHeaderUrl(pos, endPos, RecvLoop)
 
-                curSendBufSize = 0
+                curSendSize = 0
                 while true:
                   if equalMem(cast[pointer](pos), "\c\L\c\L".cstring, 4):
                     if pos == endPos:
@@ -853,7 +853,7 @@ template parseServers*(serverBody: untyped) {.dirty.} =
     var retRecv: int
     var recvBuf = cast[ptr UncheckedArray[byte]](allocShared0(workerRecvBufSize))
     var sendBuf = cast[ptr UncheckedArray[byte]](allocShared0(workerSendBufSize))
-    var curSendBufSize: int
+    var curSendSize: int
     var reqHeaderUrlPos: uint
     var reqHeaderUrlSize: uint
     var reqHeaderMinorVer: int
