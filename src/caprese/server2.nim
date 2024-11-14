@@ -37,7 +37,7 @@ macro genAppIdEnum*(): untyped =
             newIdentNode("size"),
             nnkCall.newTree(
               newIdentNode("sizeof"),
-              newIdentNode("cint")
+              newIdentNode("cuint")
             )
           )
         )
@@ -376,7 +376,7 @@ template parseServers*(serverBody: untyped) {.dirty.} =
   var routesProcList {.compileTime.}: seq[NimNode]
 
   type
-    SendProcType {.size: sizeof(cint).} = enum
+    SendProcType {.size: sizeof(cuint).} = enum
       SendProc1_Prev2
       SendProc2_Prev2
       SendProc3_Prev2
@@ -625,7 +625,7 @@ template parseServers*(serverBody: untyped) {.dirty.} =
             var newClient = clientFreePool2.pop()
             if not newClient.isNil:
               newClient.sock = clientSock
-              newClient.appId = (client.appId.cint + 1).AppId
+              newClient.appId = (client.appId.cuint + 1).AppId
               let e = epoll_ctl(epfd, EPOLL_CTL_ADD, clientSock.cint, addr newClient.ev)
               if e != 0: raise
               newClient.whackaMole = false
@@ -715,7 +715,7 @@ template parseServers*(serverBody: untyped) {.dirty.} =
             #client.recvPos
             client.recvLen = retRecv
             recvBuf = cast[ptr UncheckedArray[byte]](allocShared0(workerRecvBufSize))
-            client.appId = (client.appId.cint + 1).AppId # AppRoutesRecv
+            client.appId = (client.appId.cuint + 1).AppId # AppRoutesRecv
             break
           else:
             if errno == EAGAIN or errno == EWOULDBLOCK:
