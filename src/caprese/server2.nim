@@ -508,11 +508,21 @@ template parseServers*(serverBody: untyped) {.dirty.} =
 
         template sendProc2(): SendResult =
           var nextSize = curSendSize + data.len
-          if nextSize <= workerSendBufSize:
+          when cfg.sendBufExpand:
+            if nextSize > sendBufSize:
+              let nextReserveSize = nextSize div 2 + nextSize
+              sendBuf = cast[ptr UncheckedArray[byte]](sendBuf.reallocShared(nextReserveSize))
+              sendBufSize = nextReserveSize
             copyMem(addr sendBuf[curSendSize], addr data[0], data.len)
             curSendSize = nextSize
             SendResult.Pending
-          else: SendResult.Error
+          else:
+            if nextSize <= sendBufSize:
+              copyMem(addr sendBuf[curSendSize], addr data[0], data.len)
+              curSendSize = nextSize
+              SendResult.Pending
+            else:
+              SendResult.Error
 
         template sendProc3(): SendResult =
           copyMem(addr sendBuf[curSendSize], addr data[0], data.len)
@@ -852,6 +862,7 @@ template parseServers*(serverBody: untyped) {.dirty.} =
     var retRecv: int
     var recvBuf = cast[ptr UncheckedArray[byte]](allocShared0(workerRecvBufSize))
     var sendBuf = cast[ptr UncheckedArray[byte]](allocShared0(workerSendBufSize))
+    var sendBufSize = workerSendBufSize
     var curSendSize: int
     var reqHeaderUrlPos: uint
     var reqHeaderUrlSize: uint
