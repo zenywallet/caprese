@@ -163,7 +163,7 @@ template parseServers*(serverBody: untyped) {.dirty.} =
       recvPos: ptr UncheckedArray[byte]
       recvLen: int
       sendBuf: ptr UncheckedArray[byte]
-      sendBufSize: int
+      when cfg.sendBufExpand: sendBufSize: int
       sendPos: ptr UncheckedArray[byte]
       sendLen: int
       threadId: int
@@ -206,7 +206,7 @@ template parseServers*(serverBody: untyped) {.dirty.} =
     client.recvPos = nil
     client.recvLen = 0
     client.sendBuf = nil
-    client.sendBufSize = 0
+    when cfg.sendBufExpand: client.sendBufSize = 0
     client.sendPos = nil
     client.sendLen = 0
     client.threadId = -1
@@ -269,7 +269,7 @@ template parseServers*(serverBody: untyped) {.dirty.} =
       if not client.sendBuf.isNil:
         client.sendBuf.deallocShared()
         client.sendBuf = nil
-        client.sendBufSize = 0
+        when cfg.sendBufExpand: client.sendBufSize = 0
         client.sendPos = nil
         client.sendLen = 0
       #client.whackaMole = false
@@ -371,7 +371,7 @@ template parseServers*(serverBody: untyped) {.dirty.} =
     listenServer.recvPos = nil
     listenServer.recvLen = 0
     listenServer.sendBuf = nil
-    listenServer.sendBufSize = 0
+    when cfg.sendBufExpand: listenServer.sendBufSize = 0
     listenServer.sendPos = nil
     listenServer.sendLen = 0
     listenServer.threadId = -1
