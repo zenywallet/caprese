@@ -71,7 +71,10 @@ type
     tcpNodelay*: bool
     clientMax*: int
     connectionTimeout*: int
+    recvBufExpand*: bool
     recvBufExpandBreakSize*: int
+    sendBufExpand*: bool
+    sendBufExpandBreakSize*: int
     maxFrameSize*: int
     certsPath*: string
     privKeyFile*: string
@@ -118,7 +121,10 @@ const defaultConfig* = defaultConfigMacro:
   tcpNodelay = true
   clientMax = 32000
   connectionTimeout = 120
+  recvBufExpand = true
   recvBufExpandBreakSize = 131072 * 5
+  sendBufExpand = true
+  sendBufExpandBreakSize = -1
   maxFrameSize = 131072 * 5
   certsPath = "./certs"
   privKeyFile = "privkey.pem"
