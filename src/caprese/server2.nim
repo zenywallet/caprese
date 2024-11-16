@@ -861,6 +861,7 @@ template parseServers*(serverBody: untyped) {.dirty.} =
     var addrLen: SockLen = sizeof(sockAddress).SockLen
     var retRecv: int
     var recvBuf = cast[ptr UncheckedArray[byte]](allocShared0(workerRecvBufSize))
+    var recvBufSize = workerRecvBufSize
     var sendBuf = cast[ptr UncheckedArray[byte]](allocShared0(workerSendBufSize))
     var sendBufSize = workerSendBufSize
     var curSendSize: int
