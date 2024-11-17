@@ -211,6 +211,8 @@ template parseServers*(serverBody: untyped) {.dirty.} =
     client.sendLen = 0
     client.threadId = -1
     client.whackaMole = false
+    client.prev = nil
+    client.next = nil
     var retAddFreePool = clientFreePool2.add(client)
     if not retAddFreePool: raise
 
