@@ -499,12 +499,70 @@ template parseServers*(serverBody: untyped) {.dirty.} =
       echo "appRoutesBase"
 
       proc send(data: seq[byte] | string | Array[byte]): SendResult {.discardable.} =
-        template sendProc1(): SendResult =
+        template sendProc1(nextAppOffset: cuint): SendResult =
           let sendlen = client.sock.send(addr data[0], data.len.cint,  MSG_NOSIGNAL)
-          if sendlen > 0:
-            SendResult.Success
-          else:
-            SendResult.Pending
+          if sendlen == data.len: SendResult.Success
+          elif sendlen == 0: SendResult.None
+          elif sendlen > 0:
+            var left = data.len - sendlen
+            if client.sendBuf.isNil:
+              if left <= sendBufSize:
+                client.sendBuf = sendBuf
+                client.sendBufSize = sendBufSize
+                copyMem(sendBuf, addr data[sendlen], left)
+                client.sendPos = sendBuf
+                client.sendLen = left
+                client.appId = (client.appId.cuint + nextAppOffset).AppId
+                var e = epoll_ctl(epfd, EPOLL_CTL_MOD, client.sock.cint, addr client.ev2)
+                if e != 0:
+                  echo "error: client epoll mod"
+                sendBuf = cast[ptr UncheckedArray[byte]](allocShared(workerSendBufSize))
+                sendBufSize = workerSendBufSize
+                SendResult.Pending
+              else:
+                when cfg.sendBufExpand:
+                  let leftReserve = left div 2 + left
+                  client.sendBuf = cast[ptr UncheckedArray[byte]](allocShared(leftReserve))
+                  client.sendBufSize = leftReserve
+                  copyMem(client.sendBuf, addr data[sendlen], left)
+                  client.sendPos = client.sendBuf
+                  client.sendLen = left
+                  client.appId = (client.appId.cuint + nextAppOffset).AppId
+                  var e = epoll_ctl(epfd, EPOLL_CTL_MOD, client.sock.cint, addr client.ev2)
+                  if e != 0:
+                    echo "error: client epoll mod"
+                  SendResult.Pending
+                else:
+                  SendResult.Error
+            else:
+              when cfg.sendBufExpand:
+                if left > client.sendBufSize:
+                  let leftReserve = left div 2 + left
+                  client.sendBuf = cast[ptr UncheckedArray[byte]](client.sendBuf.reallocShared(leftReserve))
+                  client.sendBufSize = leftReserve
+                copyMem(client.sendBuf, addr data[sendlen], left)
+                client.sendPos = client.sendBuf
+                client.sendLen = left
+                client.appId = (client.appId.cuint + nextAppOffset).AppId
+                var e = epoll_ctl(epfd, EPOLL_CTL_MOD, client.sock.cint, addr client.ev2)
+                if e != 0:
+                  echo "error: client epoll mod"
+                SendResult.Pending
+              else:
+                if left <= client.sendBufSize:
+                  copyMem(client.sendBuf, addr data[sendlen], left)
+                  client.sendPos = client.sendBuf
+                  client.sendLen = left
+                  client.appId = (client.appId.cuint + nextAppOffset).AppId
+                  var e = epoll_ctl(epfd, EPOLL_CTL_MOD, client.sock.cint, addr client.ev2)
+                  if e != 0:
+                    echo "error: client epoll mod"
+                  SendResult.Pending
+                else:
+                  SendResult.Error
+          elif errno == EAGAIN or errno == EWOULDBLOCK: SendResult.Pending
+          elif errno == EINTR: send(data)
+          else: SendResult.Error
 
         template sendProc2(): SendResult =
           var nextSize = curSendSize + data.len
@@ -535,8 +593,8 @@ template parseServers*(serverBody: untyped) {.dirty.} =
 
         {.computedGoto.}
         case curSendProcType
-        of SendProc1_Prev2: sendProc1()
-        of SendProc1_Prev1: sendProc1()
+        of SendProc1_Prev2: sendProc1(2)
+        of SendProc1_Prev1: sendProc1(1)
         of SendProc2: sendProc2()
         of SendProc3_Prev2: sendProc3()
         of SendProc3_Prev1: sendProc3()
@@ -832,6 +890,13 @@ template parseServers*(serverBody: untyped) {.dirty.} =
   macro appRoutesSendMacro(appId: AppId): untyped =
     quote do:
       echo `appId`
+      echo "data=", client.sendPos.toString(client.sendLen), client.sendLen
+      let sendlen = client.sock.send(client.sendPos, client.sendLen.cint,  MSG_NOSIGNAL)
+
+      client.appId = (client.appId.cuint - 2).AppId
+      var e = epoll_ctl(epfd, EPOLL_CTL_MOD, client.sock.cint, addr client.ev)
+      if e != 0:
+        echo "error: client epoll mod"
 
   macro appGetMacro(appId: AppId): untyped =
     quote do:
