@@ -176,6 +176,7 @@ template parseServers*(serverBody: untyped) {.dirty.} =
   let cpuCount = countProcessors()
   var serverWorkerNum = when cfg.serverWorkerNum < 0: cpuCount else: cfg.serverWorkerNum
   var multiProcessThreadNum = when cfg.multiProcessThreadNum < 0: cpuCount else: cfg.multiProcessThreadNum
+  var threadNum = when cfg.multiProcess: multiProcessThreadNum else: serverWorkerNum
 
   when cfg.multiProcess:
     var processWorkerId = 0
@@ -318,8 +319,14 @@ template parseServers*(serverBody: untyped) {.dirty.} =
     if retClose != 0:
       echo "error: close client monitor"
 
-  var epfd: cint = epoll_create1(O_CLOEXEC)
-  if epfd < 0: raise
+  when cfg.clientThreadAssign == DynamicAssign or (cfg.multiProcess and cfg.clientThreadAssign == AutoAssign):
+    var epfd: cint = epoll_create1(O_CLOEXEC)
+    if epfd < 0: raise
+  else:
+    var epfds = cast[ptr UncheckedArray[cint]](allocShared0(sizeof(cint) * threadNum))
+    for i in 0..<threadNum:
+      epfds[i] = epoll_create1(O_CLOEXEC)
+      if epfds[i] < 0: raise
 
   var sockCtl = createNativeSocket()
   if sockCtl == osInvalidSocket: raise
@@ -339,10 +346,17 @@ template parseServers*(serverBody: untyped) {.dirty.} =
   abortClient.ev.data = cast[EpollData](addr abortClient)
 
   proc abortServer() =
-    if epfd > 0:
-      var e = epoll_ctl(epfd, EPOLL_CTL_ADD, sockCtl.cint, addr abortClient.ev)
-      if e != 0:
-        echo "error: abort epoll"
+    when cfg.clientThreadAssign == DynamicAssign or (cfg.multiProcess and cfg.clientThreadAssign == AutoAssign):
+      if epfd > 0:
+        var e = epoll_ctl(epfd, EPOLL_CTL_ADD, sockCtl.cint, addr abortClient.ev)
+        if e != 0:
+          echo "error: abort epoll"
+    else:
+      for i in 0..<threadNum:
+        if epfds[i] > 0:
+          var e = epoll_ctl(epfds[i], EPOLL_CTL_ADD, sockCtl.cint, addr abortClient.ev)
+          if e != 0:
+            echo "error: abort epoll"
 
   onSignal(SIGINT, SIGTERM):
     echo "bye from signal ", sig
@@ -448,10 +462,20 @@ template parseServers*(serverBody: untyped) {.dirty.} =
         listenServers[`srvId`].sock = sock
         listenServers[`srvId`].appId = `appId`
         when cfg.multiProcess:
-          var retCtl = epoll_ctl(epfd, EPOLL_CTL_ADD, sock, addr listenServers[`srvId`].ev2)
-        else:
+          when cfg.clientThreadAssign == FixedAssign:
+            for i in 0..<threadNum:
+              var retCtl = epoll_ctl(epfds[i], EPOLL_CTL_ADD, sock, addr listenServers[`srvId`].ev2)
+              if retCtl != 0: raise
+          else:
+            var retCtl = epoll_ctl(epfd, EPOLL_CTL_ADD, sock, addr listenServers[`srvId`].ev2)
+            if retCtl != 0: raise
+        elif cfg.clientThreadAssign == DynamicAssign:
           var retCtl = epoll_ctl(epfd, EPOLL_CTL_ADD, sock, addr listenServers[`srvId`].ev)
-        if retCtl != 0: raise
+          if retCtl != 0: raise
+        else:
+          for i in 0..<threadNum:
+            var retCtl = epoll_ctl(epfds[i], EPOLL_CTL_ADD, sock, addr listenServers[`srvId`].ev2)
+            if retCtl != 0: raise
 
     macro serverBodyMacro(): untyped =
       var extractServerBody = serverBody.copy()
@@ -695,7 +719,10 @@ template parseServers*(serverBody: untyped) {.dirty.} =
             if not newClient.isNil:
               newClient.sock = clientSock
               newClient.appId = (client.appId.cuint + 1).AppId
-              let e = epoll_ctl(epfd, EPOLL_CTL_ADD, clientSock.cint, addr newClient.ev)
+              when cfg.clientThreadAssign == DynamicAssign or (cfg.multiProcess and cfg.clientThreadAssign == AutoAssign):
+                let e = epoll_ctl(epfd, EPOLL_CTL_ADD, clientSock.cint, addr newClient.ev)
+              else:
+                let e = epoll_ctl(epfd2, EPOLL_CTL_ADD, clientSock.cint, addr newClient.ev)
               if e != 0: raise
               newClient.whackaMole = false
               addClientRing(newClient)
@@ -704,7 +731,7 @@ template parseServers*(serverBody: untyped) {.dirty.} =
               var retClose = clientSock.cint.close()
               if retClose != 0: raise
               break
-          when cfg.multiProcess:
+          when cfg.multiProcess or cfg.clientThreadAssign != DynamicAssign:
             break
         else:
           break
@@ -936,6 +963,11 @@ template parseServers*(serverBody: untyped) {.dirty.} =
     var reqHeaderUrlSize: uint
     var reqHeaderMinorVer: int
     var curSendProcType: SendProcType
+    when cfg.clientThreadAssign == DynamicAssign or (cfg.multiProcess and cfg.clientThreadAssign == AutoAssign):
+      discard
+    else:
+      var epfd = epfds[arg.threadId]
+      var epfd2 = epfd
 
     appRoutesBase()
 
@@ -989,9 +1021,16 @@ template parseServers*(serverBody: untyped) {.dirty.} =
   if retSockCtlClose != 0:
     echo "error: close sockCtl"
 
-  var retEpfdClose = epfd.close()
-  if retEpfdClose != 0:
-    echo "error: close epfd"
+  when cfg.clientThreadAssign == DynamicAssign or (cfg.multiProcess and cfg.clientThreadAssign == AutoAssign):
+    var retEpfdClose = epfd.close()
+    if retEpfdClose != 0:
+      echo "error: close epfd"
+  else:
+    for i in countdown(threadNum - 1, 0):
+      var retEpfdClose = epfds[i].close()
+      if retEpfdClose != 0:
+        echo "error: close epfd"
+    epfds.deallocShared()
 
   freeClientRing()
   clients2.deallocShared()

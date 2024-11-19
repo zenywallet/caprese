@@ -59,6 +59,11 @@ type
     SniOnly
     HeaderHostOnly
 
+  ClientThreadAssign* = enum
+    AutoAssign
+    DynamicAssign
+    FixedAssign
+
   Config* {.paramNames: "configNames".} = object
     sslLib*: SslLib
     debugLog*: bool
@@ -94,6 +99,7 @@ type
     reusePort*: bool
     multiProcess*: bool
     multiProcessThreadNum*: int
+    clientThreadAssign*: ClientThreadAssign
 
 paramNamesConst("configNames")
 
@@ -144,6 +150,7 @@ const defaultConfig* = defaultConfigMacro:
   reusePort = false
   multiProcess = false
   multiProcessThreadNum = 1
+  clientThreadAssign = AutoAssign
 
 var configStmt* {.compileTime.} = newStmtList()
 
