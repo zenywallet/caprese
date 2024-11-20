@@ -100,6 +100,7 @@ type
     multiProcess*: bool
     multiProcessThreadNum*: int
     clientThreadAssign*: ClientThreadAssign
+    clientLock*: bool
 
 paramNamesConst("configNames")
 
@@ -151,6 +152,7 @@ const defaultConfig* = defaultConfigMacro:
   multiProcess = false
   multiProcessThreadNum = 1
   clientThreadAssign = AutoAssign
+  clientLock = false
 
 var configStmt* {.compileTime.} = newStmtList()
 

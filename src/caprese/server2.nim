@@ -170,6 +170,7 @@ template parseServers*(serverBody: untyped) {.dirty.} =
       whackaMole: bool
       prev: ptr ClientObj2
       next: ptr ClientObj2
+      when cfg.clientLock: lock: Lock
 
     Client2 = ptr ClientObj2
 
@@ -214,6 +215,7 @@ template parseServers*(serverBody: untyped) {.dirty.} =
     client.whackaMole = false
     client.prev = nil
     client.next = nil
+    when cfg.clientLock: initLock(client.lock)
     var retAddFreePool = clientFreePool2.add(client)
     if not retAddFreePool: raise
 
@@ -740,6 +742,7 @@ template parseServers*(serverBody: untyped) {.dirty.} =
     var routesProc = routesProcList[curRoutesId]
 
     quote do:
+      when cfg.clientLock: acquire(client.lock)
       block RecvLoop:
         while true:
           retRecv = client.sock.recv(recvBuf, workerRecvBufSize, 0.cint)
@@ -821,6 +824,7 @@ template parseServers*(serverBody: untyped) {.dirty.} =
             else:
               client.close()
               break
+      when cfg.clientLock: release(client.lock)
 
   macro appRoutesRecvMacro(appId: AppId): untyped =
     var routesBody = routesBodyList[curRoutesId]
@@ -1033,4 +1037,8 @@ template parseServers*(serverBody: untyped) {.dirty.} =
     epfds.deallocShared()
 
   freeClientRing()
+  when cfg.clientLock:
+    for i in 0..<cfg.clientMax:
+      var client = addr clients2[i]
+      deinitLock(client.lock)
   clients2.deallocShared()
