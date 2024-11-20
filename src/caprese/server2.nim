@@ -192,32 +192,42 @@ template parseServers*(serverBody: untyped) {.dirty.} =
       if pid == 0:
         processWorkerId = forkCount * multiProcessThreadNum
 
-  var clients2 = cast[ptr UncheckedArray[ClientObj2]](allocShared0(sizeof(ClientObj2) * cfg.clientMax))
+  var clients2: ptr UncheckedArray[ClientObj2]
   var clientFreePool2 = queue2.newQueue[Client2]()
 
-  for i in 0..<cfg.clientMax:
-    var client = addr clients2[i]
-    client.sock = osInvalidSocket
-    client.sockUpperReserved = -1.cint
-    client.appId = AppId0_AppEmpty
-    client.ev.events = EPOLLIN or EPOLLRDHUP or EPOLLET
-    client.ev.data = cast[EpollData](client)
-    client.ev2.events = EPOLLRDHUP or EPOLLET or EPOLLOUT
-    client.ev2.data = cast[EpollData](client)
-    client.recvBuf = nil
-    client.recvPos = nil
-    client.recvLen = 0
-    client.sendBuf = nil
-    when cfg.sendBufExpand: client.sendBufSize = 0
-    client.sendPos = nil
-    client.sendLen = 0
-    client.threadId = -1
-    client.whackaMole = false
-    client.prev = nil
-    client.next = nil
-    when cfg.clientLock: initLock(client.lock)
-    var retAddFreePool = clientFreePool2.add(client)
-    if not retAddFreePool: raise
+  proc initClient() =
+    clients2 = cast[ptr UncheckedArray[ClientObj2]](allocShared0(sizeof(ClientObj2) * cfg.clientMax))
+
+    for i in 0..<cfg.clientMax:
+      var client = addr clients2[i]
+      client.sock = osInvalidSocket
+      client.sockUpperReserved = -1.cint
+      client.appId = AppId0_AppEmpty
+      client.ev.events = EPOLLIN or EPOLLRDHUP or EPOLLET
+      client.ev.data = cast[EpollData](client)
+      client.ev2.events = EPOLLRDHUP or EPOLLET or EPOLLOUT
+      client.ev2.data = cast[EpollData](client)
+      client.recvBuf = nil
+      client.recvPos = nil
+      client.recvLen = 0
+      client.sendBuf = nil
+      when cfg.sendBufExpand: client.sendBufSize = 0
+      client.sendPos = nil
+      client.sendLen = 0
+      client.threadId = -1
+      client.whackaMole = false
+      client.prev = nil
+      client.next = nil
+      when cfg.clientLock: initLock(client.lock)
+      var retAddFreePool = clientFreePool2.add(client)
+      if not retAddFreePool: raise
+
+  proc freeClient() =
+    when cfg.clientLock:
+      for i in 0..<cfg.clientMax:
+        var client = addr clients2[i]
+        deinitLock(client.lock)
+    clients2.deallocShared()
 
   var clientRingLock: Lock
   var clientRingRootObj: ClientObj2
@@ -989,6 +999,7 @@ template parseServers*(serverBody: untyped) {.dirty.} =
             appCaseBody(abortBlock = WaitLoop)
           evIdx = 0
 
+  initClient()
   initClientRing()
   import std/strutils
   activeHeaderInit()
@@ -1037,8 +1048,4 @@ template parseServers*(serverBody: untyped) {.dirty.} =
     epfds.deallocShared()
 
   freeClientRing()
-  when cfg.clientLock:
-    for i in 0..<cfg.clientMax:
-      var client = addr clients2[i]
-      deinitLock(client.lock)
-  clients2.deallocShared()
+  freeClient()
