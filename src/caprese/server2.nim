@@ -267,7 +267,7 @@ template parseServers*(serverBody: untyped) {.dirty.} =
                                 success_memmodel: int, failure_memmodel: int): bool
                                 {.importc: "__atomic_compare_exchange_n", nodecl, discardable.}
 
-  proc close(client: Client2) {.inline.} =
+  proc close(client: Client2, lockFlag: static bool = true) {.inline.} =
     var sockInt = cast[ptr int](addr client.sock)[] # sock + sockUpperReserved(-1) = 8 bytes
     if client.sock != osInvalidSocket and
       atomic_compare_exchange_n(cast[ptr int](addr client.sock),
@@ -276,6 +276,7 @@ template parseServers*(serverBody: untyped) {.dirty.} =
       var sockCint = cast[cint](sockInt) # cast lower only
       var retClose = sockCint.close()
       if retClose != 0: raise
+      when cfg.clientLock and lockFlag: acquire(client.lock)
       if not client.recvBuf.isNil:
         client.recvBuf.deallocShared()
         client.recvBuf = nil
@@ -287,6 +288,7 @@ template parseServers*(serverBody: untyped) {.dirty.} =
         when cfg.sendBufExpand: client.sendBufSize = 0
         client.sendPos = nil
         client.sendLen = 0
+      when cfg.clientLock and lockFlag: release(client.lock)
       #client.whackaMole = false
       delClientRing(client)
       clientFreePool2.addSafe(client)
@@ -656,7 +658,7 @@ template parseServers*(serverBody: untyped) {.dirty.} =
               reqHeaderMinorVer = int(cast[ptr char](cast[pointer](pos))[]) - int('0')
               inc(pos)
               if reqHeaderMinorVer < 0 or reqHeaderMinorVer > 9 or not equalMem(cast[pointer](pos), "\c\L".cstring, 2):
-                client.close()
+                client.close(false)
                 break RecvLoop
               break
           inc(pos); if pos == endPos: break RecvLoop
@@ -768,14 +770,14 @@ template parseServers*(serverBody: untyped) {.dirty.} =
                   if pos == endPos:
                     var retRoutes = `routesProc`(SendProc1_Prev2)
                     if retRoutes <= SendResult.None:
-                      client.close()
+                      client.close(false)
                     else:
                       client.whackaMole = false
                     break RecvLoop
                   else:
                     var retRoutes = `routesProc`(SendProc2)
                     if retRoutes <= SendResult.None:
-                      client.close()
+                      client.close(false)
                       break RecvLoop
                     else:
                       inc(pos, 4)
@@ -789,14 +791,14 @@ template parseServers*(serverBody: untyped) {.dirty.} =
                         if pos == endPos:
                           var retRoutes = `routesProc`(SendProc3_Prev2)
                           if retRoutes <= SendResult.None:
-                            client.close()
+                            client.close(false)
                           else:
                             client.whackaMole = false
                           break RecvLoop
                         else:
                           var retRoutes = `routesProc`(SendProc2)
                           if retRoutes <= SendResult.None:
-                            client.close()
+                            client.close(false)
                             break RecvLoop
                           else:
                             inc(pos, 4)
@@ -816,7 +818,7 @@ template parseServers*(serverBody: untyped) {.dirty.} =
               break RecvLoop
 
           elif retRecv == 0:
-            client.close()
+            client.close(false)
             break
 
           elif retRecv > 0:
@@ -832,7 +834,7 @@ template parseServers*(serverBody: untyped) {.dirty.} =
             elif errno == EINTR:
               continue
             else:
-              client.close()
+              client.close(false)
               break
       when cfg.clientLock: release(client.lock)
 
