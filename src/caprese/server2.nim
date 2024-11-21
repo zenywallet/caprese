@@ -622,22 +622,54 @@ template parseServers*(serverBody: untyped) {.dirty.} =
             else:
               SendResult.Error
 
-        template sendProc3(): SendResult =
-          copyMem(addr sendBuf[curSendSize], addr data[0], data.len)
-          curSendSize += data.len
+        template sendProc3Tmpl(nextAppOffset: cuint): SendResult {.dirty.} =
           let sendlen = client.sock.send(sendBuf, curSendSize.cint,  MSG_NOSIGNAL)
-          if sendlen  == curSendSize:
-            SendResult.Success
-          else:
+          if sendlen  == curSendSize: SendResult.Success
+          elif sendlen == 0: SendResult.None
+          elif sendlen > 0:
+            var left = curSendSize - sendlen
+            if not client.sendBuf.isNil:
+              client.sendBuf.deallocShared()
+            client.sendBuf = sendBuf
+            client.sendBufSize = sendBufSize
+            client.sendPos = cast[ptr UncheckedArray[byte]](addr sendBuf[sendlen])
+            client.sendLen = left
+            client.appId = (client.appId.cuint + nextAppOffset).AppId
+            var e = epoll_ctl(when declared(epfd2): epfd2 else: epfd, EPOLL_CTL_MOD, client.sock.cint, addr client.ev2)
+            if e != 0:
+              echo "error: client epoll mod"
+            sendBuf = cast[ptr UncheckedArray[byte]](allocShared(workerSendBufSize))
+            sendBufSize = workerSendBufSize
             SendResult.Pending
+          elif errno == EAGAIN or errno == EWOULDBLOCK: SendResult.Pending
+          elif errno == EINTR: send(data)
+          else: SendResult.Error
+
+        template sendProc3(nextAppOffset: cuint): SendResult =
+          var nextSize = curSendSize + data.len
+          when cfg.sendBufExpand:
+            if nextSize > sendBufSize:
+              let nextReserveSize = nextSize div 2 + nextSize
+              sendBuf = cast[ptr UncheckedArray[byte]](sendBuf.reallocShared(nextReserveSize))
+              sendBufSize = nextReserveSize
+            copyMem(addr sendBuf[curSendSize], addr data[0], data.len)
+            curSendSize = nextSize
+            sendProc3Tmpl(nextAppOffset)
+          else:
+            if nextSize > sendBufSize:
+              SendResult.Error
+            else:
+              copyMem(addr sendBuf[curSendSize], addr data[0], data.len)
+              curSendSize = nextSize
+              sendProc3Tmpl(nextAppOffset)
 
         {.computedGoto.}
         case curSendProcType
         of SendProc1_Prev2: sendProc1(2)
         of SendProc1_Prev1: sendProc1(1)
         of SendProc2: sendProc2()
-        of SendProc3_Prev2: sendProc3()
-        of SendProc3_Prev1: sendProc3()
+        of SendProc3_Prev2: sendProc3(2)
+        of SendProc3_Prev1: sendProc3(1)
 
       template parseHeaderUrl(pos, endPos: uint, RecvLoop: typed) =
         reqHeaderUrlPos = pos
