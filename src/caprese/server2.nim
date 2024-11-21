@@ -553,7 +553,7 @@ template parseServers*(serverBody: untyped) {.dirty.} =
                 client.sendPos = sendBuf
                 client.sendLen = left
                 client.appId = (client.appId.cuint + nextAppOffset).AppId
-                var e = epoll_ctl(epfd, EPOLL_CTL_MOD, client.sock.cint, addr client.ev2)
+                var e = epoll_ctl(when declared(epfd2): epfd2 else: epfd, EPOLL_CTL_MOD, client.sock.cint, addr client.ev2)
                 if e != 0:
                   echo "error: client epoll mod"
                 sendBuf = cast[ptr UncheckedArray[byte]](allocShared(workerSendBufSize))
@@ -568,7 +568,7 @@ template parseServers*(serverBody: untyped) {.dirty.} =
                   client.sendPos = client.sendBuf
                   client.sendLen = left
                   client.appId = (client.appId.cuint + nextAppOffset).AppId
-                  var e = epoll_ctl(epfd, EPOLL_CTL_MOD, client.sock.cint, addr client.ev2)
+                  var e = epoll_ctl(when declared(epfd2): epfd2 else: epfd, EPOLL_CTL_MOD, client.sock.cint, addr client.ev2)
                   if e != 0:
                     echo "error: client epoll mod"
                   SendResult.Pending
@@ -584,7 +584,7 @@ template parseServers*(serverBody: untyped) {.dirty.} =
                 client.sendPos = client.sendBuf
                 client.sendLen = left
                 client.appId = (client.appId.cuint + nextAppOffset).AppId
-                var e = epoll_ctl(epfd, EPOLL_CTL_MOD, client.sock.cint, addr client.ev2)
+                var e = epoll_ctl(when declared(epfd2): epfd2 else: epfd, EPOLL_CTL_MOD, client.sock.cint, addr client.ev2)
                 if e != 0:
                   echo "error: client epoll mod"
                 SendResult.Pending
@@ -594,7 +594,7 @@ template parseServers*(serverBody: untyped) {.dirty.} =
                   client.sendPos = client.sendBuf
                   client.sendLen = left
                   client.appId = (client.appId.cuint + nextAppOffset).AppId
-                  var e = epoll_ctl(epfd, EPOLL_CTL_MOD, client.sock.cint, addr client.ev2)
+                  var e = epoll_ctl(when declared(epfd2): epfd2 else: epfd, EPOLL_CTL_MOD, client.sock.cint, addr client.ev2)
                   if e != 0:
                     echo "error: client epoll mod"
                   SendResult.Pending
@@ -733,10 +733,7 @@ template parseServers*(serverBody: untyped) {.dirty.} =
             if not newClient.isNil:
               newClient.sock = clientSock
               newClient.appId = (client.appId.cuint + 1).AppId
-              when cfg.clientThreadAssign == DynamicAssign or (cfg.multiProcess and cfg.clientThreadAssign == AutoAssign):
-                let e = epoll_ctl(epfd, EPOLL_CTL_ADD, clientSock.cint, addr newClient.ev)
-              else:
-                let e = epoll_ctl(epfd2, EPOLL_CTL_ADD, clientSock.cint, addr newClient.ev)
+              let e = epoll_ctl(when declared(epfd2): epfd2 else: epfd, EPOLL_CTL_ADD, clientSock.cint, addr newClient.ev)
               if e != 0: raise
               newClient.whackaMole = false
               addClientRing(newClient)
@@ -939,7 +936,7 @@ template parseServers*(serverBody: untyped) {.dirty.} =
       let sendlen = client.sock.send(client.sendPos, client.sendLen.cint,  MSG_NOSIGNAL)
 
       client.appId = (client.appId.cuint - 2).AppId
-      var e = epoll_ctl(epfd, EPOLL_CTL_MOD, client.sock.cint, addr client.ev)
+      var e = epoll_ctl(when declared(epfd2): epfd2 else: epfd, EPOLL_CTL_MOD, client.sock.cint, addr client.ev)
       if e != 0:
         echo "error: client epoll mod"
 
