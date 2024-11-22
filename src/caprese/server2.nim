@@ -966,12 +966,29 @@ template parseServers*(serverBody: untyped) {.dirty.} =
       echo `appId`
       echo "data=", client.sendPos.toString(client.sendLen), client.sendLen
       when cfg.clientLock: acquire(client.lock)
-      let sendlen = client.sock.send(client.sendPos, client.sendLen.cint,  MSG_NOSIGNAL)
-
-      client.appId = (client.appId.cuint - 2).AppId
-      var e = epoll_ctl(when declared(epfd2): epfd2 else: epfd, EPOLL_CTL_MOD, client.sock.cint, addr client.ev)
-      if e != 0:
-        echo "error: client epoll mod"
+      while true:
+        let sendlen = client.sock.send(client.sendPos, client.sendLen.cint,  MSG_NOSIGNAL)
+        if sendlen == client.sendLen:
+          client.appId = (client.appId.cuint - 2).AppId
+          var e = epoll_ctl(when declared(epfd2): epfd2 else: epfd, EPOLL_CTL_MOD, client.sock.cint, addr client.ev)
+          if e != 0:
+            echo "error: client epoll mod"
+          break
+        elif sendlen == 0:
+          client.close(false)
+          break
+        elif sendlen > 0:
+          client.sendPos = cast[ptr UncheckedArray[byte]](addr client.sendPos[sendlen])
+          client.sendLen = client.sendLen - sendlen
+        else:
+          if errno == EAGAIN or errno == EWOULDBLOCK:
+            var e = epoll_ctl(when declared(epfd2): epfd2 else: epfd, EPOLL_CTL_MOD, client.sock.cint, addr client.ev2)
+            if e != 0:
+              echo "error: client epoll mod"
+            break
+          elif errno != EINTR:
+            client.close(false)
+            break
       when cfg.clientLock: release(client.lock)
 
   macro appGetMacro(appId: AppId): untyped =
