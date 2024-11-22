@@ -965,12 +965,14 @@ template parseServers*(serverBody: untyped) {.dirty.} =
     quote do:
       echo `appId`
       echo "data=", client.sendPos.toString(client.sendLen), client.sendLen
+      when cfg.clientLock: acquire(client.lock)
       let sendlen = client.sock.send(client.sendPos, client.sendLen.cint,  MSG_NOSIGNAL)
 
       client.appId = (client.appId.cuint - 2).AppId
       var e = epoll_ctl(when declared(epfd2): epfd2 else: epfd, EPOLL_CTL_MOD, client.sock.cint, addr client.ev)
       if e != 0:
         echo "error: client epoll mod"
+      when cfg.clientLock: release(client.lock)
 
   macro appGetMacro(appId: AppId): untyped =
     quote do:
