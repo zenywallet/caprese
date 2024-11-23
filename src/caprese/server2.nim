@@ -963,8 +963,6 @@ template parseServers*(serverBody: untyped) {.dirty.} =
 
   macro appRoutesSendMacro(appId: AppId): untyped =
     quote do:
-      echo `appId`
-      echo "data=", client.sendPos.toString(client.sendLen), client.sendLen
       when cfg.clientLock: acquire(client.lock)
       while true:
         let sendlen = client.sock.send(client.sendPos, client.sendLen.cint,  MSG_NOSIGNAL)
