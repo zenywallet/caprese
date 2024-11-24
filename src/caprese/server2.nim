@@ -815,29 +815,29 @@ template parseServers*(serverBody: untyped) {.dirty.} =
                       inc(pos, 4)
                       parseHeaderUrl(pos, endPos, RecvLoop)
 
-                    while true:
-                      if equalMem(cast[pointer](pos), "\c\L\c\L".cstring, 4):
-                        if pos == endPos:
-                          var retRoutes = `routesProc`(SendProc3_Prev2)
-                          if retRoutes <= SendResult.None:
-                            client.close(false)
-                          else:
-                            client.whackaMole = false
-                          break RecvLoop
-                        else:
-                          var retRoutes = `routesProc`(SendProc2)
-                          if retRoutes <= SendResult.None:
-                            client.close(false)
+                      while true:
+                        if equalMem(cast[pointer](pos), "\c\L\c\L".cstring, 4):
+                          if pos == endPos:
+                            var retRoutes = `routesProc`(SendProc3_Prev2)
+                            if retRoutes <= SendResult.None:
+                              client.close(false)
+                            else:
+                              client.whackaMole = false
                             break RecvLoop
                           else:
+                            var retRoutes = `routesProc`(SendProc2)
+                            if retRoutes <= SendResult.None:
+                              client.close(false)
+                              break RecvLoop
+                            else:
+                              inc(pos, 4)
+
+                          if equalMem(cast[pointer](pos), "GET ".cstring, 4):
                             inc(pos, 4)
+                            parseHeaderUrl(pos, endPos, RecvLoop)
 
-                        if equalMem(cast[pointer](pos), "GET ".cstring, 4):
-                          inc(pos, 4)
-                          parseHeaderUrl(pos, endPos, RecvLoop)
-
-                      if pos >= endPos: break RecvLoop
-                      inc(pos)
+                        if pos >= endPos: break RecvLoop
+                        inc(pos)
                 else:
                   if pos >= endPos: break RecvLoop
                   inc(pos)
@@ -918,30 +918,30 @@ template parseServers*(serverBody: untyped) {.dirty.} =
                         inc(pos, 4)
                         parseHeaderUrl(pos, endPos, RecvLoop)
 
-                      while true:
-                        if equalMem(cast[pointer](pos), "\c\L\c\L".cstring, 4):
-                          if pos == endPos:
-                            var retRoutes = `routesProc`(SendProc3_Prev1)
-                            if retRoutes <= SendResult.None:
-                              client.close()
-                            else:
-                              client.whackaMole = false
-                              client.recvLen = 0
-                            break RecvLoop
-                          else:
-                            var retRoutes = `routesProc`(SendProc2)
-                            if retRoutes <= SendResult.None:
-                              client.close()
+                        while true:
+                          if equalMem(cast[pointer](pos), "\c\L\c\L".cstring, 4):
+                            if pos == endPos:
+                              var retRoutes = `routesProc`(SendProc3_Prev1)
+                              if retRoutes <= SendResult.None:
+                                client.close()
+                              else:
+                                client.whackaMole = false
+                                client.recvLen = 0
                               break RecvLoop
                             else:
+                              var retRoutes = `routesProc`(SendProc2)
+                              if retRoutes <= SendResult.None:
+                                client.close()
+                                break RecvLoop
+                              else:
+                                inc(pos, 4)
+
+                            if equalMem(cast[pointer](pos), "GET ".cstring, 4):
                               inc(pos, 4)
+                              parseHeaderUrl(pos, endPos, RecvLoop)
 
-                          if equalMem(cast[pointer](pos), "GET ".cstring, 4):
-                            inc(pos, 4)
-                            parseHeaderUrl(pos, endPos, RecvLoop)
-
-                        if pos >= endPos: break RecvLoop
-                        inc(pos)
+                          if pos >= endPos: break RecvLoop
+                          inc(pos)
                   else:
                     if pos >= endPos: break RecvLoop
                     inc(pos)
