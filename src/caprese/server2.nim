@@ -604,7 +604,7 @@ template parseServers*(serverBody: untyped) {.dirty.} =
           elif errno == EINTR: send(data)
           else: SendResult.Error
 
-        template sendProc2(): SendResult =
+        template sendProc2(body: untyped): SendResult =
           var nextSize = curSendSize + data.len
           when cfg.sendBufExpand:
             if nextSize > sendBufSize:
@@ -613,12 +613,12 @@ template parseServers*(serverBody: untyped) {.dirty.} =
               sendBufSize = nextReserveSize
             copyMem(addr sendBuf[curSendSize], addr data[0], data.len)
             curSendSize = nextSize
-            SendResult.Pending
+            body
           else:
             if nextSize <= sendBufSize:
               copyMem(addr sendBuf[curSendSize], addr data[0], data.len)
               curSendSize = nextSize
-              SendResult.Pending
+              body
             else:
               SendResult.Error
 
@@ -646,28 +646,13 @@ template parseServers*(serverBody: untyped) {.dirty.} =
           else: SendResult.Error
 
         template sendProc3(nextAppOffset: cuint): SendResult =
-          var nextSize = curSendSize + data.len
-          when cfg.sendBufExpand:
-            if nextSize > sendBufSize:
-              let nextReserveSize = nextSize div 2 + nextSize
-              sendBuf = cast[ptr UncheckedArray[byte]](sendBuf.reallocShared(nextReserveSize))
-              sendBufSize = nextReserveSize
-            copyMem(addr sendBuf[curSendSize], addr data[0], data.len)
-            curSendSize = nextSize
-            sendProc3Tmpl(nextAppOffset)
-          else:
-            if nextSize > sendBufSize:
-              SendResult.Error
-            else:
-              copyMem(addr sendBuf[curSendSize], addr data[0], data.len)
-              curSendSize = nextSize
-              sendProc3Tmpl(nextAppOffset)
+          sendProc2(sendProc3Tmpl(nextAppOffset))
 
         {.computedGoto.}
         case curSendProcType
         of SendProc1_Prev2: sendProc1(2)
         of SendProc1_Prev1: sendProc1(1)
-        of SendProc2: sendProc2()
+        of SendProc2: sendProc2(SendResult.Pending)
         of SendProc3_Prev2: sendProc3(2)
         of SendProc3_Prev1: sendProc3(1)
 
