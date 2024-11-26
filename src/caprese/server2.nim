@@ -56,7 +56,7 @@ template parseServers*(serverBody: untyped) {.dirty.} =
   import std/options
   import std/cpuinfo
 
-  const cmdList = ["get", "stream", "public", "certificates", "acme",
+  const cmdList = ["get", "stream", "public", "certificates", "acme", "proxy",
           "post", "head", "put", "delete", "connect", "options", "trace", "patch"]
 
   macro genCmdListType(objName, varType: untyped): untyped =
