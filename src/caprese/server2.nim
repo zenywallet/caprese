@@ -420,16 +420,6 @@ template parseServers*(serverBody: untyped) {.dirty.} =
       SendProc3_Prev2
       SendProc3_Prev1
 
-  macro getRoutesBody(): untyped =
-    var body = routesBodyList[curRoutesId]
-    var routesProc = genSym(nskProc, "routesProc")
-    quote do:
-      proc `routesProc`(): SendResult = `body`
-      `routesProc`()
-
-  macro nextRoutesBody() =
-    inc(curRoutesId)
-
   var listenAppIdList {.compileTime.}: seq[AppId]
   macro listenAppIdMacro() =
     for i, appType in appIdTypeList2:
