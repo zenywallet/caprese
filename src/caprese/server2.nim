@@ -524,6 +524,45 @@ template parseServers*(serverBody: untyped) {.dirty.} =
   template createThreadWrapper(t: var Thread[WrapperThreadArg]; threadProc: proc (arg: ThreadArg) {.thread.}; threadArg: ThreadArg) =
     createThread(t, threadWrapper, (threadProc, threadArg))
 
+  proc filterCmdNode(body: var NimNode, filterCmdList: openArray[string], level: int): bool {.discardable.} =
+    for i in countdown(body.len - 1, 0):
+      var n = body[i]
+      if filterCmdNode(n, filterCmdList, level + 1):
+        body.del(i)
+      if (body.kind == nnkCall or body.kind == nnkCommand):
+
+        if "public" in filterCmdList:
+          if eqIdent(body[0], "public") and body[body.len - 1].kind == nnkBlockStmt:
+            return true
+        if "certificates" in filterCmdList:
+          if eqIdent(body[0], "certificates"):
+            return true
+        if "acme" in filterCmdList:
+          if eqIdent(body[0], "acme"):
+            return true
+        if "proxy" in filterCmdList:
+          if eqIdent(body[0], "proxy"):
+            return true
+
+        if body.len >= 3:
+          for cmd in filterCmdList:
+            if eqIdent(body[0], cmd) and body[body.len - 1].kind == nnkStmtList:
+              return true
+    return false
+
+  proc filterCmdNode(body: NimNode, filterCmdList: openArray[string]): NimNode =
+    result = body.copy()
+    result.filterCmdNode(filterCmdList, 0)
+
+  macro getRoutesBody(body: untyped): untyped =
+    filterCmdNode(body, ["post", "head", "put", "delete", "connect", "options", "trace"])
+
+  macro postRoutesBody(body: untyped): untyped =
+    filterCmdNode(body, ["get", "stream", "public", "certificates", "acme", "head", "put", "delete", "connect", "options", "trace"])
+
+  macro fallbackRoutesBody(body: untyped): untyped =
+    filterCmdNode(body, ["get", "stream", "public", "certificates", "acme", "post"])
+
   macro appRoutesBase(): untyped =
     result = quote do:
       echo "appRoutesBase"
@@ -673,11 +712,12 @@ template parseServers*(serverBody: untyped) {.dirty.} =
     for i in 0..<routesBodyList.len:
       var routesBody = routesBodyList[i]
       var routesProc = routesProcList[i]
+      var routesBodyGet = getRoutesBody(routesBody)
 
       result.add quote do:
         proc `routesProc`(sendProcType: SendProcType): SendResult =
           curSendProcType = sendProcType
-          `routesBody`
+          `routesBodyGet`
 
   proc camel(s: string): string {.compileTime.} =
     result = s
