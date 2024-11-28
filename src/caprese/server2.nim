@@ -410,7 +410,7 @@ template parseServers*(serverBody: untyped) {.dirty.} =
   var curSrvId {.compileTime.} = 0
   var curRoutesId {.compileTime.} = 0
   var routesBodyList {.compileTime.}: seq[NimNode]
-  var routesProcList {.compileTime.}: seq[NimNode]
+  var routesProcList {.compileTime.}: seq[tuple[get, post, fallback: NimNode]]
 
   type
     SendProcType {.size: sizeof(cuint).} = enum
@@ -441,7 +441,9 @@ template parseServers*(serverBody: untyped) {.dirty.} =
       routesBodyList.add quote do:
         `body0`
 
-      routesProcList.add genSym(nskProc, "routesProc")
+      routesProcList.add (get: genSym(nskProc, "routesProc"),
+                          post: genSym(nskProc, "routesProc"),
+                          fallback: genSym(nskProc, "routesProc"))
 
       quote do:
         echo "server: ", `bindAddress`, ":", `port`, " srvId=", `srvId`
@@ -711,11 +713,13 @@ template parseServers*(serverBody: untyped) {.dirty.} =
 
     for i in 0..<routesBodyList.len:
       var routesBody = routesBodyList[i]
-      var routesProc = routesProcList[i]
+      var (routesProcGet, routesProcPost, routesProcFallback) = routesProcList[i]
       var routesBodyGet = getRoutesBody(routesBody)
+      var routesBodyPost = postRoutesBody(routesBody)
+      var routesBodyFallback = fallbackRoutesBody(routesBody)
 
       result.add quote do:
-        proc `routesProc`(sendProcType: SendProcType): SendResult =
+        proc `routesProcGet`(sendProcType: SendProcType): SendResult =
           curSendProcType = sendProcType
           `routesBodyGet`
 
@@ -795,7 +799,7 @@ template parseServers*(serverBody: untyped) {.dirty.} =
           break
 
   macro appRoutesMacro(appId: AppId): untyped =
-    var routesProc = routesProcList[curRoutesId]
+    var (routesProcGet, routesProcPost, routesProcFallback) = routesProcList[curRoutesId]
 
     quote do:
       when cfg.clientLock: acquire(client.lock)
@@ -812,14 +816,14 @@ template parseServers*(serverBody: untyped) {.dirty.} =
               while true:
                 if equalMem(cast[pointer](pos), "\c\L\c\L".cstring, 4):
                   if pos == endPos:
-                    var retRoutes = `routesProc`(SendProc1_Prev2)
+                    var retRoutes = `routesProcGet`(SendProc1_Prev2)
                     if retRoutes <= SendResult.None:
                       client.close(false)
                     else:
                       client.whackaMole = false
                     break RecvLoop
                   else:
-                    var retRoutes = `routesProc`(SendProc2)
+                    var retRoutes = `routesProcGet`(SendProc2)
                     if retRoutes <= SendResult.None:
                       client.close(false)
                       break RecvLoop
@@ -833,14 +837,14 @@ template parseServers*(serverBody: untyped) {.dirty.} =
                       while true:
                         if equalMem(cast[pointer](pos), "\c\L\c\L".cstring, 4):
                           if pos == endPos:
-                            var retRoutes = `routesProc`(SendProc3_Prev2)
+                            var retRoutes = `routesProcGet`(SendProc3_Prev2)
                             if retRoutes <= SendResult.None:
                               client.close(false)
                             else:
                               client.whackaMole = false
                             break RecvLoop
                           else:
-                            var retRoutes = `routesProc`(SendProc2)
+                            var retRoutes = `routesProcGet`(SendProc2)
                             if retRoutes <= SendResult.None:
                               client.close(false)
                               break RecvLoop
@@ -884,12 +888,12 @@ template parseServers*(serverBody: untyped) {.dirty.} =
 
   macro appRoutesRecvMacro(appId: AppId): untyped =
     var routesBody = routesBodyList[curRoutesId]
-    var routesProc = routesProcList[curRoutesId]
+    var (routesProcGet, routesProcPost, routesProcFallback) = routesProcList[curRoutesId]
 
     quote do:
       echo `appId`
 
-      proc `routesProc`(sendProcType: SendProcType): SendResult =
+      proc `routesProcGet`(sendProcType: SendProcType): SendResult =
         curSendProcType = sendProcType
         `routesBody`
 
@@ -914,7 +918,7 @@ template parseServers*(serverBody: untyped) {.dirty.} =
                 while true:
                   if equalMem(cast[pointer](pos), "\c\L\c\L".cstring, 4):
                     if pos == endPos:
-                      var retRoutes = `routesProc`(SendProc1_Prev1)
+                      var retRoutes = `routesProcGet`(SendProc1_Prev1)
                       if retRoutes <= SendResult.None:
                         client.close()
                       else:
@@ -922,7 +926,7 @@ template parseServers*(serverBody: untyped) {.dirty.} =
                         client.recvLen = 0
                       break RecvLoop
                     else:
-                      var retRoutes = `routesProc`(SendProc2)
+                      var retRoutes = `routesProcGet`(SendProc2)
                       if retRoutes <= SendResult.None:
                         client.close()
                         break RecvLoop
@@ -936,7 +940,7 @@ template parseServers*(serverBody: untyped) {.dirty.} =
                         while true:
                           if equalMem(cast[pointer](pos), "\c\L\c\L".cstring, 4):
                             if pos == endPos:
-                              var retRoutes = `routesProc`(SendProc3_Prev1)
+                              var retRoutes = `routesProcGet`(SendProc3_Prev1)
                               if retRoutes <= SendResult.None:
                                 client.close()
                               else:
@@ -944,7 +948,7 @@ template parseServers*(serverBody: untyped) {.dirty.} =
                                 client.recvLen = 0
                               break RecvLoop
                             else:
-                              var retRoutes = `routesProc`(SendProc2)
+                              var retRoutes = `routesProcGet`(SendProc2)
                               if retRoutes <= SendResult.None:
                                 client.close()
                                 break RecvLoop
