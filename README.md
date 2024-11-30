@@ -39,7 +39,7 @@ Now let's build the Caprese.
     cd caprese
     nimble install --depsOnly
     nimble depsAll
-    nim c -r -d:EXAMPLE1 -d:release --threads:on --mm:orc src/caprese.nim
+    nim c -r -d:EXAMPLE1 -d:release --opt:speed --threads:on --mm:orc src/caprese.nim
 
 Open [https://localhost:8009/](https://localhost:8009/) in your browser. You'll probably get a SSL certificate warning, but make sure it's a local server and proceed.
 
@@ -266,7 +266,7 @@ server(ip = "0.0.0.0", port = 8089):
 serverStart()
 ```
 
- The `server:` block can have more than one before `serverStart()`. The `host` value of the `routes:` block is actually set to your domain name. The path of `certificates:` block is not the compile-time path, but the run-time path. If the certificate files are updated while the Caprese is running, the new certificates are automatically loaded.
+ The `server:` block can have more than one before `serverStart()`. The `host` value of the `routes:` block actually sets your domain name. The path of `certificates:` block is not the compile-time path, but the run-time path. If the certificate files are updated while the Caprese is running, the new certificates are automatically loaded.
 
 #### Set the certificate path for each
 
@@ -517,6 +517,87 @@ Use `onProtocol:` block.
 * **reqProtocol:** WebSocket protocol requested by the client. See [Check multiple protocols of the WebSocket](#check-multiple-protocols-of-the-websocket) for details.
 * **reqHeader(HeaderID):** Get the specific header parameter of the client request by *HeaderID*. See [Http Headers](#http-headers) for details.
 * **reqClient:** Pointer to the `client` object currently being processed in the thread context, the same as `client`. Normally, `client` should be used.
+
+#### Hey! POST
+Maybe you want to use a method called POST, but it is disabled by default on Caprese. Because I never use it for my services to retain integrity. Wouldn't you be happy with the WebSocket stream?
+
+```nim
+config:
+  postRequestMethod = true
+
+server(...):
+  routes:
+    ...
+
+    post "/upload":
+      # client: Client
+      # data: ptr UncheckedArray[byte]
+      # size: int
+      # content: string
+
+      echo "post data=", content
+
+    ...
+```
+
+If the POST data size is large, please use the `onMessage:` block as shown below, but it's not implemented yet.
+
+```nim
+config:
+  postRequestMethod = true
+
+server(...):
+  routes:
+    ...
+
+    post "/upload":
+      onStart:
+        # client: Client
+        # contentLength: int
+
+        # --- open file
+
+      onMessage:
+        # client: Client
+        # contentLength: int
+        # pos: int
+        # data: ptr UncheckedArray[byte]
+        # size: int
+        # content: string
+
+        # --- append content to file
+
+      onDone:
+        # client: Client
+        # contentLength: int
+        # totalSize: int
+
+        # --- close file
+
+      onFailed:
+        # client: Client
+        # contentLength: int
+        # totalSize: int
+
+        # --- delete file
+
+    ...
+```
+
+You can use `onEnd:` block instead of `onDone:` and `onFailed:` blocks. If `onStart:` is called, `onEnd:` will always be called.
+
+```nim
+      onEnd:
+        # client: Client
+        # contentLength: int
+        # totalSize: int
+
+        if contentLength == totalSize:
+          # onDone: block body
+        else:
+          # onFailed: block body
+
+```
 
 ### Client Object Custom Extension
 Custom parameters can be added to the `client` object. When custom pragmas `{.clientExt.}` are added to a regular object definitions, all the fields of that object are appended to the `client` object. However, fields that have already been defined in the `client` object cannot be added.
@@ -816,7 +897,7 @@ serverStart()
 
 Create a *server.nim* file with the above code and launch *server* as a non-root user. Open ports 80 and 443 to allow connections from external clients.
 
-    nim c -d:release --threads:on --mm:orc server.nim
+    nim c -d:release --opt:speed --threads:on --mm:orc server.nim
     sudo setcap cap_net_bind_service=+ep ./server
     ./server
 
