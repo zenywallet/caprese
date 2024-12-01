@@ -832,31 +832,44 @@ template parseServers*(serverBody: untyped) {.dirty.} =
                 else:
                   inc(pos, 4)
 
-                while equalMem(cast[pointer](pos), "GET ".cstring, 4):
-                  inc(pos, 4)
-                  parseHeaderUrl(pos, endPos, RecvLoop)
+                while true:
+                  if equalMem(cast[pointer](pos), "GET ".cstring, 4):
+                    inc(pos, 4)
+                    parseHeaderUrl(pos, endPos, RecvLoop)
 
-                  while not equalMem(cast[pointer](pos), "\c\L\c\L".cstring, 4):
-                    if pos >= endPos: break RecvLoop
-                    inc(pos)
+                    while not equalMem(cast[pointer](pos), "\c\L\c\L".cstring, 4):
+                      if pos >= endPos: break RecvLoop
+                      inc(pos)
 
-                  if pos == endPos:
-                    var retRoutes = `routesProcGet`(SendProc3_Prev2)
-                    if retRoutes <= SendResult.None:
-                      client.close(false)
-                    else:
-                      client.whackaMole = false
-                    break RecvLoop
-                  else:
-                    var retRoutes = `routesProcGet`(SendProc2)
-                    if retRoutes <= SendResult.None:
-                      client.close(false)
+                    if pos == endPos:
+                      var retRoutes = `routesProcGet`(SendProc3_Prev2)
+                      if retRoutes <= SendResult.None:
+                        client.close(false)
+                      else:
+                        client.whackaMole = false
                       break RecvLoop
                     else:
-                      inc(pos, 4)
+                      var retRoutes = `routesProcGet`(SendProc2)
+                      if retRoutes <= SendResult.None:
+                        client.close(false)
+                        break RecvLoop
+                      else:
+                        inc(pos, 4)
+
+                  elif equalMem(recvBuf, "POST".cstring, 4):
+                    var pos = cast[uint](recvBuf) + 5
+                    break RecvLoop
+
+                  else:
+                    client.close(false)
+                    break RecvLoop
 
             elif equalMem(recvBuf, "POST".cstring, 4):
               var pos = cast[uint](recvBuf) + 5
+              break RecvLoop
+
+            else:
+              client.close(false)
               break RecvLoop
 
           elif retRecv == 0:
