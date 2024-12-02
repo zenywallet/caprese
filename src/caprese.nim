@@ -91,7 +91,8 @@ macro worker*(num: int, body: untyped): untyped =
     workerThreadWaitProc.add proc() =
       joinThreads(workerThreads)
 
-template worker*(body: untyped) = worker(1, body)
+#template worker*(body: untyped) = worker(1, body)
+template worker1*(body: untyped) = worker(1, body)
 
 template workerStart*() =
   when not initServerFlag:
