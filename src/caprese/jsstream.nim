@@ -16,7 +16,7 @@ type
     reconnectCount: int
 
 proc connect0*(stream: ref Stream; url: cstring; protocols: JsObject; onOpen: proc();
-              onReady: proc(); onRecv: proc(data: Uint8Array); onClose: proc()) =
+              onReady: proc(); onMessage: proc(data: Uint8Array); onClose: proc()) =
   stream.ws = newWebSocket(url, protocols)
   stream.ws.binaryType = "arraybuffer".cstring
   when RECONNECT_INFINITE:
@@ -28,7 +28,7 @@ proc connect0*(stream: ref Stream; url: cstring; protocols: JsObject; onOpen: pr
       dec(stream.reconnectCount)
       let randomWait = Math.round(Math.random() * (RECONNECT_WAIT * 2 / 3).toJs).to(int)
       let ms = Math.round(RECONNECT_WAIT / 3).to(int) + randomWait
-      setTimeout(proc() = stream.connect0(url, protocols, onOpen, onReady, onRecv, onClose), ms)
+      setTimeout(proc() = stream.connect0(url, protocols, onOpen, onReady, onMessage, onClose), ms)
 
   stream.ws.onerror = proc(evt: JsObject) =
     console.error("websocket error:", evt)
@@ -50,26 +50,26 @@ proc connect0*(stream: ref Stream; url: cstring; protocols: JsObject; onOpen: pr
     var size = data.length.to(cint)
     console.log(size)
     console.log(uint8ArrayToStr(data))
-    onRecv(data)
+    onMessage(data)
 
 macro connect*(stream: ref Stream; url: cstring; protocols: JsObject; body: untyped): untyped =
   var onOpen = newStmtList()
   var onReady = newStmtList()
-  var onRecv = newStmtList()
+  var onMessage = newStmtList()
   var onClose = newStmtList()
   for b in body:
     if b[0].eqIdent("onOpen"):
       onOpen.add(b[1])
     elif b[0].eqIdent("onReady"):
       onReady.add(b[1])
-    elif b[0].eqIdent("onRecv"):
-      onRecv.add(b[1])
+    elif b[0].eqIdent("onMessage"):
+      onMessage.add(b[1])
     elif b[0].eqIdent("onClose"):
       onClose.add(b[1])
   var data = ident"data"
   quote do:
     `stream`.connect0(`url`, `protocols`, proc() = `onOpen`, proc() = `onReady`,
-                      proc(`data`: Uint8Array) = `onRecv`, proc() = `onClose`)
+                      proc(`data`: Uint8Array) = `onMessage`, proc() = `onClose`)
 
 macro connect*(stream: ref Stream; url, protocol: cstring; body: untyped): untyped =
   var protocols = quote do: `protocol`.toJs
