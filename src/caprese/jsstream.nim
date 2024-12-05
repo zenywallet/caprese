@@ -10,12 +10,16 @@ const RECONNECT_WAIT = 15000
 const RECONNECT_INFINITE = true
 
 type
-  Stream* = object
+  StreamObj* = object
     ws: JsObject
     readyFlag: bool
     reconnectCount: int
 
-proc connect0*(stream: ref Stream; url: cstring; protocols: JsObject; onOpen: proc();
+  Stream* = ref StreamObj
+
+proc newStream*(): Stream = new StreamObj
+
+proc connect0*(stream: Stream; url: cstring; protocols: JsObject; onOpen: proc();
               onReady: proc(); onMessage: proc(data: Uint8Array); onClose: proc()) =
   stream.ws = newWebSocket(url, protocols)
   stream.ws.binaryType = "arraybuffer".cstring
@@ -52,7 +56,7 @@ proc connect0*(stream: ref Stream; url: cstring; protocols: JsObject; onOpen: pr
     console.log(uint8ArrayToStr(data))
     onMessage(data)
 
-macro connect*(stream: ref Stream; url: cstring; protocols: JsObject; body: untyped): untyped =
+macro connect*(stream: Stream; url: cstring; protocols: JsObject; body: untyped): untyped =
   var onOpen = newStmtList()
   var onReady = newStmtList()
   var onMessage = newStmtList()
@@ -71,29 +75,29 @@ macro connect*(stream: ref Stream; url: cstring; protocols: JsObject; body: unty
     `stream`.connect0(`url`, `protocols`, proc() = `onOpen`, proc() = `onReady`,
                       proc(`data`: Uint8Array) = `onMessage`, proc() = `onClose`)
 
-macro connect*(stream: ref Stream; url, protocol: cstring; body: untyped): untyped =
+macro connect*(stream: Stream; url, protocol: cstring; body: untyped): untyped =
   var protocols = quote do: `protocol`.toJs
   quote do:
     connect(`stream`, `url`, `protocols`, `body`)
 
-macro connect*(stream: ref Stream; url, protocol: cstring): untyped =
+macro connect*(stream: Stream; url, protocol: cstring): untyped =
   var protocols = quote do: `protocol`.toJs
   var data = ident"data"
   quote do:
     `stream`.connect0(`url`, `protocols`, proc() = discard, proc() = discard,
                       proc(`data`: Uint8Array) = discard, proc() = discard)
 
-proc close*(stream: ref Stream) =
+proc close*(stream: Stream) =
   if not stream.ws.isNil:
     stream.reconnectCount = 0
     stream.ws.close()
     stream.ws = jsNull
 
-proc send*(stream: ref Stream; data: Uint8Array): bool {.discardable.} =
+proc send*(stream: Stream; data: Uint8Array): bool {.discardable.} =
   if stream.ws.readyState == WebSocket.OPEN:
     stream.ws.send(data)
 
-template ready*(stream: ref Stream; body: untyped) =
+template ready*(stream: Stream; body: untyped) =
   block ready:
     proc bodyMain() {.async, discardable.} =
       while not stream.readyFlag:
