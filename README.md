@@ -511,6 +511,60 @@ Use `onProtocol:` block.
         ...
 ```
 
+#### Send pending WebSocket requests
+
+```nim
+import caprese
+
+const IndexHtml = staticHtmlDocument:
+  buildHtml(html):
+    head:
+      meta(charset="utf-8")
+      title: text "WebSocket"
+    body:
+      tdiv(id="main")
+      script(src="/js/app.js")
+
+const AppJs = staticScript:
+  import std/jsffi
+  import caprese/jslib
+  import caprese/jsstream
+  var stream: Stream = newStream()
+  stream.connect(url = "wss://localhost:8009/ws", protocol = "test"):
+    onOpen: stream.send(strToUint8Array("Hi, WebSocket".cstring))
+    onMessage: document.getElementById("main").innerText = uint8ArrayToStr(data)
+
+const AppMinJs = scriptMinifier(code = AppJs, extern = @[])
+
+type
+  PendingData = object
+    msg: string
+
+var wsReqs: Pendings[PendingData]
+wsReqs.newPending(limit = 100)
+
+worker(4):
+  wsReqs.recvLoop(req):
+    let msgText = sanitizeHtml(req.data.msg)
+    let clientId = req.cid
+    clientId.wsSend(msgText)
+
+server(ssl = true, ip = "127.0.0.1", port = 8009):
+  routes(host = "localhost"):
+    stream "/ws":
+      onMessage: wsReqs.pending(PendingData(msg: content))
+    get "/": IndexHtml.content("html").response
+    get "/js/app.js": AppMinJs.content("js").response
+
+serverStart()
+```
+
+If you need the *ClientId* in other ways, you can also get it with the following function in the `server:` blocks.
+
+```nim
+proc markPending(client: Client): ClientId
+```
+
 #### Routes helper APIs
 * **reqUrl:** URL requested from client, always starts `/`. Caprese will reject requests that do not begin with `/`. This means that when concatenating URL strings in a request, it is guaranteed that there will always be a `/` between the strings. You may use Nim's `/` to concatenate path strings with `reqUrl`, but it is not efficient, so I recommend concatenating with `&`.
 * **reqHost:** Hostname requested in the header from client. It may be different from the hostname negotiated by SSL. Incorrect hostnames should be rejected. If the `host` of `routes:` is specified, unmatched hosts will be ignored and will not be processed within that `routes:` block. You may use `reqHost` for custom handling without `host` of `routes:`.
