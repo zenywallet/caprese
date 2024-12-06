@@ -44,16 +44,12 @@ proc connect0*(stream: Stream; url: cstring; protocols: JsObject; onOpen: proc()
     onReady()
 
   stream.ws.onclose = proc(evt: JsObject) =
-    console.log("websocket close:", evt.code)
     stream.readyFlag = false
     onClose() # In case of an error, a close event may occur without an open event
     reconnect()
 
   stream.ws.onmessage = proc(evt: JsObject) =
     var data = newUint8Array(evt.data)
-    var size = data.length.to(cint)
-    console.log(size)
-    console.log(uint8ArrayToStr(data))
     onMessage(data)
 
 macro connect*(stream: Stream; url: cstring; protocols: JsObject; body: untyped): untyped =
