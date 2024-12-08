@@ -21,7 +21,7 @@ proc newStream*(): Stream = new StreamObj
 
 proc connect0*(stream: Stream; url: cstring; protocols: JsObject; onOpen: proc(evt: JsObject);
               onReady: proc(evt: JsObject); onMessage: proc(evt: JsObject, data: Uint8Array);
-              onClose: proc(evt: JsObject)) =
+              onClose: proc(evt: JsObject); onError: proc(evt: JsObject)) =
   stream.ws = newWebSocket(url, protocols)
   stream.ws.binaryType = "arraybuffer".cstring
   when RECONNECT_INFINITE:
@@ -33,10 +33,9 @@ proc connect0*(stream: Stream; url: cstring; protocols: JsObject; onOpen: proc(e
       dec(stream.reconnectCount)
       let randomWait = Math.round(Math.random() * (RECONNECT_WAIT * 2 / 3).toJs).to(int)
       let ms = Math.round(RECONNECT_WAIT / 3).to(int) + randomWait
-      setTimeout(proc() = stream.connect0(url, protocols, onOpen, onReady, onMessage, onClose), ms)
+      setTimeout(proc() = stream.connect0(url, protocols, onOpen, onReady, onMessage, onClose, onError), ms)
 
-  stream.ws.onerror = proc(evt: JsObject) =
-    console.error("websocket error:", evt)
+  stream.ws.onerror = proc(evt: JsObject) = onError(evt)
 
   stream.ws.onopen = proc(evt: JsObject) =
     stream.reconnectCount = RECONNECT_COUNT
@@ -58,6 +57,7 @@ macro connect*(stream: Stream; url: cstring; protocols: JsObject; body: untyped)
   var onReady = newStmtList()
   var onMessage = newStmtList()
   var onClose = newStmtList()
+  var onError = newStmtList()
   for b in body:
     if b[0].eqIdent("onOpen"):
       onOpen.add(b[1])
@@ -67,6 +67,8 @@ macro connect*(stream: Stream; url: cstring; protocols: JsObject; body: untyped)
       onMessage.add(b[1])
     elif b[0].eqIdent("onClose"):
       onClose.add(b[1])
+    elif b[0].eqIdent("onError"):
+      onError.add(b[1])
   var evt = ident"evt"
   var data = ident"data"
   quote do:
@@ -74,7 +76,8 @@ macro connect*(stream: Stream; url: cstring; protocols: JsObject; body: untyped)
                       proc(`evt`: JsObject) = `onOpen`,
                       proc(`evt`: JsObject) = `onReady`,
                       proc(`evt`: JsObject, `data`: Uint8Array) = `onMessage`,
-                      proc(`evt`: JsObject) = `onClose`)
+                      proc(`evt`: JsObject) = `onClose`,
+                      proc(`evt`: JsObject) = `onError`)
 
 macro connect*(stream: Stream; url, protocol: cstring; body: untyped): untyped =
   var protocols = quote do: `protocol`.toJs
@@ -90,6 +93,7 @@ macro connect*(stream: Stream; url, protocol: cstring): untyped =
                       proc(`evt`: JsObject) = discard,
                       proc(`evt`: JsObject) = discard,
                       proc(`evt`: JsObject, `data`: Uint8Array) = discard,
+                      proc(`evt`: JsObject) = discard,
                       proc(`evt`: JsObject) = discard)
 
 proc close*(stream: Stream) =
