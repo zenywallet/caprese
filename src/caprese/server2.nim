@@ -100,6 +100,8 @@ template parseServers*(serverBody: untyped) {.dirty.} =
     echo "routesCmdFlagList=", routesCmdFlagList
     echo "routesCmdCountList=", routesCmdCountList
 
+  var routesHostFlagList {.compileTime.}: seq[bool]
+
   macro parseBody() =
     macro send(dummy: untyped): untyped = quote do: SendResult.None
 
@@ -110,7 +112,7 @@ template parseServers*(serverBody: untyped) {.dirty.} =
         proc `routesProc`(): SendResult = `body`
         discard `routesProc`()
 
-    macro routes(routesBody: untyped): untyped =
+    proc routesBase(routesBody: NimNode): NimNode {.compileTime.} =
       quote do:
         newRoutesFlag()
         echo "routes ", newAppId(AppType2.AppRoutes)
@@ -130,6 +132,14 @@ template parseServers*(serverBody: untyped) {.dirty.} =
               newAppId(AppType2.AppPost)
             newAppId(AppType2.AppPostSend)
         `routesBody`
+
+    macro routes(routesBody: untyped): untyped =
+      routesHostFlagList.add(false)
+      routesBase(routesBody)
+
+    macro routes(host: string, routesBody: untyped): untyped =
+      routesHostFlagList.add(true)
+      routesBase(routesBody)
 
     macro get(url: string, getBody: untyped): untyped =
       quote do:
@@ -491,6 +501,8 @@ template parseServers*(serverBody: untyped) {.dirty.} =
   extractBody()
 
   macro routes(routesBody: untyped): untyped = routesBody
+
+  macro routes(host: string, routesBody: untyped): untyped = routesBody
 
   macro get(url: string, getBody: untyped): untyped =
     quote do:
