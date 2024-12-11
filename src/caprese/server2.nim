@@ -577,6 +577,26 @@ template parseServers*(serverBody: untyped) {.dirty.} =
   macro fallbackRoutesBody(body: untyped): untyped =
     filterCmdNode(body, ["get", "stream", "public", "certificates", "acme", "post"])
 
+  const internalEssentialHeaders = [(id: "InternalEssentialHeaderHost", val: "Host"),
+                                    (id: "InternalEssentialHeaderConnection", val: "Connection"),
+                                    (id: "InternalContentLength", val: "Content-Length")]
+
+  macro genHeaderParams(idEnumName, strListName: untyped): untyped =
+    var enumParams = nnkEnumTy.newTree(newEmptyNode())
+    var targetParams = nnkBracket.newTree()
+    for a in internalEssentialHeaders:
+      enumParams.add(ident(a.id))
+      var compareStr = newLit(a.val & ": ")
+      targetParams.add(compareStr)
+    quote do:
+      type `idEnumName` = `enumParams`
+      const `strListName` = `targetParams`
+
+  genHeaderParams(HeaderParams, TargetHeaderParams)
+
+  for a in HeaderParams:
+    echo $a, "[", ord(a), "]=\"", TargetHeaderParams[ord(a)], "\""
+
   macro appRoutesBase(): untyped =
     result = quote do:
       echo "appRoutesBase"
