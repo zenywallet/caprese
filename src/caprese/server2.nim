@@ -597,6 +597,24 @@ template parseServers*(serverBody: untyped) {.dirty.} =
   for a in HeaderParams:
     echo $a, "[", ord(a), "]=\"", TargetHeaderParams[ord(a)], "\""
 
+  macro genTargetHeaders(TargetHeaders: untyped): untyped =
+    var bracket = nnkBracket.newTree()
+    for a in HeaderParams:
+      bracket.add nnkTupleConstr.newTree(
+        nnkExprColonExpr.newTree(
+          newIdentNode("id"),
+          newIdentNode($a)
+        ),
+        nnkExprColonExpr.newTree(
+          newIdentNode("str"),
+          newLit(TargetHeaderParams[ord(a)])
+        )
+      )
+    quote do:
+      const `TargetHeaders` = `bracket`
+
+  genTargetHeaders(TargetHeaders)
+
   macro appRoutesBase(): untyped =
     result = quote do:
       echo "appRoutesBase"
