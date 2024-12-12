@@ -597,6 +597,12 @@ template parseServers*(serverBody: untyped) {.dirty.} =
   for a in HeaderParams:
     echo $a, "[", ord(a), "]=\"", TargetHeaderParams[ord(a)], "\""
 
+  type
+    ReqHeader = object
+      url: string
+      params: array[TargetHeaderParams.len, tuple[cur: int, size: int]]
+      minorVer: int
+
   macro genTargetHeaders(TargetHeaders: untyped): untyped =
     var bracket = nnkBracket.newTree()
     for a in HeaderParams:
