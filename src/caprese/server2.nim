@@ -618,8 +618,12 @@ template parseServers*(serverBody: untyped) {.dirty.} =
           newLit(TargetHeaderParams[ord(a)])
         )
       )
+    var StaticTargetHeaders = ident("StaticTargetHeaders")
     quote do:
-      const `TargetHeaders` = `bracket`
+      const `StaticTargetHeaders` = `bracket`
+      var `TargetHeaders`: Array[tuple[id: HeaderParams, str: string]]
+      for a in `StaticTargetHeaders`:
+        `TargetHeaders`.add(a)
 
   genTargetHeaders(TargetHeaders)
 
