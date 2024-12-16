@@ -603,7 +603,7 @@ template parseServers*(serverBody: untyped) {.dirty.} =
       urlPos: uint
       urlSize: uint
       minorVer: int
-      params: array[TargetHeaderParams.len, tuple[cur: int, size: int]]
+      params: array[TargetHeaderParams.len, tuple[cur: uint, size: uint]]
 
   macro genTargetHeaders(TargetHeaders: untyped): untyped =
     var bracket = nnkBracket.newTree()
