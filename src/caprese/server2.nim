@@ -1119,6 +1119,10 @@ template parseServers*(serverBody: untyped) {.dirty.} =
       var epfd = epfds[arg.threadId]
       var epfd2 = epfd
 
+    var targetHeaders: Array[ptr tuple[id: HeaderParams, str: string]]
+    for i in 0..<TargetHeaders.len:
+      targetHeaders.add(addr TargetHeaders[i])
+
     appRoutesBase()
 
     template nextEv() =
