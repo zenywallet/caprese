@@ -773,6 +773,10 @@ template parseServers*(serverBody: untyped) {.dirty.} =
               break
           inc(pos); if pos == endPos: break RecvLoop
 
+      template reqHeader(paramId: HeaderParams): string =
+        let param = ctxReqHeader.params[paramId.int]
+        capbytes.toString(cast[ptr UncheckedArray[byte]](param.cur), param.size)
+
     for i in 0..<routesBodyList.len:
       var routesBody = routesBodyList[i]
       var (routesProcGet, routesProcPost, routesProcFallback) = routesProcList[i]
@@ -1119,6 +1123,7 @@ template parseServers*(serverBody: untyped) {.dirty.} =
       var epfd = epfds[arg.threadId]
       var epfd2 = epfd
 
+    var ctxReqHeader: ReqHeader
     var targetHeaders: Array[ptr tuple[id: HeaderParams, str: string]]
     for i in 0..<TargetHeaders.len:
       targetHeaders.add(addr TargetHeaders[i])
