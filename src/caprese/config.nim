@@ -152,7 +152,7 @@ const defaultConfig* = defaultConfigMacro:
   multiProcess = false
   multiProcessThreadNum = 1
   clientThreadAssign = AutoAssign
-  clientLock = false
+  clientLock = true
 
 var configStmt* {.compileTime.} = newStmtList()
 
