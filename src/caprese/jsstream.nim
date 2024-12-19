@@ -7,7 +7,7 @@ import jslib
 
 const RECONNECT_COUNT = 120
 const RECONNECT_WAIT = 15000
-const RECONNECT_INFINITE = true
+const RECONNECT_INFINITE = false
 
 type
   StreamObj* = object
