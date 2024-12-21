@@ -878,9 +878,43 @@ template parseServers*(serverBody: untyped) {.dirty.} =
               var pos = cast[uint](recvBuf) + 4
               parseHeaderUrl(pos, endPos, RecvLoop)
 
-              while not equalMem(cast[pointer](pos), "\c\L\c\L".cstring, 4):
+              if not equalMem(cast[pointer](pos), "\c\L\c\L".cstring, 4):
+                inc(pos, 2)
                 if pos >= endPos: break RecvLoop
-                inc(pos)
+
+                var incompleteIdx = 0
+                block parseHeaderBlock:
+                  while true:
+                    block paramsLoop:
+                      for i in incompleteIdx..<targetHeaders.len:
+                        let (headerId, targetParam) = targetHeaders[i][]
+                        if equalMem(cast[pointer](pos), targetParam.cstring, targetParam.len):
+                          inc(pos, targetParam.len)
+                          var cur = pos
+                          while not equalMem(cast[pointer](pos), "\c\L".cstring, 2):
+                            if pos >= endPos: break RecvLoop
+                            inc(pos)
+                          ctxReqHeader.params[headerId.int] = (cur, pos - cur)
+                          if i != incompleteIdx:
+                            swap(targetHeaders[incompleteIdx], targetHeaders[i])
+                          if pos >= endPos: break RecvLoop
+                          inc(incompleteIdx)
+                          if incompleteIdx >= targetHeaders.len:
+                            break parseHeaderBlock
+                          else:
+                            inc(pos, 2)
+                            break paramsLoop
+
+                      while not equalMem(cast[pointer](pos), "\c\L".cstring, 2):
+                        if pos >= endPos: break RecvLoop
+                        inc(pos)
+                      if equalMem(cast[pointer](pos), "\c\L\c\L".cstring, 4):
+                        break parseHeaderBlock
+                      inc(pos, 2)
+
+                while not equalMem(cast[pointer](pos), "\c\L\c\L".cstring, 4):
+                  if pos >= endPos: break RecvLoop
+                  inc(pos)
 
               curSendSize = 0
               if pos == endPos:
