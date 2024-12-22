@@ -102,6 +102,12 @@ template parseServers*(serverBody: untyped) {.dirty.} =
 
   var routesHostFlagList {.compileTime.}: seq[bool]
 
+  macro routesHostFlagTrueExists(): bool =
+    for flag in routesHostFlagList:
+      if flag:
+        return newIdentNode("true")
+    return newIdentNode("false")
+
   macro parseBody() =
     macro send(dummy: untyped): untyped = quote do: SendResult.None
 
@@ -1160,6 +1166,8 @@ template parseServers*(serverBody: untyped) {.dirty.} =
     var ctxReqHeader: ReqHeader
     var targetHeaders: Array[ptr tuple[id: HeaderParams, str: string]]
     for i in 0..<TargetHeaders.len:
+      if TargetHeaders[i].id == InternalEssentialHeaderHost and not routesHostFlagTrueExists():
+        continue
       targetHeaders.add(addr TargetHeaders[i])
 
     appRoutesBase()
