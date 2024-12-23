@@ -1165,10 +1165,13 @@ template parseServers*(serverBody: untyped) {.dirty.} =
 
     var ctxReqHeader: ReqHeader
     var targetHeaders: Array[ptr tuple[id: HeaderParams, str: string]]
+    var targetHeadersForGet: Array[ptr tuple[id: HeaderParams, str: string]]
     for i in 0..<TargetHeaders.len:
       if TargetHeaders[i].id == InternalEssentialHeaderHost and not routesHostFlagTrueExists():
         continue
       targetHeaders.add(addr TargetHeaders[i])
+      if TargetHeaders[i].id != InternalContentLength:
+        targetHeadersForGet.add(addr TargetHeaders[i])
 
     appRoutesBase()
 
