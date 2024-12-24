@@ -1169,6 +1169,9 @@ template parseServers*(serverBody: untyped) {.dirty.} =
     for i in 0..<TargetHeaders.len:
       if TargetHeaders[i].id == InternalEssentialHeaderHost and not routesHostFlagTrueExists():
         continue
+      when not cfg.reqHeaderConnection:
+        if TargetHeaders[i].id == InternalEssentialHeaderConnection:
+          continue
       targetHeaders.add(addr TargetHeaders[i])
       if TargetHeaders[i].id != InternalContentLength:
         targetHeadersForGet.add(addr TargetHeaders[i])
