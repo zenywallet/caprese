@@ -779,6 +779,45 @@ template parseServers*(serverBody: untyped) {.dirty.} =
               break
           inc(pos); if pos == endPos: break RecvLoop
 
+      template parseHeader(pos, endPos: uint, RecvLoop: typed) =
+        if not equalMem(cast[pointer](pos), "\c\L\c\L".cstring, 4):
+          inc(pos, 2)
+          if pos >= endPos: break RecvLoop
+
+          var incompleteIdx = 0
+          block parseHeaderBlock:
+            while true:
+              block paramsLoop:
+                for i in incompleteIdx..<targetHeadersForGet.len:
+                  let (headerId, targetParam) = targetHeadersForGet[i][]
+                  if equalMem(cast[pointer](pos), targetParam.cstring, targetParam.len):
+                    inc(pos, targetParam.len)
+                    var cur = pos
+                    while not equalMem(cast[pointer](pos), "\c\L".cstring, 2):
+                      if pos >= endPos: break RecvLoop
+                      inc(pos)
+                    ctxReqHeader.params[headerId.int] = (cur, pos - cur)
+                    if i != incompleteIdx:
+                      swap(targetHeadersForGet[incompleteIdx], targetHeadersForGet[i])
+                    if pos >= endPos: break RecvLoop
+                    inc(incompleteIdx)
+                    if incompleteIdx >= targetHeadersForGet.len:
+                      break parseHeaderBlock
+                    else:
+                      inc(pos, 2)
+                      break paramsLoop
+
+                while not equalMem(cast[pointer](pos), "\c\L".cstring, 2):
+                  if pos >= endPos: break RecvLoop
+                  inc(pos)
+                if equalMem(cast[pointer](pos), "\c\L\c\L".cstring, 4):
+                  break parseHeaderBlock
+                inc(pos, 2)
+
+          while not equalMem(cast[pointer](pos), "\c\L\c\L".cstring, 4):
+            if pos >= endPos: break RecvLoop
+            inc(pos)
+
       template reqHeader(paramId: HeaderParams): string =
         let param = ctxReqHeader.params[paramId.int]
         capbytes.toString(cast[ptr UncheckedArray[byte]](param.cur), param.size)
@@ -883,44 +922,7 @@ template parseServers*(serverBody: untyped) {.dirty.} =
             if equalMem(recvBuf, "GET ".cstring, 4):
               var pos = cast[uint](recvBuf) + 4
               parseHeaderUrl(pos, endPos, RecvLoop)
-
-              if not equalMem(cast[pointer](pos), "\c\L\c\L".cstring, 4):
-                inc(pos, 2)
-                if pos >= endPos: break RecvLoop
-
-                var incompleteIdx = 0
-                block parseHeaderBlock:
-                  while true:
-                    block paramsLoop:
-                      for i in incompleteIdx..<targetHeadersForGet.len:
-                        let (headerId, targetParam) = targetHeadersForGet[i][]
-                        if equalMem(cast[pointer](pos), targetParam.cstring, targetParam.len):
-                          inc(pos, targetParam.len)
-                          var cur = pos
-                          while not equalMem(cast[pointer](pos), "\c\L".cstring, 2):
-                            if pos >= endPos: break RecvLoop
-                            inc(pos)
-                          ctxReqHeader.params[headerId.int] = (cur, pos - cur)
-                          if i != incompleteIdx:
-                            swap(targetHeadersForGet[incompleteIdx], targetHeadersForGet[i])
-                          if pos >= endPos: break RecvLoop
-                          inc(incompleteIdx)
-                          if incompleteIdx >= targetHeadersForGet.len:
-                            break parseHeaderBlock
-                          else:
-                            inc(pos, 2)
-                            break paramsLoop
-
-                      while not equalMem(cast[pointer](pos), "\c\L".cstring, 2):
-                        if pos >= endPos: break RecvLoop
-                        inc(pos)
-                      if equalMem(cast[pointer](pos), "\c\L\c\L".cstring, 4):
-                        break parseHeaderBlock
-                      inc(pos, 2)
-
-                while not equalMem(cast[pointer](pos), "\c\L\c\L".cstring, 4):
-                  if pos >= endPos: break RecvLoop
-                  inc(pos)
+              parseHeader(pos, endPos, RecvLoop)
 
               curSendSize = 0
               if pos == endPos:
@@ -942,44 +944,7 @@ template parseServers*(serverBody: untyped) {.dirty.} =
                   if equalMem(cast[pointer](pos), "GET ".cstring, 4):
                     inc(pos, 4)
                     parseHeaderUrl(pos, endPos, RecvLoop)
-
-                    if not equalMem(cast[pointer](pos), "\c\L\c\L".cstring, 4):
-                      inc(pos, 2)
-                      if pos >= endPos: break RecvLoop
-
-                      var incompleteIdx = 0
-                      block parseHeaderBlock:
-                        while true:
-                          block paramsLoop:
-                            for i in incompleteIdx..<targetHeadersForGet.len:
-                              let (headerId, targetParam) = targetHeadersForGet[i][]
-                              if equalMem(cast[pointer](pos), targetParam.cstring, targetParam.len):
-                                inc(pos, targetParam.len)
-                                var cur = pos
-                                while not equalMem(cast[pointer](pos), "\c\L".cstring, 2):
-                                  if pos >= endPos: break RecvLoop
-                                  inc(pos)
-                                ctxReqHeader.params[headerId.int] = (cur, pos - cur)
-                                if i != incompleteIdx:
-                                  swap(targetHeadersForGet[incompleteIdx], targetHeadersForGet[i])
-                                if pos >= endPos: break RecvLoop
-                                inc(incompleteIdx)
-                                if incompleteIdx >= targetHeadersForGet.len:
-                                  break parseHeaderBlock
-                                else:
-                                  inc(pos, 2)
-                                  break paramsLoop
-
-                            while not equalMem(cast[pointer](pos), "\c\L".cstring, 2):
-                              if pos >= endPos: break RecvLoop
-                              inc(pos)
-                            if equalMem(cast[pointer](pos), "\c\L\c\L".cstring, 4):
-                              break parseHeaderBlock
-                            inc(pos, 2)
-
-                      while not equalMem(cast[pointer](pos), "\c\L\c\L".cstring, 4):
-                        if pos >= endPos: break RecvLoop
-                        inc(pos)
+                    parseHeader(pos, endPos, RecvLoop)
 
                     if pos == endPos:
                       var retRoutes = `routesProcGet`(SendProc3_Prev2)
