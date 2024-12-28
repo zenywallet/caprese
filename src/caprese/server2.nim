@@ -818,6 +818,45 @@ template parseServers*(serverBody: untyped) {.dirty.} =
             if pos >= endPos: break RecvLoop
             inc(pos)
 
+      template parseHeader(pos, endPos: uint, RecvLoop: typed) =
+        if not equalMem(cast[pointer](pos), "\c\L\c\L".cstring, 4):
+          inc(pos, 2)
+          if pos >= endPos: break RecvLoop
+
+          var incompleteIdx = 0
+          block parseHeaderBlock:
+            while true:
+              block paramsLoop:
+                for i in incompleteIdx..<targetHeaders.len:
+                  let (headerId, targetParam) = targetHeaders[i][]
+                  if equalMem(cast[pointer](pos), targetParam.cstring, targetParam.len):
+                    inc(pos, targetParam.len)
+                    var cur = pos
+                    while not equalMem(cast[pointer](pos), "\c\L".cstring, 2):
+                      if pos >= endPos: break RecvLoop
+                      inc(pos)
+                    ctxReqHeader.params[headerId.int] = (cur, pos - cur)
+                    if i != incompleteIdx:
+                      swap(targetHeaders[incompleteIdx], targetHeaders[i])
+                    if pos >= endPos: break RecvLoop
+                    inc(incompleteIdx)
+                    if incompleteIdx >= targetHeaders.len:
+                      break parseHeaderBlock
+                    else:
+                      inc(pos, 2)
+                      break paramsLoop
+
+                while not equalMem(cast[pointer](pos), "\c\L".cstring, 2):
+                  if pos >= endPos: break RecvLoop
+                  inc(pos)
+                if equalMem(cast[pointer](pos), "\c\L\c\L".cstring, 4):
+                  break parseHeaderBlock
+                inc(pos, 2)
+
+          while not equalMem(cast[pointer](pos), "\c\L\c\L".cstring, 4):
+            if pos >= endPos: break RecvLoop
+            inc(pos)
+
       template reqHeader(paramId: HeaderParams): string =
         let param = ctxReqHeader.params[paramId.int]
         capbytes.toString(cast[ptr UncheckedArray[byte]](param.cur), param.size)
@@ -963,6 +1002,9 @@ template parseServers*(serverBody: untyped) {.dirty.} =
 
                   elif equalMem(recvBuf, "POST".cstring, 4):
                     var pos = cast[uint](recvBuf) + 5
+                    parseHeaderUrl(pos, endPos, RecvLoop)
+                    parseHeader(pos, endPos, RecvLoop)
+                    echo "InternalContentLength=", reqHeader(InternalContentLength)
                     break RecvLoop
 
                   else:
@@ -971,6 +1013,9 @@ template parseServers*(serverBody: untyped) {.dirty.} =
 
             elif equalMem(recvBuf, "POST".cstring, 4):
               var pos = cast[uint](recvBuf) + 5
+              parseHeaderUrl(pos, endPos, RecvLoop)
+              parseHeader(pos, endPos, RecvLoop)
+              echo "InternalContentLength=", reqHeader(InternalContentLength)
               break RecvLoop
 
             else:
