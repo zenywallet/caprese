@@ -779,7 +779,7 @@ template parseServers*(serverBody: untyped) {.dirty.} =
               break
           inc(pos); if pos == endPos: break RecvLoop
 
-      template parseHeader(pos, endPos: uint, RecvLoop: typed) =
+      template parseHeaderGet(pos, endPos: uint, RecvLoop: typed) =
         if not equalMem(cast[pointer](pos), "\c\L\c\L".cstring, 4):
           inc(pos, 2)
           if pos >= endPos: break RecvLoop
@@ -922,7 +922,7 @@ template parseServers*(serverBody: untyped) {.dirty.} =
             if equalMem(recvBuf, "GET ".cstring, 4):
               var pos = cast[uint](recvBuf) + 4
               parseHeaderUrl(pos, endPos, RecvLoop)
-              parseHeader(pos, endPos, RecvLoop)
+              parseHeaderGet(pos, endPos, RecvLoop)
 
               curSendSize = 0
               if pos == endPos:
@@ -944,7 +944,7 @@ template parseServers*(serverBody: untyped) {.dirty.} =
                   if equalMem(cast[pointer](pos), "GET ".cstring, 4):
                     inc(pos, 4)
                     parseHeaderUrl(pos, endPos, RecvLoop)
-                    parseHeader(pos, endPos, RecvLoop)
+                    parseHeaderGet(pos, endPos, RecvLoop)
 
                     if pos == endPos:
                       var retRoutes = `routesProcGet`(SendProc3_Prev2)
