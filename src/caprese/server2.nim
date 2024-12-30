@@ -55,6 +55,7 @@ macro genAppIdEnum*(): untyped =
 template parseServers*(serverBody: untyped) {.dirty.} =
   import std/options
   import std/cpuinfo
+  import std/strutils
 
   const cmdList = ["get", "stream", "public", "certificates", "acme", "proxy",
           "post", "head", "put", "delete", "connect", "options", "trace", "patch"]
@@ -873,6 +874,11 @@ template parseServers*(serverBody: untyped) {.dirty.} =
           curSendProcType = sendProcType
           `routesBodyGet`
 
+        proc `routesProcPost`(sendProcType: SendProcType): SendResult =
+          echo "routesProcPost"
+          curSendProcType = sendProcType
+          `routesBodyPost`
+
   proc camel(s: string): string {.compileTime.} =
     result = s
     if result.len > 0 and result[0] >= 'A' and result[0] <= 'Z':
@@ -1016,6 +1022,13 @@ template parseServers*(serverBody: untyped) {.dirty.} =
               parseHeaderUrl(pos, endPos, RecvLoop)
               parseHeader(pos, endPos, RecvLoop)
               echo "InternalContentLength=", reqHeader(InternalContentLength)
+              var contentLength = try: parseInt(reqHeader(InternalContentLength)) except: 0
+              if pos + contentLength.uint == endPos:
+                var retRoutes = `routesProcPost`(SendProc1_Prev2)
+                if retRoutes <= SendResult.None:
+                  client.close(false)
+                else:
+                  client.whackaMole = false
               break RecvLoop
 
             else:
@@ -1238,7 +1251,6 @@ template parseServers*(serverBody: untyped) {.dirty.} =
 
   initClient()
   initClientRing()
-  import std/strutils
   activeHeaderInit()
   when cfg.headerDate:
     startTimeStampUpdater(cfg)
