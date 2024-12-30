@@ -574,13 +574,13 @@ template parseServers*(serverBody: untyped) {.dirty.} =
     result = body.copy()
     result.filterCmdNode(filterCmdList, 0)
 
-  macro getRoutesBody(body: untyped): untyped =
+  proc getRoutesBody(body: NimNode): NimNode {.compileTime.} =
     filterCmdNode(body, ["post", "head", "put", "delete", "connect", "options", "trace"])
 
-  macro postRoutesBody(body: untyped): untyped =
+  proc postRoutesBody(body: NimNode): NimNode {.compileTime.} =
     filterCmdNode(body, ["get", "stream", "public", "certificates", "acme", "head", "put", "delete", "connect", "options", "trace"])
 
-  macro fallbackRoutesBody(body: untyped): untyped =
+  proc fallbackRoutesBody(body: NimNode): NimNode {.compileTime.} =
     filterCmdNode(body, ["get", "stream", "public", "certificates", "acme", "post"])
 
   const internalEssentialHeaders = [(id: "InternalEssentialHeaderHost", val: "Host"),
