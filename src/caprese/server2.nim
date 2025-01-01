@@ -1029,6 +1029,13 @@ template parseServers*(serverBody: untyped) {.dirty.} =
                   client.close(false)
                 else:
                   client.whackaMole = false
+              elif pos + contentLength.uint < endPos:
+                var retRoutes = `routesProcPost`(SendProc2)
+                if retRoutes <= SendResult.None:
+                  client.close(false)
+                  break RecvLoop
+                else:
+                  inc(pos, 4 + contentLength)
               break RecvLoop
 
             else:
