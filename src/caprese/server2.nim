@@ -1011,6 +1011,20 @@ template parseServers*(serverBody: untyped) {.dirty.} =
                     parseHeaderUrl(pos, endPos, RecvLoop)
                     parseHeader(pos, endPos, RecvLoop)
                     echo "InternalContentLength=", reqHeader(InternalContentLength)
+                    var contentLength = try: parseInt(reqHeader(InternalContentLength)) except: 0
+                    if pos + contentLength.uint == endPos:
+                      var retRoutes = `routesProcPost`(SendProc3_Prev2)
+                      if retRoutes <= SendResult.None:
+                        client.close(false)
+                      else:
+                        client.whackaMole = false
+                    elif pos + contentLength.uint < endPos:
+                      var retRoutes = `routesProcPost`(SendProc2)
+                      if retRoutes <= SendResult.None:
+                        client.close(false)
+                        break RecvLoop
+                      else:
+                        inc(pos, 4 + contentLength)
                     break RecvLoop
 
                   else:
