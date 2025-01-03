@@ -1177,7 +1177,10 @@ template parseServers*(serverBody: untyped) {.dirty.} =
       while true:
         let sendlen = client.sock.send(client.sendPos, client.sendLen.cint,  MSG_NOSIGNAL)
         if sendlen == client.sendLen:
-          client.appId = (client.appId.cuint - 2).AppId
+          if client.recvLen > 0:
+            client.appId = (client.appId.cuint - 1).AppId
+          else:
+            client.appId = (client.appId.cuint - 2).AppId
           var e = epoll_ctl(when declared(epfd2): epfd2 else: epfd, EPOLL_CTL_MOD, client.sock.cint, addr client.ev)
           if e != 0:
             echo "error: client epoll mod"
