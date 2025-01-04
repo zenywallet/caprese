@@ -778,7 +778,13 @@ template parseServers*(serverBody: untyped) {.dirty.} =
                 client.close(false)
                 break RecvLoop
               break
-          inc(pos); if pos == endPos: break RecvLoop
+          inc(pos);
+          if pos == endPos:
+            client.recvBuf = recvBuf
+            client.recvLen = retRecv
+            recvBuf = cast[ptr UncheckedArray[byte]](allocShared0(workerRecvBufSize))
+            client.appId = (client.appId.cuint + 1).AppId # AppRoutesRecv
+            break RecvLoop
 
       template parseHeaderGet(pos, endPos: uint, RecvLoop: typed) =
         if not equalMem(cast[pointer](pos), "\c\L\c\L".cstring, 4):
@@ -963,6 +969,7 @@ template parseServers*(serverBody: untyped) {.dirty.} =
         while true:
           retRecv = client.sock.recv(recvBuf, workerRecvBufSize, 0.cint)
           if retRecv >= 17:
+            client.recvPos = recvBuf
             var endPos = cast[uint](recvBuf) + cast[uint](retRecv) - 4
             if equalMem(recvBuf, "GET ".cstring, 4):
               var pos = cast[uint](recvBuf) + 4
@@ -986,6 +993,7 @@ template parseServers*(serverBody: untyped) {.dirty.} =
                   inc(pos, 4)
 
                 while true:
+                  client.recvPos = cast[ptr UncheckedArray[byte]](pos)
                   if equalMem(cast[pointer](pos), "GET ".cstring, 4):
                     inc(pos, 4)
                     parseHeaderUrl(pos, endPos, RecvLoop)
