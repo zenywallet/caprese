@@ -781,8 +781,10 @@ template parseServers*(serverBody: untyped) {.dirty.} =
           inc(pos);
           if pos == endPos:
             client.recvBuf = recvBuf
+            client.recvPos = recvPos
             client.recvLen = retRecv
             recvBuf = cast[ptr UncheckedArray[byte]](allocShared0(workerRecvBufSize))
+            recvPos = recvBuf
             client.appId = (client.appId.cuint + 1).AppId # AppRoutesRecv
             break RecvLoop
 
@@ -967,12 +969,11 @@ template parseServers*(serverBody: untyped) {.dirty.} =
       when cfg.clientLock: acquire(client.lock)
       block RecvLoop:
         while true:
-          retRecv = client.sock.recv(recvBuf, workerRecvBufSize, 0.cint)
+          retRecv = client.sock.recv(recvPos, workerRecvBufSize, 0.cint)
           if retRecv >= 17:
-            client.recvPos = recvBuf
-            var endPos = cast[uint](recvBuf) + cast[uint](retRecv) - 4
-            if equalMem(recvBuf, "GET ".cstring, 4):
-              var pos = cast[uint](recvBuf) + 4
+            var endPos = cast[uint](recvPos) + cast[uint](retRecv) - 4
+            if equalMem(recvPos, "GET ".cstring, 4):
+              var pos = cast[uint](recvPos) + 4
               parseHeaderUrl(pos, endPos, RecvLoop)
               parseHeaderGet(pos, endPos, RecvLoop)
 
@@ -1014,8 +1015,8 @@ template parseServers*(serverBody: untyped) {.dirty.} =
                       else:
                         inc(pos, 4)
 
-                  elif equalMem(recvBuf, "POST".cstring, 4):
-                    var pos = cast[uint](recvBuf) + 5
+                  elif equalMem(recvPos, "POST".cstring, 4):
+                    var pos = cast[uint](recvPos) + 5
                     parseHeaderUrl(pos, endPos, RecvLoop)
                     parseHeader(pos, endPos, RecvLoop)
                     echo "InternalContentLength=", reqHeader(InternalContentLength)
@@ -1070,9 +1071,10 @@ template parseServers*(serverBody: untyped) {.dirty.} =
 
           elif retRecv > 0:
             client.recvBuf = recvBuf
-            #client.recvPos
+            client.recvPos = recvPos
             client.recvLen = retRecv
             recvBuf = cast[ptr UncheckedArray[byte]](allocShared0(workerRecvBufSize))
+            recvPos = recvBuf
             client.appId = (client.appId.cuint + 1).AppId # AppRoutesRecv
             break
           else:
@@ -1238,6 +1240,7 @@ template parseServers*(serverBody: untyped) {.dirty.} =
     var addrLen: SockLen = sizeof(sockAddress).SockLen
     var retRecv: int
     var recvBuf = cast[ptr UncheckedArray[byte]](allocShared0(workerRecvBufSize))
+    var recvPos = recvBuf
     var recvBufSize = workerRecvBufSize
     var sendBuf = cast[ptr UncheckedArray[byte]](allocShared0(workerSendBufSize))
     var sendBufSize = workerSendBufSize
