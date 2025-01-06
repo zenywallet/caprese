@@ -75,7 +75,10 @@ task brotli, "Copy brotli":
     exec "cp -r c ../../src/brotli/"
 
 task depsAll, "Build deps":
-  exec "git submodule update --init"
+  if getEnv("NOREMOTEUPDATE") == "1":
+    exec "git submodule update --init"
+  else:
+    exec "git submodule update --init --remote"
   bearsslTask()
   opensslTask()
   libresslTask()
@@ -99,12 +102,19 @@ before install:
 
 before build:
   if getEnv("NOSSL") == "1":
-    exec "git submodule update --init deps/zopfli"
-    exec "git submodule update --init deps/brotli"
+    if getEnv("NOREMOTEUPDATE") == "1":
+      exec "git submodule update --init deps/zopfli"
+      exec "git submodule update --init deps/brotli"
+    else:
+      exec "git submodule update --init --remote deps/zopfli"
+      exec "git submodule update --init --remote deps/brotli"
     exec "mkdir -p src/lib"
     exec "touch src/lib/NOSSL.a"
   else:
-    exec "git submodule update --init"
+    if getEnv("NOREMOTEUPDATE") == "1":
+      exec "git submodule update --init"
+    else:
+      exec "git submodule update --init --remote"
     if not fileExists("src/lib/bearssl/libbearssl.a"):
       bearsslTask()
     if not fileExists("src/lib/openssl/libssl.a") or not fileExists("src/lib/openssl/libcrypto.a"):
