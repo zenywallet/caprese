@@ -1016,7 +1016,7 @@ template parseServers*(serverBody: untyped) {.dirty.} =
                         inc(pos, 4)
 
                   elif equalMem(recvPos, "POST".cstring, 4):
-                    var pos = cast[uint](recvPos) + 5
+                    pos = cast[uint](recvPos) + 5
                     parseHeaderUrl(pos, endPos, RecvLoop)
                     parseHeader(pos, endPos, RecvLoop)
                     echo "InternalContentLength=", reqHeader(InternalContentLength)
