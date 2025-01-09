@@ -994,7 +994,7 @@ template parseServers*(serverBody: untyped) {.dirty.} =
                   inc(pos, 4)
 
                 while true:
-                  client.recvPos = cast[ptr UncheckedArray[byte]](pos)
+                  recvPos = cast[ptr UncheckedArray[byte]](pos)
                   if equalMem(cast[pointer](pos), "GET ".cstring, 4):
                     inc(pos, 4)
                     parseHeaderUrl(pos, endPos, RecvLoop)
