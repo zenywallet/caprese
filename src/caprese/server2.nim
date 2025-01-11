@@ -969,11 +969,11 @@ template parseServers*(serverBody: untyped) {.dirty.} =
       when cfg.clientLock: acquire(client.lock)
       block RecvLoop:
         while true:
-          retRecv = client.sock.recv(recvPos, workerRecvBufSize, 0.cint)
+          retRecv = client.sock.recv(recvBuf, workerRecvBufSize, 0.cint)
           if retRecv >= 17:
-            var endPos = cast[uint](recvPos) + cast[uint](retRecv) - 4
-            if equalMem(recvPos, "GET ".cstring, 4):
-              var pos = cast[uint](recvPos) + 4
+            var endPos = cast[uint](recvBuf) + cast[uint](retRecv) - 4
+            if equalMem(recvBuf, "GET ".cstring, 4):
+              var pos = cast[uint](recvBuf) + 4
               parseHeaderUrl(pos, endPos, RecvLoop)
               parseHeaderGet(pos, endPos, RecvLoop)
 
