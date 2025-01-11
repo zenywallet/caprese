@@ -1035,7 +1035,6 @@ template parseServers*(serverBody: untyped) {.dirty.} =
                         break RecvLoop
                       else:
                         inc(pos, 4 + contentLength)
-                    break RecvLoop
 
                   else:
                     client.close(false)
