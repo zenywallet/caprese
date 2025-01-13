@@ -1060,7 +1060,53 @@ template parseServers*(serverBody: untyped) {.dirty.} =
                   break RecvLoop
                 else:
                   inc(pos, 4 + contentLength)
-              break RecvLoop
+
+                while true:
+                  recvPos = cast[ptr UncheckedArray[byte]](pos)
+                  if equalMem(cast[pointer](pos), "GET ".cstring, 4):
+                    inc(pos, 4)
+                    parseHeaderUrl(pos, endPos, RecvLoop)
+                    parseHeaderGet(pos, endPos, RecvLoop)
+
+                    if pos == endPos:
+                      var retRoutes = `routesProcGet`(SendProc3_Prev2)
+                      if retRoutes <= SendResult.None:
+                        client.close(false)
+                      else:
+                        client.whackaMole = false
+                      break RecvLoop
+                    else:
+                      var retRoutes = `routesProcGet`(SendProc2)
+                      if retRoutes <= SendResult.None:
+                        client.close(false)
+                        break RecvLoop
+                      else:
+                        inc(pos, 4)
+
+                  elif equalMem(recvPos, "POST".cstring, 4):
+                    pos = cast[uint](recvPos) + 5
+                    parseHeaderUrl(pos, endPos, RecvLoop)
+                    parseHeader(pos, endPos, RecvLoop)
+                    echo "InternalContentLength=", reqHeader(InternalContentLength)
+                    var contentLength = try: parseInt(reqHeader(InternalContentLength)) except: 0
+                    if pos + contentLength.uint == endPos:
+                      var retRoutes = `routesProcPost`(SendProc3_Prev2)
+                      if retRoutes <= SendResult.None:
+                        client.close(false)
+                      else:
+                        client.whackaMole = false
+                      break RecvLoop
+                    elif pos + contentLength.uint < endPos:
+                      var retRoutes = `routesProcPost`(SendProc2)
+                      if retRoutes <= SendResult.None:
+                        client.close(false)
+                        break RecvLoop
+                      else:
+                        inc(pos, 4 + contentLength)
+
+                  else:
+                    client.close(false)
+                    break RecvLoop
 
             else:
               client.close(false)
