@@ -883,7 +883,6 @@ template parseServers*(serverBody: untyped) {.dirty.} =
           `routesBodyGet`
 
         proc `routesProcPost`(sendProcType: SendProcType): SendResult =
-          echo "routesProcPost"
           curSendProcType = sendProcType
           `routesBodyPost`
 
@@ -1019,7 +1018,6 @@ template parseServers*(serverBody: untyped) {.dirty.} =
                     pos = cast[uint](recvPos) + 5
                     parseHeaderUrl(pos, endPos, RecvLoop)
                     parseHeader(pos, endPos, RecvLoop)
-                    echo "InternalContentLength=", reqHeader(InternalContentLength)
                     var contentLength = try: parseInt(reqHeader(InternalContentLength)) except: 0
                     if pos + contentLength.uint == endPos:
                       var retRoutes = `routesProcPost`(SendProc3_Prev2)
@@ -1045,7 +1043,6 @@ template parseServers*(serverBody: untyped) {.dirty.} =
               parseHeaderUrl(pos, endPos, RecvLoop)
               parseHeader(pos, endPos, RecvLoop)
               curSendSize = 0
-              echo "InternalContentLength=", reqHeader(InternalContentLength)
               var contentLength = try: parseInt(reqHeader(InternalContentLength)) except: 0
               if pos + contentLength.uint == endPos:
                 var retRoutes = `routesProcPost`(SendProc1_Prev2)
@@ -1088,7 +1085,6 @@ template parseServers*(serverBody: untyped) {.dirty.} =
                     pos = cast[uint](recvPos) + 5
                     parseHeaderUrl(pos, endPos, RecvLoop)
                     parseHeader(pos, endPos, RecvLoop)
-                    echo "InternalContentLength=", reqHeader(InternalContentLength)
                     var contentLength = try: parseInt(reqHeader(InternalContentLength)) except: 0
                     if pos + contentLength.uint == endPos:
                       var retRoutes = `routesProcPost`(SendProc3_Prev2)
