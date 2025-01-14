@@ -1044,6 +1044,7 @@ template parseServers*(serverBody: untyped) {.dirty.} =
               var pos = cast[uint](recvBuf) + 5
               parseHeaderUrl(pos, endPos, RecvLoop)
               parseHeader(pos, endPos, RecvLoop)
+              curSendSize = 0
               echo "InternalContentLength=", reqHeader(InternalContentLength)
               var contentLength = try: parseInt(reqHeader(InternalContentLength)) except: 0
               if pos + contentLength.uint == endPos:
