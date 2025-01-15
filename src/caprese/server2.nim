@@ -1014,8 +1014,8 @@ template parseServers*(serverBody: untyped) {.dirty.} =
                       else:
                         inc(pos, 4)
 
-                  elif equalMem(recvPos, "POST".cstring, 4):
-                    pos = cast[uint](recvPos) + 5
+                  elif equalMem(cast[pointer](pos), "POST".cstring, 4):
+                    inc(pos, 5)
                     parseHeaderUrl(pos, endPos, RecvLoop)
                     parseHeader(pos, endPos, RecvLoop)
                     var contentLength = try: parseInt(reqHeader(InternalContentLength)) except: 0
@@ -1081,8 +1081,8 @@ template parseServers*(serverBody: untyped) {.dirty.} =
                       else:
                         inc(pos, 4)
 
-                  elif equalMem(recvPos, "POST".cstring, 4):
-                    pos = cast[uint](recvPos) + 5
+                  elif equalMem(cast[pointer](pos), "POST".cstring, 4):
+                    inc(pos, 5)
                     parseHeaderUrl(pos, endPos, RecvLoop)
                     parseHeader(pos, endPos, RecvLoop)
                     var contentLength = try: parseInt(reqHeader(InternalContentLength)) except: 0
