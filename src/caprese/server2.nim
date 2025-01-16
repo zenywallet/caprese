@@ -922,8 +922,6 @@ template parseServers*(serverBody: untyped) {.dirty.} =
         newIdentNode($i.AppId),
         appStmt
       )
-
-    echo "ret=", ret.astGenRepr
     ret
 
   macro appEmptyMacro(appId: AppId): untyped =
