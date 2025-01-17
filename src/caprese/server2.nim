@@ -892,7 +892,7 @@ template parseServers*(serverBody: untyped) {.dirty.} =
       result[0] = char(result[0].uint8 + 32'u8)
 
   macro appCaseBody(abortBlock: typed): untyped =
-    var ret = nnkCaseStmt.newTree(
+    result = nnkCaseStmt.newTree(
       nnkDotExpr.newTree(
         newIdentNode("client"),
         newIdentNode("appId")
@@ -918,11 +918,10 @@ template parseServers*(serverBody: untyped) {.dirty.} =
             newIdentNode("nextEv")
           )
         )
-      ret.add nnkOfBranch.newTree(
+      result.add nnkOfBranch.newTree(
         newIdentNode($i.AppId),
         appStmt
       )
-    ret
 
   macro appEmptyMacro(appId: AppId): untyped =
     quote do:
