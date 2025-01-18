@@ -614,6 +614,7 @@ template parseServers*(serverBody: untyped) {.dirty.} =
 
   macro genTargetHeaders(TargetHeaders: untyped): untyped =
     var bracket = nnkBracket.newTree()
+    var identStr = ident("str")
     for a in HeaderParams:
       bracket.add nnkTupleConstr.newTree(
         nnkExprColonExpr.newTree(
@@ -621,14 +622,14 @@ template parseServers*(serverBody: untyped) {.dirty.} =
           newIdentNode($a)
         ),
         nnkExprColonExpr.newTree(
-          newIdentNode("str"),
+          identStr,
           newLit(TargetHeaderParams[ord(a)])
         )
       )
     var StaticTargetHeaders = ident("StaticTargetHeaders")
     quote do:
       const `StaticTargetHeaders` = `bracket`
-      var `TargetHeaders`: Array[tuple[id: HeaderParams, str: string]]
+      var `TargetHeaders`: Array[tuple[id: HeaderParams, `identStr`: string]]
       for a in `StaticTargetHeaders`:
         `TargetHeaders`.add(a)
 
