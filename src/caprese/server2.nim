@@ -614,6 +614,7 @@ template parseServers*(serverBody: untyped) {.dirty.} =
 
   macro genTargetHeaders(TargetHeaders: untyped): untyped =
     var bracket = nnkBracket.newTree()
+    var identId = ident("id")
     var identStr = ident("str")
     for a in HeaderParams:
       bracket.add nnkTupleConstr.newTree(
@@ -629,7 +630,7 @@ template parseServers*(serverBody: untyped) {.dirty.} =
     var StaticTargetHeaders = ident("StaticTargetHeaders")
     quote do:
       const `StaticTargetHeaders` = `bracket`
-      var `TargetHeaders`: Array[tuple[id: HeaderParams, `identStr`: string]]
+      var `TargetHeaders`: Array[tuple[`identId`: HeaderParams, `identStr`: string]]
       for a in `StaticTargetHeaders`:
         `TargetHeaders`.add(a)
 
