@@ -534,12 +534,12 @@ template parseServers*(serverBody: untyped) {.dirty.} =
   macro get(url: string, getBody: untyped): untyped =
     quote do:
       checkUrlPath(`url`):
-        when returnExists(body): `getBody` else: return `getBody`
+        when returnExists(`getBody`): `getBody` else: return `getBody`
 
   macro post(url: string, postBody: untyped): untyped =
     quote do:
       if `url`.len == reqHeaderUrlSize and equalMem(cast[pointer](reqHeaderUrlPos), `url`.cstring,  `url`.len):
-        when returnExists(body): `postBody` else: return `postBody`
+        when returnExists(`postBody`): `postBody` else: return `postBody`
 
   type
     ThreadArgType {.pure.} = enum
