@@ -511,9 +511,29 @@ template parseServers*(serverBody: untyped) {.dirty.} =
 
   macro routes(host: string, routesBody: untyped): untyped = routesBody
 
+  macro checkUrlPath(path: static string, body: untyped): untyped =
+    result = newStmtList()
+    for i in 0..<path.len:
+      if path[i] == ':':
+        var cmpPath = path[0..i-1]
+        var id = path[i+1..^1]
+        if id.len > 0 and find(id, '/') < 0 and find(id, ':') < 0:
+          var idVar = ident(id)
+          var reqUrlLast = quote do: cast[ptr UncheckedArray[byte]](reqHeaderUrlPos + `i`.uint).toString(reqHeaderUrlSize - `i`.uint)
+          result.add quote do:
+            if `cmpPath`.len <= reqHeaderUrlSize and equalMem(cast[pointer](reqHeaderUrlPos), `cmpPath`.cstring, `cmpPath`.len):
+              var `idVar` = `reqUrlLast`
+              `body`
+          return
+        break
+    if result.len == 0:
+      result.add quote do:
+        if `path`.len == reqHeaderUrlSize and equalMem(cast[pointer](reqHeaderUrlPos), `path`.cstring, `path`.len):
+          `body`
+
   macro get(url: string, getBody: untyped): untyped =
     quote do:
-      if `url`.len == reqHeaderUrlSize and equalMem(cast[pointer](reqHeaderUrlPos), `url`.cstring,  `url`.len):
+      checkUrlPath(`url`):
         when returnExists(body): `getBody` else: return `getBody`
 
   macro post(url: string, postBody: untyped): untyped =
