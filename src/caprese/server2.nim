@@ -538,7 +538,7 @@ template parseServers*(serverBody: untyped) {.dirty.} =
 
   macro post(url: string, postBody: untyped): untyped =
     quote do:
-      if `url`.len == reqHeaderUrlSize and equalMem(cast[pointer](reqHeaderUrlPos), `url`.cstring,  `url`.len):
+      checkUrlPath(`url`):
         when returnExists(`postBody`): `postBody` else: return `postBody`
 
   type
