@@ -1017,7 +1017,6 @@ template parseServers*(serverBody: untyped) {.dirty.} =
                     inc(pos, 4)
                     parseHeaderUrl(pos, endPos, RecvLoop)
                     parseHeaderGet(pos, endPos, RecvLoop)
-
                     if pos == endPos:
                       var retRoutes = `routesProcGet`(SendProc3_Prev2)
                       if retRoutes <= SendResult.None:
