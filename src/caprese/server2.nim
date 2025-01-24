@@ -1011,8 +1011,8 @@ template parseServers*(serverBody: untyped) {.dirty.} =
                 else:
                   inc(pos, 4)
 
+                recvPos = cast[ptr UncheckedArray[byte]](pos)
                 while true:
-                  recvPos = cast[ptr UncheckedArray[byte]](pos)
                   if equalMem(cast[pointer](pos), "GET ".cstring, 4):
                     inc(pos, 4)
                     parseHeaderUrl(pos, endPos, RecvLoop)
@@ -1031,6 +1031,7 @@ template parseServers*(serverBody: untyped) {.dirty.} =
                         break RecvLoop
                       else:
                         inc(pos, 4)
+                    recvPos = cast[ptr UncheckedArray[byte]](pos)
 
                   elif equalMem(cast[pointer](pos), "POST".cstring, 4):
                     inc(pos, 5)
@@ -1051,6 +1052,7 @@ template parseServers*(serverBody: untyped) {.dirty.} =
                         break RecvLoop
                       else:
                         inc(pos, 4 + contentLength)
+                    recvPos = cast[ptr UncheckedArray[byte]](pos)
 
                   else:
                     client.close(false)
