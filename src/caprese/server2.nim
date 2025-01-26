@@ -1054,6 +1054,51 @@ template parseServers*(serverBody: untyped) {.dirty.} =
                         inc(pos, 4 + contentLength)
                     recvPos = cast[ptr UncheckedArray[byte]](pos)
 
+                    while equalMem(cast[pointer](pos), "POST".cstring, 4):
+                      inc(pos, 5)
+                      parseHeaderUrl(pos, endPos, RecvLoop)
+                      parseHeader(pos, endPos, RecvLoop)
+                      var contentLength = try: parseInt(reqHeader(InternalContentLength)) except: 0
+                      if pos + contentLength.uint == endPos:
+                        var retRoutes = `routesProcPost`(SendProc3_Prev2)
+                        if retRoutes <= SendResult.None:
+                          client.close(false)
+                        else:
+                          client.whackaMole = false
+                        break RecvLoop
+                      elif pos + contentLength.uint < endPos:
+                        var retRoutes = `routesProcPost`(SendProc2)
+                        if retRoutes <= SendResult.None:
+                          client.close(false)
+                          break RecvLoop
+                        else:
+                          inc(pos, 4 + contentLength)
+                      recvPos = cast[ptr UncheckedArray[byte]](pos)
+
+                      if equalMem(cast[pointer](pos), "GET ".cstring, 4):
+                        inc(pos, 4)
+                        parseHeaderUrl(pos, endPos, RecvLoop)
+                        parseHeaderGet(pos, endPos, RecvLoop)
+                        if pos == endPos:
+                          var retRoutes = `routesProcGet`(SendProc3_Prev2)
+                          if retRoutes <= SendResult.None:
+                            client.close(false)
+                          else:
+                            client.whackaMole = false
+                          break RecvLoop
+                        else:
+                          var retRoutes = `routesProcGet`(SendProc2)
+                          if retRoutes <= SendResult.None:
+                            client.close(false)
+                            break RecvLoop
+                          else:
+                            inc(pos, 4)
+                        recvPos = cast[ptr UncheckedArray[byte]](pos)
+
+                      else:
+                        client.close(false)
+                        break RecvLoop
+
                   else:
                     client.close(false)
                     break RecvLoop
