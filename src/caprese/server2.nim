@@ -993,7 +993,7 @@ template parseServers*(serverBody: untyped) {.dirty.} =
             if equalMem(recvBuf, "GET ".cstring, 4):
               var pos = cast[uint](recvBuf) + 4
               parseHeaderUrl(pos, endPos, RecvLoop)
-              parseHeaderGet(pos, endPos, RecvLoop)
+              parseHeaderGet(pos, endPos + 4, RecvLoop)
 
               curSendSize = 0
               if pos == endPos:
@@ -1016,7 +1016,7 @@ template parseServers*(serverBody: untyped) {.dirty.} =
                   if equalMem(cast[pointer](pos), "GET ".cstring, 4):
                     inc(pos, 4)
                     parseHeaderUrl(pos, endPos, RecvLoop)
-                    parseHeaderGet(pos, endPos, RecvLoop)
+                    parseHeaderGet(pos, endPos + 4, RecvLoop)
                     if pos == endPos:
                       var retRoutes = `routesProcGet`(SendProc3_Prev2)
                       if retRoutes <= SendResult.None:
@@ -1036,7 +1036,7 @@ template parseServers*(serverBody: untyped) {.dirty.} =
                   elif equalMem(cast[pointer](pos), "POST".cstring, 4):
                     inc(pos, 5)
                     parseHeaderUrl(pos, endPos, RecvLoop)
-                    parseHeader(pos, endPos, RecvLoop)
+                    parseHeader(pos, endPos + 4, RecvLoop)
                     var contentLength = try: parseInt(reqHeader(InternalContentLength)) except: 0
                     if pos + contentLength.uint == endPos:
                       var retRoutes = `routesProcPost`(SendProc3_Prev2)
@@ -1057,7 +1057,7 @@ template parseServers*(serverBody: untyped) {.dirty.} =
                     while equalMem(cast[pointer](pos), "POST".cstring, 4):
                       inc(pos, 5)
                       parseHeaderUrl(pos, endPos, RecvLoop)
-                      parseHeader(pos, endPos, RecvLoop)
+                      parseHeader(pos, endPos + 4, RecvLoop)
                       var contentLength = try: parseInt(reqHeader(InternalContentLength)) except: 0
                       if pos + contentLength.uint == endPos:
                         var retRoutes = `routesProcPost`(SendProc3_Prev2)
@@ -1078,7 +1078,7 @@ template parseServers*(serverBody: untyped) {.dirty.} =
                       if equalMem(cast[pointer](pos), "GET ".cstring, 4):
                         inc(pos, 4)
                         parseHeaderUrl(pos, endPos, RecvLoop)
-                        parseHeaderGet(pos, endPos, RecvLoop)
+                        parseHeaderGet(pos, endPos + 4, RecvLoop)
                         if pos == endPos:
                           var retRoutes = `routesProcGet`(SendProc3_Prev2)
                           if retRoutes <= SendResult.None:
@@ -1106,7 +1106,7 @@ template parseServers*(serverBody: untyped) {.dirty.} =
             elif equalMem(recvBuf, "POST".cstring, 4):
               var pos = cast[uint](recvBuf) + 5
               parseHeaderUrl(pos, endPos, RecvLoop)
-              parseHeader(pos, endPos, RecvLoop)
+              parseHeader(pos, endPos + 4, RecvLoop)
               curSendSize = 0
               var contentLength = try: parseInt(reqHeader(InternalContentLength)) except: 0
               if pos + contentLength.uint == endPos:
@@ -1129,7 +1129,7 @@ template parseServers*(serverBody: untyped) {.dirty.} =
                   if equalMem(cast[pointer](pos), "GET ".cstring, 4):
                     inc(pos, 4)
                     parseHeaderUrl(pos, endPos, RecvLoop)
-                    parseHeaderGet(pos, endPos, RecvLoop)
+                    parseHeaderGet(pos, endPos + 4, RecvLoop)
 
                     if pos == endPos:
                       var retRoutes = `routesProcGet`(SendProc3_Prev2)
@@ -1149,7 +1149,7 @@ template parseServers*(serverBody: untyped) {.dirty.} =
                   elif equalMem(cast[pointer](pos), "POST".cstring, 4):
                     inc(pos, 5)
                     parseHeaderUrl(pos, endPos, RecvLoop)
-                    parseHeader(pos, endPos, RecvLoop)
+                    parseHeader(pos, endPos + 4, RecvLoop)
                     var contentLength = try: parseInt(reqHeader(InternalContentLength)) except: 0
                     if pos + contentLength.uint == endPos:
                       var retRoutes = `routesProcPost`(SendProc3_Prev2)
