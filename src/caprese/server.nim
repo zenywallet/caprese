@@ -166,13 +166,13 @@ template serverInit*() {.dirty.} =
 
   when cfg.sslLib == BearSSL:
     debug "SSL: BearSSL"
-    import bearssl/bearssl_ssl
-    import bearssl/bearssl_x509
-    import bearssl/bearssl_rsa
-    import bearssl/bearssl_ec
-    import bearssl/bearssl_hash
-    import bearssl/bearssl_prf
-    import bearssl/bearssl_pem
+    import bearssl/ssl
+    import bearssl/x509
+    import bearssl/rsa
+    import bearssl/ec
+    import bearssl/hash
+    import bearssl/prf
+    import bearssl/pem
     when defined(BEARSSL_DEFAULT_EC):
       import bearssl/chain_ec
       import bearssl/key_ec
