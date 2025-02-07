@@ -744,7 +744,7 @@ template serverTagLib*(cfg: static Config) {.dirty.} =
           return SendResult.None
 
   proc wsServerSend*(client: Client, data: seq[byte] | string | Array[byte],
-                    opcode: WebSocketOpCode = WebSocketOpCode.Binary): SendResult =
+                    opcode: WebSocketOpCode = WebSocketOpCode.Binary): SendResult {.discardable.} =
     var dataLen = data.len
     when data is Array:
       var data = data.toSeq
