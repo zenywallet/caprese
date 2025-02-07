@@ -812,8 +812,8 @@ template serverTagLib*(cfg: static Config) {.dirty.} =
           inc(sendCount)
     sendCount
 
-  template wsSend*(tag: Tag, data: seq[byte] | string | Array[byte],
-                  opcode: WebSocketOpCode = WebSocketOpCode.Binary): int =
+  proc wsSend*(tag: Tag, data: seq[byte] | string | Array[byte],
+              opcode: WebSocketOpCode = WebSocketOpCode.Binary): int {.discardable.} =
     wsSendTag(tag, data, opcode)
 
 var abort*: proc() {.thread.} = proc() {.thread.} = active = false
