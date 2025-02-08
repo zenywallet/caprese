@@ -697,8 +697,8 @@ Custom parameters can be added to the server thread `ctx` object by the custom p
 
 ```nim
 import caprese
-import caprese/bearssl/bearssl_ssl
-import caprese/bearssl/bearssl_hash
+import caprese/bearssl/ssl
+import caprese/bearssl/hash
 
 config:
   postRequestMethod = true
