@@ -21,7 +21,7 @@ requires "karax >= 1.2.3"
 
 task bearssl, "Build BearSSL":
   withDir "deps/bearssl":
-    exec "make -j$(nproc)"
+    exec "make -j$(nproc --all || sysctl -n hw.ncpu || getconf _NPROCESSORS_ONLN || echo 1)"
     exec "mkdir -p ../../src/lib/bearssl"
     exec "cp build/libbearssl.a ../../src/lib/bearssl/"
 
@@ -30,7 +30,7 @@ task openssl, "Build OpenSSL":
     if fileExists("libssl.so"):
       exec "make clean"
     exec "./Configure no-shared"
-    exec "make -j$(nproc)"
+    exec "make -j$(nproc --all || sysctl -n hw.ncpu || getconf _NPROCESSORS_ONLN || echo 1)"
     exec "mkdir -p ../../src/lib/openssl"
     exec "cp libssl.a ../../src/lib/openssl/"
     exec "cp libcrypto.a ../../src/lib/openssl/"
@@ -45,7 +45,7 @@ task libressl, "Build LibreSSL":
     exec "git pull"
     exec "./autogen.sh"
     exec "./configure"
-    exec "make -j$(nproc)"
+    exec "make -j$(nproc --all || sysctl -n hw.ncpu || getconf _NPROCESSORS_ONLN || echo 1)"
     exec "mkdir -p ../../src/lib/libressl"
     exec "cp ssl/.libs/libssl.a ../../src/lib/libressl/"
     exec "cp crypto/.libs/libcrypto.a ../../src/lib/libressl/"
@@ -55,7 +55,7 @@ task boringssl, "Build BoringSSL":
     mkDir "build"
     cd "build"
     exec "cmake .."
-    exec "make -j$(nproc)"
+    exec "make -j$(nproc --all || sysctl -n hw.ncpu || getconf _NPROCESSORS_ONLN || echo 1)"
     cd ".."
     exec "mkdir -p ../../src/lib/boringssl"
     exec "cp build/ssl/libssl.a ../../src/lib/boringssl/"
