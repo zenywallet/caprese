@@ -274,17 +274,19 @@ template serverTagLib*(cfg: static Config) {.dirty.} =
 
   proc toUint64(tag: Tag): uint64 = capbytes.toUint64(tag.toSeq)
 
-  proc empty*(pair: HashTableData): bool =
-    when pair.val is Array:
-      pair.val.len == 0
-    else:
-      pair.val == nil
-  proc setEmpty*(pair: HashTableData) =
-    when pair.val is Array:
-      pair.val.empty()
-    else:
-      pair.val = nil
-  loadHashTableModules()
+  when not declared(newHashTable):
+    proc empty*(pair: HashTableData): bool =
+      when pair.val is Array:
+        pair.val.len == 0
+      else:
+        pair.val == nil
+    proc setEmpty*(pair: HashTableData) =
+      when pair.val is Array:
+        pair.val.empty()
+      else:
+        pair.val = nil
+    loadHashTableModules()
+
   var pendingClients*: HashTableMem[ClientId, Client]
   var clientsLock*: RWLock
   var curClientId: ClientId = 0
