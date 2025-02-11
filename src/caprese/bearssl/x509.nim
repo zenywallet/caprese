@@ -1,1 +1,2 @@
-include bearssl_x509
+import bearssl_x509
+export bearssl_x509

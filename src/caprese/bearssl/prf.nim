@@ -1,1 +1,2 @@
-include bearssl_prf
+import bearssl_prf
+export bearssl_prf

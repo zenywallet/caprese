@@ -1,1 +1,2 @@
-include bearssl_ssl
+import bearssl_ssl
+export bearssl_ssl

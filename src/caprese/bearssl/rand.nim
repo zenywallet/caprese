@@ -1,1 +1,2 @@
-include bearssl_rand
+import bearssl_rand
+export bearssl_rand

@@ -1,1 +1,2 @@
-include bearssl_hmac
+import bearssl_hmac
+export bearssl_hmac

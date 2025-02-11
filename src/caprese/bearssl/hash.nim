@@ -1,1 +1,2 @@
-include bearssl_hash
+import bearssl_hash
+export bearssl_hash

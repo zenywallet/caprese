@@ -1,1 +1,2 @@
-include bearssl_block
+import bearssl_block
+export bearssl_block
