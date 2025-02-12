@@ -152,6 +152,7 @@ template contentsWithCfg*(cfg: static Config) {.dirty.} =
       (when cfg.headerContentType: "Content-Type: " & contentType & "\c\L" else: "") &
       (when cfg.headerDate: "Date: ddd, dd MMM yyyy HH:mm:ss GMT\c\L" else: "") &
       (when cfg.headerServer: "Server: " & ServerName & "\c\L" else: "") &
+
       "Content-Length: " & $blen & "\c\L\c\L" &
       body
 
@@ -172,6 +173,7 @@ template contentsWithCfg*(cfg: static Config) {.dirty.} =
       (when cfg.headerContentType: "Content-Type: " & mimetype.string & "\c\L" else: "") &
       (when cfg.headerDate: "Date: ddd, dd MMM yyyy HH:mm:ss GMT\c\L" else: "") &
       (when cfg.headerServer: "Server: " & ServerName & "\c\L" else: "") &
+
       "Content-Length: " & $blen & "\c\L\c\L" &
       body
 
@@ -262,7 +264,20 @@ template addDocType*(body: string): string = "<!DOCTYPE html><meta charset=\"utf
 
 template convertHtmlDocument*(code: string): string =
   mixin unindent
-  let ret = execCode(code).unindent(4)
+  let codeOutput = execCode(code)
+  var findBody = false
+  var spaceCount = 0
+  for s in codeOutput.splitLines():
+    if findBody:
+      for c in s:
+        if c == ' ':
+          inc(spaceCount)
+        else:
+          break
+      break
+    if s.strip.startsWith("<body>"):
+      findBody = true
+  let ret = codeOutput.unindent(if spaceCount > 4: spaceCount else: 4)
   echo ret
   ret
 
