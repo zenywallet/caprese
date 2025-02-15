@@ -8,6 +8,7 @@ import std/cpuinfo
 import std/os
 import std/strutils
 import std/options
+import std/epoll
 when NimMajor >= 2:
   import checksums/sha1
 else:
@@ -15,6 +16,7 @@ else:
 import logs
 import arraylib
 import bytes
+import contents
 import files
 import server_types
 import rlimit
@@ -5377,6 +5379,15 @@ macro onSigTermQuit(body: untyped) = discard onSigTermQuitBody.add(body)
 template onQuit*(body: untyped) = onSigTermQuit(body)
 
 var abortClientPtr: pointer
+var abortClientEvPtr: ptr EpollEvent
+
+template serverAbort() =
+  active = false
+  highGear = false
+  var retCtl = epoll_ctl(epfd, EPOLL_CTL_ADD, sockCtl, abortClientEvPtr)
+  if retCtl != 0:
+    logs.error "error: abort epoll_ctl ret=", retCtl, " ", getErrnoStr()
+  stopTimeStampUpdater()
 
 var serverWaitThread: Thread[WrapperThreadArg]
 
@@ -5406,6 +5417,7 @@ template serverStart*(wait: bool = true) =
     abortClient.appId = 1
     abortClient.ev.events = EPOLLIN
     abortClient.ev.data = cast[EpollData](abortClient)
+    abortClientEvPtr = addr abortClient.ev
 
     template serverStartBody() =
       var params: ProxyParams
@@ -5454,14 +5466,7 @@ template serverStart*(wait: bool = true) =
 
 template serverWait*() = joinThread(serverWaitThread)
 
-template serverStop*() =
-  active = false
-  highGear = false
-  var abortClient = cast[ptr ClientObj](abortClientPtr)
-  var retCtl = epoll_ctl(epfd, EPOLL_CTL_ADD, sockCtl, addr abortClient.ev)
-  if retCtl != 0:
-    logs.error "error: abort epoll_ctl ret=", retCtl, " ", getErrnoStr()
-  stopTimeStampUpdater()
+template serverStop*() = serverAbort()
 
 var initFlag {.compileTime.}: bool
 macro init*(): untyped =
@@ -5479,7 +5484,7 @@ macro init*(): untyped =
       setRlimitOpenFiles(limitOpenFiles)
     when cfg.sigPipeIgnore: signal(SIGPIPE, SIG_IGN)
     abort = proc() {.thread.} =
-      serverStop()
+      serverAbort()
       active = false
     when cfg.sigTermQuit:
       onSignal(SIGINT, SIGTERM):
