@@ -646,7 +646,10 @@ template serverTagLib*(cfg: static Config) {.dirty.} =
       acquire(client.lock)
       client.addSendBuf(cast[ptr UncheckedArray[byte]](addr data[0]), size)
       release(client.lock)
-      return SendResult.Pending
+      if client.invokeSendEvent():
+        return SendResult.Pending
+      else:
+        return SendResult.Error
     elif cfg.sslLib == OpenSSL or cfg.sslLib == LibreSSL or cfg.sslLib == BoringSSL:
       if client.sendCurSize > 0:
         acquire(client.lock)
