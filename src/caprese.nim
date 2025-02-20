@@ -81,13 +81,14 @@ macro worker*(num: int, body: untyped): untyped =
       body
     )
   )
+  var threadId = newIdentNode("threadId")
   discard serverStmt.add quote do:
     atomicInc(workerNum, `num`)
-    var workerThreads = newSeq[Thread[void]](`num`)
+    var workerThreads = newSeq[Thread[int]](`num`)
     block:
-      proc workerProc() {.thread.} = `workerRootBlockBody`
+      proc workerProc(`threadId`: int) {.thread.} = `workerRootBlockBody`
       for i in 0..<`num`:
-        createThread(workerThreads[i], workerProc)
+        createThread(workerThreads[i], workerProc, i)
     workerThreadWaitProc.add proc() =
       joinThreads(workerThreads)
 
