@@ -83,7 +83,7 @@ macro worker*(num: int, body: untyped): untyped =
   )
   discard serverStmt.add quote do:
     atomicInc(workerNum, `num`)
-    var workerThreads: array[`num`, Thread[void]]
+    var workerThreads = newSeq[Thread[void]](`num`)
     block:
       proc workerProc() {.thread.} = `workerRootBlockBody`
       for i in 0..<`num`:
