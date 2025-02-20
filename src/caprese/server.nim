@@ -1102,6 +1102,20 @@ proc findColonNum(s: string): bool {.compileTime.} =
       break
   if findmColonNum == 2: true else: false
 
+macro findColonNumMacro(host: string): bool =
+  if findColonNum($host):
+    newLit(true)
+  else:
+    newLit(false)
+
+macro getSite(host: static string): untyped =
+  var site = $host
+  for i in countdown(site.len-1, 0):
+    if site[i] == ':':
+      site.setLen(i)
+      break
+  newLit(site)
+
 var sslRoutesIdx {.compileTime.}: int = 1
 
 macro addServerMacro*(bindAddress: string, port: uint16, unix: bool, ssl: bool, sslLib: SslLib, body: untyped = newEmptyNode()): untyped =
@@ -1135,24 +1149,35 @@ macro addServerMacro*(bindAddress: string, port: uint16, unix: bool, ssl: bool, 
     if eqIdent(s[0], "routes"):
       var hostname = ""
       var portInt = intVal(port)
+      var hostnameIdent: NimNode
       if s[1].kind == nnkStrLit:
         hostname = $s[1]
         if portInt > 0 and portInt != 80 and portInt != 443 and not findColonNum(hostname):
           s[1] = newLit(hostname & ":" & $portInt)
       elif s[1].kind == nnkExprEqExpr and eqIdent(s[1][0], "host"):
-        hostname = $s[1][1]
-        if portInt > 0 and portInt != 80 and portInt != 443 and not findColonNum(hostname):
-          s[1][1] = newLit(hostname & ":" & $portInt)
+        if s[1][1].kind == nnkStrLit:
+          hostname = $s[1][1]
+          if portInt > 0 and portInt != 80 and portInt != 443 and not findColonNum(hostname):
+            s[1][1] = newLit(hostname & ":" & $portInt)
+        elif s[1][1].kind == nnkIdent:
+          hostnameIdent = s[1][1]
+          s.insert(1, nnkExprEqExpr.newTree(
+            newIdentNode("port"),
+            newLit(portInt)
+          ))
+        else:
+          macros.error "unexpected routes host " & $s[1][1].kind
       for i in countdown(hostname.len-1, 0):
         if hostname[i] == ':':
           hostname.setLen(i)
           break
-      if boolVal(ssl) and hostname.len > 0:
+      if boolVal(ssl) and (hostname.len > 0 or not hostnameIdent.isNil):
         s.insert(1, nnkExprEqExpr.newTree(newIdentNode("internalSslIdx"), newLit(sslRoutesIdx)))
         inc(sslRoutesIdx)
       var routesBase = s.copy()
       var routesBody = newStmtList()
       var certsBlockFlag = false
+      var site = if hostname.len > 0 or hostnameIdent.isNil: newLit(hostname) else: quote do: getSite(`hostnameIdent`)
       for s2 in s[s.len - 1]:
         if eqIdent(s2[0], "certificates"):
           certsBlockFlag = true
@@ -1180,7 +1205,7 @@ macro addServerMacro*(bindAddress: string, port: uint16, unix: bool, ssl: bool, 
             ))
           s2.insert(1, nnkExprEqExpr.newTree(
             newIdentNode("site"),
-            newLit(hostname)
+            site
           ))
           s2.insert(1, nnkExprEqExpr.newTree(
             newIdentNode("srvId"),
@@ -1247,7 +1272,7 @@ macro addServerMacro*(bindAddress: string, port: uint16, unix: bool, ssl: bool, 
 
       if not certsBlockFlag and boolVal(ssl):
         routesBody.insert 0, quote do:
-          certificates(`srvId`, `hostname`, "")
+          certificates(`srvId`, `site`, "")
 
       routesBase[routesBase.len - 1] = routesBody
       routesList.add(routesBase)
@@ -1341,9 +1366,25 @@ macro returnRequired*(body: untyped): bool =
   else:
     return newLit(false)
 
+
 template routes*(host: string, body: untyped) =
   if reqHost() == host:
     when returnRequired(body): return body else: body
+
+macro routes*(port: int, host: string, body: untyped): untyped =
+  var portInt = intVal(port)
+  var site = quote do: getSite(`host`)
+  var hostNode = quote do: staticString(`host`)
+  var findColon = quote do: findColonNumMacro(`hostNode`)
+  var portStr = $portInt
+  var hostPort = quote do: `site` & ":" & `portStr`
+  quote do:
+    when `portInt` > 0 and `portInt` != 80 and `portInt `!= 443 and not `findColon`:
+      if reqHost() == `hostPort`:
+        when returnRequired(`body`): return `body` else: `body`
+    else:
+      if reqHost() == `host`:
+        when returnRequired(`body`): return `body` else: `body`
 
 template routes*(body: untyped) =
   block:
@@ -1361,6 +1402,39 @@ template routes*(internalSslIdx: int, host: string, body: untyped) =
       when returnRequired(body): return body else: body
   else:
     raise
+
+macro routes*(internalSslIdx: int, port: int, host: string, body: untyped): untyped =
+  var portInt = intVal(port)
+  var site = quote do: getSite(`host`)
+  var hostNode = quote do: staticString(`host`)
+  var findColon = quote do: findColonNumMacro(`hostNode`)
+  var portStr = $portInt
+  var hostPort = quote do: `site` & ":" & `portStr`
+  quote do:
+    when `portInt` > 0 and `portInt` != 80 and `portInt `!= 443 and not `findColon`:
+      when cfg.sslRoutesHost == SniAndHeaderHost:
+        if serverThreadCtx.client.sslIdx == `internalSslIdx` and reqHost() == `hostPort`:
+          when returnRequired(`body`): return `body` else: `body`
+      elif cfg.sslRoutesHost == SniOnly:
+        if serverThreadCtx.client.sslIdx == `internalSslIdx`:
+          when returnRequired(`body`): return `body` else: `body`
+      elif cfg.sslRoutesHost == HeaderHostOnly:
+        if reqHost() == `hostPort`:
+          when returnRequired(`body`): return `body` else: `body`
+      else:
+        raise
+    else:
+      when cfg.sslRoutesHost == SniAndHeaderHost:
+        if serverThreadCtx.client.sslIdx == `internalSslIdx` and reqHost() == `host`:
+          when returnRequired(`body`): return `body` else: `body`
+      elif cfg.sslRoutesHost == SniOnly:
+        if serverThreadCtx.client.sslIdx == `internalSslIdx`:
+          when returnRequired(`body`): return `body` else: `body`
+      elif cfg.sslRoutesHost == HeaderHostOnly:
+        if reqHost() == `host`:
+          when returnRequired(`body`): return `body` else: `body`
+      else:
+        raise
 
 var certsTableData {.compileTime.}: seq[tuple[key: string, val: tuple[
   idx: int, srvId: int, privPath: string, chainPath: string,
