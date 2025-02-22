@@ -1149,7 +1149,7 @@ macro addServerMacro*(bindAddress: string, port: uint16, unix: bool, ssl: bool, 
     if eqIdent(s[0], "routes"):
       var hostname = ""
       var portInt = intVal(port)
-      var hostnameIdent: NimNode
+      var hostnameNode: NimNode
       if s[1].kind == nnkStrLit:
         hostname = $s[1]
         if portInt > 0 and portInt != 80 and portInt != 443 and not findColonNum(hostname):
@@ -1160,7 +1160,7 @@ macro addServerMacro*(bindAddress: string, port: uint16, unix: bool, ssl: bool, 
           if portInt > 0 and portInt != 80 and portInt != 443 and not findColonNum(hostname):
             s[1][1] = newLit(hostname & ":" & $portInt)
         elif s[1][1].kind == nnkIdent or s[1][1].kind == nnkDotExpr or s[1][1].kind == nnkCall:
-          hostnameIdent = s[1][1]
+          hostnameNode = s[1][1]
           s.insert(1, nnkExprEqExpr.newTree(
             newIdentNode("port"),
             newLit(portInt)
@@ -1171,13 +1171,13 @@ macro addServerMacro*(bindAddress: string, port: uint16, unix: bool, ssl: bool, 
         if hostname[i] == ':':
           hostname.setLen(i)
           break
-      if boolVal(ssl) and (hostname.len > 0 or not hostnameIdent.isNil):
+      if boolVal(ssl) and (hostname.len > 0 or not hostnameNode.isNil):
         s.insert(1, nnkExprEqExpr.newTree(newIdentNode("internalSslIdx"), newLit(sslRoutesIdx)))
         inc(sslRoutesIdx)
       var routesBase = s.copy()
       var routesBody = newStmtList()
       var certsBlockFlag = false
-      var site = if hostname.len > 0 or hostnameIdent.isNil: newLit(hostname) else: quote do: getSite(`hostnameIdent`)
+      var site = if hostname.len > 0 or hostnameNode.isNil: newLit(hostname) else: quote do: getSite(`hostnameNode`)
       for s2 in s[s.len - 1]:
         if eqIdent(s2[0], "certificates"):
           certsBlockFlag = true
