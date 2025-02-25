@@ -1,6 +1,6 @@
 # Copyright (c) 2021 zenywallet
 
-import posix
+import std/posix
 import logs
 
 proc setRlimitOpenFiles*(rlim: int): bool {.discardable.} =
