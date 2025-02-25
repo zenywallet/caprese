@@ -253,6 +253,14 @@ template contentsWithCfg*(cfg: static Config) {.dirty.} =
             "Content-Length: 0\c\L" &
             "Location: " & location & "\c\L\c\L"
 
+  proc redirect302*(location: string): string =
+    result = "HTTP/" & HTTP_VERSION & " " & $Status302 & "\c\L" &
+            (when cfg.headerContentType: "Content-Type: text/html\c\L" else: "") &
+            (when cfg.headerDate: "Date: " & getCurTimeStr() & "\c\L" else: "") &
+            (when cfg.headerServer: "Server: " & ServerName & "\c\L" else: "") &
+            "Content-Length: 0\c\L" &
+            "Location: " & location & "\c\L\c\L"
+
 const BusyBody* = "<!DOCTYPE html><meta charset=\"utf-8\"><i>Sorry, It is a break time.</i>"
 const BadRequest* = "<!DOCTYPE html><meta charset=\"utf-8\"><i>Oops, something's wrong?</i>"
 const NotFound* = "<!DOCTYPE html><meta charset=\"utf-8\"><i>You just found emptiness.</i>"
