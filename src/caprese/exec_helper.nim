@@ -32,11 +32,11 @@ elif paramCount() == 2:
       var t = d[s.boundaries].strip(chars = {' ', ':', '"'})
       list[t] = t
 
-    for s in d.findAll(re2"[a-zA-Z_][\w]*: "):
-      var t = d[s.boundaries].strip(chars = {' ', ':'})
-      list[t] = t
-      #if list.hasKey(t):
-      #  resList[t] = t
+    #for s in d.findAll(re2"[a-zA-Z_][\w]*: "):
+    #  var t = d[s.boundaries].strip(chars = {' ', ':'})
+    #  list[t] = t
+    #  #if list.hasKey(t):
+    #  #  resList[t] = t
 
     for s in d.findAll(re2"\.[a-zA-Z_][\w]*"):
       var t = d[s.boundaries].strip(chars = {'.'})
