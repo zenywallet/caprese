@@ -1,10 +1,10 @@
 # Copyright (c) 2022 zenywallet
 
-import os
-import random
-import nre
-import tables
-import strutils
+import std/os
+import std/random
+import std/nre
+import std/tables
+import std/strutils
 
 const letters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 
