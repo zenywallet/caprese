@@ -17,6 +17,7 @@ when NimMajor >= 2:
   requires "checksums"
 requires "nimcrypto"
 requires "karax >= 1.2.3"
+requires "regex"
 
 
 task bearssl, "Build BearSSL":
