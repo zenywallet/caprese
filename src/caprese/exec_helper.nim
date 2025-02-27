@@ -28,23 +28,23 @@ elif paramCount() == 2:
     let targetJs = paramStr(2)
     let d = readFile(targetJs)
 
-    for s in d.findAll(re2""": "[a-zA-Z_][\w]*""""):
-      var t = d[s.boundaries].strip(chars = {' ', ':', '"'})
+    for m in d.findAll(re2""": "[a-zA-Z_][\w]*""""):
+      var t = d[m.boundaries].strip(chars = {' ', ':', '"'})
       list[t] = t
 
-    #for s in d.findAll(re2"[a-zA-Z_][\w]*: "):
-    #  var t = d[s.boundaries].strip(chars = {' ', ':'})
+    #for m in d.findAll(re2"[a-zA-Z_][\w]*: "):
+    #  var t = d[m.boundaries].strip(chars = {' ', ':'})
     #  list[t] = t
     #  #if list.hasKey(t):
     #  #  resList[t] = t
 
-    for s in d.findAll(re2"\.[a-zA-Z_][\w]*"):
-      var t = d[s.boundaries].strip(chars = {'.'})
+    for m in d.findAll(re2"\.[a-zA-Z_][\w]*"):
+      var t = d[m.boundaries].strip(chars = {'.'})
       if list.hasKey(t):
         resList[t] = t
 
-    for s in d.findAll(re2"\[""[a-zA-Z_][\w]*""\]"):
-      var t = d[s.boundaries].strip(chars = {'[', ']', '"'})
+    for m in d.findAll(re2"\[""[a-zA-Z_][\w]*""\]"):
+      var t = d[m.boundaries].strip(chars = {'[', ']', '"'})
       if list.hasKey(t):
         resList[t] = t
 
