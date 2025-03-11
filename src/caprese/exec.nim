@@ -26,13 +26,13 @@ proc basicExtern*(filename: string): string {.compileTime.} =
 
 proc removeTmpFiles(removeDir: string) {.compileTime.} =
   var tmpFiles = removeDir / srcFileName & "_tmp" & "[[:digit:]]*"
-  var ret = staticExec("find " & tmpFiles & " -type f -mmin +60 2> /dev/null | xargs -r rm")
+  var ret = staticExec("find " & tmpFiles & " -type f -mmin +60 -print0 2> /dev/null | xargs -r0 rm")
   if ret.len > 0:
     echo ret
 
 proc removeCacheDirs(removeDir: string) {.compileTime.} =
   var tmpFiles = removeDir / srcFileName & "_tmp" & "[[:digit:]]*"
-  var ret = staticExec("find \"" & tmpFiles & "\" -type d -mmin +5 2> /dev/null | xargs -r rm -rf")
+  var ret = staticExec("find \"" & tmpFiles & "\" -type d -mmin +5 -print0 2> /dev/null | xargs -r0 rm -rf")
   if ret.len > 0:
     echo ret
 
