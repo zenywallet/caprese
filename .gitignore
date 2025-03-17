@@ -13,3 +13,4 @@ certs/
 public/
 src/nimcache/
 src/caprese/bearssl/generated_*
+src/closure-compiler-*.jar
