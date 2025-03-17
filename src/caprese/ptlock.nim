@@ -51,6 +51,8 @@ template withWriteLock*(a: var RWLock, body: untyped) =
         raise newException(PthreadLockError, "pthread unlock")
 
 
+const SpinLockErrorCheck = defined(SPINLOCK_ERROR_CHECK)
+
 proc spinLockInit*(a: var SpinLock, pshared: cint = PTHREAD_PROCESS_PRIVATE) =
   if pthread_spin_init(addr a, pshared) != 0:
     raise newException(PthreadLockError, "pthread spin lock init")
@@ -60,10 +62,18 @@ proc spinLockDestroy*(a: var SpinLock) =
     raise newException(PthreadLockError, "pthread spin lock destroy")
 
 template spinLockAcquire*(a: var SpinLock) =
-  discard pthread_spin_lock(addr a)
+  when SpinLockErrorCheck:
+    if pthread_spin_lock(addr a) != 0:
+      raise newException(PthreadLockError, "pthread_spin_lock")
+  else:
+    discard pthread_spin_lock(addr a)
 
 template spinLockRelease*(a: var SpinLock) =
-  discard pthread_spin_unlock(addr a)
+  when SpinLockErrorCheck:
+    if pthread_spin_unlock(addr a) != 0:
+      raise newException(PthreadLockError, "pthread_spin_unlock")
+  else:
+    discard pthread_spin_unlock(addr a)
 
 template initLock*(a: var SpinLock, pshared: cint = PTHREAD_PROCESS_PRIVATE) =
   discard pthread_spin_init(addr a, pshared)
@@ -72,10 +82,18 @@ template deinitLock*(a: var SpinLock) =
   discard pthread_spin_destroy(addr a)
 
 template acquire*(a: var SpinLock) =
-  discard pthread_spin_lock(addr a)
+  when SpinLockErrorCheck:
+    if pthread_spin_lock(addr a) != 0:
+      raise newException(PthreadLockError, "pthread_spin_lock")
+  else:
+    discard pthread_spin_lock(addr a)
 
 template release*(a: var SpinLock) =
-  discard pthread_spin_unlock(addr a)
+  when SpinLockErrorCheck:
+    if pthread_spin_unlock(addr a) != 0:
+      raise newException(PthreadLockError, "pthread_spin_unlock")
+  else:
+    discard pthread_spin_unlock(addr a)
 
 template withSpinLock*(a: var SpinLock, body: untyped) =
   if pthread_spin_lock(addr a) != 0:
