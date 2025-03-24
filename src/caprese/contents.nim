@@ -299,16 +299,19 @@ else:
 export karaxdsl
 export vdom
 
-template staticHtmlDocument*(body: untyped): string =
+template staticHtmlDocument*(pretty: bool, body: untyped): string =
   block:
     macro staticHtmlDocumentMacro(): string =
       var code = "import re\n" &
         "let content = \"\"\"" & $body & "\"\"\"\n" &
-        """echo "<!DOCTYPE html>\n" & content.replacef(re"<([^>]*) />", "<$1>")""" & "\n"
+        "echo \"" & (if pretty: "<!doctype html>" else: "<!DOCTYPE html>") &
+        """\n" & content.replacef(re"<([^>]*) />", "<$1>")""" & "\n"
       nnkStmtList.newTree(
         newLit(convertHtmlDocument(code))
       )
     staticHtmlDocumentMacro()
+
+template staticHtmlDocument*(body: untyped): string = staticHtmlDocument(false, body)
 
 template staticScript*(body: untyped): string =
   block:
