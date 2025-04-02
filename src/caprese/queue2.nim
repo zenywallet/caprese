@@ -24,7 +24,9 @@ proc atomic_compare_exchange_n(p: ptr uint64, expected: ptr uint64, desired: uin
 #                        {.importc: "__atomic_fetch_sub", nodecl, discardable.}
 
 
-when NimMajor >= 2:
+when NimMajor >= 2 and (compileOption("mm", "orc") or
+                        compileOption("mm", "arc") or
+                        compileOption("mm", "atomicArc")):
   proc `=destroy`*[T](queue: Queue[T]) =
     if likely(not queue.buf.isNil):
       queue.buf.deallocShared()
