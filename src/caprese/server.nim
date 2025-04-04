@@ -678,7 +678,6 @@ template serverTagLib*(cfg: static Config) {.dirty.} =
               return SendResult.Pending
             else:
               return SendResult.Error
-            return SendResult.Pending
           elif errno == EINTR:
             continue
           return SendResult.Error
