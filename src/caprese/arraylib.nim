@@ -37,14 +37,14 @@ else:
                           compileOption("mm", "atomicArc")):
     proc `=destroy`*[T](x: Array[T]) {.enforceNoRaises.} =
       if x.data != nil:
-        when T is not Ordinal:
+        when T is not Ordinal and T is not ptr and T is not pointer:
           for i in 0..<x.len:
             `=destroy`(x.data[i])
         x.data.deallocShared()
   else:
     proc `=destroy`*[T](x: var Array[T]) =
       if x.data != nil:
-        when T is not Ordinal:
+        when T is not Ordinal and T is not ptr and T is not pointer:
           for i in 0..<x.len:
             `=destroy`(x.data[i])
         x.data.deallocShared()
@@ -57,7 +57,7 @@ else:
     a.cap = b.cap
     if b.data != nil:
       a.data = cast[typeof(a.data)](allocShared0(sizeof(T) * a.cap))
-      when T is Ordinal:
+      when T is Ordinal or T is ptr or T is pointer:
         copyMem(a.data, b.data, sizeof(T) * a.len)
       else:
         for i in 0..<a.len:
@@ -153,7 +153,7 @@ else:
     a.cap = len
 
   proc newArray*[T](buf: ptr UncheckedArray[T], len: Natural): Array[T] =
-    when T is Ordinal:
+    when T is Ordinal or T is ptr or T is pointer:
       let size = sizeof(T) * len
       result.data = cast[typeof(result.data)](allocShared0(size))
       copyMem(result.data, buf, size)
@@ -166,7 +166,7 @@ else:
 
   proc toArray*[T](x: openArray[T]): Array[T] =
     if x.len > 0:
-      when T is Ordinal:
+      when T is Ordinal or T is ptr or T is pointer:
         let size = sizeof(T) * x.len
         result.data = cast[typeof(result.data)](allocShared0(size))
         copyMem(result.data, unsafeAddr x[0], size)
@@ -179,7 +179,7 @@ else:
 
   proc toArray*[T](x: seq[T]): Array[T] =
     if x.len > 0:
-      when T is Ordinal:
+      when T is Ordinal or T is ptr or T is pointer:
         let size = sizeof(T) * x.len
         result.data = cast[typeof(result.data)](allocShared0(size))
         copyMem(result.data, unsafeAddr x[0], size)
