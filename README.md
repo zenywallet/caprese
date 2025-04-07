@@ -16,7 +16,7 @@ I heard you like Ubuntu, so the following are required to install [Nim](https://
 
     sudo apt install build-essential curl
 
-Install with [choosenim](https://github.com/dom96/choosenim#choosenim).
+Install with [choosenim](https://github.com/nim-lang/choosenim).
 
     curl https://nim-lang.org/choosenim/init.sh -sSf | sh
     echo 'export PATH='$HOME'/.nimble/bin:$PATH' >> ~/.bashrc
@@ -27,7 +27,7 @@ See [Nim](https://nim-lang.org/) for installation details.
 #### Build Caprese and Launch
 you also require the following installation to build the SSL libraries.
 
-    sudo apt install automake autoconf libtool cmake pkg-config
+    sudo apt install automake autoconf libtool cmake
 
 Do you have git installed?
 
