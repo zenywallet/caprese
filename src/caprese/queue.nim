@@ -38,7 +38,7 @@ proc add*[T](queue: var Queue[T], data: T) =
   inc(queue.count)
   inc(queue.next)
 
-proc pop*[T](queue: var Queue[T]): T =
+proc pop*[T](queue: var Queue[T], freeFlag: static bool = true): T =
   acquire(queue.lock)
   defer:
     release(queue.lock)
@@ -48,11 +48,14 @@ proc pop*[T](queue: var Queue[T]): T =
       pos = pos + queue.bufLen
     dec(queue.count)
     result = queue.buf[pos]
+    when freeFlag and T is not Ordinal and T is not ptr and T is not pointer:
+      `=destroy`[T](queue.buf[pos])
+      zeroMem(addr queue.buf[pos], sizeof(T))
   else:
     when not (T is ptr) and not (T is pointer):
       raise newException(QueueEmptyError, "no data")
 
-iterator pop*[T](queue: var Queue[T]): lent T =
+iterator pop*[T](queue: var Queue[T], freeFlag: static bool = true): lent T =
   acquire(queue.lock)
   defer:
     release(queue.lock)
@@ -62,6 +65,9 @@ iterator pop*[T](queue: var Queue[T]): lent T =
       pos = pos + queue.bufLen
     dec(queue.count)
     yield queue.buf[pos]
+    when freeFlag and T is not Ordinal and T is not ptr and T is not pointer:
+      `=destroy`[T](queue.buf[pos])
+      zeroMem(addr queue.buf[pos], sizeof(T))
 
 proc send*[T](queue: var Queue[T], data: T): bool {.discardable.} =
   acquire(queue.lock)
@@ -94,7 +100,7 @@ proc send*[T](queue: var Queue[T], data: ptr UncheckedArray[T], size: int): bool
     signal(queue.cond)
   return true
 
-proc recv*[T](queue: var Queue[T]): T =
+proc recv*[T](queue: var Queue[T], freeFlag: static bool = true): T =
   acquire(queue.lock)
   defer:
     release(queue.lock)
@@ -117,6 +123,9 @@ proc recv*[T](queue: var Queue[T]): T =
     pos = pos + queue.bufLen
   dec(queue.count)
   result = queue.buf[pos]
+  when freeFlag and T is not Ordinal and T is not ptr and T is not pointer:
+    `=destroy`[T](queue.buf[pos])
+    zeroMem(addr queue.buf[pos], sizeof(T))
 
 proc drop*[T](queue: var Queue[T]) =
   acquire(queue.lock)
