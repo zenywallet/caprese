@@ -213,7 +213,7 @@ proc proxyDispatcher(params: ProxyParams) {.thread.} =
     var epollEvents: array[EPOLL_EVENTS_SIZE, EpollEvent]
     while true:
       var nfd = epoll_wait(epfd, cast[ptr EpollEvent](addr epollEvents),
-                          EPOLL_EVENTS_SIZE.cint, 3000.cint)
+                          EPOLL_EVENTS_SIZE.cint, -1.cint)
       if not active:
         break
 
