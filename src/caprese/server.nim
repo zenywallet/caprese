@@ -4709,7 +4709,14 @@ template serverLib(cfg: static Config) {.dirty.} =
                 acquire(client.spinLock)
                 if client.dirty == ClientDirtyNone:
                   client.threadId = 0
-                  release(client.spinLock)
+                  if client.appShift or client.sendCurSize > 0:
+                    client.ev.events = EPOLLRDHUP or EPOLLET or EPOLLOUT
+                    release(client.spinLock)
+                    var retCtl = epoll_ctl(epfd, EPOLL_CTL_MOD, cast[cint](client.sock), addr client.ev)
+                    if retCtl != 0:
+                      logs.error "error: epoll_ctl ret=", retCtl, " errno=", errno
+                  else:
+                    release(client.spinLock)
                   return
                 else:
                   release(client.spinLock)
