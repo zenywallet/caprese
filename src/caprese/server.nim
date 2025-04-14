@@ -1656,6 +1656,22 @@ template proxy*(proxyAppId: int, path, unix: string, body: untyped) =
       client.appId = proxyAppId    
     return SendResult.Pending
 
+template proxyInsertHeader*(insHeaderData: string) =
+  var reqData = if client.recvCurSize > 0:
+    cast[ptr UncheckedArray[byte]](addr client.recvBuf[0]).toString(client.recvCurSize)
+  else:
+    cast[ptr UncheckedArray[byte]](ctx.pRecvBuf0).toString(ctx.recvDataSize)
+  for i in 0..<reqData.len - 3:
+    if equalMem(addr reqData[i], "\c\L\c\L".cstring, 4):
+      let splitPos = i + 2
+      client.reserveRecvBuf(reqData.len + insHeaderData.len)
+      copyMem(client.recvBuf, addr reqData[0], splitPos)
+      copyMem(addr client.recvBuf[splitPos], addr insHeaderData[0], insHeaderData.len)
+      copyMem(addr client.recvBuf[splitPos + insHeaderData.len], addr reqData[splitPos], reqData.len - splitPos)
+      client.recvCurSize = reqData.len + insHeaderData.len
+      ctx.data = cast[ptr UncheckedArray[byte]](addr client.recvBuf[splitPos + 2])
+      break
+
 template serverType() {.dirty.} =
   type
     ReqHeader = object
