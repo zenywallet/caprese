@@ -3113,9 +3113,6 @@ template serverLib(cfg: static Config) {.dirty.} =
           release(client.spinLock)
       elif retFlush == SendResult.Error:
         client.close()
-        acquire(client.spinLock)
-        client.threadId = 0
-        release(client.spinLock)
         return
       else:
         acquire(client.spinLock)
@@ -3153,9 +3150,10 @@ template serverLib(cfg: static Config) {.dirty.} =
       else:
         if lastSendErr != SendResult.Pending:
           client.close()
-        acquire(client.spinLock)
-        client.threadId = 0
-        release(client.spinLock)
+        else:
+          acquire(client.spinLock)
+          client.threadId = 0
+          release(client.spinLock)
 
   proc appRoutesSendSsl(ctx: ServerThreadCtx) {.thread.} =
     echo "appRoutesSendSsl"
