@@ -4133,9 +4133,6 @@ template serverLib(cfg: static Config) {.dirty.} =
                 release(client.spinLock)
             elif retFlush == SendResult.Error:
               client.close(ssl = true)
-              acquire(client.spinLock)
-              client.threadId = 0
-              release(client.spinLock)
               return
             else:
               acquire(client.spinLock)
@@ -4486,9 +4483,6 @@ template serverLib(cfg: static Config) {.dirty.} =
 
                 elif recvlen == 0:
                   client.close(ssl = true)
-                  acquire(client.spinLock)
-                  client.threadId = 0
-                  release(client.spinLock)
                   return
                 else:
                   client.sslErr = SSL_get_error(client.ssl, recvlen.cint)
@@ -4662,9 +4656,6 @@ template serverLib(cfg: static Config) {.dirty.} =
 
               elif recvlen == 0:
                 client.close()
-                acquire(client.spinLock)
-                client.threadId = 0
-                release(client.spinLock)
                 return
               else:
                 if errno == EAGAIN or errno == EWOULDBLOCK:
@@ -4679,9 +4670,6 @@ template serverLib(cfg: static Config) {.dirty.} =
                 elif errno == EINTR:
                   continue
                 client.close()
-                acquire(client.spinLock)
-                client.threadId = 0
-                release(client.spinLock)
                 return
 
           while true:
