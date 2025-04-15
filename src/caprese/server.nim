@@ -3154,6 +3154,7 @@ template serverLib(cfg: static Config) {.dirty.} =
           acquire(client.spinLock)
           client.threadId = 0
           release(client.spinLock)
+        return
 
   proc appRoutesSendSsl(ctx: ServerThreadCtx) {.thread.} =
     echo "appRoutesSendSsl"
