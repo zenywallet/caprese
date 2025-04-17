@@ -484,32 +484,35 @@ template serverTagLib*(cfg: static Config) {.dirty.} =
         tasksPair.val = tasksPair.val[idx + 1..^1]
 
   proc getAndPurgeTasks*(clientId: ClientId, cb: proc(task: ClientTask): bool {.gcsafe.}): bool =
-    result = true
     var tasksPair: HashTableData[ClientId, Array[ClientTask]]
     var tasks: Array[ClientTask]
 
     withReadLock clientsLock:
       tasksPair = clientId2Tasks.get(clientId)
-      if tasksPair.isNil: return
+      if tasksPair.isNil: return true
       tasks = tasksPair.val
 
-    var idx: int = -1
-    for task in tasks:
-      if not cb(task):
-        result = false
-        break
-      inc(idx)
+    var tasksLen = tasks.len
+    if tasksLen == 0:
+      return true
 
-    if idx >= 0 and idx < tasksPair.val.len:
+    while true:
+      for task in tasks:
+        if not cb(task):
+          return false
+
       withWriteLock clientsLock:
-        tasksPair = clientId2Tasks.get(clientId)
-        for i in 0..idx:
+        for i in 0..<tasksLen:
           if tasksPair.val[i].cmd == ClientTaskCmd.Data:
             tasksPair.val[i].data.empty()
-        if idx == tasksPair.val.high:
+        if tasksLen == tasksPair.val.len:
           clientId2Tasks.del(tasksPair)
+          return true
         else:
-          tasksPair.val = tasksPair.val[idx + 1..^1]
+          tasksPair.val = tasksPair.val[tasksLen..^1]
+          tasks = tasksPair.val
+
+      tasksLen = tasks.len
 
   proc delTasks*(clientId: ClientId) =
     withWriteLock clientsLock:
