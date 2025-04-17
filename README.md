@@ -686,7 +686,7 @@ server(ssl = true, ip = "0.0.0.0", port = 8009):
 serverStart()
 ```
 
-One more thing... The following function may be used to access the client extension object from workers that only know the client ID. However, the `client` objects are usually intended to be accessed from the `server:` blocks and are not permanently accessible from the workers. In some cases, resource management such as locking may be necessary.
+One more thing... The following function may be used to access the client extension object from workers that only know the client ID. However, some methods of *Client* are only intended to be called from the dispatch-level in `server:` blocks and should not be called from another thread worker. To use it well, resource management such as locking may be necessary. Also *Client* from *ClientId* are temporarily associated and not permanently accessible. The association is removed when the client is disconnected. This trick will not cause the problem of sending data to the wrong clients as compared to the method using socket numbers or pointers.
 
 ```nim
 proc getClient(clientId: ClientId): Client
@@ -801,7 +801,7 @@ The second argument of `content()` can be an extension such as *html* or *js* in
 ### Reverse Proxy
 The Caprese's reverse proxy is different from a typical reverse proxy server and is more simplified. It may be faster than a typical reverse proxy server due to the following specifications. It would be more useful in simple configurations.
 
-- The request URL and http headers are not changed. Since data is sent and received without changing the data to the proxy destination, it would work fine with WebSockets and such.
+- The request URL and http headers are not changed. Since data is sent and received without changing the data to the proxy destination, it would work fine with WebSockets and such. Even if the headers are not changed, it is at least possible to add a custom header to the first request with a custom handling feature. It is supposed to send the IP address of the connecting client to the backend.
 - When a client makes a request to a proxy path, all subsequent communication is connected to the proxy destination until disconnected. The proxy path is simply compared to the URL, and if the first string matches, proxy forwarding starts. It may be better to add a `/` at the end of the proxy path to make it strict.
 - External connections are made with SSL, but no SSL inside the proxy. It could be used for internal connections or to connect to back-end services.
 
@@ -835,8 +835,9 @@ server(ip = "127.0.0.1", port = 8089):
 server(ssl = true, ip = "0.0.0.0", port = 8009):
   routes(host = "localhost"):
     proxy(path = "/", host = "localhost", port = 8089):
-      debug "url=", reqUrl
       # custom handling here
+      debug "url=", reqUrl
+      proxyInsertHeader("Some-Custom-Header: Lovely Parameter\c\L")
 ```
 
 #### UNIX domain socket
