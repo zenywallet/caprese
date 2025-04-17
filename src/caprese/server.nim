@@ -502,10 +502,11 @@ template serverTagLib*(cfg: static Config) {.dirty.} =
 
     if idx >= 0 and idx < tasksPair.val.len:
       withWriteLock clientsLock:
+        tasksPair = clientId2Tasks.get(clientId)
         for i in 0..idx:
           if tasksPair.val[i].cmd == ClientTaskCmd.Data:
             tasksPair.val[i].data.empty()
-        if idx == tasks.high:
+        if idx == tasksPair.val.high:
           clientId2Tasks.del(tasksPair)
         else:
           tasksPair.val = tasksPair.val[idx + 1..^1]
