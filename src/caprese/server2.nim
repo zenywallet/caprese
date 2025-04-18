@@ -322,7 +322,10 @@ template parseServers*(serverBody: untyped) {.dirty.} =
   proc clientMonitor() {.thread.} =
     var checkTimeout = cfg.connectionTimeout * 1000
     while true:
-      var num = poll(addr fds[0], 1, checkTimeout)
+      var num = when (NimMajor, NimMinor, NimPatch) >= (2, 2, 2):
+        poll(addr fds[0], 1.Tnfds, checkTimeout.cint)
+      else:
+        poll(addr fds[0], 1.Tnfds, checkTimeout.int)
       if num == 0:
         var clientRing = clientRingRoot.next
         while clientRing != clientRingRoot:
