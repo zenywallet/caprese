@@ -244,6 +244,9 @@ template contentsWithCfg*(cfg: static Config) {.dirty.} =
   template addHeader*(body: string): string | Array[byte] =
     addHeader_b_selector(body)
 
+  template reqHeader*(code: StatusCode): string =
+    "HTTP/" & HTTP_VERSION & " " & $code & "\c\L\c\L"
+
 
   proc redirect301*(location: string): string =
     result = "HTTP/" & HTTP_VERSION & " " & $Status301 & "\c\L" &

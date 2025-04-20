@@ -2316,7 +2316,7 @@ template serverLib(cfg: static Config) {.dirty.} =
 
   template response(file: FileContent, code: StatusCode = Status200): SendResult {.used.} =
     if reqHeader(InternalIfNoneMatch) == file.md5:
-      send("HTTP/" & HTTP_VERSION & " " & $Status304 & "\c\L\c\L")
+      send(reqHeader(Status304))
     else:
       var acceptEnc = reqHeader(InternalAcceptEncoding).split(",")
       acceptEnc.apply(proc(x: string): string = x.strip)
