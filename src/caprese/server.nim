@@ -2237,6 +2237,14 @@ template serverLib(cfg: static Config) {.dirty.} =
       if reqUrl() =~ path:
         when returnExists(body): body else: return body
 
+  when declared(Regex2):
+    template get(path: Regex2, body: untyped) {.used.} =
+      block:
+        var m {.inject.} = RegexMatch2()
+        template group(i: int): string = reqUrl()[m.group(i)]
+        if match(reqUrl(), path, m):
+          when returnExists(body): body else: return body
+
   template startsWith(path: string): bool {.used.} = startsWith(reqUrl(), path)
 
   template get(path: bool, body: untyped) {.used.} =
