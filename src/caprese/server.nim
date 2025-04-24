@@ -1717,7 +1717,6 @@ macro serverThreadCtxObjTypeMacro*(cfg: static Config): untyped =
     result[0][2][2].add(n)  # append to ServerThreadCtxObj
 
 template serverLib(cfg: static Config) {.dirty.} =
-  import std/re
   import std/strutils
   import std/sequtils
   when NimMajor >= 2:
@@ -2233,9 +2232,10 @@ template serverLib(cfg: static Config) {.dirty.} =
     if reqUrl() in pathArgs:
       when returnExists(body): body else: return body
 
-  template get(path: Regex, body: untyped) {.used.} =
-    if reqUrl() =~ path:
-      when returnExists(body): body else: return body
+  when declared(Regex):
+    template get(path: Regex, body: untyped) {.used.} =
+      if reqUrl() =~ path:
+        when returnExists(body): body else: return body
 
   template startsWith(path: string): bool {.used.} = startsWith(reqUrl(), path)
 
