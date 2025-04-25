@@ -305,10 +305,10 @@ export vdom
 template staticHtmlDocument*(pretty: bool, body: untyped): string =
   block:
     macro staticHtmlDocumentMacro(): string =
-      var code = "import re\n" &
+      var code = "import regex\n" &
         "let content = \"\"\"" & $body & "\"\"\"\n" &
         "echo \"" & (if pretty: "<!doctype html>" else: "<!DOCTYPE html>") &
-        """\n" & content.replacef(re"<([^>]*) />", "<$1>")""" & "\n"
+        """\n" & content.replace(re"<([^>]*) />", "<$1>")""" & "\n"
       nnkStmtList.newTree(
         newLit(convertHtmlDocument(code))
       )
