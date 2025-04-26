@@ -108,7 +108,7 @@ You can find closure-compiler-vyyyyMMdd.jar in the current path. Copy the file t
 import caprese
 
 const HelloJs = staticScript:
-  import jsffi
+  import std/jsffi
   var console {.importc, nodecl.}: JsObject
   var helloStr = "Hello,".cstring
   var spaceStr = " ".cstring
@@ -223,11 +223,22 @@ serverStart()
 #### URL path handling using Regular expression
 
 ```nim
+import std/re
+...
+
     get re"/([a-z]+)(\d+)":
       send(sanitizeHtml(matches[0] & "|" & matches[1]).addHeader())
 ```
 
 Considering efficiency, other methods may be better.
+
+```nim
+import regex
+...
+
+    get re2"/([a-z]+)(\d+)":
+      send(sanitizeHtml(group(0) & "|" & group(1)).addHeader())
+```
 
 #### URL path handling using special tag
 
@@ -956,7 +967,7 @@ Create a *server.nim* file with the above code and launch *server* as a non-root
     sudo setcap cap_net_bind_service=+ep ./server
     ./server
 
-With *server* running, execute the following *certbot* command as root user. Specify the web root folder where *certbot* will place the ACME HTTP-01 challenge token.
+With *server* running, execute the following *certbot* command as root user. Specify the web root folder where *certbot* will place the ACME HTTP-01 challenge token. The folder must be created first. Do not specify the same folder as the certificates or a folder that contains other files for `acme:` path. If you do, it will be published. The *certbot* places the files in that folder, but deletes them immediately during processing.
 
     certbot certonly --webroot -w /path/to/www/YOUR_DOMAIN -d YOUR_DOMAIN
 
