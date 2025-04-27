@@ -601,13 +601,14 @@ template serverTagLib*(cfg: static Config) {.dirty.} =
     if client.recvBuf.isNil:
       client.recvBuf = cast[ptr UncheckedArray[byte]](allocShared0(sizeof(byte) * (size + workerRecvBufSize)))
       client.recvBufSize = size + workerRecvBufSize
-    var left = client.recvBufSize - client.recvCurSize
-    if size > left:
-      var nextSize = client.recvCurSize + size + workerRecvBufSize
-      if nextSize > cfg.recvBufExpandBreakSize:
-        raise newException(ServerError, "client request too large")
-      client.recvBuf = reallocClientBuf(client.recvBuf, nextSize)
-      client.recvBufSize = nextSize
+    else:
+      var left = client.recvBufSize - client.recvCurSize
+      if size > left:
+        var nextSize = client.recvCurSize + size + workerRecvBufSize
+        if nextSize > cfg.recvBufExpandBreakSize:
+          raise newException(ServerError, "client request too large")
+        client.recvBuf = reallocClientBuf(client.recvBuf, nextSize)
+        client.recvBufSize = nextSize
 
   proc addRecvBuf(client: Client, data: ptr UncheckedArray[byte], size: int) =
     client.reserveRecvBuf(size)
