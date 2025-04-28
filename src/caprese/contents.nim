@@ -244,7 +244,7 @@ template contentsWithCfg*(cfg: static Config) {.dirty.} =
   template addHeader*(body: string): string | Array[byte] =
     addHeader_b_selector(body)
 
-  template reqHeader*(code: StatusCode): string =
+  template resHeader*(code: StatusCode): string =
     "HTTP/" & HTTP_VERSION & " " & $code & "\c\L\c\L"
 
 
