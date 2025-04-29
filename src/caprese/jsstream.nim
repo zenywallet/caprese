@@ -5,9 +5,19 @@ import std/asyncjs
 import std/macros
 import jslib
 
-const RECONNECT_COUNT = 120
-const RECONNECT_WAIT = 15000
-const RECONNECT_INFINITE = false
+when defined(STATIC_STREAM_CONFIG):
+  const RECONNECT_COUNT = 120
+  const RECONNECT_WAIT = 15000
+  const RECONNECT_INFINITE = false
+else:
+  var RECONNECT_COUNT = 120
+  var RECONNECT_WAIT = 15000
+  var RECONNECT_INFINITE = false
+
+  template setStreamConfig*(reconnectCount: int, reconnectWait: int, reconnectInfinite: bool) =
+    RECONNECT_COUNT = reconnectCount
+    RECONNECT_WAIT = reconnectWait
+    RECONNECT_INFINITE = reconnectInfinite
 
 type
   StreamObj* = object
@@ -24,8 +34,12 @@ proc connect0*(stream: Stream; url: cstring; protocols: JsObject; onOpen: proc(e
               onClose: proc(evt: JsObject); onError: proc(evt: JsObject)) =
   stream.ws = newWebSocket(url, protocols)
   stream.ws.binaryType = "arraybuffer".cstring
-  when RECONNECT_INFINITE:
-    if stream.reconnectCount == 0:
+  when defined(STATIC_STREAM_CONFIG):
+    when RECONNECT_INFINITE:
+      if stream.reconnectCount == 0:
+        stream.reconnectCount = RECONNECT_COUNT
+  else:
+    if RECONNECT_INFINITE and stream.reconnectCount == 0:
       stream.reconnectCount = RECONNECT_COUNT
 
   template reconnect() {.dirty.} =
