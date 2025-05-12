@@ -59,8 +59,12 @@ task boringssl, "Build BoringSSL":
     exec "make -j$(nproc --all || sysctl -n hw.ncpu || getconf _NPROCESSORS_ONLN || echo 1)"
     cd ".."
     exec "mkdir -p ../../src/lib/boringssl"
-    exec "cp build/ssl/libssl.a ../../src/lib/boringssl/"
-    exec "cp build/crypto/libcrypto.a ../../src/lib/boringssl/"
+    if fileExists("build/libssl.a"):
+      exec "cp build/libssl.a ../../src/lib/boringssl/"
+      exec "cp build/libcrypto.a ../../src/lib/boringssl/"
+    else:
+      exec "cp build/ssl/libssl.a ../../src/lib/boringssl/"
+      exec "cp build/crypto/libcrypto.a ../../src/lib/boringssl/"
 
 task selfcert, "Generate Self-Signed Certificate":
   exec "nim c -r src/caprese/self_cert.nim"
