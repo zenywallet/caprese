@@ -4197,6 +4197,7 @@ template serverLib(cfg: static Config) {.dirty.} =
   template streamMainTmpl(body: untyped) {.dirty.} =
     proc streamMain(client: Client, opcode: WebSocketOpCode,
       data: ptr UncheckedArray[byte], size: int): SendResult =
+      template content: string {.used.} = data.toString(size)
       body
 
   template streamMainTmpl(messageBody: untyped, closeBody: untyped) {.dirty.} =
