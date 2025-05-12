@@ -253,7 +253,7 @@ when isMainModule:
         var sport = if port == 80.toJs or port == 443.toJs: "".cstring else: ":".cstring & port.to(cstring)
         result = prot & "//".cstring & domain & sport & "/".cstring & path
 
-      var ws = newWebSocket(wsUrl("localhost", "ws"), "caprese-0.1")
+      var ws = newWebSocket(wsUrl("localhost", "ws"), "caprese-0.1".cstring)
       proc testSend() =
         if ws.readyState == WebSocket.OPEN:
           ws.send(testData)
