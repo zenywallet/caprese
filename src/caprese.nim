@@ -316,9 +316,10 @@ when isMainModule:
           # opcode: WebSocketOpCode
           # data: ptr UncheckedArray[byte]
           # size: int
+          # content: string
           onMessage:
             echo "onMessage"
-            wsSend(data.toString(size), WebSocketOpcode.Binary)
+            wsSend(content, WebSocketOpcode.Binary)
 
           onClose:
             echo "onClose"
@@ -332,15 +333,16 @@ when isMainModule:
           # opcode: WebSocketOpCode
           # data: ptr UncheckedArray[byte]
           # size: int
+          # content: string
           echo "stream test"
           case opcode
           of WebSocketOpcode.Binary, WebSocketOpcode.Text, WebSocketOpcode.Continue:
             echo "onMessage"
-            wsSend(data.toString(size), WebSocketOpcode.Binary)
+            wsSend(content, WebSocketOpcode.Binary)
           of WebSocketOpcode.Ping:
-            wsSend(data.toString(size), WebSocketOpcode.Pong)
+            wsSend(content, WebSocketOpcode.Pong)
           of WebSocketOpcode.Pong:
-            debug "pong ", data.toString(size)
+            debug "pong ", content
             SendResult.Success
           else: # WebSocketOpcode.Close
             echo "onClose"
