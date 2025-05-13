@@ -21,7 +21,6 @@ import files
 import server_types
 import rlimit
 import config
-export arraylib
 export server_types
 
 var routesHostParamExists* {.compileTime.}: bool = false

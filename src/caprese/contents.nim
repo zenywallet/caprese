@@ -111,6 +111,8 @@ type
   ContentType* = distinct string
 
 template contentsWithCfg*(cfg: static Config) {.dirty.} =
+  import arraylib
+
   const HTTP_VERSION* = $cfg.httpVersion
   const ServerName* = cfg.serverName
 
