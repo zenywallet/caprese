@@ -126,6 +126,12 @@ proc toBytes*(buf: ptr UncheckedArray[byte], size: SomeInteger): seq[byte] =
 
 proc Bytes*(x: SomeOrdinal | SomeFloat): seq[byte] {.inline.} = x.toBytes
 proc Bytes*(args: varargs[seq[byte], toBytes]): seq[byte] = concat(args)
+proc Bytes*(obj: tuple | object): seq[byte] =
+  var s: seq[seq[byte]]
+  for val in obj.fields:
+    var b = val.toBytes
+    s.add(b)
+  concat(s)
 
 proc toBytesBE*(x: seq[byte]): seq[byte] {.inline.} = x
 proc toBytesBE*(x: openarray[byte]): seq[byte] {.inline.} = x.toSeq
@@ -149,6 +155,12 @@ proc toBytesBE*(obj: ref tuple | ref object | ptr tuple | ptr object): seq[byte]
 
 proc BytesBE*(x: SomeOrdinal | SomeFloat): seq[byte] {.inline.} = x.toBytesBE
 proc BytesBE*(args: varargs[seq[byte], toBytesBE]): seq[byte] = concat(args)
+proc BytesBE*(obj: tuple | object): seq[byte] =
+  var s: seq[seq[byte]]
+  for val in obj.fields:
+    var b = val.toBytesBE
+    s.add(b)
+  concat(s)
 
 proc toBytesFromHex*(s: string): seq[byte] =
   if s.len mod 2 == 0:
