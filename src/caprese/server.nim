@@ -22,7 +22,6 @@ import server_types
 import rlimit
 import config
 export arraylib
-export bytes
 export server_types
 
 var routesHostParamExists* {.compileTime.}: bool = false
@@ -761,11 +760,11 @@ template serverTagLib*(cfg: static Config) {.dirty.} =
       var data = data.toSeq
     var finOp = 0x80.byte or opcode.byte
     var frame = if dataLen < 126:
-      capbytes.BytesBE(finOp, dataLen.byte, data)
+      capbytes.BytesBE (finOp, dataLen.byte, data)
     elif dataLen <= 0xffff:
-      capbytes.BytesBE(finOp, 126.byte, dataLen.uint16, data)
+      capbytes.BytesBE (finOp, 126.byte, dataLen.uint16, data)
     else:
-      capbytes.BytesBE(finOp, 127.byte, dataLen.uint64, data)
+      capbytes.BytesBE (finOp, 127.byte, dataLen.uint64, data)
     result = client.send(frame)
 
   proc wsServerSend*(clientId: ClientId, data: seq[byte] | string | Array[byte],
@@ -777,11 +776,11 @@ template serverTagLib*(cfg: static Config) {.dirty.} =
       var data = data.toBytes
     var finOp = 0x80.byte or opcode.byte
     var frame = if dataLen < 126:
-      capbytes.BytesBE(finOp, dataLen.byte, data)
+      capbytes.BytesBE (finOp, dataLen.byte, data)
     elif dataLen <= 0xffff:
-      capbytes.BytesBE(finOp, 126.byte, dataLen.uint16, data)
+      capbytes.BytesBE (finOp, 126.byte, dataLen.uint16, data)
     else:
-      capbytes.BytesBE(finOp, 127.byte, dataLen.uint64, data)
+      capbytes.BytesBE (finOp, 127.byte, dataLen.uint64, data)
     result = clientId.send(frame.toString())
 
   when not defined(SERVER2):
@@ -793,7 +792,7 @@ template serverTagLib*(cfg: static Config) {.dirty.} =
 
   template wsSend(data: ptr UncheckedArray[byte], size: int,
                   opcode: WebSocketOpCode = WebSocketOpCode.Binary): SendResult {.dirty, used.} =
-    client.wsServerSend(data.toString(size), opcode)
+    client.wsServerSend(capbytes.toString(data, size), opcode)
 
   template wsSend(clientId: ClientId, data: seq[byte] | string | Array[byte],
                   opcode: WebSocketOpCode = WebSocketOpCode.Binary): SendResult {.dirty, used.} =
@@ -801,7 +800,7 @@ template serverTagLib*(cfg: static Config) {.dirty.} =
 
   template wsSend(clientId: ClientId, data: ptr UncheckedArray[byte], size: int,
                   opcode: WebSocketOpCode = WebSocketOpCode.Binary): SendResult {.dirty, used.} =
-    clientId.wsServerSend(data.toString(size), opcode)
+    clientId.wsServerSend(capbytes.toString(data, size), opcode)
 
   proc wsSend0(tag: Tag, data: seq[byte] | string | Array[byte],
               opcode: WebSocketOpCode = WebSocketOpCode.Binary): SendResult {.used.} =
@@ -4197,20 +4196,20 @@ template serverLib(cfg: static Config) {.dirty.} =
   template streamMainTmpl(body: untyped) {.dirty.} =
     proc streamMain(client: Client, opcode: WebSocketOpCode,
       data: ptr UncheckedArray[byte], size: int): SendResult =
-      template content: string {.used.} = data.toString(size)
+      template content: string {.used.} = capbytes.toString(data, size)
       body
 
   template streamMainTmpl(messageBody: untyped, closeBody: untyped) {.dirty.} =
     proc streamMain(client: Client, opcode: WebSocketOpCode,
       data: ptr UncheckedArray[byte], size: int): SendResult =
-      template content: string {.used.} = data.toString(size)
+      template content: string {.used.} = capbytes.toString(data, size)
       case opcode
       of WebSocketOpcode.Binary, WebSocketOpcode.Text, WebSocketOpcode.Continue:
         messageBody
       of WebSocketOpcode.Ping:
-        client.wsServerSend(data.toString(size), WebSocketOpcode.Pong)
+        client.wsServerSend(capbytes.toString(data, size), WebSocketOpcode.Pong)
       of WebSocketOpcode.Pong:
-        debug "pong ", data.toString(size)
+        debug "pong ", capbytes.toString(data, size)
         SendResult.Success
       else: # WebSocketOpcode.Close
         closeBody
