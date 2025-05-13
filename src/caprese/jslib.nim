@@ -56,6 +56,10 @@ macro `.()`*(typ: typedesc, field: untyped, args: varargs[JsObject, jsFromAst]):
 
 proc newWebSocket*(url: cstring, protocols: cstring | JsObject): WebSocket {.importcpp: "new WebSocket(#, #)".}
 proc newWebSocket*(url: cstring): WebSocket {.importcpp: "new WebSocket(#)".}
+template newWebSocket*(url, protocols: string): WebSocket = newWebSocket(url.cstring, protocols.cstring)
+template newWebSocket*(url: cstring, protocols: string): WebSocket = newWebSocket(url, protocols.cstring)
+template newWebSocket*(url: string, protocols: cstring): WebSocket = newWebSocket(url.cstring, protocols)
+template newWebSocket*(url: string): WebSocket = newWebSocket(url.cstring)
 proc newUint8Array*(): Uint8Array {.importcpp: "new Uint8Array()".}
 proc newUint8Array*(length: int): Uint8Array {.importcpp: "new Uint8Array(#)".}
 proc newUint8Array*(obj: JsObject): Uint8Array {.importcpp: "new Uint8Array(#)".} # typedArray, buffer
