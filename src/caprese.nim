@@ -45,6 +45,8 @@ template joli_workerTmpl(num: typed, body: untyped) {.dirty.} =
   discard joli_serverStmt.add quote do:
     joli_addWorker(`num`, `body`)
 
+macro base*(body: untyped): untyped =
+  discard serverStmt.add body
 
 macro server*(ssl: bool, ip: string, port: uint16, body: untyped): untyped =
   joli_serverTmpl(ip, port, false, ssl, body)
@@ -57,7 +59,6 @@ macro server*(ip: string, port: uint16, body: untyped): untyped =
   discard serverStmt.add quote do:
     echo "server: ", `ip`, ":", `port`
     addServer(`ip`, `port`, false, false, `body`)
-
 
 macro server*(unix: string, body: untyped): untyped =
   joli_serverTmpl(unix, 0, true, false, body)
