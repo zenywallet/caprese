@@ -101,21 +101,21 @@ proc toBytes*(x: string): seq[byte] {.inline.} = cast[seq[byte]](x)
 proc toBytes*(obj: tuple | object): seq[byte] =
   var s: seq[seq[byte]]
   for val in obj.fields:
-    var b = val.toBytes
+    var b = bytes.toBytes(val)
     s.add(b)
   concat(s)
 
 proc toBytes*[T](obj: openarray[T]): seq[byte] =
   var s: seq[seq[byte]]
   for val in obj:
-    var b = val.toBytes
+    var b = bytes.toBytes(val)
     s.add(b)
   concat(s)
 
 proc toBytes*(obj: ref tuple | ref object | ptr tuple | ptr object): seq[byte] =
   var s: seq[seq[byte]]
   for val in obj[].fields:
-    var b = val.toBytes
+    var b = bytes.toBytes(val)
     s.add(b)
   concat(s)
 
@@ -124,12 +124,12 @@ proc toBytes*(buf: ptr UncheckedArray[byte], size: SomeInteger): seq[byte] =
   for i in 0..<size:
     result.add(buf[i])
 
-proc Bytes*(x: SomeOrdinal | SomeFloat): seq[byte] {.inline.} = x.toBytes
+proc Bytes*(x: SomeOrdinal | SomeFloat): seq[byte] {.inline.} = bytes.toBytes(x)
 proc Bytes*(args: varargs[seq[byte], toBytes]): seq[byte] = concat(args)
 proc Bytes*(obj: tuple | object): seq[byte] =
   var s: seq[seq[byte]]
   for val in obj.fields:
-    var b = val.toBytes
+    var b = bytes.toBytes(val)
     s.add(b)
   concat(s)
 
@@ -142,30 +142,30 @@ proc toBytesBE*(x: string): seq[byte] {.inline.} = cast[seq[byte]](x)
 proc toBytesBE*(obj: tuple | object): seq[byte] =
   var s: seq[seq[byte]]
   for val in obj.fields:
-    var b = val.toBytesBE
+    var b = bytes.toBytesBE(val)
     s.add(b)
   concat(s)
 
 proc toBytesBE*[T](obj: openarray[T]): seq[byte] =
   var s: seq[seq[byte]]
   for val in obj:
-    var b = val.toBytesBE
+    var b = bytes.toBytesBE(val)
     s.add(b)
   concat(s)
 
 proc toBytesBE*(obj: ref tuple | ref object | ptr tuple | ptr object): seq[byte] =
   var s: seq[seq[byte]]
   for val in obj[].fields:
-    var b = val.toBytesBE
+    var b = bytes.toBytesBE(val)
     s.add(b)
   concat(s)
 
-proc BytesBE*(x: SomeOrdinal | SomeFloat): seq[byte] {.inline.} = x.toBytesBE
+proc BytesBE*(x: SomeOrdinal | SomeFloat): seq[byte] {.inline.} = bytes.toBytesBE(x)
 proc BytesBE*(args: varargs[seq[byte], toBytesBE]): seq[byte] = concat(args)
 proc BytesBE*(obj: tuple | object): seq[byte] =
   var s: seq[seq[byte]]
   for val in obj.fields:
-    var b = val.toBytesBE
+    var b = bytes.toBytesBE(val)
     s.add(b)
   concat(s)
 
