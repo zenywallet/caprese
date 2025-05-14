@@ -204,7 +204,7 @@ proc toUint64BE*(x: openarray[byte]): uint64 {.inline.} = x.toUint64.toBE
 proc toHash*(x: var byte): Hash {.inline.} = Hash((cast[ptr array[32, byte]](addr x)[]).toSeq)
 proc toHash*(x: seq[byte]): Hash {.inline.} = Hash(x)
 proc toHash*(x: openarray[byte]): Hash {.inline.} = Hash(x.toSeq)
-proc toHash*(x: Hex): Hash {.inline} = x.toBytes.toReverse.Hash
+proc toHash*(x: Hex): Hash {.inline.} = x.toBytes.toReverse.Hash
 
 proc toHash160*(x: var byte): Hash160 {.inline.} = Hash160((cast[ptr array[20, byte]](addr x)[]).toSeq)
 proc toHash160*(x: seq[byte]): Hash160 {.inline.} = Hash160(x)
