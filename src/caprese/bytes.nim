@@ -1,6 +1,6 @@
 # Copyright (c) 2020 zenywallet
 
-import sequtils, strutils, endians, algorithm
+import std/[sequtils, strutils, endians, algorithm]
 
 type
   VarInt* = distinct int
