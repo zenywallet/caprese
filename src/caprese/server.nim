@@ -114,7 +114,8 @@ macro clientObjTypeMacro*(cfg: static Config): untyped =
         sendBuf: ptr UncheckedArray[byte]
         sendCurSize: int
         keepAlive: bool
-        keepAlive2: KeepAliveStatus
+        when `cfg`.sslLib == BearSSL:
+          keepAlive2: KeepAliveStatus
         ip: uint32
         invoke: bool
         lock: Lock
@@ -843,6 +844,8 @@ template serverInitFreeClient() {.dirty.} =
       p[i].sendBuf = nil
       p[i].sendCurSize = 0
       p[i].keepAlive = true
+      when `cfg`.sslLib == BearSSL:
+        p[i].keepAlive2 = KeepAliveStatus.Unknown
       p[i].payloadSize = 0
       when cfg.sslLib == BearSSL:
         p[i].sc = nil
@@ -927,6 +930,8 @@ template serverInitFreeClient() {.dirty.} =
         deallocShared(cast[pointer](client.sendBuf))
         client.sendBuf = nil
       client.keepAlive = true
+      when `cfg`.sslLib == BearSSL:
+        client.keepAlive2 = KeepAliveStatus.Unknown
       client.payloadSize = 0
       client.appShift = false
       when cfg.sslLib == SslLib.None:
@@ -3379,6 +3384,9 @@ template serverLib(cfg: static Config) {.dirty.} =
                 of SendRec:
                   bufSendRec = cast[ptr UncheckedArray[byte]](br_ssl_engine_sendrec_buf(ec, addr bufLen))
                   if bufSendRec.isNil:
+                    if client.keepAlive2 == KeepAliveStatus.False:
+                      client.close()
+                      break engineBlock
                     engine = RecvRec
                   else:
                     while true:
