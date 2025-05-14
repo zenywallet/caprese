@@ -146,6 +146,13 @@ proc toBytesBE*(obj: tuple | object): seq[byte] =
     s.add(b)
   concat(s)
 
+proc toBytesBE*[T](obj: openarray[T]): seq[byte] =
+  var s: seq[seq[byte]]
+  for val in obj:
+    var b = val.toBytesBE
+    s.add(b)
+  concat(s)
+
 proc toBytesBE*(obj: ref tuple | ref object | ptr tuple | ptr object): seq[byte] =
   var s: seq[seq[byte]]
   for val in obj[].fields:
