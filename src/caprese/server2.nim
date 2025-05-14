@@ -522,7 +522,8 @@ template parseServers*(serverBody: untyped) {.dirty.} =
         var id = path[i+1..^1]
         if id.len > 0 and find(id, '/') < 0 and find(id, ':') < 0:
           var idVar = ident(id)
-          var reqUrlLast = quote do: cast[ptr UncheckedArray[byte]](reqHeaderUrlPos + `i`.uint).toString(reqHeaderUrlSize - `i`.uint)
+          var reqUrlLast = quote do:
+            capbytes.toString(cast[ptr UncheckedArray[byte]](reqHeaderUrlPos + `i`.uint), reqHeaderUrlSize - `i`.uint)
           result.add quote do:
             if `cmpPath`.len <= reqHeaderUrlSize and equalMem(cast[pointer](reqHeaderUrlPos), `cmpPath`.cstring, `cmpPath`.len):
               var `idVar` = `reqUrlLast`
