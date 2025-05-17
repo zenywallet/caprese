@@ -1663,21 +1663,21 @@ template proxy*(proxyAppId: int, path, unix: string, body: untyped) =
       client.appId = proxyAppId
     return SendResult.Pending
 
-template proxy*(pathArgs: varargs[string], host: string, port: uint16) = discard
+template proxy*(path: varargs[string], host: string, port: uint16) = discard
 
-template proxy*(pathArgs: varargs[string], host: string, port: uint16, body: untyped) = discard
+template proxy*(path: varargs[string], host: string, port: uint16, body: untyped) = discard
 
-template proxy*(pathArgs: varargs[string], unix: string) = discard
+template proxy*(path: varargs[string], unix: string) = discard
 
-template proxy*(pathArgs: varargs[string], unix: string, body: untyped) = discard
+template proxy*(path: varargs[string], unix: string, body: untyped) = discard
 
-template proxy*(proxyAppId: int, pathArgs: varargs[string], host: string, port: uint16, body: untyped) =
-  for path in pathArgs:
-    proxy(proxyAppId, path, host, port, body)
+template proxy*(proxyAppId: int, path: varargs[string], host: string, port: uint16, body: untyped) =
+  for p in path:
+    proxy(proxyAppId, p, host, port, body)
 
-template proxy*(proxyAppId: int, pathArgs: varargs[string], unix: string, body: untyped) =
-  for path in pathArgs:
-    proxy(proxyAppId, path, unix, body)
+template proxy*(proxyAppId: int, path: varargs[string], unix: string, body: untyped) =
+  for p in path:
+    proxy(proxyAppId, p, unix, body)
 
 template proxyInsertHeader*(insHeaderData: string) =
   var reqData = if client.recvCurSize > 0:
@@ -2247,8 +2247,8 @@ template serverLib(cfg: static Config) {.dirty.} =
     checkUrlPath(path):
       when returnExists(body): body else: return body
 
-  template get(pathArgs: varargs[string], body: untyped) {.used.} =
-    if reqUrl() in pathArgs:
+  template get(path: varargs[string], body: untyped) {.used.} =
+    if reqUrl() in path:
       when returnExists(body): body else: return body
 
   when declared(Regex):
