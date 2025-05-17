@@ -141,7 +141,6 @@ macro clientObjTypeMacro*(cfg: static Config): untyped =
           ssl: SSL
           sslErr: int
           sslIdx: int
-        pStream*: pointer
         proxy: Proxy
 
       Client* {.inject.} = ptr ClientObj
