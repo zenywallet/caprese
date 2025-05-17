@@ -1661,7 +1661,7 @@ template proxy*(proxyAppId: int, path, unix: string, body: untyped) =
         client.proxy.send(ctx.pRecvBuf0, ctx.recvDataSize)
       if sendRet == SendResult.None or sendRet == SendResult.Error:
         return sendRet
-      client.appId = proxyAppId    
+      client.appId = proxyAppId
     return SendResult.Pending
 
 template proxyInsertHeader*(insHeaderData: string) =
