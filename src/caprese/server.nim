@@ -5098,10 +5098,10 @@ template serverLib(cfg: static Config) {.dirty.} =
           except:
             freeChains(certKeyChainsList[val.idx].chains)
             let e = getCurrentException()
-            logs.error e.name, " ", e.msg
+            logs.error e.name, ": ", e.msg
         except:
           let e = getCurrentException()
-          logs.error e.name, " ", e.msg
+          logs.error e.name, ": ", e.msg
 
     when cfg.sslLib == OpenSSL or cfg.sslLib == LibreSSL or cfg.sslLib == BoringSSL:
       type
@@ -5196,11 +5196,11 @@ template serverLib(cfg: static Config) {.dirty.} =
                   freeChains(certKeyChainsList[idx].chains)
                   release(certKeyChainsListLock)
                   let e = getCurrentException()
-                  logs.error e.name, " ", e.msg
+                  logs.error e.name, ": ", e.msg
               except:
                 release(certKeyChainsListLock)
                 let e = getCurrentException()
-                logs.error e.name, " ", e.msg
+                logs.error e.name, ": ", e.msg
               break
 
         when cfg.sslLib == OpenSSL or cfg.sslLib == LibreSSL or cfg.sslLib == BoringSSL:
