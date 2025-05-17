@@ -1663,6 +1663,22 @@ template proxy*(proxyAppId: int, path, unix: string, body: untyped) =
       client.appId = proxyAppId
     return SendResult.Pending
 
+template proxy*(pathArgs: varargs[string], host: string, port: uint16) = discard
+
+template proxy*(pathArgs: varargs[string], host: string, port: uint16, body: untyped) = discard
+
+template proxy*(pathArgs: varargs[string], unix: string) = discard
+
+template proxy*(pathArgs: varargs[string], unix: string, body: untyped) = discard
+
+template proxy*(proxyAppId: int, pathArgs: varargs[string], host: string, port: uint16, body: untyped) =
+  for path in pathArgs:
+    proxy(proxyAppId, path, host, port, body)
+
+template proxy*(proxyAppId: int, pathArgs: varargs[string], unix: string, body: untyped) =
+  for path in pathArgs:
+    proxy(proxyAppId, path, unix, body)
+
 template proxyInsertHeader*(insHeaderData: string) =
   var reqData = if client.recvCurSize > 0:
     cast[ptr UncheckedArray[byte]](addr client.recvBuf[0]).toString(client.recvCurSize)
