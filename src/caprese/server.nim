@@ -3275,12 +3275,12 @@ template serverLib(cfg: static Config) {.dirty.} =
       proc postRoutesMain(ctx: ServerThreadCtx, client: Client): SendResult {.inline.} =
         template data: ptr UncheckedArray[byte] {.used.} = ctx.data
         template size: int {.used.} = ctx.size
-        template content: string {.used.} = ctx.data.toString(ctx.size)
+        template content: string {.used.} = capbytes.toString(ctx.data, ctx.size)
         postRoutesBody(body)
       proc fallbackRoutesMain(ctx: ServerThreadCtx, client: Client): SendResult {.inline.} =
         template data: ptr UncheckedArray[byte] {.used.} = ctx.data
         template size: int {.used.} = ctx.size
-        template content: string {.used.} = ctx.data.toString(ctx.size)
+        template content: string {.used.} = capbytes.toString(ctx.data, ctx.size)
         fallbackRoutesBody(body)
     else:
       proc routesMain(ctx: ServerThreadCtx, client: Client): SendResult {.inline.} =
@@ -3288,7 +3288,7 @@ template serverLib(cfg: static Config) {.dirty.} =
       proc fallbackRoutesMain(ctx: ServerThreadCtx, client: Client): SendResult {.inline.} =
         template data: ptr UncheckedArray[byte] {.used.} = ctx.data
         template size: int {.used.} = ctx.size
-        template content: string {.used.} = ctx.data.toString(ctx.size)
+        template content: string {.used.} = capbytes.toString(ctx.data, ctx.size)
         fallbackRoutesBody(body)
 
   when cfg.sslLib == BearSSL:
