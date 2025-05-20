@@ -710,6 +710,7 @@ Custom parameters can be added to the server thread `ctx` object by the custom p
 import caprese
 import caprese/bearssl/ssl
 import caprese/bearssl/hash
+import caprese/bytes
 
 config:
   postRequestMethod = true
@@ -849,6 +850,33 @@ server(ssl = true, ip = "0.0.0.0", port = 8009):
       # custom handling here
       debug "url=", reqUrl
       proxyInsertHeader("Some-Custom-Header: Lovely Parameter\c\L")
+```
+
+#### Multiple `proxy:` paths
+```nim
+server(ssl = true, ip = "0.0.0.0", port = 8009):
+  routes(host = "localhost"):
+    proxy "/api/",
+          "/address/",
+          "/transaction/", host = "localhost", port = 3000
+
+    proxy "/home/", host = "localhost", port = 3001
+
+    send("Not Found".addHeader(Status404))
+```
+
+```nim
+    proxy ["/api/", "/address/", "/transaction/"], host = "localhost", port = 3000
+```
+
+```nim
+    proxy path = ["/api/", "/address/", "/transaction/"],
+          host = "localhost", port = 3000
+```
+
+```nim
+    proxy(path = ["/api/", "/address/", "/transaction/"], host = "localhost", port = 3000):
+      ...
 ```
 
 #### UNIX domain socket
