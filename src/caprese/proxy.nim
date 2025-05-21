@@ -35,7 +35,7 @@ type
 
   ProxyError* = object of CatchableError
 
-var active = true
+var active = false
 var epfd: cint = -1
 
 template errorException(x: varargs[string, `$`]) =
