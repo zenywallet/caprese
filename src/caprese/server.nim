@@ -239,7 +239,7 @@ proc toWebSocketOpCode*(opcode: int8): WebSocketOpCode =
 template reallocClientBuf*(buf: ptr UncheckedArray[byte], size: int): ptr UncheckedArray[byte] =
   cast[ptr UncheckedArray[byte]](reallocShared(buf, size))
 
-var active* = true
+var active* = false
 var epfd*: cint = -1
 
 type
@@ -5543,6 +5543,7 @@ template serverStart*(wait: bool = true) =
     activeHeaderInit()
 
     template serverStartBody() =
+      active = true
       startTimeStampUpdater(cfg)
       abortClientPtr = allocShared0(sizeof(ClientObj))
       var abortClient = cast[ptr ClientObj](abortClientPtr)
