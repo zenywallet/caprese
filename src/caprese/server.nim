@@ -5541,16 +5541,17 @@ template serverStart*(wait: bool = true) =
     serverType()
     serverLib(cfg)
     activeHeaderInit()
-    startTimeStampUpdater(cfg)
-    abortClientPtr = allocShared0(sizeof(ClientObj))
-    var abortClient = cast[ptr ClientObj](abortClientPtr)
-    abortClient.sock = sockCtl
-    abortClient.appId = 1
-    abortClient.ev.events = EPOLLIN
-    abortClient.ev.data = cast[EpollData](abortClient)
-    abortClientEvPtr = addr abortClient.ev
 
     template serverStartBody() =
+      startTimeStampUpdater(cfg)
+      abortClientPtr = allocShared0(sizeof(ClientObj))
+      var abortClient = cast[ptr ClientObj](abortClientPtr)
+      abortClient.sock = sockCtl
+      abortClient.appId = 1
+      abortClient.ev.events = EPOLLIN
+      abortClient.ev.data = cast[EpollData](abortClient)
+      abortClientEvPtr = addr abortClient.ev
+
       var params: ProxyParams
       params.abortCallback = proc() =
         errorQuit "error: proxy dispatcher"
