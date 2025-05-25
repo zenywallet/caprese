@@ -49,9 +49,15 @@ proc pop*[T](queue: var Queue[T], freeFlag: static bool = true): T =
     dec(queue.count)
     result = queue.buf[pos]
     when freeFlag and T is not Ordinal and T is not ptr and T is not pointer:
-      {.cast(gcsafe).}:
-        `=destroy`[T](queue.buf[pos])
-      zeroMem(addr queue.buf[pos], sizeof(T))
+      when NimMajor >= 2 and (compileOption("mm", "orc") or
+                              compileOption("mm", "arc") or
+                              compileOption("mm", "atomicArc")):
+        {.cast(gcsafe).}:
+          `=destroy`[T](queue.buf[pos])
+        zeroMem(addr queue.buf[pos], sizeof(T))
+      else:
+        var empty: T
+        queue.buf[pos] = empty
   else:
     when not (T is ptr) and not (T is pointer):
       raise newException(QueueEmptyError, "no data")
@@ -67,9 +73,15 @@ iterator pop*[T](queue: var Queue[T], freeFlag: static bool = true): lent T =
     dec(queue.count)
     yield queue.buf[pos]
     when freeFlag and T is not Ordinal and T is not ptr and T is not pointer:
-      {.cast(gcsafe).}:
-        `=destroy`[T](queue.buf[pos])
-      zeroMem(addr queue.buf[pos], sizeof(T))
+      when NimMajor >= 2 and (compileOption("mm", "orc") or
+                              compileOption("mm", "arc") or
+                              compileOption("mm", "atomicArc")):
+        {.cast(gcsafe).}:
+          `=destroy`[T](queue.buf[pos])
+        zeroMem(addr queue.buf[pos], sizeof(T))
+      else:
+        var empty: T
+        queue.buf[pos] = empty
 
 proc send*[T](queue: var Queue[T], data: T): bool {.discardable.} =
   acquire(queue.lock)
@@ -125,10 +137,17 @@ proc recv*[T](queue: var Queue[T], freeFlag: static bool = true): T =
     pos = pos + queue.bufLen
   dec(queue.count)
   result = queue.buf[pos]
+
   when freeFlag and T is not Ordinal and T is not ptr and T is not pointer:
-    {.cast(gcsafe).}:
-      `=destroy`[T](queue.buf[pos])
-    zeroMem(addr queue.buf[pos], sizeof(T))
+    when NimMajor >= 2 and (compileOption("mm", "orc") or
+                            compileOption("mm", "arc") or
+                            compileOption("mm", "atomicArc")):
+      {.cast(gcsafe).}:
+        `=destroy`[T](queue.buf[pos])
+      zeroMem(addr queue.buf[pos], sizeof(T))
+    else:
+      var empty: T
+      queue.buf[pos] = empty
 
 proc drop*[T](queue: var Queue[T]) =
   acquire(queue.lock)
