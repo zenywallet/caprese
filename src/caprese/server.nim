@@ -5522,16 +5522,23 @@ template serverAbort() =
 
 var serverWaitThread: Thread[WrapperThreadArg]
 
-template serverStart*(wait: bool = true) =
-  initCfg()
-  serverConfigMacro()
-  contentsWithCfg(cfg)
-  init()
-  initServer()
-  when defined(SERVER2):
+when defined(SERVER2):
+  template serverStart*() =
+    initCfg()
+    serverConfigMacro()
+    contentsWithCfg(cfg)
+    init()
+    initServer()
     import server2
     parseServers(serverStmt)
-  else:
+
+else:
+  template serverStart*(wait: bool = true) =
+    initCfg()
+    serverConfigMacro()
+    contentsWithCfg(cfg)
+    init()
+    initServer()
     template addServer*(bindAddress: string, port: uint16, unix: bool, ssl: bool, body: untyped) =
       addServer1(bindAddress, port, unix, ssl, body)
     serverMacro()
@@ -5597,9 +5604,9 @@ template serverStart*(wait: bool = true) =
 
       createThread(serverWaitThread, threadWrapper, (waitProc, ThreadArg(argType: ThreadArgType.Void)))
 
-template serverWait*() = joinThread(serverWaitThread)
+  template serverWait*() = joinThread(serverWaitThread)
 
-template serverStop*() = serverAbort()
+  template serverStop*() = serverAbort()
 
 var initFlag {.compileTime.}: bool
 macro init*(): untyped =
