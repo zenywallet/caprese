@@ -49,7 +49,8 @@ proc pop*[T](queue: var Queue[T], freeFlag: static bool = true): T =
     dec(queue.count)
     result = queue.buf[pos]
     when freeFlag and T is not Ordinal and T is not ptr and T is not pointer:
-      `=destroy`[T](queue.buf[pos])
+      {.cast(gcsafe).}:
+        `=destroy`[T](queue.buf[pos])
       zeroMem(addr queue.buf[pos], sizeof(T))
   else:
     when not (T is ptr) and not (T is pointer):
@@ -66,7 +67,8 @@ iterator pop*[T](queue: var Queue[T], freeFlag: static bool = true): lent T =
     dec(queue.count)
     yield queue.buf[pos]
     when freeFlag and T is not Ordinal and T is not ptr and T is not pointer:
-      `=destroy`[T](queue.buf[pos])
+      {.cast(gcsafe).}:
+        `=destroy`[T](queue.buf[pos])
       zeroMem(addr queue.buf[pos], sizeof(T))
 
 proc send*[T](queue: var Queue[T], data: T): bool {.discardable.} =
@@ -124,7 +126,8 @@ proc recv*[T](queue: var Queue[T], freeFlag: static bool = true): T =
   dec(queue.count)
   result = queue.buf[pos]
   when freeFlag and T is not Ordinal and T is not ptr and T is not pointer:
-    `=destroy`[T](queue.buf[pos])
+    {.cast(gcsafe).}:
+      `=destroy`[T](queue.buf[pos])
     zeroMem(addr queue.buf[pos], sizeof(T))
 
 proc drop*[T](queue: var Queue[T]) =
