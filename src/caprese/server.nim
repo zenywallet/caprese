@@ -5533,7 +5533,7 @@ when defined(SERVER2):
     parseServers(serverStmt)
 
 else:
-  template serverStart*(wait: bool = true) =
+  template serverBase() =
     initCfg()
     serverConfigMacro()
     contentsWithCfg(cfg)
@@ -5596,17 +5596,36 @@ else:
       joinThread(contents.timeStampThread)
       abortClientPtr.deallocShared()
 
+  template serverManager*() =
+    serverBase()
+
+    proc waitProc(arg: ThreadArg) {.thread.} =
+      serverStartBody()
+
+    proc serverStart*() =
+      createThread(serverWaitThread, threadWrapper, (waitProc, ThreadArg(argType: ThreadArgType.Void)))
+
+    proc serverWait*() = joinThread(serverWaitThread)
+
+    proc serverStop*() = serverAbort()
+
+  template serverStart*(wait: bool = true) =
+    serverBase()
+
     when wait:
       serverStartBody()
+
+      proc serverStop*() = serverAbort()
+
     else:
       proc waitProc(arg: ThreadArg) {.thread.} =
         serverStartBody()
 
       createThread(serverWaitThread, threadWrapper, (waitProc, ThreadArg(argType: ThreadArgType.Void)))
 
-  template serverWait*() = joinThread(serverWaitThread)
+      proc serverWait*() = joinThread(serverWaitThread)
 
-  template serverStop*() = serverAbort()
+      proc serverStop*() = serverAbort()
 
 var initFlag {.compileTime.}: bool
 macro init*(): untyped =
