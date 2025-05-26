@@ -4216,13 +4216,13 @@ template serverLib(cfg: static Config) {.dirty.} =
       clientHandlerProcs.add appRoutesSend
 
   template streamMainTmpl(body: untyped) {.dirty.} =
-    proc streamMain(client: Client, opcode: WebSocketOpCode,
+    proc streamMain0(client: Client, opcode: WebSocketOpCode,
       data: ptr UncheckedArray[byte], size: int): SendResult =
       template content: string {.used.} = capbytes.toString(data, size)
       body
 
   template streamMainTmpl(messageBody: untyped, closeBody: untyped) {.dirty.} =
-    proc streamMain(client: Client, opcode: WebSocketOpCode,
+    proc streamMain0(client: Client, opcode: WebSocketOpCode,
       data: ptr UncheckedArray[byte], size: int): SendResult =
       template content: string {.used.} = capbytes.toString(data, size)
       case opcode
@@ -4322,7 +4322,7 @@ template serverLib(cfg: static Config) {.dirty.} =
                         client.payloadSize = client.payloadSize + payloadSize
                         p = cast[ptr UncheckedArray[byte]](addr client.recvBuf[client.payloadSize])
                       if fin:
-                        var retStream = client.streamMain(opcode.toWebSocketOpCode,
+                        var retStream = client.streamMain0(opcode.toWebSocketOpCode,
                                                           cast[ptr UncheckedArray[byte]](addr client.recvBuf[0]),
                                                           client.payloadSize)
                         case retStream
@@ -4479,7 +4479,7 @@ template serverLib(cfg: static Config) {.dirty.} =
                       next, size) = getFrame(ctx.pRecvBuf0, recvlen)
                   while find:
                     if fin:
-                      var retStream = client.streamMain(opcode.toWebSocketOpCode, payload, payloadSize)
+                      var retStream = client.streamMain0(opcode.toWebSocketOpCode, payload, payloadSize)
                       case retStream
                       of SendResult.Success:
                         discard
@@ -4571,7 +4571,7 @@ template serverLib(cfg: static Config) {.dirty.} =
                     client.payloadSize = client.payloadSize + payloadSize
                     p = cast[ptr UncheckedArray[byte]](addr client.recvBuf[client.payloadSize])
                   if fin:
-                    var retStream = client.streamMain(opcode.toWebSocketOpCode,
+                    var retStream = client.streamMain0(opcode.toWebSocketOpCode,
                                                       cast[ptr UncheckedArray[byte]](addr client.recvBuf[0]),
                                                       client.payloadSize)
                     case retStream
@@ -4659,7 +4659,7 @@ template serverLib(cfg: static Config) {.dirty.} =
                     next, size) = getFrame(ctx.pRecvBuf0, recvlen)
                 while find:
                   if fin:
-                    var retStream = client.streamMain(opcode.toWebSocketOpCode, payload, payloadSize)
+                    var retStream = client.streamMain0(opcode.toWebSocketOpCode, payload, payloadSize)
                     case retStream
                     of SendResult.Success:
                       discard
@@ -4722,7 +4722,7 @@ template serverLib(cfg: static Config) {.dirty.} =
                   client.payloadSize = client.payloadSize + payloadSize
                   p = cast[ptr UncheckedArray[byte]](addr client.recvBuf[client.payloadSize])
                 if fin:
-                  var retStream = client.streamMain(opcode.toWebSocketOpCode,
+                  var retStream = client.streamMain0(opcode.toWebSocketOpCode,
                                                     cast[ptr UncheckedArray[byte]](addr client.recvBuf[0]),
                                                     client.payloadSize)
                   case retStream
