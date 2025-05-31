@@ -306,9 +306,10 @@ template serverTagLib*(cfg: static Config) {.dirty.} =
     withWriteLock clientsLock:
       if client.clientId == INVALID_CLIENT_ID:
         while true:
-          inc(curClientId)
           if curClientId >= int.high:
             curClientId = 1
+          else:
+            inc(curClientId)
           let cur = pendingClients.get(curClientId)
           if cur.isNil:
             break
