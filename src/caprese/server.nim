@@ -306,7 +306,7 @@ template serverTagLib*(cfg: static Config) {.dirty.} =
     withWriteLock clientsLock:
       if client.clientId == INVALID_CLIENT_ID:
         while true:
-          if curClientId >= int.high:
+          if unlikely(curClientId >= int.high):
             curClientId = 1
           else:
             inc(curClientId)
