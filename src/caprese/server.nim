@@ -434,21 +434,21 @@ template serverTagLib*(cfg: static Config) {.dirty.} =
       if not clientIdsPair.isNil:
         result = clientIdsPair.val
         for clientId in clientIdsPair.val:
-          let tagRefs = clientId2Tags.get(clientId)
-          for i, t in tagRefs.val:
+          let tagRefsPair = clientId2Tags.get(clientId)
+          for i, t in tagRefsPair.val:
             if clientIdsPair.key.addr == t.tag:
-              if tagRefs.val.len <= 1:
-                clientId2Tags.del(tagRefs)
+              if tagRefsPair.val.len <= 1:
+                clientId2Tags.del(tagRefsPair)
               else:
-                tagRefs.val.del(i)
+                tagRefsPair.val.del(i)
               break
         tag2ClientIds.del(clientIdsPair)
 
   proc getTags*(clientId: ClientId): Array[Tag] =
     withReadLock clientsLock:
-      let tagRefs = clientId2Tags.get(clientId)
-      if not tagRefs.isNil:
-        for t in tagRefs.val:
+      let tagRefsPair = clientId2Tags.get(clientId)
+      if not tagRefsPair.isNil:
+        for t in tagRefsPair.val:
           result.add(t.tag[])
 
   iterator getClientIds*(tag: Tag): ClientId =
@@ -468,13 +468,13 @@ template serverTagLib*(cfg: static Config) {.dirty.} =
     else:
       while true:
         var cid = clientIdsPair.val[0]
-        let tagRefs = clientId2Tags.get(cid)
-        for i, t in tagRefs.val:
+        let tagRefsPair = clientId2Tags.get(cid)
+        for i, t in tagRefsPair.val:
           if clientIdsPair.key.addr == t.tag:
-            if tagRefs.val.len <= 1:
-              clientId2Tags.del(tagRefs)
+            if tagRefsPair.val.len <= 1:
+              clientId2Tags.del(tagRefsPair)
             else:
-              tagRefs.val.del(i)
+              tagRefsPair.val.del(i)
             break
         if clientIdsPair.val.len <= 1:
           tag2ClientIds.del(clientIdsPair)
@@ -491,11 +491,11 @@ template serverTagLib*(cfg: static Config) {.dirty.} =
             break
 
   iterator getTags*(clientId: ClientId): Tag =
-    var tagRefs: HashTableData[ClientId, Array[TagRef]]
+    var tagRefsPair: HashTableData[ClientId, Array[TagRef]]
     withReadLock clientsLock:
-      tagRefs = clientId2Tags.get(clientId)
-    if not tagRefs.isNil:
-      for t in tagRefs.val:
+      tagRefsPair = clientId2Tags.get(clientId)
+    if not tagRefsPair.isNil:
+      for t in tagRefsPair.val:
         yield t.tag[]
 
   proc addTask*(clientId: ClientId, task: ClientTask) =
