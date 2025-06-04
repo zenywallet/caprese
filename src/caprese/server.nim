@@ -424,25 +424,25 @@ template serverTagLib*(cfg: static Config) {.dirty.} =
 
   proc getClientIds*(tag: Tag): Array[ClientId] =
     withReadLock clientsLock:
-      let clientIds = tag2ClientIds.get(tag)
-      if not clientIds.isNil:
-        result = clientIds.val
+      let clientIdsPair = tag2ClientIds.get(tag)
+      if not clientIdsPair.isNil:
+        result = clientIdsPair.val
 
   proc purgeClientIds*(tag: Tag): Array[ClientId] =
     withWriteLock clientsLock:
-      let clientIds = tag2ClientIds.get(tag)
-      if not clientIds.isNil:
-        result = clientIds.val
-        for clientId in clientIds.val:
+      let clientIdsPair = tag2ClientIds.get(tag)
+      if not clientIdsPair.isNil:
+        result = clientIdsPair.val
+        for clientId in clientIdsPair.val:
           let tagRefs = clientId2Tags.get(clientId)
           for i, t in tagRefs.val:
-            if clientIds.key.addr == t.tag:
+            if clientIdsPair.key.addr == t.tag:
               if tagRefs.val.len <= 1:
                 clientId2Tags.del(tagRefs)
               else:
                 tagRefs.val.del(i)
               break
-        tag2ClientIds.del(clientIds)
+        tag2ClientIds.del(clientIdsPair)
 
   proc getTags*(clientId: ClientId): Array[Tag] =
     withReadLock clientsLock:
@@ -452,32 +452,32 @@ template serverTagLib*(cfg: static Config) {.dirty.} =
           result.add(t.tag[])
 
   iterator getClientIds*(tag: Tag): ClientId =
-    var clientIds: HashTableData[Tag, Array[ClientId]]
+    var clientIdsPair: HashTableData[Tag, Array[ClientId]]
     withReadLock clientsLock:
-      clientIds = tag2ClientIds.get(tag)
-    if not clientIds.isNil:
-      for c in clientIds.val:
+      clientIdsPair = tag2ClientIds.get(tag)
+    if not clientIdsPair.isNil:
+      for c in clientIdsPair.val:
         yield c
 
   iterator purgeClientIds*(tag: Tag): ClientId =
-    var clientIds: HashTableData[Tag, Array[ClientId]]
+    var clientIdsPair: HashTableData[Tag, Array[ClientId]]
     wrlock(clientsLock)
-    clientIds = tag2ClientIds.get(tag)
-    if clientIds.isNil:
+    clientIdsPair = tag2ClientIds.get(tag)
+    if clientIdsPair.isNil:
       unlock(clientsLock)
     else:
       while true:
-        var cid = clientIds.val[0]
+        var cid = clientIdsPair.val[0]
         let tagRefs = clientId2Tags.get(cid)
         for i, t in tagRefs.val:
-          if clientIds.key.addr == t.tag:
+          if clientIdsPair.key.addr == t.tag:
             if tagRefs.val.len <= 1:
               clientId2Tags.del(tagRefs)
             else:
               tagRefs.val.del(i)
             break
-        if clientIds.val.len <= 1:
-          tag2ClientIds.del(clientIds)
+        if clientIdsPair.val.len <= 1:
+          tag2ClientIds.del(clientIdsPair)
           unlock(clientsLock)
           yield cid
           break
@@ -485,8 +485,8 @@ template serverTagLib*(cfg: static Config) {.dirty.} =
           unlock(clientsLock)
           yield cid
           wrlock(clientsLock)
-          clientIds = tag2ClientIds.get(tag)
-          if clientIds.isNil:
+          clientIdsPair = tag2ClientIds.get(tag)
+          if clientIdsPair.isNil:
             unlock(clientsLock)
             break
 
