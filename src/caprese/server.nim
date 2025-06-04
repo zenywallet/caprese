@@ -428,6 +428,22 @@ template serverTagLib*(cfg: static Config) {.dirty.} =
       if not clientIds.isNil:
         result = clientIds.val
 
+  proc purgeClientIds*(tag: Tag): Array[ClientId] =
+    withWriteLock clientsLock:
+      let clientIds = tag2ClientIds.get(tag)
+      if not clientIds.isNil:
+        result = clientIds.val
+        for clientId in clientIds.val:
+          let tagRefs = clientId2Tags.get(clientId)
+          for i, t in tagRefs.val:
+            if clientIds.key.addr == t.tag:
+              if tagRefs.val.len <= 1:
+                clientId2Tags.del(tagRefs)
+              else:
+                tagRefs.val.del(i)
+              break
+        tag2ClientIds.del(clientIds)
+
   proc getTags*(clientId: ClientId): Array[Tag] =
     withReadLock clientsLock:
       let tagRefs = clientId2Tags.get(clientId)
@@ -442,6 +458,37 @@ template serverTagLib*(cfg: static Config) {.dirty.} =
     if not clientIds.isNil:
       for c in clientIds.val:
         yield c
+
+  iterator purgeClientIds*(tag: Tag): ClientId =
+    var clientIds: HashTableData[Tag, Array[ClientId]]
+    wrlock(clientsLock)
+    clientIds = tag2ClientIds.get(tag)
+    if clientIds.isNil:
+      unlock(clientsLock)
+    else:
+      while true:
+        var cid = clientIds.val[0]
+        let tagRefs = clientId2Tags.get(cid)
+        for i, t in tagRefs.val:
+          if clientIds.key.addr == t.tag:
+            if tagRefs.val.len <= 1:
+              clientId2Tags.del(tagRefs)
+            else:
+              tagRefs.val.del(i)
+            break
+        if clientIds.val.len <= 1:
+          tag2ClientIds.del(clientIds)
+          unlock(clientsLock)
+          yield cid
+          break
+        else:
+          unlock(clientsLock)
+          yield cid
+          wrlock(clientsLock)
+          clientIds = tag2ClientIds.get(tag)
+          if clientIds.isNil:
+            unlock(clientsLock)
+            break
 
   iterator getTags*(clientId: ClientId): Tag =
     var tagRefs: HashTableData[ClientId, Array[TagRef]]
