@@ -1433,7 +1433,7 @@ macro routes*(port: int, host: string, body: untyped): untyped =
   var portStr = $portInt
   var hostPort = quote do: `site` & ":" & `portStr`
   quote do:
-    when `portInt` > 0 and `portInt` != 80 and `portInt `!= 443 and not `findColon`:
+    when `portInt` > 0 and `portInt` != 80 and `portInt ` != 443 and not `findColon`:
       if reqHost() == `hostPort`:
         when returnRequired(`body`): return `body` else: `body`
     else:
@@ -1465,7 +1465,7 @@ macro routes*(internalSslIdx: int, port: int, host: string, body: untyped): unty
   var portStr = $portInt
   var hostPort = quote do: `site` & ":" & `portStr`
   quote do:
-    when `portInt` > 0 and `portInt` != 80 and `portInt `!= 443 and not `findColon`:
+    when `portInt` > 0 and `portInt` != 80 and `portInt ` != 443 and not `findColon`:
       when cfg.sslRoutesHost == SniAndHeaderHost:
         if serverThreadCtx.client.sslIdx == `internalSslIdx` and reqHost() == `hostPort`:
           when returnRequired(`body`): return `body` else: `body`
