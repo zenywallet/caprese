@@ -456,8 +456,8 @@ template serverTagLib*(cfg: static Config) {.dirty.} =
     withReadLock clientsLock:
       clientIdsPair = tag2ClientIds.get(tag)
     if not clientIdsPair.isNil:
-      for c in clientIdsPair.val:
-        yield c
+      for cid in clientIdsPair.val:
+        yield cid
 
   iterator purgeClientIds*(tag: Tag): ClientId =
     var clientIdsPair: HashTableData[Tag, Array[ClientId]]
