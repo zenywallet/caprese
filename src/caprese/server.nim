@@ -1200,7 +1200,7 @@ macro addServerMacro*(bindAddress: string, port: uint16, unix: bool, ssl: bool, 
   var serverResources = newStmtList()
   var routesList = newStmtList()
   for s in body:
-    if eqIdent(s[0], "routes"):
+    if s.len > 1 and eqIdent(s[0], "routes"):
       var hostname = ""
       var portInt = intVal(port)
       var hostnameNode: NimNode
@@ -1233,7 +1233,7 @@ macro addServerMacro*(bindAddress: string, port: uint16, unix: bool, ssl: bool, 
       var certsBlockFlag = false
       var site = if hostname.len > 0 or hostnameNode.isNil: newLit(hostname) else: quote do: getSite(`hostnameNode`)
       for s2 in s[s.len - 1]:
-        if eqIdent(s2[0], "certificates"):
+        if s2.len > 0 and eqIdent(s2[0], "certificates"):
           certsBlockFlag = true
           if s2.len > 1:
             if s2[1].kind == nnkStrLit:
@@ -1265,7 +1265,7 @@ macro addServerMacro*(bindAddress: string, port: uint16, unix: bool, ssl: bool, 
             newIdentNode("srvId"),
             newLit(srvId)
           ))
-        elif eqIdent(s2[0], "stream"):
+        elif s2.len > 1 and eqIdent(s2[0], "stream"):
           inc(curAppId)
           var streamAppId = curAppId
           if s2[1].kind != nnkExprEqExpr or not eqIdent(s2[1][0], "streamAppId"):
@@ -1283,7 +1283,7 @@ macro addServerMacro*(bindAddress: string, port: uint16, unix: bool, ssl: bool, 
           inc(curAppId)
           serverHandlerList.add(("appStreamSend", ssl, unix, newStmtList()))
           appIdTypeList.add(AppStreamSend)
-        elif eqIdent(s2[0], "public"):
+        elif s2.len > 1 and eqIdent(s2[0], "public"):
           var importPath = s2[1]
           inc(curResId)
           var filesTableName = newIdentNode("staticFilesTable" & $curResId)
@@ -1304,7 +1304,7 @@ macro addServerMacro*(bindAddress: string, port: uint16, unix: bool, ssl: bool, 
                   return response(retFile.data)
           serverResources.add quote do:
             const `filesTableName` = createStaticFilesTable(`importPath`)
-        elif eqIdent(s2[0], "proxy"):
+        elif s2.len > 1 and eqIdent(s2[0], "proxy"):
           inc(curAppId)
           var proxyAppId = curAppId
           if s2[1].kind != nnkExprEqExpr or not eqIdent(s2[1][0], "proxyAppId"):
@@ -1565,14 +1565,14 @@ template acceptKey(key: string): string =
 
 macro onProtocolBodyExists(body: untyped): untyped =
   for s in body:
-    if eqIdent(s[0], "onProtocol"):
+    if s.len > 0 and eqIdent(s[0], "onProtocol"):
       return newLit(true)
   return newLit(false)
 
 macro getOnProtocolBody(body: untyped): untyped =
   var onProtocolStmt = newStmtList()
   for s in body:
-    if eqIdent(s[0], "onProtocol"):
+    if s.len > 1 and eqIdent(s[0], "onProtocol"):
       onProtocolStmt.add(s[1])
   quote do:
     proc protocolCheck(): tuple[flag: bool, resProtocol: string] =
@@ -1581,7 +1581,7 @@ macro getOnProtocolBody(body: untyped): untyped =
 macro getOnOpenBody(body: untyped): untyped =
   var onOpenStmt = newStmtList()
   for s in body:
-    if eqIdent(s[0], "onOpen"):
+    if s.len > 1 and eqIdent(s[0], "onOpen"):
       onOpenStmt.add(s[1])
   onOpenStmt
 
@@ -1835,7 +1835,7 @@ template serverLib(cfg: static Config) {.dirty.} =
     var priv, chain: string
     var privPath, chainPath: string
     for s in body:
-      if s.kind == nnkCall:
+      if s.len > 1 and s.kind == nnkCall:
         if eqIdent(s[0], "privKey"):
           priv = $s[1][0]
         elif eqIdent(s[0], "fullChain"):
@@ -4296,13 +4296,13 @@ template serverLib(cfg: static Config) {.dirty.} =
     var rawStmt = newStmtList()
 
     for s in body:
-      if eqIdent(s[0], "onProtocol"):
+      if s.len > 0 and eqIdent(s[0], "onProtocol"):
         continue
-      elif eqIdent(s[0], "onOpen"):
+      elif s.len > 0 and eqIdent(s[0], "onOpen"):
         continue
-      elif eqIdent(s[0], "onMessage"):
+      elif s.len > 1 and eqIdent(s[0], "onMessage"):
         onMessageStmt.add(s[1])
-      elif eqIdent(s[0], "onClose"):
+      elif s.len > 1 and eqIdent(s[0], "onClose"):
         onCloseStmt.add(s[1])
       else:
         rawStmt.add(s)
