@@ -272,7 +272,14 @@ template serverTagLib*(cfg: static Config) {.dirty.} =
       of ClientTaskCmd.Data:
         data*: Array[byte]
 
-  proc toUint64(tag: Tag): uint64 = capbytes.toUint64(tag.toSeq)
+  proc toUint64(tag: Tag): uint64 =
+    var s = tag.toSeq
+    var pos = s.len
+    if pos < 8:
+      s.setLen(8)
+      for i in pos..<8:
+        s[i] = '='.byte
+    capbytes.toUint64(s)
 
   when not declared(newHashTable):
     proc empty*(pair: HashTableData): bool =
