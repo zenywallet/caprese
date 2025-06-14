@@ -876,9 +876,25 @@ template serverTagLib*(cfg: static Config) {.dirty.} =
           inc(sendCount)
     sendCount
 
+  template wsSendOnceTag*(tag: Tag, data: seq[byte] | string | Array[byte],
+                          opcode: WebSocketOpCode = WebSocketOpCode.Binary): int =
+    var sendCount = 0
+    let clientIds = tag.purgeClientIds()
+    if clientIds.len > 0:
+      let sendData = data
+      for cid in clientIds:
+        let ret = cid.wsServerSend(sendData, opcode)
+        if ret == SendResult.Pending or ret == SendResult.Success:
+          inc(sendCount)
+    sendCount
+
   proc wsSend*(tag: Tag, data: seq[byte] | string | Array[byte],
               opcode: WebSocketOpCode = WebSocketOpCode.Binary): int {.discardable.} =
     wsSendTag(tag, data, opcode)
+
+  proc wsSendOnce*(tag: Tag, data: seq[byte] | string | Array[byte],
+                  opcode: WebSocketOpCode = WebSocketOpCode.Binary): int {.discardable.} =
+    wsSendOnceTag(tag, data, opcode)
 
 var abort*: proc() {.thread.} = proc() {.thread.} = active = false
 
