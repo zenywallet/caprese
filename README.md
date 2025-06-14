@@ -349,7 +349,7 @@ server(ssl = true, ip = "0.0.0.0", port = 8009):
 serverStart()
 ```
 
-I hope you get the idea... This is SNI. There are multiple `routes:` blocks in a `server:` block. Like the `server:` block, the `routes:` block can have multiple blocks.
+I hope you get the idea... This is SNI. There are multiple `routes:` blocks in a `server:` block. You can have as many `server:` and `routes:` blocks as you want.
 
 You can also omit the `certificates:` block. The following code works the same as the above code. Just remember to prepare the certificate files.
 
@@ -875,7 +875,7 @@ server(ssl = true, ip = "0.0.0.0", port = 8009):
 ```
 
 ```nim
-    proxy(path = ["/api/", "/address/", "/transaction/"], host = "localhost", port = 3000):
+    proxy(path = ["/api/", ... ], host = "localhost", port = 3000):
       ...
 ```
 
@@ -935,14 +935,18 @@ proc delTag(clientId: ClientId, tag: Tag)
 proc delTags(clientId: ClientId)
 proc delTags(tag: Tag)
 proc getClientIds(tag: Tag): Array[ClientId]
+proc purgeClientIds(tag: Tag): Array[ClientId]
 proc getTags(clientId: ClientId): Array[Tag]
 iterator getClientIds(tag: Tag): ClientId
+iterator purgeClientIds(tag: Tag): ClientId
 iterator getTags(clientId: ClientId): Tag
 ```
 
 #### Send to tag, WebSocket only
 ```nim
-template wsSend(tag: Tag, data: seq[byte] | string | Array[byte],
+proc wsSend(tag: Tag, data: seq[byte] | string | Array[byte],
+            opcode: WebSocketOpCode = WebSocketOpCode.Binary): int
+proc wsSendOnce(tag: Tag, data: seq[byte] | string | Array[byte],
                 opcode: WebSocketOpCode = WebSocketOpCode.Binary): int
 ```
 
