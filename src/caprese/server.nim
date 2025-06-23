@@ -3335,6 +3335,10 @@ template serverLib(cfg: static Config) {.dirty.} =
   macro postRoutesBody(body: untyped): untyped =
     filterCmdNode(body, ["get", "stream", "public", "certificates", "acme", "head", "put", "delete", "connect", "options", "trace"])
 
+  macro proxyRoutesBody(body: untyped): untyped =
+    filterCmdNode(body, ["get", "stream", "public", "certificates", "acme", "post",
+                        "head", "put", "delete", "connect", "options", "trace"])
+
   macro fallbackRoutesBody(body: untyped): untyped =
     filterCmdNode(body, ["get", "stream", "public", "certificates", "acme", "post"])
 
@@ -3348,6 +3352,8 @@ template serverLib(cfg: static Config) {.dirty.} =
         template size: int {.used.} = ctx.size
         template content: string {.used.} = capbytes.toString(ctx.data, ctx.size)
         postRoutesBody(body)
+      proc proxyRoutesMain(ctx: ServerThreadCtx, client: Client): SendResult {.inline.} =
+        proxyRoutesBody(body)
       proc fallbackRoutesMain(ctx: ServerThreadCtx, client: Client): SendResult {.inline.} =
         template data: ptr UncheckedArray[byte] {.used.} = ctx.data
         template size: int {.used.} = ctx.size
@@ -3356,6 +3362,8 @@ template serverLib(cfg: static Config) {.dirty.} =
     else:
       proc routesMain(ctx: ServerThreadCtx, client: Client): SendResult {.inline.} =
         body
+      proc proxyRoutesMain(ctx: ServerThreadCtx, client: Client): SendResult {.inline.} =
+        proxyRoutesBody(body)
       proc fallbackRoutesMain(ctx: ServerThreadCtx, client: Client): SendResult {.inline.} =
         template data: ptr UncheckedArray[byte] {.used.} = ctx.data
         template size: int {.used.} = ctx.size
@@ -3428,42 +3436,63 @@ template serverLib(cfg: static Config) {.dirty.} =
                     client.addRecvBuf(bufRecvApp, bufLen.int, if bufLen.int > workerRecvBufSize: bufLen.int else: workerRecvBufSize)
                     br_ssl_engine_recvapp_ack(ec, bufLen.csize_t)
 
-                    if client.recvCurSize >= 17 and equalMem(addr client.recvBuf[client.recvCurSize - 4], "\c\L\c\L".cstring, 4):
-                      var nextPos = 0
-                      var parseSize = client.recvCurSize
-                      while true:
-                        ctx.pRecvBuf = cast[ptr UncheckedArray[byte]](addr client.recvBuf[nextPos])
-                        (headerErr, headerNext) = parseHeader(ctx.pRecvBuf, parseSize, ctx.targetHeaders, ctx.header)
-                        if headerErr == 0:
-                          let retMain = routesMain(ctx, client)
-                          if client.keepAlive2 == KeepAliveStatus.Unknown:
-                            if ctx.header.minorVer == 0 or getHeaderValue(ctx.pRecvBuf, ctx.header,
-                              InternalEssentialHeaderConnection) == "close":
-                              client.keepAlive2 = KeepAliveStatus.False
+                    if client.recvCurSize >= 17:
+                      if equalMem(addr client.recvBuf[client.recvCurSize - 4], "\c\L\c\L".cstring, 4):
+                        var nextPos = 0
+                        var parseSize = client.recvCurSize
+                        while true:
+                          ctx.pRecvBuf = cast[ptr UncheckedArray[byte]](addr client.recvBuf[nextPos])
+                          (headerErr, headerNext) = parseHeader(ctx.pRecvBuf, parseSize, ctx.targetHeaders, ctx.header)
+                          if headerErr == 0:
+                            let retMain = routesMain(ctx, client)
+                            if client.keepAlive2 == KeepAliveStatus.Unknown:
+                              if ctx.header.minorVer == 0 or getHeaderValue(ctx.pRecvBuf, ctx.header,
+                                InternalEssentialHeaderConnection) == "close":
+                                client.keepAlive2 = KeepAliveStatus.False
+                              else:
+                                client.keepAlive2 = KeepAliveStatus.True
+                            if retMain == SendResult.Pending or retMain == SendResult.Success:
+                              if headerNext < parseSize:
+                                nextPos = headerNext
+                                parseSize = parseSize - nextPos
+                              else:
+                                client.recvCurSize = 0
+                                engine = SendApp
+                                break
                             else:
-                              client.keepAlive2 = KeepAliveStatus.True
-                          if retMain == SendResult.Pending or retMain == SendResult.Success:
-                            if headerNext < parseSize:
-                              nextPos = headerNext
-                              parseSize = parseSize - nextPos
-                            else:
-                              client.recvCurSize = 0
-                              engine = SendApp
-                              break
-                          else:
-                            when cfg.errorCloseMode == ErrorCloseMode.UntilConnectionTimeout:
-                              if retMain == SendResult.Error:
-                                var retCtl = epoll_ctl(epfd, EPOLL_CTL_DEL, cast[cint](client.sock), addr client.ev)
-                                if retCtl != 0:
-                                  logs.error "error: epoll_ctl EPOLL_CTL_DEL ret=", retCtl, " errno=", errno
+                              when cfg.errorCloseMode == ErrorCloseMode.UntilConnectionTimeout:
+                                if retMain == SendResult.Error:
+                                  var retCtl = epoll_ctl(epfd, EPOLL_CTL_DEL, cast[cint](client.sock), addr client.ev)
+                                  if retCtl != 0:
+                                    logs.error "error: epoll_ctl EPOLL_CTL_DEL ret=", retCtl, " errno=", errno
+                                else:
+                                  client.close()
                               else:
                                 client.close()
-                            else:
-                              client.close()
+                              break engineBlock
+                          else:
+                            client.close()
                             break engineBlock
+                      else:
+                        # proxy only
+                        if equalMem(addr client.recvBuf[0], "POST /".cstring, 6):
+                          for i in 6..client.recvCurSize - 4:
+                            if equalMem(addr client.recvBuf[i], "\c\L\c\L".cstring, 4):
+                              var pos = 6
+                              while true:
+                                if equalMem(addr client.recvBuf[pos], " HTTP/1.".cstring, 8):
+                                  ctx.header.url = capbytes.toString(cast[ptr UncheckedArray[byte]](addr client.recvBuf[5]), pos - 5)
+                                  let retMain = proxyRoutesMain(ctx, client)
+                                  if retMain == SendResult.Pending or retMain == SendResult.Success:
+                                    engine = SendApp
+                                    echo "--engineBlock"
+                                    break
+                                inc(pos)
+                                if pos >= client.recvCurSize:
+                                  engine = SendRec
+                                  break
                         else:
-                          client.close()
-                          break engineBlock
+                          engine = SendRec
                     else:
                       engine = SendRec
 
