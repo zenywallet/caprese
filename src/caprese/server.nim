@@ -3103,7 +3103,7 @@ template serverLib(cfg: static Config) {.dirty.} =
       except:
         if not selfSignedCertFallback:
           ctx.SSL_CTX_free()
-          raise
+          raise newException(ServerSslCertError, "no fallback")
         ctx.selfSignedCertificate()
 
       SSL_CTX_set_options(ctx, (SSL_OP_NO_SSLv2 or SSL_OP_NO_SSLv3 or
