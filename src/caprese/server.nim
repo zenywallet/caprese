@@ -3099,7 +3099,7 @@ template serverLib(cfg: static Config) {.dirty.} =
             logs.error "error: chain file"
             raise newException(ServerSslCertError, "chain file")
         else:
-          raise
+          raise newException(ServerSslCertError, "no certs")
       except:
         if not selfSignedCertFallback:
           ctx.SSL_CTX_free()
