@@ -234,7 +234,7 @@ proc toWebSocketOpCode*(opcode: int8): WebSocketOpCode =
   of 0x1: WebSocketOpcode.Text
   of 0x9: WebSocketOpcode.Ping
   of 0xa: WebSocketOpcode.Pong
-  else: raise
+  else: raise newException(ServerError, "invalid opcode")
 
 template reallocClientBuf*(buf: ptr UncheckedArray[byte], size: int): ptr UncheckedArray[byte] =
   cast[ptr UncheckedArray[byte]](reallocShared(buf, size))
@@ -2488,9 +2488,9 @@ template serverLib(cfg: static Config) {.dirty.} =
             zeroMem(addr pemObj.data[0], pemObj.data.len)
             pemObj.data = @[]
         of BR_PEM_ERROR:
-          raise
+          raise newException(ServerSslCertError, "br pem error")
         else:
-          raise
+          raise newException(ServerSslCertError, "br pem unknown")
 
     proc clearPemObjs(pemObjs: var PemObjs) =
       for i in 0..<pemObjs.len:
@@ -2626,9 +2626,9 @@ template serverLib(cfg: static Config) {.dirty.} =
         of BR_PEM_END_OBJ:
           allBuf.add(buf)
         of BR_PEM_ERROR:
-          raise
+          raise newException(ServerSslCertError, "br pem error")
         else:
-          raise
+          raise newException(ServerSslCertError, "br pem unknown")
 
       result.cert = cast[ptr UncheckedArray[br_x509_certificate]](allocShared0(sizeof(br_x509_certificate) * allBuf.len))
       result.certLen = allBuf.len.csize_t
@@ -2930,7 +2930,7 @@ template serverLib(cfg: static Config) {.dirty.} =
         return 0.cint
 
       else:
-        raise
+        raise newException(ServerSslCertError, "cert key type unknown")
 
     proc sa_do_keyx(pctx: ptr ptr br_ssl_server_policy_class; data: ptr uint8;
                     len: ptr csize_t): uint32 {.cdecl.}  =
@@ -2949,7 +2949,7 @@ template serverLib(cfg: static Config) {.dirty.} =
         return br_rsa_ssl_decrypt(pc.irsacore, pc.sk, data, len[])
 
       else:
-        raise
+        raise newException(ServerSslCertError, "cert key type unknown")
 
     proc sa_do_sign(pctx: ptr ptr br_ssl_server_policy_class; algo_id: cuint;
                     data: ptr uint8; hv_len: csize_t; len: csize_t): csize_t {.cdecl.} =
@@ -2987,7 +2987,7 @@ template serverLib(cfg: static Config) {.dirty.} =
           return 0.csize_t
 
       else:
-        raise
+        raise newException(ServerSslCertError, "cert key type unknown")
 
     var sa_policy_vtable_obj = br_ssl_server_policy_class(
       #context_size: 0.csize_t,
