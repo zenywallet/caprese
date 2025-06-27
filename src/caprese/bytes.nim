@@ -76,9 +76,9 @@ proc varStr*(s: string): seq[byte] {.inline.} = concat(varInt(s.len), cast[seq[b
 
 proc pad*(len: int): seq[byte] {.inline.} = newSeq[byte](len)
 
-proc pad*(len: int, val: byte): seq[byte] {.inline.} =
+proc pad*(len: int, val: byte | char): seq[byte] {.inline.} =
   result = newSeqUninitialized[byte](len)
-  result.fill(val)
+  result.fill(val.byte)
 
 proc newFixedStr*(data: string, size: int): FixedStr {.inline.} = FixedStr(data: data, size: size)
 
