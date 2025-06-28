@@ -4540,8 +4540,7 @@ template serverLib(cfg: static Config) {.dirty.} =
                         engine = RecvApp
                       else:
                         if bufRecvApp.isNil and bufSendRec.isNil and
-                          not bufRecvRec.isNil and not bufSendApp.isNil and
-                          client.sendCurSize == 0:
+                          not bufRecvRec.isNil and not bufSendApp.isNil:
                           client.threadId = 0
                           release(client.spinLock)
                           break
