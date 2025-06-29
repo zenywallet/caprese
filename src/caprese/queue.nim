@@ -48,7 +48,8 @@ proc pop*[T](queue: var Queue[T], freeFlag: static bool = true): T =
       pos = pos + queue.bufLen
     dec(queue.count)
     result = queue.buf[pos]
-    when freeFlag and T is not Ordinal and T is not ptr and T is not pointer:
+    when freeFlag and T is not Ordinal and T is not ptr and
+                      T is not pointer and T is not tuple:
       when NimMajor >= 2 and (compileOption("mm", "orc") or
                               compileOption("mm", "arc") or
                               compileOption("mm", "atomicArc")):
@@ -72,7 +73,8 @@ iterator pop*[T](queue: var Queue[T], freeFlag: static bool = true): lent T =
       pos = pos + queue.bufLen
     dec(queue.count)
     yield queue.buf[pos]
-    when freeFlag and T is not Ordinal and T is not ptr and T is not pointer:
+    when freeFlag and T is not Ordinal and T is not ptr and
+                      T is not pointer and T is not tuple:
       when NimMajor >= 2 and (compileOption("mm", "orc") or
                               compileOption("mm", "arc") or
                               compileOption("mm", "atomicArc")):
@@ -138,7 +140,8 @@ proc recv*[T](queue: var Queue[T], freeFlag: static bool = true): T =
   dec(queue.count)
   result = queue.buf[pos]
 
-  when freeFlag and T is not Ordinal and T is not ptr and T is not pointer:
+  when freeFlag and T is not Ordinal and T is not ptr and
+                    T is not pointer and T is not tuple:
     when NimMajor >= 2 and (compileOption("mm", "orc") or
                             compileOption("mm", "arc") or
                             compileOption("mm", "atomicArc")):
