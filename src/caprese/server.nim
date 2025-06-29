@@ -3565,7 +3565,22 @@ template serverLib(cfg: static Config) {.dirty.} =
                       client.close()
                       break
                     else:
-                      engine = RecvApp
+                      acquire(client.spinLock)
+                      if client.dirty != ClientDirtyNone:
+                        client.dirty = ClientDirtyNone
+                        release(client.spinLock)
+                        engine = RecvApp
+                      else:
+                        if not bufRecvRec.isNil:
+                          client.threadId = 0
+                          release(client.spinLock)
+                          var retCtl = epoll_ctl(epfd, EPOLL_CTL_MOD, cast[cint](client.sock), addr client.ev)
+                          if retCtl != 0:
+                            logs.error "error: epoll_ctl ret=", retCtl, " errno=", errno
+                          break
+                        else:
+                          release(client.spinLock)
+                          engine = RecvApp
                   else:
                     proc taskCallback(task: ClientTask): bool =
                       client.addSendBuf(task.data.toString())
@@ -4505,7 +4520,22 @@ template serverLib(cfg: static Config) {.dirty.} =
                       client.close()
                       break
                     else:
-                      engine = RecvApp
+                      acquire(client.spinLock)
+                      if client.dirty != ClientDirtyNone:
+                        client.dirty = ClientDirtyNone
+                        release(client.spinLock)
+                        engine = RecvApp
+                      else:
+                        if not bufRecvRec.isNil:
+                          client.threadId = 0
+                          release(client.spinLock)
+                          var retCtl = epoll_ctl(epfd, EPOLL_CTL_MOD, cast[cint](client.sock), addr client.ev)
+                          if retCtl != 0:
+                            logs.error "error: epoll_ctl ret=", retCtl, " errno=", errno
+                          break
+                        else:
+                          release(client.spinLock)
+                          engine = RecvApp
                   else:
                     proc taskCallback(task: ClientTask): bool =
                       client.addSendBuf(task.data.toString())
@@ -4981,7 +5011,22 @@ template serverLib(cfg: static Config) {.dirty.} =
                       client.close()
                       break
                     else:
-                      engine = RecvApp
+                      acquire(client.spinLock)
+                      if client.dirty != ClientDirtyNone:
+                        client.dirty = ClientDirtyNone
+                        release(client.spinLock)
+                        engine = RecvApp
+                      else:
+                        if not bufRecvRec.isNil:
+                          client.threadId = 0
+                          release(client.spinLock)
+                          var retCtl = epoll_ctl(epfd, EPOLL_CTL_MOD, cast[cint](client.sock), addr client.ev)
+                          if retCtl != 0:
+                            logs.error "error: epoll_ctl ret=", retCtl, " errno=", errno
+                          break
+                        else:
+                          release(client.spinLock)
+                          engine = RecvApp
                   else:
                     proc taskCallback(task: ClientTask): bool =
                       client.addSendBuf(task.data.toString())
