@@ -96,6 +96,8 @@ proc free*(proxy: Proxy) =
   if ret < 0:
     echo "error: EPOLL_CTL_DEL ret=", ret, " errno=", errno
   sock.close()
+  if not proxy.sendBuf.isNil:
+    proxy.sendBuf.deallocShared()
   rwlockDestroy(proxy.lock)
   proxy.deallocShared()
 
