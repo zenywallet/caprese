@@ -135,6 +135,7 @@ macro clientObjTypeMacro*(cfg: static Config): untyped =
         payloadSize: int
         when `cfg`.sslLib == BearSSL:
           sc: ptr br_ssl_server_context
+          iobuf: pointer
           keyType: cint
           sslIdx: int
         elif `cfg`.sslLib == OpenSSL or `cfg`.sslLib == LibreSSL or `cfg`.sslLib == BoringSSL:
@@ -979,6 +980,9 @@ template serverInitFreeClient() {.dirty.} =
         if not client.sc.isNil:
           deallocShared(cast[pointer](client.sc))
           client.sc = nil
+        if not client.iobuf.isNil:
+          deallocShared(client.iobuf)
+          client.iobuf = nil
         client.keyType = 0.cint
         client.sslIdx = 0
       elif ssl and (cfg.sslLib == OpenSSL or cfg.sslLib == LibreSSL or cfg.sslLib == BoringSSL):
@@ -3136,8 +3140,8 @@ template serverLib(cfg: static Config) {.dirty.} =
           br_ssl_server_init_caprese(newClient.sc)
           let bidi = 1.cint
           let iobufLen = BR_SSL_BUFSIZE_BIDI.csize_t
-          let iobuf = allocShared0(iobufLen)
-          br_ssl_engine_set_buffer(addr newClient.sc.eng, iobuf, iobufLen, bidi)
+          newClient.iobuf = allocShared0(iobufLen)
+          br_ssl_engine_set_buffer(addr newClient.sc.eng, newClient.iobuf, iobufLen, bidi)
           newClient.sendProc = sendSslProc
         if br_ssl_server_reset(newClient.sc) == 0:
           errorRaise "error: br_ssl_server_reset"
