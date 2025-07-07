@@ -3397,7 +3397,7 @@ template serverLib(cfg: static Config) {.dirty.} =
         s.add " BR_SSL_RECVAPP"
       echo s
 
-  macro appRoutesMacro(ssl: bool, body: untyped): untyped =
+  macro appRoutesMacro(appId: int, ssl: bool, body: untyped): untyped =
     quote do:
       clientHandlerProcs.add proc (ctx: ServerThreadCtx) {.thread.} =
         when `ssl`:
@@ -3667,7 +3667,7 @@ template serverLib(cfg: static Config) {.dirty.} =
                 client.close(ssl = true)
                 break
               else:
-                inc(client.appId)
+                client.appId = `appId` + 1
                 acquire(client.spinLock)
                 client.threadId = 0
                 release(client.spinLock)
@@ -5153,16 +5153,18 @@ template serverLib(cfg: static Config) {.dirty.} =
     quote do:
       clientHandlerProcs.add appRoutesSend # appProxySend is same
 
-  proc addHandlerProc(name: string, ssl: NimNode, unix: NimNode, body: NimNode): NimNode {.compileTime.} =
+  proc addHandlerProc(appId: NimNode, name: string, ssl: NimNode, unix: NimNode, body: NimNode): NimNode {.compileTime.} =
     if name == "appListen":
       newCall(name & "Macro", ssl, unix, body)
+    elif name == "appRoutes":
+      newCall(name & "Macro", appId, ssl, body)
     else:
       newCall(name & "Macro", ssl, body)
 
   macro serverHandlerMacro(): untyped =
     result = newStmtList()
-    for s in serverHandlerList:
-      result.add(addHandlerProc(s[0], s[1], s[2], s[3]))
+    for appId, s in serverHandlerList:
+      result.add(addHandlerProc(newLit(appId), s[0], s[1], s[2], s[3]))
 
   serverHandlerMacro()
 
