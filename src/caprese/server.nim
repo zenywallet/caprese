@@ -3485,7 +3485,6 @@ template serverLib(cfg: static Config) {.dirty.} =
                                   let retMain = proxyRoutesMain(ctx, client)
                                   if retMain == SendResult.Pending or retMain == SendResult.Success:
                                     engine = SendApp
-                                    echo "--engineBlock"
                                     break
                                 inc(pos)
                                 if pos >= client.recvCurSize:
