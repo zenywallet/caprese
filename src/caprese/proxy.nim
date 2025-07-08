@@ -92,9 +92,6 @@ proc free*(proxy: Proxy) =
     sock = proxy.sock
     if sock == osInvalidSocket: return
     proxy.sock = osInvalidSocket
-  var ret = epoll_ctl(epfd, EPOLL_CTL_DEL, sock.cint, nil)
-  if ret < 0:
-    echo "error: EPOLL_CTL_DEL ret=", ret, " errno=", errno
   sock.close()
   if not proxy.sendBuf.isNil:
     proxy.sendBuf.deallocShared()
