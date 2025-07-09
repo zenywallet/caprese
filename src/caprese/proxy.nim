@@ -199,7 +199,6 @@ var abortSock: SocketHandle = osInvalidSocket
 
 proc proxyDispatcher(params: ProxyParams) {.thread.} =
   try:
-    abortSock = createNativeSocket()
     var tcp_rmem = abortSock.getSockOptInt(SOL_SOCKET, SO_RCVBUF)
 
     var buf = newSeq[byte](tcp_rmem)
@@ -254,6 +253,7 @@ proc proxyDispatcher(params: ProxyParams) {.thread.} =
 
 proc proxyManager*(params: ProxyParams): Thread[ProxyParams] =
   active = true
+  abortSock = createNativeSocket()
   createThread(result, proxyDispatcher, params)
 
 proc QuitProxyManager*(proxyThread: Thread[ProxyParams])=
