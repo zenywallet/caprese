@@ -306,3 +306,5 @@ proc `$`*(data: Hash160): string = data.toBytes.toHex
 proc `$`*(o: ref tuple | ref object | ptr tuple | ptr object): string = $o[]
 
 proc `==`*(x, y: Hash | Hash160): bool = x.toBytes == y.toBytes
+
+proc `$`*[S](data: array[S, byte]): string = data.toHex
