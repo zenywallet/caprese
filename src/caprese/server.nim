@@ -726,7 +726,7 @@ template serverTagLib*(cfg: static Config) {.dirty.} =
           size = size - sendRet
           pos = pos + sendRet
           continue
-        elif sendRet < 0:
+        else:
           client.sslErr = SSL_get_error(client.ssl, sendRet.cint)
           debug "SSL_send err=", client.sslErr, " errno=", errno
           if client.sslErr == SSL_ERROR_WANT_WRITE or client.sslErr == SSL_ERROR_WANT_READ:
@@ -737,11 +737,11 @@ template serverTagLib*(cfg: static Config) {.dirty.} =
               return SendResult.Pending
             else:
               return SendResult.Error
+          elif client.sslErr == SSL_ERROR_ZERO_RETURN:
+            return SendResult.None
           elif errno == EINTR:
             continue
           return SendResult.Error
-        else:
-          return SendResult.None
 
   proc send(client: Client, data: seq[byte] | string | Array[byte]): SendResult {.inline.} =
     return client.sendProc(client, cast[ptr UncheckedArray[byte]](unsafeAddr data[0]), data.len)
@@ -796,17 +796,17 @@ template serverTagLib*(cfg: static Config) {.dirty.} =
           deallocShared(cast[pointer](client.sendBuf))
           client.sendBuf = nil
           return SendResult.Success
-        elif sendRet < 0:
+        else:
           client.sslErr = SSL_get_error(client.ssl, sendRet.cint)
           if client.sslErr == SSL_ERROR_WANT_WRITE or client.sslErr == SSL_ERROR_WANT_READ:
             copyMem(addr client.sendBuf[0], d, size)
             client.sendCurSize = size
             return SendResult.Pending
-          if errno == EINTR:
+          elif client.sslErr == SSL_ERROR_ZERO_RETURN:
+            return SendResult.None
+          elif errno == EINTR:
             continue
           return SendResult.Error
-        else:
-          return SendResult.None
 
   proc wsServerSend*(client: Client, data: seq[byte] | string | Array[byte],
                     opcode: WebSocketOpCode = WebSocketOpCode.Binary): SendResult {.discardable.} =
