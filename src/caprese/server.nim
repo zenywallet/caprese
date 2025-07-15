@@ -4648,9 +4648,6 @@ template serverLib(cfg: static Config) {.dirty.} =
                     release(client.spinLock)
                     break
 
-                elif recvlen == 0:
-                  client.close(ssl = true)
-                  return
                 else:
                   client.sslErr = SSL_get_error(client.ssl, recvlen.cint)
                   if client.sslErr == SSL_ERROR_WANT_READ:
@@ -4725,9 +4722,6 @@ template serverLib(cfg: static Config) {.dirty.} =
                     continue
                 else:
                   client.recvCurSize = client.payloadSize
-              elif recvlen == 0:
-                client.close(ssl = true)
-                return
               else:
                 client.sslErr = SSL_get_error(client.ssl, recvlen.cint)
                 if client.sslErr == SSL_ERROR_WANT_READ:
@@ -5081,9 +5075,6 @@ template serverLib(cfg: static Config) {.dirty.} =
                 if sendRet == SendResult.Error:
                   client.close(ssl = `ssl`)
                   break
-              elif recvLen == 0:
-                client.close(ssl = `ssl`)
-                break
               else:
                 client.sslErr = SSL_get_error(client.ssl, recvlen.cint)
                 if client.sslErr == SSL_ERROR_WANT_READ:
