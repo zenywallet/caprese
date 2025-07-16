@@ -490,6 +490,7 @@ template serverTagLib*(cfg: static Config) {.dirty.} =
           yield cid
           break
         else:
+          clientIdsPair.val.del(0)
           unlock(clientsLock)
           yield cid
           wrlock(clientsLock)
