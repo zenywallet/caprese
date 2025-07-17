@@ -118,7 +118,7 @@ macro clientObjTypeMacro*(cfg: static Config): untyped =
           keepAlive2: KeepAliveStatus
         ip: uint32
         invoke: bool
-        lock: Lock
+        lock*: Lock
         spinLock: SpinLock
         whackaMole: bool
         sendProc: ClientSendProc
