@@ -726,7 +726,6 @@ template serverTagLib*(cfg: static Config) {.dirty.} =
         elif sendRet > 0:
           size = size - sendRet
           pos = pos + sendRet
-          continue
         else:
           client.sslErr = SSL_get_error(client.ssl, sendRet.cint)
           debug "SSL_send err=", client.sslErr, " errno=", errno
@@ -740,9 +739,8 @@ template serverTagLib*(cfg: static Config) {.dirty.} =
               return SendResult.Error
           elif client.sslErr == SSL_ERROR_ZERO_RETURN:
             return SendResult.None
-          elif errno == EINTR:
-            continue
-          return SendResult.Error
+          elif errno != EINTR:
+            return SendResult.Error
 
   proc send(client: Client, data: seq[byte] | string | Array[byte]): SendResult {.inline.} =
     return client.sendProc(client, cast[ptr UncheckedArray[byte]](unsafeAddr data[0]), data.len)
