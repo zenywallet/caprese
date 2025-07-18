@@ -3596,7 +3596,9 @@ template serverLib(cfg: static Config) {.dirty.} =
                           engine = RecvApp
                   else:
                     proc taskCallback(task: ClientTask): bool =
+                      acquire(client.lock)
                       client.addSendBuf(task.data.toString())
+                      release(client.lock)
                       result = true
                     discard client.clientId.getAndPurgeTasks(taskCallback)
 
@@ -4551,7 +4553,9 @@ template serverLib(cfg: static Config) {.dirty.} =
                           engine = RecvApp
                   else:
                     proc taskCallback(task: ClientTask): bool =
+                      acquire(client.lock)
                       client.addSendBuf(task.data.toString())
+                      release(client.lock)
                       result = true
                     discard client.clientId.getAndPurgeTasks(taskCallback)
 
@@ -5036,7 +5040,9 @@ template serverLib(cfg: static Config) {.dirty.} =
                           engine = RecvApp
                   else:
                     proc taskCallback(task: ClientTask): bool =
+                      acquire(client.lock)
                       client.addSendBuf(task.data.toString())
+                      release(client.lock)
                       result = true
                     discard client.clientId.getAndPurgeTasks(taskCallback)
 
