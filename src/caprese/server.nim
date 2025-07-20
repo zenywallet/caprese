@@ -770,14 +770,18 @@ template serverTagLib*(cfg: static Config) {.dirty.} =
         if size > 0:
           pos = pos + sendRet
         else:
+          acquire(client.lock)
           client.sendCurSize = 0
           deallocShared(cast[pointer](client.sendBuf))
           client.sendBuf = nil
+          release(client.lock)
           return SendResult.Success
       elif sendRet < 0:
         if errno == EAGAIN or errno == EWOULDBLOCK:
+          acquire(client.lock)
           copyMem(addr client.sendBuf[0], d, size)
           client.sendCurSize = size
+          release(client.lock)
           return SendResult.Pending
         if errno != EINTR:
           return SendResult.Error
@@ -800,15 +804,19 @@ template serverTagLib*(cfg: static Config) {.dirty.} =
           if size > 0:
             pos = pos + sendRet
           else:
+            acquire(client.lock)
             client.sendCurSize = 0
             deallocShared(cast[pointer](client.sendBuf))
             client.sendBuf = nil
+            release(client.lock)
             return SendResult.Success
         else:
           client.sslErr = SSL_get_error(client.ssl, sendRet.cint)
           if client.sslErr == SSL_ERROR_WANT_WRITE or client.sslErr == SSL_ERROR_WANT_READ:
+            acquire(client.lock)
             copyMem(addr client.sendBuf[0], d, size)
             client.sendCurSize = size
+            release(client.lock)
             return SendResult.Pending
           elif client.sslErr == SSL_ERROR_ZERO_RETURN:
             return SendResult.None
