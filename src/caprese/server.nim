@@ -769,19 +769,18 @@ template serverTagLib*(cfg: static Config) {.dirty.} =
         size = size - sendRet
         if size > 0:
           pos = pos + sendRet
-          continue
-        client.sendCurSize = 0
-        deallocShared(cast[pointer](client.sendBuf))
-        client.sendBuf = nil
-        return SendResult.Success
+        else:
+          client.sendCurSize = 0
+          deallocShared(cast[pointer](client.sendBuf))
+          client.sendBuf = nil
+          return SendResult.Success
       elif sendRet < 0:
         if errno == EAGAIN or errno == EWOULDBLOCK:
           copyMem(addr client.sendBuf[0], d, size)
           client.sendCurSize = size
           return SendResult.Pending
-        if errno == EINTR:
-          continue
-        return SendResult.Error
+        if errno != EINTR:
+          return SendResult.Error
       else:
         return SendResult.None
 
@@ -800,11 +799,11 @@ template serverTagLib*(cfg: static Config) {.dirty.} =
           size = size - sendRet
           if size > 0:
             pos = pos + sendRet
-            continue
-          client.sendCurSize = 0
-          deallocShared(cast[pointer](client.sendBuf))
-          client.sendBuf = nil
-          return SendResult.Success
+          else:
+            client.sendCurSize = 0
+            deallocShared(cast[pointer](client.sendBuf))
+            client.sendBuf = nil
+            return SendResult.Success
         else:
           client.sslErr = SSL_get_error(client.ssl, sendRet.cint)
           if client.sslErr == SSL_ERROR_WANT_WRITE or client.sslErr == SSL_ERROR_WANT_READ:
@@ -813,9 +812,8 @@ template serverTagLib*(cfg: static Config) {.dirty.} =
             return SendResult.Pending
           elif client.sslErr == SSL_ERROR_ZERO_RETURN:
             return SendResult.None
-          elif errno == EINTR:
-            continue
-          return SendResult.Error
+          elif errno != EINTR:
+            return SendResult.Error
 
   proc wsServerSend*(client: Client, data: seq[byte] | string | Array[byte],
                     opcode: WebSocketOpCode = WebSocketOpCode.Binary): SendResult {.discardable.} =
