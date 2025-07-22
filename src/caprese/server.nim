@@ -146,16 +146,6 @@ macro clientObjTypeMacro*(cfg: static Config): untyped =
 
       Client* {.inject.} = ptr ClientObj
 
-    {.push stackTrace: off.}
-    template withLock*(client: Client, body: untyped) =
-      acquire(client.lock)
-      {.locks: [client.lock].}:
-        try:
-          body
-        finally:
-          release(client.lock)
-    {.pop.}
-
   for n in clientExtRec:
     result[3][2][2].add(n)  # append to ClientObj
 
@@ -202,6 +192,16 @@ template serverInit*() {.dirty.} =
     import openssl
 
   clientObjTypeMacro(cfg)
+
+  {.push stackTrace: off.}
+  template withLock*(client: Client, body: untyped) =
+    acquire(client.lock)
+    {.locks: [client.lock].}:
+      try:
+        body
+      finally:
+        release(client.lock)
+  {.pop.}
 
   const ClientDirtyNone = 0
   const ClientDirtyTrue = 1
