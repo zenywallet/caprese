@@ -1018,6 +1018,7 @@ template serverInitFreeClient() {.dirty.} =
       if not client.sendBuf.isNil:
         deallocShared(cast[pointer](client.sendBuf))
         client.sendBuf = nil
+        client.sendCurSize = 0
       client.keepAlive = true
       when `cfg`.sslLib == BearSSL:
         client.keepAlive2 = KeepAliveStatus.Unknown
