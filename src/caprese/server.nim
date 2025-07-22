@@ -739,9 +739,7 @@ template serverTagLib*(cfg: static Config) {.dirty.} =
         else:
           client.sslErr = SSL_get_error(client.ssl, sendRet.cint)
           debug "SSL_send err=", client.sslErr, " errno=", errno
-          if client.sslErr == SSL_ERROR_WANT_WRITE or
-              client.sslErr == SSL_ERROR_WANT_READ or
-              client.sslErr == SSL_ERROR_NONE:
+          if client.sslErr == SSL_ERROR_WANT_WRITE or client.sslErr == SSL_ERROR_WANT_READ:
             acquire(client.lock)
             client.addSendBuf(cast[ptr UncheckedArray[byte]](addr data[pos]), size)
             release(client.lock)
@@ -814,9 +812,7 @@ template serverTagLib*(cfg: static Config) {.dirty.} =
             return SendResult.Success
         else:
           client.sslErr = SSL_get_error(client.ssl, sendRet.cint)
-          if client.sslErr == SSL_ERROR_WANT_WRITE or
-              client.sslErr == SSL_ERROR_WANT_READ or
-              client.sslErr == SSL_ERROR_NONE:
+          if client.sslErr == SSL_ERROR_WANT_WRITE or client.sslErr == SSL_ERROR_WANT_READ:
             acquire(client.lock)
             copyMem(addr client.sendBuf[0], d, size)
             client.sendCurSize = size
@@ -3654,7 +3650,7 @@ template serverLib(cfg: static Config) {.dirty.} =
               if retSslAccept < 0:
                 client.sslErr = SSL_get_error(client.ssl, retSslAccept)
                 debug "SSL_accept err=", client.sslErr, " errno=", errno
-                if client.sslErr == SSL_ERROR_WANT_READ or client.sslErr == SSL_ERROR_NONE:
+                if client.sslErr == SSL_ERROR_WANT_READ:
                   acquire(client.spinLock)
                   if client.dirty == ClientDirtyNone:
                     client.threadId = 0
@@ -4171,7 +4167,7 @@ template serverLib(cfg: static Config) {.dirty.} =
 
               else:
                 client.sslErr = SSL_get_error(client.ssl, ctx.recvDataSize.cint)
-                if client.sslErr == SSL_ERROR_WANT_READ or client.sslErr == SSL_ERROR_NONE:
+                if client.sslErr == SSL_ERROR_WANT_READ:
                   acquire(client.spinLock)
                   if client.dirty == ClientDirtyNone:
                     client.threadId = 0
@@ -4673,7 +4669,7 @@ template serverLib(cfg: static Config) {.dirty.} =
 
                 else:
                   client.sslErr = SSL_get_error(client.ssl, recvlen.cint)
-                  if client.sslErr == SSL_ERROR_WANT_READ or client.sslErr == SSL_ERROR_NONE:
+                  if client.sslErr == SSL_ERROR_WANT_READ:
                     acquire(client.spinLock)
                     if client.dirty == ClientDirtyNone:
                       client.threadId = 0
@@ -4747,7 +4743,7 @@ template serverLib(cfg: static Config) {.dirty.} =
                   client.recvCurSize = client.payloadSize
               else:
                 client.sslErr = SSL_get_error(client.ssl, recvlen.cint)
-                if client.sslErr == SSL_ERROR_WANT_READ or client.sslErr == SSL_ERROR_NONE:
+                if client.sslErr == SSL_ERROR_WANT_READ:
                   acquire(client.spinLock)
                   if client.dirty == ClientDirtyNone:
                     client.threadId = 0
@@ -5102,7 +5098,7 @@ template serverLib(cfg: static Config) {.dirty.} =
                   break
               else:
                 client.sslErr = SSL_get_error(client.ssl, recvlen.cint)
-                if client.sslErr == SSL_ERROR_WANT_READ or client.sslErr == SSL_ERROR_NONE:
+                if client.sslErr == SSL_ERROR_WANT_READ:
                   acquire(client.spinLock)
                   if client.dirty == ClientDirtyNone:
                     client.threadId = 0
