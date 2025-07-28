@@ -5679,7 +5679,6 @@ template serverAbort() =
   var retCtl = epoll_ctl(epfd, EPOLL_CTL_ADD, sockCtl, abortClientEvPtr)
   if retCtl != 0:
     logs.error "error: abort epoll_ctl ret=", retCtl, " ", getErrnoStr()
-  stopTimeStampUpdater()
 
 var serverWaitThread: Thread[WrapperThreadArg]
 
@@ -5754,7 +5753,7 @@ else:
         freeFileWatcher()
         joinThread(fileWatcherThread)
       proxyThread.QuitProxyManager()
-      joinThread(contents.timeStampThread)
+      stopTimeStampUpdater(true)
       abortClientPtr.deallocShared()
 
   template serverManager*() =
