@@ -4201,7 +4201,7 @@ template serverLib(cfg: static Config) {.dirty.} =
                   if errno == EAGAIN or errno == EWOULDBLOCK:
                     client.threadId = 0
                     return
-                  if client.sslErr == SSL_ERROR_SYSCALL or errno == EINTR:
+                  if errno == EINTR:
                     continue
                   client.close(ssl = true)
                   return
@@ -5132,7 +5132,7 @@ template serverLib(cfg: static Config) {.dirty.} =
                   if errno == EAGAIN or errno == EWOULDBLOCK:
                     client.threadId = 0
                     return
-                  if client.sslErr == SSL_ERROR_SYSCALL or errno == EINTR:
+                  if errno == EINTR:
                     continue
                   client.close(ssl = true)
                   return
