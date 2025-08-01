@@ -4162,13 +4162,12 @@ template serverLib(cfg: static Config) {.dirty.} =
                   client.addRecvBuf(ctx.pRecvBuf0, ctx.recvDataSize)
                   break
 
-              elif ctx.recvDataSize == 0:
-                client.close(ssl = true)
-                return
-
               else:
                 client.sslErr = SSL_get_error(client.ssl, ctx.recvDataSize.cint)
-                if client.sslErr == SSL_ERROR_WANT_READ:
+                if client.sslErr == SSL_ERROR_ZERO_RETURN:
+                  client.close(ssl = true)
+                  return
+                elif client.sslErr == SSL_ERROR_WANT_READ:
                   acquire(client.spinLock)
                   if client.dirty == ClientDirtyNone:
                     client.threadId = 0
