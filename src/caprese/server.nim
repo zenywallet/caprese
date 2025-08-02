@@ -4198,8 +4198,21 @@ template serverLib(cfg: static Config) {.dirty.} =
                     break
                 else:
                   if errno == EAGAIN or errno == EWOULDBLOCK:
-                    client.threadId = 0
-                    return
+                    acquire(client.spinLock)
+                    if client.dirty == ClientDirtyNone:
+                      client.threadId = 0
+                      if client.appShift or client.sendCurSize > 0:
+                        client.ev.events = EPOLLRDHUP or EPOLLET or EPOLLOUT
+                      else:
+                        client.ev.events = EPOLLIN or EPOLLRDHUP or EPOLLET
+                      release(client.spinLock)
+                      var retCtl = epoll_ctl(epfd, EPOLL_CTL_MOD, cast[cint](client.sock), addr client.ev)
+                      if retCtl != 0:
+                        logs.error "error: epoll_ctl ret=", retCtl, " errno=", errno
+                      return
+                    else:
+                      release(client.spinLock)
+                      break
                   if errno == EINTR:
                     continue
                   client.close(ssl = true)
