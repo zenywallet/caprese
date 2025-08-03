@@ -4269,16 +4269,61 @@ template serverLib(cfg: static Config) {.dirty.} =
                     client.close(ssl = true)
                     return
 
-            elif recvlen == 0:
-              client.close(ssl = true)
-
             else:
-              if errno == EAGAIN or errno == EWOULDBLOCK:
-                break
-              elif errno == EINTR:
-                continue
-              client.close(ssl = true)
-            return
+              client.sslErr = SSL_get_error(client.ssl, ctx.recvDataSize.cint)
+              if client.sslErr == SSL_ERROR_ZERO_RETURN:
+                client.close(ssl = true)
+                return
+              elif client.sslErr == SSL_ERROR_WANT_READ:
+                acquire(client.spinLock)
+                if client.dirty == ClientDirtyNone:
+                  client.threadId = 0
+                  if client.appShift or client.sendCurSize > 0:
+                    client.ev.events = EPOLLRDHUP or EPOLLET or EPOLLOUT
+                  else:
+                    client.ev.events = EPOLLIN or EPOLLRDHUP or EPOLLET
+                  release(client.spinLock)
+                  var retCtl = epoll_ctl(epfd, EPOLL_CTL_MOD, cast[cint](client.sock), addr client.ev)
+                  if retCtl != 0:
+                    logs.error "error: epoll_ctl ret=", retCtl, " errno=", errno
+                  return
+                else:
+                  release(client.spinLock)
+                  break
+              elif client.sslErr == SSL_ERROR_WANT_WRITE:
+                acquire(client.spinLock)
+                if client.dirty == ClientDirtyNone:
+                  client.threadId = 0
+                  release(client.spinLock)
+                  client.ev.events = EPOLLRDHUP or EPOLLET or EPOLLOUT
+                  var retCtl = epoll_ctl(epfd, EPOLL_CTL_MOD, cast[cint](client.sock), addr client.ev)
+                  if retCtl != 0:
+                    logs.error "error: epoll_ctl ret=", retCtl, " errno=", errno
+                  return
+                else:
+                  release(client.spinLock)
+                  break
+              else:
+                if errno == EAGAIN or errno == EWOULDBLOCK:
+                  acquire(client.spinLock)
+                  if client.dirty == ClientDirtyNone:
+                    client.threadId = 0
+                    if client.appShift or client.sendCurSize > 0:
+                      client.ev.events = EPOLLRDHUP or EPOLLET or EPOLLOUT
+                    else:
+                      client.ev.events = EPOLLIN or EPOLLRDHUP or EPOLLET
+                    release(client.spinLock)
+                    var retCtl = epoll_ctl(epfd, EPOLL_CTL_MOD, cast[cint](client.sock), addr client.ev)
+                    if retCtl != 0:
+                      logs.error "error: epoll_ctl ret=", retCtl, " errno=", errno
+                    return
+                  else:
+                    release(client.spinLock)
+                    break
+                if errno == EINTR:
+                  continue
+                client.close(ssl = true)
+                return
 
         else:
           raise
