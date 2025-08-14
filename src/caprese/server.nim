@@ -1668,7 +1668,7 @@ template stream*(streamAppId: int, path: string, protocol: string, body: untyped
             getOnOpenBody(body)
             return ret
         else:
-          return SendResult.Error
+          discard #return SendResult.Error
       else:
         let prot = getHeaderValue(InternalSecWebSocketProtocol)
         when protocol.len > 0:
@@ -1678,7 +1678,7 @@ template stream*(streamAppId: int, path: string, protocol: string, body: untyped
             getOnOpenBody(body)
             return ret
           else:
-            return SendResult.Error
+            discard #return SendResult.Error
         else:
           reqClient()[].appId = streamAppId
           let ret = if prot.len > 0:
