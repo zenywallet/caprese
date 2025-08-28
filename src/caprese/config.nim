@@ -58,6 +58,7 @@ type
     SniAndHeaderHost
     SniOnly
     HeaderHostOnly
+    BothUnchecked
 
   ClientThreadAssign* = enum
     AutoAssign

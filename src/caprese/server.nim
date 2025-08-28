@@ -1497,6 +1497,8 @@ template routes*(internalSslIdx: int, host: string, body: untyped) =
   elif cfg.sslRoutesHost == HeaderHostOnly:
     if reqHost() == host:
       when returnRequired(body): return body else: body
+  elif cfg.sslRoutesHost == BothUnchecked:
+    when returnRequired(body): return body else: body
   else:
     raise
 
@@ -1518,6 +1520,8 @@ macro routes*(internalSslIdx: int, port: int, host: string, body: untyped): unty
       elif cfg.sslRoutesHost == HeaderHostOnly:
         if reqHost() == `hostPort`:
           when returnRequired(`body`): return `body` else: `body`
+      elif cfg.sslRoutesHost == BothUnchecked:
+        when returnRequired(`body`): return `body` else: `body`
       else:
         raise
     else:
@@ -1530,6 +1534,8 @@ macro routes*(internalSslIdx: int, port: int, host: string, body: untyped): unty
       elif cfg.sslRoutesHost == HeaderHostOnly:
         if reqHost() == `host`:
           when returnRequired(`body`): return `body` else: `body`
+      elif cfg.sslRoutesHost == BothUnchecked:
+        when returnRequired(`body`): return `body` else: `body`
       else:
         raise
 
