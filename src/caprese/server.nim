@@ -3285,8 +3285,76 @@ template serverLib(cfg: static Config) {.dirty.} =
         return
 
   proc appRoutesSendSsl(ctx: ServerThreadCtx) {.thread.} =
-    echo "appRoutesSendSsl"
-    raise
+    let client = ctx.client
+
+    acquire(client.spinLock)
+    if client.threadId == 0:
+      if client.sock == osInvalidSocket:
+        release(client.spinLock)
+        return
+      else:
+        client.threadId = ctx.threadId
+        release(client.spinLock)
+    else:
+      client.dirty = ClientDirtyTrue
+      release(client.spinLock)
+      return
+
+    while true:
+      client.dirty = ClientDirtyNone
+      let retFlush = client.sendSslFlush()
+      if retFlush == SendResult.Pending:
+        acquire(client.spinLock)
+        if client.dirty == ClientDirtyNone:
+          client.threadId = 0
+          release(client.spinLock)
+          return
+        else:
+          release(client.spinLock)
+      elif retFlush == SendResult.Error:
+        client.close()
+        return
+      else:
+        acquire(client.spinLock)
+        if client.dirty == ClientDirtyNone:
+          release(client.spinLock)
+          break
+        else:
+          release(client.spinLock)
+
+    let clientId = client.clientId
+
+    var lastSendErr: SendResult
+    proc taskCallback(task: ClientTask): bool =
+      lastSendErr = client.send(task.data.toString())
+      result = (lastSendErr == SendResult.Success)
+
+    while true:
+      client.dirty = ClientDirtyNone
+      if clientId.getAndPurgeTasks(taskCallback):
+        acquire(client.spinLock)
+        if client.dirty == ClientDirtyNone:
+          if client.appShift:
+            dec(client.appId)
+            client.appShift = false
+          client.threadId = 0
+          release(client.spinLock)
+
+          client.ev.events = EPOLLIN or EPOLLRDHUP or EPOLLET
+          var retCtl = epoll_ctl(epfd, EPOLL_CTL_MOD, cast[cint](client.sock), addr client.ev)
+          if retCtl != 0:
+            errorRaise "error: appRoutesSend epoll_ctl ret=", retCtl, " ", getErrnoStr()
+          return
+        else:
+          release(client.spinLock)
+      else:
+        if lastSendErr != SendResult.Pending:
+          client.close()
+        else:
+          acquire(client.spinLock)
+          client.threadId = 0
+          release(client.spinLock)
+        return
 
   proc appStream(ctx: ServerThreadCtx) {.thread.} =
     echo "appStream"
@@ -4978,7 +5046,10 @@ template serverLib(cfg: static Config) {.dirty.} =
 
   macro appStreamSendMacro(ssl: bool, body: untyped): untyped {.used.} =
     quote do:
-      clientHandlerProcs.add appRoutesSend # appStreamSend is same
+      when `ssl` and (cfg.sslLib == OpenSSL or cfg.sslLib == LibreSSL or cfg.sslLib == BoringSSL):
+        clientHandlerProcs.add appRoutesSendSsl
+      else:
+        clientHandlerProcs.add appRoutesSend
 
   macro appProxyMacro(ssl: bool, body: untyped): untyped {.used.} =
     quote do:
