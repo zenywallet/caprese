@@ -5299,7 +5299,10 @@ template serverLib(cfg: static Config) {.dirty.} =
 
   macro appProxySendMacro(ssl: bool, body: untyped): untyped {.used.} =
     quote do:
-      clientHandlerProcs.add appRoutesSend # appProxySend is same
+      when `ssl` and (cfg.sslLib == OpenSSL or cfg.sslLib == LibreSSL or cfg.sslLib == BoringSSL):
+        clientHandlerProcs.add appRoutesSendSsl
+      else:
+        clientHandlerProcs.add appRoutesSend
 
   proc addHandlerProc(appId: NimNode, name: string, ssl: NimNode, unix: NimNode, body: NimNode): NimNode {.compileTime.} =
     if name == "appListen":
