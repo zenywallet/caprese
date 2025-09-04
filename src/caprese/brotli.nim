@@ -27,6 +27,8 @@ const brotliPath = currentSourcePath().parentDir() / "../brotli"
 {.compile: brotliPath / "c/enc/memory.c".}
 {.compile: brotliPath / "c/enc/metablock.c".}
 {.compile: brotliPath / "c/enc/static_dict.c".}
+{.compile: brotliPath / "c/enc/static_dict_lut.c".}
+{.compile: brotliPath / "c/enc/static_init.c".}
 {.compile: brotliPath / "c/enc/utf8_util.c".}
 
 {.compile: brotliPath / "c/common/constants.c".}
@@ -39,6 +41,7 @@ const brotliPath = currentSourcePath().parentDir() / "../brotli"
 {.compile: brotliPath / "c/dec/bit_reader.c".}
 {.compile: brotliPath / "c/dec/decode.c".}
 {.compile: brotliPath / "c/dec/huffman.c".}
+{.compile: brotliPath / "c/dec/prefix.c".}
 {.compile: brotliPath / "c/dec/state.c".}
 
 type
