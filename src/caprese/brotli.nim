@@ -43,6 +43,7 @@ const brotliPath = currentSourcePath().parentDir() / "../brotli"
 {.compile: brotliPath / "c/dec/huffman.c".}
 {.compile: brotliPath / "c/dec/prefix.c".}
 {.compile: brotliPath / "c/dec/state.c".}
+{.compile: brotliPath / "c/dec/static_init.c".}
 
 type
   BrotliEncoderMode* = enum
