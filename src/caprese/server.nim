@@ -779,7 +779,7 @@ template serverTagLib*(cfg: static Config) {.dirty.} =
       elif sendRet < 0:
         if errno == EAGAIN or errno == EWOULDBLOCK:
           acquire(client.lock)
-          copyMem(addr client.sendBuf[0], d, size)
+          moveMem(addr client.sendBuf[0], d, size)
           client.sendCurSize = size
           release(client.lock)
           return SendResult.Pending
@@ -814,7 +814,7 @@ template serverTagLib*(cfg: static Config) {.dirty.} =
           client.sslErr = SSL_get_error(client.ssl, sendRet.cint)
           if client.sslErr == SSL_ERROR_WANT_WRITE or client.sslErr == SSL_ERROR_WANT_READ:
             acquire(client.lock)
-            copyMem(addr client.sendBuf[0], d, size)
+            moveMem(addr client.sendBuf[0], d, size)
             client.sendCurSize = size
             release(client.lock)
             return SendResult.Pending
@@ -3696,7 +3696,7 @@ template serverLib(cfg: static Config) {.dirty.} =
                       else:
                         copyMem(bufSendApp, client.sendBuf, bufLen.int)
                         client.sendCurSize = sendSize - bufLen.int
-                        copyMem(addr client.sendBuf[0], addr client.sendBuf[bufLen], client.sendCurSize)
+                        moveMem(addr client.sendBuf[0], addr client.sendBuf[bufLen], client.sendCurSize)
                         release(client.lock)
                         br_ssl_engine_sendapp_ack(ec, bufLen)
                         br_ssl_engine_flush(ec, 0)
@@ -4586,7 +4586,7 @@ template serverLib(cfg: static Config) {.dirty.} =
                         next, size) = getFrame(p, client.recvCurSize - client.payloadSize)
                     while find:
                       if not payload.isNil and payloadSize > 0:
-                        copyMem(p, payload, payloadSize)
+                        moveMem(p, payload, payloadSize)
                         client.payloadSize = client.payloadSize + payloadSize
                         p = cast[ptr UncheckedArray[byte]](addr client.recvBuf[client.payloadSize])
                       if fin:
@@ -4603,7 +4603,7 @@ template serverLib(cfg: static Config) {.dirty.} =
                       (find, fin, opcode, payload, payloadSize, next, size) = getFrame(next, size)
 
                     if not next.isNil and size > 0:
-                      copyMem(p, next, size)
+                      moveMem(p, next, size)
                       client.recvCurSize = client.payloadSize + size
                     else:
                       client.recvCurSize = client.payloadSize
@@ -4710,7 +4710,7 @@ template serverLib(cfg: static Config) {.dirty.} =
                       else:
                         copyMem(bufSendApp, client.sendBuf, bufLen.int)
                         client.sendCurSize = sendSize - bufLen.int
-                        copyMem(addr client.sendBuf[0], addr client.sendBuf[bufLen], client.sendCurSize)
+                        moveMem(addr client.sendBuf[0], addr client.sendBuf[bufLen], client.sendCurSize)
                         release(client.lock)
                         br_ssl_engine_sendapp_ack(ec, bufLen)
                         br_ssl_engine_flush(ec, 0)
@@ -4848,7 +4848,7 @@ template serverLib(cfg: static Config) {.dirty.} =
                     next, size) = getFrame(p, client.recvCurSize - client.payloadSize)
                 while find:
                   if not payload.isNil and payloadSize > 0:
-                    copyMem(p, payload, payloadSize)
+                    moveMem(p, payload, payloadSize)
                     client.payloadSize = client.payloadSize + payloadSize
                     p = cast[ptr UncheckedArray[byte]](addr client.recvBuf[client.payloadSize])
                   if fin:
@@ -4868,7 +4868,7 @@ template serverLib(cfg: static Config) {.dirty.} =
                   (find, fin, opcode, payload, payloadSize, next, size) = getFrame(next, size)
 
                 if not next.isNil and size > 0:
-                  copyMem(p, next, size)
+                  moveMem(p, next, size)
                   client.recvCurSize = client.payloadSize + size
                   if recvlen == workerRecvBufSize:
                     continue
@@ -4996,7 +4996,7 @@ template serverLib(cfg: static Config) {.dirty.} =
                   next, size) = getFrame(p, client.recvCurSize - client.payloadSize)
               while find:
                 if not payload.isNil and payloadSize > 0:
-                  copyMem(p, payload, payloadSize)
+                  moveMem(p, payload, payloadSize)
                   client.payloadSize = client.payloadSize + payloadSize
                   p = cast[ptr UncheckedArray[byte]](addr client.recvBuf[client.payloadSize])
                 if fin:
@@ -5016,7 +5016,7 @@ template serverLib(cfg: static Config) {.dirty.} =
                 (find, fin, opcode, payload, payloadSize, next, size) = getFrame(next, size)
 
               if not next.isNil and size > 0:
-                copyMem(p, next, size)
+                moveMem(p, next, size)
                 client.recvCurSize = client.payloadSize + size
               else:
                 client.recvCurSize = client.payloadSize
@@ -5200,7 +5200,7 @@ template serverLib(cfg: static Config) {.dirty.} =
                       else:
                         copyMem(bufSendApp, client.sendBuf, bufLen.int)
                         client.sendCurSize = sendSize - bufLen.int
-                        copyMem(addr client.sendBuf[0], addr client.sendBuf[bufLen], client.sendCurSize)
+                        moveMem(addr client.sendBuf[0], addr client.sendBuf[bufLen], client.sendCurSize)
                         release(client.lock)
                         br_ssl_engine_sendapp_ack(ec, bufLen)
                         br_ssl_engine_flush(ec, 0)
