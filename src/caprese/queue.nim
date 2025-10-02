@@ -50,12 +50,16 @@ proc pop*[T](queue: var Queue[T], freeFlag: static bool = true): T =
     result = queue.buf[pos]
     when freeFlag and T is not Ordinal and T is not ptr and
                       T is not pointer and T is not tuple:
-      when NimMajor >= 2 and (compileOption("mm", "orc") or
-                              compileOption("mm", "arc") or
-                              compileOption("mm", "atomicArc")):
-        {.cast(gcsafe).}:
-          `=destroy`[T](queue.buf[pos])
-        zeroMem(addr queue.buf[pos], sizeof(T))
+      when NimMajor >= 2:
+        when compileOption("mm", "orc") or
+            compileOption("mm", "arc") or
+            compileOption("mm", "atomicArc"):
+          {.cast(gcsafe).}:
+            `=destroy`[T](queue.buf[pos])
+          zeroMem(addr queue.buf[pos], sizeof(T))
+        else:
+          var empty: T
+          queue.buf[pos] = empty
       else:
         var empty: T
         queue.buf[pos] = empty
@@ -75,12 +79,16 @@ iterator pop*[T](queue: var Queue[T], freeFlag: static bool = true): lent T =
     yield queue.buf[pos]
     when freeFlag and T is not Ordinal and T is not ptr and
                       T is not pointer and T is not tuple:
-      when NimMajor >= 2 and (compileOption("mm", "orc") or
-                              compileOption("mm", "arc") or
-                              compileOption("mm", "atomicArc")):
-        {.cast(gcsafe).}:
-          `=destroy`[T](queue.buf[pos])
-        zeroMem(addr queue.buf[pos], sizeof(T))
+      when NimMajor >= 2:
+        when compileOption("mm", "orc") or
+            compileOption("mm", "arc") or
+            compileOption("mm", "atomicArc"):
+          {.cast(gcsafe).}:
+            `=destroy`[T](queue.buf[pos])
+          zeroMem(addr queue.buf[pos], sizeof(T))
+        else:
+          var empty: T
+          queue.buf[pos] = empty
       else:
         var empty: T
         queue.buf[pos] = empty
@@ -142,12 +150,16 @@ proc recv*[T](queue: var Queue[T], freeFlag: static bool = true): T =
 
   when freeFlag and T is not Ordinal and T is not ptr and
                     T is not pointer and T is not tuple:
-    when NimMajor >= 2 and (compileOption("mm", "orc") or
-                            compileOption("mm", "arc") or
-                            compileOption("mm", "atomicArc")):
-      {.cast(gcsafe).}:
-        `=destroy`[T](queue.buf[pos])
-      zeroMem(addr queue.buf[pos], sizeof(T))
+    when NimMajor >= 2:
+      when compileOption("mm", "orc") or
+          compileOption("mm", "arc") or
+          compileOption("mm", "atomicArc"):
+        {.cast(gcsafe).}:
+          `=destroy`[T](queue.buf[pos])
+        zeroMem(addr queue.buf[pos], sizeof(T))
+      else:
+        var empty: T
+        queue.buf[pos] = empty
     else:
       var empty: T
       queue.buf[pos] = empty
@@ -168,14 +180,22 @@ proc clear*[T](queue: var Queue[T]) =
   queue.count = 0
   queue.next = 0
 
-when NimMajor >= 2 and (compileOption("mm", "orc") or
-                        compileOption("mm", "arc") or
-                        compileOption("mm", "atomicArc")):
-  proc `=destroy`*[T](queue: Queue[T]) =
-    if likely(not queue.buf.isNil):
-      queue.buf.deallocShared()
-      deinitLock((unsafeAddr queue).lock)
-      deinitCond((unsafeAddr queue).cond)
+when NimMajor >= 2:
+  when compileOption("mm", "orc") or
+      compileOption("mm", "arc") or
+      compileOption("mm", "atomicArc"):
+    proc `=destroy`*[T](queue: Queue[T]) =
+      if likely(not queue.buf.isNil):
+        queue.buf.deallocShared()
+        deinitLock((unsafeAddr queue).lock)
+        deinitCond((unsafeAddr queue).cond)
+  else:
+    proc `=destroy`*[T](queue: var Queue[T]) =
+      if likely(not queue.buf.isNil):
+        queue.buf.deallocShared()
+        queue.buf = nil
+        deinitLock(queue.lock)
+        deinitCond(queue.cond)
 else:
   proc `=destroy`*[T](queue: var Queue[T]) =
     if likely(not queue.buf.isNil):
