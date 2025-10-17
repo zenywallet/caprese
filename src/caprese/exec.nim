@@ -115,22 +115,24 @@ proc minifyJsCode*(srcFileDir: string, code: string, extern: string, rstr: strin
   let tmpDstFile = tmpNameFile & "_min.js"
   writeFile(tmpSrcFile, code)
   writeFile(tmpExtFile, extern & basicExtern(tmpSrcFile))
-  let srcPath = currentSourcePath().parentDir() / ".."
   let downloadClosureCompiler = staticExec fmt"""
+CAPRESE_CACHE_DIR=${{XDG_CACHE_HOME:-"$HOME/.cache"}}/caprese
 if [ -x "$(command -v google-closure-compiler)" ]; then
   echo "download closure-compiler skip"
-elif ls "{srcPath}"/closure-compiler-*.jar 1> /dev/null 2>&1; then
+elif ls $CAPRESE_CACHE_DIR/closure-compiler-*.jar 1> /dev/null 2>&1; then
   echo "download closure-compiler skip"
 else
-  mvn dependency:get -e -Ddest="{srcPath}" -Dartifact=com.google.javascript:closure-compiler:LATEST
+  mkdir -p $CAPRESE_CACHE_DIR
+  mvn dependency:get -e -Ddest=$CAPRESE_CACHE_DIR -Dartifact=com.google.javascript:closure-compiler:LATEST
 fi
 """
   echo downloadClosureCompiler
   let closureCompiler = staticExec fmt"""
+CAPRESE_CACHE_DIR=${{XDG_CACHE_HOME:-"$HOME/.cache"}}/caprese
 if [ -x "$(command -v google-closure-compiler)" ]; then
   closure_compiler="google-closure-compiler"
-elif ls "{srcPath}"/closure-compiler-*.jar 1> /dev/null 2>&1; then
-  closure_compiler="java -jar $(ls "{srcPath}"/closure-compiler-*.jar | sort -r | head -n1)"
+elif ls $CAPRESE_CACHE_DIR/closure-compiler-*.jar 1> /dev/null 2>&1; then
+  closure_compiler="java -jar $(ls $CAPRESE_CACHE_DIR/closure-compiler-*.jar | sort -r | head -n1)"
 fi
 echo $closure_compiler
 """
