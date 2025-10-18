@@ -115,8 +115,8 @@ proc minifyJsCode*(srcFileDir: string, code: string, extern: string, rstr: strin
   let tmpDstFile = tmpNameFile & "_min.js"
   writeFile(tmpSrcFile, code)
   writeFile(tmpExtFile, extern & basicExtern(tmpSrcFile))
-  let downloadClosureCompiler = staticExec fmt"""
-CAPRESE_CACHE_DIR=${{XDG_CACHE_HOME:-"$HOME/.cache"}}/caprese
+  let downloadClosureCompiler = staticExec """
+CAPRESE_CACHE_DIR=${XDG_CACHE_HOME:-"$HOME/.cache"}/caprese
 if [ -x "$(command -v google-closure-compiler)" ]; then
   echo "download closure-compiler skip"
 elif ls $CAPRESE_CACHE_DIR/closure-compiler-*.jar 1> /dev/null 2>&1; then
@@ -127,8 +127,8 @@ else
 fi
 """
   echo downloadClosureCompiler
-  let closureCompiler = staticExec fmt"""
-CAPRESE_CACHE_DIR=${{XDG_CACHE_HOME:-"$HOME/.cache"}}/caprese
+  let closureCompiler = staticExec """
+CAPRESE_CACHE_DIR=${XDG_CACHE_HOME:-"$HOME/.cache"}/caprese
 if [ -x "$(command -v google-closure-compiler)" ]; then
   closure_compiler="google-closure-compiler"
 elif ls $CAPRESE_CACHE_DIR/closure-compiler-*.jar 1> /dev/null 2>&1; then
