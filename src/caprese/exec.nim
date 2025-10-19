@@ -58,7 +58,16 @@ proc execCode*(srcFileDir: string, code: string, rstr: string): string {.compile
   echo staticExec("rm -rf \"" & tmpCacheDir & "\"")
   discard staticExec("rmdir \"" & cacheDir & "\"")
 
-template execCode*(code: string): string = execCode(binDir, code, randomStr())
+template execCode*(code: string): string =
+  block:
+    const srcFile = instantiationInfo(-1, true).filename
+    const srcFileDir = splitFile(srcFile).dir
+
+    macro execCodeResult(): string =
+      nnkStmtList.newTree(
+        newLit(execCode(srcFileDir, code, randomStr()))
+      )
+    execCodeResult()
 
 template execCode*(srcFileDir: string, code: string): string = execCode(srcFileDir, code, randomStr())
 
