@@ -1215,7 +1215,7 @@ macro getSite(host: static string): untyped =
 
 var sslRoutesIdx {.compileTime.}: int = 1
 
-macro addServerMacro*(bindAddress: string, port: uint16, unix: bool, ssl: bool, sslLib: SslLib, body: untyped = newEmptyNode()): untyped =
+macro addServerMacro*(bindAddress: string, port: uint16, reuse: bool, unix: bool, ssl: bool, sslLib: SslLib, body: untyped = newEmptyNode()): untyped =
   if boolVal(ssl) and eqIdent("None", sslLib):
     macros.error("server ssl = ture, but config.sslLib = None")
   inc(curSrvId)
@@ -1382,7 +1382,7 @@ macro addServerMacro*(bindAddress: string, port: uint16, unix: bool, ssl: bool, 
   quote do:
     `serverResources`
 
-    var serverSock = when `unix`: createServer(`bindAddress`) else: createServer(`bindAddress`, `port`)
+    var serverSock = when `unix`: createServer(`bindAddress`) else: createServer(`bindAddress`, `port`, `reuse`)
 
     addReleaseOnQuit(serverSock)
     serverSock.setBlocking(false)
@@ -1409,8 +1409,8 @@ macro addServerMacro*(bindAddress: string, port: uint16, unix: bool, ssl: bool, 
     if retCtl != 0:
       errorRaise "error: addServer epoll_ctl ret=", retCtl, " ", getErrnoStr()
 
-template addServer1*(bindAddress: string, port: uint16, unix: bool, ssl: bool, body: untyped) =
-  addServerMacro(bindAddress, port, unix, ssl, evalSslLib(cfg.sslLib), body)
+template addServer1*(bindAddress: string, port: uint16, reuse: bool, unix: bool, ssl: bool, body: untyped) =
+  addServerMacro(bindAddress, port, reuse, unix, ssl, evalSslLib(cfg.sslLib), body)
 
 macro serverConfigMacro*(): untyped = serverConfigStmt
 
@@ -5837,8 +5837,8 @@ else:
     contentsWithCfg(cfg)
     init()
     initServer()
-    template addServer*(bindAddress: string, port: uint16, unix: bool, ssl: bool, body: untyped) =
-      addServer1(bindAddress, port, unix, ssl, body)
+    template addServer*(bindAddress: string, port: uint16, reuse: bool, unix: bool, ssl: bool, body: untyped) =
+      addServer1(bindAddress, port, reuse, unix, ssl, body)
     serverMacro()
     when curSrvId == 0:
       {.error: "No server block to start.".}

@@ -29,13 +29,13 @@ var workerNum = 0
 
 var joli_serverStmt {.compileTime.} = newStmtList()
 
-macro joli_addServer*(bindAddress: string, port: uint16, unix: bool, ssl: bool, body: untyped): untyped =
+macro joli_addServer*(bindAddress: string, port: uint16, reuse: bool, unix: bool, ssl: bool, body: untyped): untyped =
   quote do:
     discard
 
-template joli_serverTmpl(bindAddress, port, unix, ssl: typed, body: untyped) {.dirty.} =
+template joli_serverTmpl(bindAddress, port, reuse, unix, ssl: typed, body: untyped) {.dirty.} =
   discard joli_serverStmt.add quote do:
-    joli_addServer(`bindAddress`, `port`, `unix`, `ssl`, `body`)
+    joli_addServer(`bindAddress`, `port`, `reuse`, `unix`, `ssl`, `body`)
 
 macro joli_addWorker*(num: int, body: untyped): untyped =
   quote do:
@@ -49,22 +49,22 @@ macro base*(body: untyped): untyped =
   discard serverStmt.add body
 
 macro server*(ssl: bool, ip: string, port: uint16, body: untyped): untyped =
-  joli_serverTmpl(ip, port, false, ssl, body)
+  joli_serverTmpl(ip, port, false, false, ssl, body)
   discard serverStmt.add quote do:
     echo "server: ", `ip`, ":", `port`, (if `ssl`: " SSL" else: "")
-    addServer(`ip`, `port`, false, `ssl`, `body`)
+    addServer(`ip`, `port`, false, false, `ssl`, `body`)
 
 macro server*(ip: string, port: uint16, body: untyped): untyped =
-  joli_serverTmpl(ip, port, false, false, body)
+  joli_serverTmpl(ip, port, false, false, false, body)
   discard serverStmt.add quote do:
     echo "server: ", `ip`, ":", `port`
-    addServer(`ip`, `port`, false, false, `body`)
+    addServer(`ip`, `port`, false, false, false, `body`)
 
 macro server*(unix: string, body: untyped): untyped =
-  joli_serverTmpl(unix, 0, true, false, body)
+  joli_serverTmpl(unix, 0, false, true, false, body)
   discard serverStmt.add quote do:
     echo "server: unix:", `unix`
-    addServer(`unix`, 0, true, false, `body`)
+    addServer(`unix`, 0, false, true, false, `body`)
 
 template serverHttp*(ip: string, body: untyped) =
   server(false, ip, 80, body)
