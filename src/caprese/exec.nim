@@ -1,9 +1,9 @@
 # Copyright (c) 2022 zenywallet
 
-import os
-import macros
-import strformat
-import strutils
+import std/os
+import std/macros
+import std/strformat
+import std/strutils
 
 const srcFile = currentSourcePath()
 const (srcFileDir, srcFileName, srcFileExt) = splitFile(srcFile)
