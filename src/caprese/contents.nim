@@ -275,9 +275,9 @@ const Empty* = ""
 
 template addDocType*(body: string): string = "<!DOCTYPE html><meta charset=\"utf-8\">" & body
 
-template convertHtmlDocument*(code: string): string =
+template convertHtmlDocument*(srcFileDir, code: string): string =
   mixin unindent
-  let codeOutput = execCode(code)
+  let codeOutput = execCode(srcFileDir, code)
   var findBody = false
   var spaceCount = 0
   for s in codeOutput.splitLines():
@@ -306,13 +306,16 @@ export vdom
 
 template staticHtmlDocument*(pretty: bool, body: untyped): string =
   block:
+    const srcFile = instantiationInfo(-1, true).filename
+    const srcFileDir = splitFile(srcFile).dir
+
     macro staticHtmlDocumentMacro(): string =
       var code = "import regex\n" &
         "let content = \"\"\"" & $body & "\"\"\"\n" &
         "echo \"" & (if pretty: "<!doctype html>" else: "<!DOCTYPE html>") &
         """\n" & content.replace(re2"<([^>]*) />", "<$1>")""" & "\n"
       nnkStmtList.newTree(
-        newLit(convertHtmlDocument(code))
+        newLit(convertHtmlDocument(srcFileDir, code))
       )
     staticHtmlDocumentMacro()
 
