@@ -112,7 +112,7 @@ template parseServers*(serverBody: untyped) {.dirty.} =
   macro parseBody() =
     macro send(dummy: untyped): untyped = quote do: SendResult.None
 
-    macro addServer(bindAddress: string, port: uint16, unix: bool, ssl: bool, body: untyped): untyped =
+    macro addServer(bindAddress: string, port: uint16, reuse: bool, unix: bool, ssl: bool, body: untyped): untyped =
       var routesProc = genSym(nskProc, "routesProc")
       quote do:
         echo "server ", newAppId(AppType2.AppListen)
@@ -453,7 +453,7 @@ template parseServers*(serverBody: untyped) {.dirty.} =
     SendResult.Success
 
   proc extractBody() =
-    macro addServer(bindAddress: string, port: uint16, unix: bool, ssl: bool, body: untyped): untyped =
+    macro addServer(bindAddress: string, port: uint16, reuse: bool, unix: bool, ssl: bool, body: untyped): untyped =
       var srvId = curSrvId; inc(curSrvId)
       var appId = ident($listenAppIdList[srvId])
       var body0 = body[0]
@@ -474,7 +474,7 @@ template parseServers*(serverBody: untyped) {.dirty.} =
         if sock == osInvalidSocket: raise
         if sock.setsockopt(SOL_SOCKET.cint, SO_REUSEADDR.cint, addr optval, sizeof(optval).SockLen) < 0:
           raise
-        when cfg.reusePort or cfg.multiProcess:
+        when `reuse` or cfg.reusePort or cfg.multiProcess:
           if sock.setsockopt(SOL_SOCKET.cint, SO_REUSEPORT.cint, addr optval, sizeof(optval).SockLen) < 0:
             raise
 
