@@ -1050,9 +1050,9 @@ proc createServer(bindAddress: string, port: uint16, reusePort: bool = false): S
   if reusePort:
     sock.setSockOptInt(SOL_SOCKET, SO_REUSEPORT, 1)
   let retBind = sock.bindAddr(aiList.ai_addr, aiList.ai_addrlen.SockLen)
+  freeaddrinfo(aiList)
   if retBind < 0:
     errorRaise "error: bind ret=", retBind, " ", getErrnoStr()
-  freeaddrinfo(aiList)
 
   let retListen = sock.listen()
   if retListen < 0:
