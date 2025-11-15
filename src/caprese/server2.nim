@@ -466,7 +466,10 @@ template parseServers*(serverBody: untyped) {.dirty.} =
                           fallback: genSym(nskProc, "routesProc"))
 
       quote do:
-        echo "server: ", `bindAddress`, ":", `port`, " srvId=", `srvId`
+        when `unix`:
+          echo "server: unix:", `bindAddress`, " srvId=", `srvId`
+        else:
+          echo "server: ", `bindAddress`, ":", `port`, " reuse=", `reuse`, " ssl=", `ssl`, " srvId=", `srvId`
 
         var aiList: ptr AddrInfo = nativesockets.getAddrInfo(`bindAddress`, `port`.Port, Domain.AF_UNSPEC)
         let domain = aiList.ai_family.toKnownDomain.get
