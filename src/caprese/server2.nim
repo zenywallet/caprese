@@ -1206,6 +1206,7 @@ template parseServers*(serverBody: untyped) {.dirty.} =
   macro appRoutesRecvMacro(appId: AppId): untyped =
     var routesBody = routesBodyList[curRoutesId]
     var (routesProcGet, routesProcPost, routesProcFallback) = routesProcList[curRoutesId]
+    inc(curRoutesId)
 
     quote do:
       echo `appId`
