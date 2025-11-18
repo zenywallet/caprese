@@ -1204,16 +1204,11 @@ template parseServers*(serverBody: untyped) {.dirty.} =
       when cfg.clientLock: release(client.lock)
 
   macro appRoutesRecvMacro(appId: AppId): untyped =
-    var routesBody = routesBodyList[curRoutesId]
     var (routesProcGet, routesProcPost, routesProcFallback) = routesProcList[curRoutesId]
     inc(curRoutesId)
 
     quote do:
       echo `appId`
-
-      proc `routesProcGet`(sendProcType: SendProcType): SendResult =
-        curSendProcType = sendProcType
-        `routesBody`
 
       var recvSize = workerRecvBufSize - client.recvLen
       if recvSize <= 0:
