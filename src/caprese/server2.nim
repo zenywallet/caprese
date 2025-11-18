@@ -161,7 +161,8 @@ template parseServers*(serverBody: untyped) {.dirty.} =
       newRoutesFlag()
       var parseServerBody = serverBody.copy()
       parseServerBody
-    serverBodyMacro()
+
+    proc parseBodyDummy() {.used.} = serverBodyMacro()
 
   parseBody()
 
