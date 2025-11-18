@@ -114,30 +114,29 @@ template parseServers*(serverBody: untyped) {.dirty.} =
 
     macro addServer(bindAddress: string, port: uint16, reuse: bool, unix: bool, ssl: bool, body: untyped): untyped =
       var routesProc = genSym(nskProc, "routesProc")
+      echo "server ", newAppId(AppType2.AppListen)
       quote do:
-        echo "server ", newAppId(AppType2.AppListen)
         proc `routesProc`(): SendResult = `body`
         discard `routesProc`()
 
     proc routesBase(routesBody: NimNode): NimNode {.compileTime.} =
+      echo "routes ", newAppId(AppType2.AppRoutes)
+      echo "routes recv ", newAppId(AppType2.AppRoutesRecv)
+      echo "routes send ", newAppId(AppType2.AppRoutesSend)
+      var cmdFlag = routesCmdFlagList[^1]
+      var cmdCount = routesCmdCountList[^1]
+      echo cmdFlag
+      echo cmdCount
+      if cmdFlag.get:
+        for _ in 0..<cmdCount.get:
+          newAppId(AppType2.AppGet)
+        newAppId(AppType2.AppGetSend)
+      if cmdFlag.post:
+        for _ in 0..<cmdCount.post:
+          newAppId(AppType2.AppPost)
+        newAppId(AppType2.AppPostSend)
+      newRoutesFlag()
       quote do:
-        newRoutesFlag()
-        echo "routes ", newAppId(AppType2.AppRoutes)
-        echo "routes recv ", newAppId(AppType2.AppRoutesRecv)
-        echo "routes send ", newAppId(AppType2.AppRoutesSend)
-        defer:
-          var cmdFlag = routesCmdFlagList[^1]
-          var cmdCount = routesCmdCountList[^1]
-          echo cmdFlag
-          echo cmdCount
-          if cmdFlag.get:
-            for _ in 0..<cmdCount.get:
-              newAppId(AppType2.AppGet)
-            newAppId(AppType2.AppGetSend)
-          if cmdFlag.post:
-            for _ in 0..<cmdCount.post:
-              newAppId(AppType2.AppPost)
-            newAppId(AppType2.AppPostSend)
         `routesBody`
 
     macro routes(routesBody: untyped): untyped =
@@ -149,16 +148,17 @@ template parseServers*(serverBody: untyped) {.dirty.} =
       routesBase(routesBody)
 
     macro get(url: string, getBody: untyped): untyped =
+      setRoutesMap(get)
       quote do:
-        setRoutesMap(get)
         echo "get"
 
     macro post(url: string, postBody: untyped): untyped =
+      setRoutesMap(post)
       quote do:
-        setRoutesMap(post)
         echo "post"
 
     macro serverBodyMacro(): untyped =
+      newRoutesFlag()
       var parseServerBody = serverBody.copy()
       parseServerBody
     serverBodyMacro()
