@@ -157,9 +157,7 @@ template parseServers*(serverBody: untyped) {.dirty.} =
       quote do:
         echo "post"
 
-    macro serverBodyMacro(): untyped =
-      var parseServerBody = serverBody.copy()
-      parseServerBody
+    macro serverBodyMacro(): untyped = serverBody.copy()
 
     macro doMacro(body: untyped) =
       var doMacro = genSym(nskMacro, "doMacro")
