@@ -162,7 +162,7 @@ template parseServers*(serverBody: untyped) {.dirty.} =
       var parseServerBody = serverBody.copy()
       parseServerBody
 
-    proc parseBodyDummy() {.used.} = serverBodyMacro()
+    proc parseBodyDummy() {.compileTime, used.} = serverBodyMacro()
 
   parseBody()
 
