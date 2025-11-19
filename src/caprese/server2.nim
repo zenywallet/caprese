@@ -158,9 +158,16 @@ template parseServers*(serverBody: untyped) {.dirty.} =
         echo "post"
 
     macro serverBodyMacro(): untyped =
-      newRoutesFlag()
       var parseServerBody = serverBody.copy()
       parseServerBody
+
+    macro doMacro(body: untyped) =
+      var doMacro = genSym(nskMacro, "doMacro")
+      quote do:
+        macro `doMacro`() = `body`
+        `doMacro`()
+
+    doMacro: newRoutesFlag()
 
     proc parseBodyDummy() {.compileTime, used.} = serverBodyMacro()
 
