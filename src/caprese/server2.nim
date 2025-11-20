@@ -60,7 +60,7 @@ template parseServers*(serverBody: untyped) {.dirty.} =
   const cmdList = ["get", "stream", "public", "certificates", "acme", "proxy",
           "post", "head", "put", "delete", "connect", "options", "trace", "patch"]
 
-  macro genCmdListType(objName, varType: untyped): untyped =
+  macro genCmdListType(objName: untyped, varType: typed): untyped =
     result = nnkTypeSection.newTree(
       nnkTypeDef.newTree(
         objName,
