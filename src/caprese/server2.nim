@@ -93,9 +93,9 @@ template parseServers*(serverBody: untyped) {.dirty.} =
   macro getField(obj: object, field: static string): untyped =
     newDotExpr(obj, ident(field))
 
-  macro staticIdentStr(s: untyped): untyped = newLit($s)
+  macro staticIdentStr(s: typed): untyped = newLit($s)
 
-  template setRoutesMap(cmd: untyped, flag: bool = true) =
+  template setRoutesMap(cmd: typed, flag: bool = true) =
     routesCmdFlagList[^1].getField(staticIdentStr(cmd)) = flag
     inc(routesCmdCountList[^1].getField(staticIdentStr(cmd)))
     echo "routesCmdFlagList=", routesCmdFlagList
