@@ -85,7 +85,7 @@ template parseServers*(serverBody: untyped) {.dirty.} =
   var routesCmdFlagList {.compileTime.}: seq[RoutesCmdFlag]
   var routesCmdCountList {.compileTime.}: seq[RoutesCmdCount]
 
-  proc newRoutesFlag() =
+  proc newRoutesFlag() {.compileTime.} =
     routesCmdFlagList.add(RoutesCmdFlag())
     routesCmdCountList.add(RoutesCmdCount())
     echo "new routesCmdFlagList=", routesCmdFlagList
