@@ -1696,11 +1696,13 @@ template stream*(streamAppId: int, path: string, protocol: string, body: untyped
 
 template public*(importPath: string, body: untyped) = body
 
-template content*(content, mime: string): FileContent =
-  createStaticFile(content, mime)
+macro content*(content, mime: string): FileContent =
+  quote do:
+    createStaticFile(`content`, `mime`)
 
-template content*(content: string): FileContent =
-  createStaticFile(content, "text/html")
+macro content*(content: string): FileContent =
+  quote do:
+    createStaticFile(`content`, "text/html")
 
 template proxy*(path, host: string, port: uint16) = discard
 
