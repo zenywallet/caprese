@@ -162,7 +162,7 @@ template parseServers*(serverBody: untyped) {.dirty.} =
     macro doMacro(body: untyped): untyped =
       var doMacro = genSym(nskMacro, "doMacro")
       quote do:
-        macro `doMacro`() = `body`
+        macro `doMacro`(): untyped = `body`
         `doMacro`()
 
     doMacro: newRoutesFlag()
