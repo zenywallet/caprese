@@ -1182,6 +1182,101 @@ macro initServer*(): untyped =
     quote do:
       discard
 
+
+var srvCmdList {.compileTime.}: seq[string]
+var srvCmdBody {.compileTime.} = newStmtList()
+
+macro srvcmd*(body: untyped) =
+  var nameNode  = if body[0].kind == nnkPostfix: body[0][1] else: body[0]
+  var name = nameNode.strVal
+  block FindCmd:
+    for c in srvCmdList:
+      if c == name:
+        break FindCmd
+    srvCmdList.add(name)
+  if body.kind == nnkMacroDef:
+    body[^1].insert(0, nnkCall.newTree(ident("setSrvCmdUsage"), nameNode))
+  else:
+    error("srvcmd only workds with nnkMacroDef, not " & $body.kind)
+  srvCmdBody.add(body)
+  discard
+
+macro srvCmdBodyMacro(): untyped = srvCmdBody
+
+macro genCmdListType(objName: untyped, varType: typedesc): untyped =
+  result = nnkTypeSection.newTree(
+    nnkTypeDef.newTree(
+      objName,
+      newEmptyNode(),
+      nnkObjectTy.newTree(
+        newEmptyNode(),
+        newEmptyNode(),
+        nnkRecList.newTree()
+      )
+    )
+  )
+  for cmd in srvCmdList:
+    result[0][2][2].add nnkIdentDefs.newTree(
+      newIdentNode(cmd),
+      varType,
+      newEmptyNode()
+    )
+
+macro doMacro(body: untyped): untyped =
+  var doMacro = genSym(nskMacro, "doMacro")
+  quote do:
+    macro `doMacro`(): untyped = `body`
+    `doMacro`()
+
+template commitSrvCmd() =
+  genCmdListType(SrvCmdFlag, bool)
+  genCmdListType(SrvCmdCount, int)
+  var srvCmdFlagList {.compileTime.}: seq[SrvCmdFlag]
+  var srvCmdCountList {.compileTime.}: seq[SrvCmdCount]
+
+  proc newSrvCmdUsage*(){.compileTime.} =
+    srvCmdFlagList.add(SrvCmdFlag())
+    srvCmdCountList.add(SrvCmdCount())
+
+  macro getField(obj: object, field: static string): untyped =
+    newDotExpr(obj, ident(field))
+
+  macro staticIdentStr(s: typed): untyped = newLit($s)
+
+  template setSrvCmdUsage*(cmd: typed, flag: bool = true) =
+    srvCmdFlagList[^1].getField(staticIdentStr(cmd)) = flag
+    inc(srvCmdCountList[^1].getField(staticIdentStr(cmd)))
+
+  doMacro:
+    newSrvCmdUsage()
+
+  template getSrvCmdFlag*(): SrvCmdFlag = srvCmdFlagList[^1]
+
+  template getSrvCmdCount*(): SrvCmdCount = srvCmdCountList[^1]
+
+  template getSrvCmdUsage*(): tuple[flag: SrvCmdFlag, count: SrvCmdCount] =
+    (flag: srvCmdFlagList[^1], count: srvCmdCountList[^1])
+
+  template getSrvCmdFlag*(id: int): SrvCmdFlag = srvCmdFlagList[id]
+
+  template getSrvCmdCount*(id: int): SrvCmdCount = srvCmdCountList[id]
+
+  template getSrvCmdUsage*(id: int): tuple[flag: SrvCmdFlag, count: SrvCmdCount] =
+    (flag: srvCmdFlagList[id], count: srvCmdCountList[id])
+
+  template getSrvCmdFlag*(id: int, cmd: typed): bool =
+    srvCmdFlagList[id].getField(staticIdentStr(cmd))
+
+  template getSrvCmdCount*(id: int, cmd: typed): int =
+    srvCmdCountList[id].getField(staticIdentStr(cmd))
+
+  template getSrvCmdUsage*(id: int, cmd: typed): tuple[flag: bool, count: int] =
+    (flag: srvCmdFlagList[id].getField(staticIdentStr(cmd)),
+    count: srvCmdCountList[id].getField(staticIdentStr(cmd)))
+
+  srvCmdBodyMacro()
+
+
 macro getAppId*(): int =
   inc(curAppId)
   newLit(curAppId)
@@ -1696,11 +1791,11 @@ template stream*(streamAppId: int, path: string, protocol: string, body: untyped
 
 template public*(importPath: string, body: untyped) = body
 
-macro content*(content, mime: string): FileContent =
+macro content*(content, mime: string): FileContent {.srvcmd.} =
   quote do:
     createStaticFile(`content`, `mime`)
 
-macro content*(content: string): FileContent =
+macro content*(content: string): FileContent {.srvcmd.} =
   quote do:
     createStaticFile(`content`, "text/html")
 
@@ -5839,6 +5934,7 @@ else:
     contentsWithCfg(cfg)
     init()
     initServer()
+    commitSrvCmd()
     template addServer*(bindAddress: string, port: uint16, reuse: bool, unix: bool, ssl: bool, body: untyped) =
       addServer1(bindAddress, port, reuse, unix, ssl, body)
     serverMacro()
