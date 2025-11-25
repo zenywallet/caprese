@@ -272,8 +272,6 @@ when isMainModule:
   proc setEmpty*(pair: HashTableData) = pair.val = -1
   loadHashTableModules()
 
-  proc `$`(data: array[32, byte]): string = data.toBytes.toHex
-
   var hashTable = newHashTable[array[32, byte], int](30)
 
   for i in 0..<20:
