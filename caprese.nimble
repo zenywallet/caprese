@@ -15,7 +15,6 @@ bin           = @["caprese"]
 requires "nim >= 1.6.4"
 when NimMajor >= 2:
   requires "checksums"
-requires "nimcrypto"
 requires "karax >= 1.2.3"
 requires "regex"
 
@@ -110,9 +109,13 @@ before build:
     if getEnv("NOREMOTEUPDATE") == "1":
       exec "git submodule update --init deps/zopfli"
       exec "git submodule update --init deps/brotli"
+      exec "git submodule update --init deps/bearssl"
     else:
       exec "git submodule update --init --remote deps/zopfli"
       exec "git submodule update --init --remote deps/brotli"
+      exec "git submodule update --init --remote deps/bearssl"
+    if not fileExists("src/lib/bearssl/libbearssl.a"):
+      bearsslTask()
     exec "mkdir -p src/lib"
     exec "touch src/lib/NOSSL.a"
   else:
