@@ -262,10 +262,18 @@ template loadHashTableModules*() {.dirty.} =
 
 when isMainModule:
   import bytes
-  import nimcrypto except toHex
+  import bearssl/ssl
+  import bearssl/hash
 
   proc sha256s*(data: openArray[byte]): array[32, byte] {.inline.} =
-    sha256.digest(data).data
+    var size = data.len.uint32
+    var ctx: br_sha256_context
+    br_sha256_init(addr ctx)
+    if size > 0:
+      br_sha256_update(addr ctx, addr data[0], size.csize_t)
+    else:
+      br_sha256_update(addr ctx, nil, 0)
+    br_sha256_out(addr ctx, addr result)
 
   #const DISABLE_HASHTABLEDATA_DELETE = false
   proc empty*(pair: HashTableData): bool = pair.val == -1
