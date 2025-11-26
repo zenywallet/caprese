@@ -12,11 +12,24 @@ when NimMajor >= 2:
     import checksums/md5
 else:
   import std/md5
-import nimcrypto
+import bearssl/ssl
+import bearssl/hash
 import zopfli
 import brotli
 import queue
 import bytes
+
+proc sha256(data: ptr UncheckedArray[byte], size: uint32): array[br_sha256_SIZE, byte] {.inline.} =
+  var ctx: br_sha256_context
+  br_sha256_init(addr ctx)
+  br_sha256_update(addr ctx, data, size.csize_t)
+  br_sha256_out(addr ctx, addr result)
+
+template sha256(data: openArray[byte] | string): array[br_sha256_SIZE, byte] =
+  if data.len > 0:
+    sha256(cast[ptr UncheckedArray[byte]](addr data[0]), data.len.uint32)
+  else:
+    sha256(nil, 0)
 
 if paramCount() == 3:
   if paramStr(1) == "import":
@@ -56,7 +69,7 @@ if paramCount() == 3:
         if fileSplit.ext.len > 1:
           ext = fileSplit.ext[1..^1]
         let mime = mimes.getMimeType(ext)
-        let hash = "\"" & base64.encode(sha256.digest(content).data) & "\""
+        let hash = "\"" & base64.encode(sha256(content)) & "\""
         let md5 = "\"" & base64.encode(content.getMD5().toBytesFromHex) & "\""
         var zopfliComp, brotliComp: seq[byte]
         if content.len > 0:
@@ -108,7 +121,7 @@ elif paramCount() == 4:
         quit(QuitFailure)
       else:
         mime = mimeType
-    let hash = "\"" & base64.encode(sha256.digest(content).data) & "\""
+    let hash = "\"" & base64.encode(sha256(content)) & "\""
     let md5 = "\"" & base64.encode(content.getMD5().toBytesFromHex) & "\""
     var zopfliComp, brotliComp: seq[byte]
     if content.len > 0:
