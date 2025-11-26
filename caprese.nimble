@@ -116,8 +116,7 @@ before build:
       exec "git submodule update --init --remote deps/bearssl"
     if not fileExists("src/lib/bearssl/libbearssl.a"):
       bearsslTask()
-    exec "mkdir -p src/lib"
-    exec "touch src/lib/NOSSL.a"
+    exec "mkdir -p src/lib; touch src/lib/NOSSL.a"
   else:
     if getEnv("NOREMOTEUPDATE") == "1":
       exec "git submodule update --init"
