@@ -89,7 +89,7 @@ proc fixedStr*(str: string, size: int): seq[byte] {.inline.} =
     concat(cast[seq[byte]](str), pad(size - str.len))
 
 proc toBytes*(x: seq[byte]): seq[byte] {.inline.} = x
-proc toBytes*(x: openarray[byte]): seq[byte] {.inline.} = x.toSeq
+proc toBytes*(x: openArray[byte]): seq[byte] {.inline.} = x.toSeq
 proc toBytes*(val: VarInt): seq[byte] {.inline.} = varInt(cast[int](val))
 proc toBytes*(str: VarStr): seq[byte] {.inline.} = varStr(cast[string](str))
 proc toBytes*(len: Pad): seq[byte] {.inline.} = pad(cast[int](len))
@@ -105,7 +105,7 @@ proc toBytes*(obj: tuple | object): seq[byte] =
     s.add(b)
   concat(s)
 
-proc toBytes*[T](obj: openarray[T]): seq[byte] =
+proc toBytes*[T](obj: openArray[T]): seq[byte] =
   var s: seq[seq[byte]]
   for val in obj:
     var b = bytes.toBytes(val)
@@ -134,7 +134,7 @@ proc Bytes*(obj: tuple | object): seq[byte] =
   concat(s)
 
 proc toBytesBE*(x: seq[byte]): seq[byte] {.inline.} = x
-proc toBytesBE*(x: openarray[byte]): seq[byte] {.inline.} = x.toSeq
+proc toBytesBE*(x: openArray[byte]): seq[byte] {.inline.} = x.toSeq
 proc toBytesBE*(hash: Hash): seq[byte] {.inline.} = cast[seq[byte]](hash)
 proc toBytesBE*(hash: Hash160): seq[byte] {.inline.} = cast[seq[byte]](hash)
 proc toBytesBE*(x: string): seq[byte] {.inline.} = cast[seq[byte]](x)
@@ -146,7 +146,7 @@ proc toBytesBE*(obj: tuple | object): seq[byte] =
     s.add(b)
   concat(s)
 
-proc toBytesBE*[T](obj: openarray[T]): seq[byte] =
+proc toBytesBE*[T](obj: openArray[T]): seq[byte] =
   var s: seq[seq[byte]]
   for val in obj:
     var b = bytes.toBytesBE(val)
@@ -190,11 +190,11 @@ proc toUint16*(x: var byte): uint16 {.inline.} = cast[ptr uint16](addr x)[]
 proc toUint32*(x: var byte): uint32 {.inline.} = cast[ptr uint32](addr x)[]
 proc toUint64*(x: var byte): uint64 {.inline.} = cast[ptr uint64](addr x)[]
 
-proc to*(x: openarray[byte], T: typedesc): T {.inline.} = cast[ptr T](unsafeAddr x[0])[]
-proc toUint8*(x: openarray[byte]): uint8 {.inline.} = x[0].uint8
-proc toUint16*(x: openarray[byte]): uint16 {.inline.} = cast[ptr uint16](unsafeAddr x[0])[]
-proc toUint32*(x: openarray[byte]): uint32 {.inline.} = cast[ptr uint32](unsafeAddr x[0])[]
-proc toUint64*(x: openarray[byte]): uint64 {.inline.} = cast[ptr uint64](unsafeAddr x[0])[]
+proc to*(x: openArray[byte], T: typedesc): T {.inline.} = cast[ptr T](unsafeAddr x[0])[]
+proc toUint8*(x: openArray[byte]): uint8 {.inline.} = x[0].uint8
+proc toUint16*(x: openArray[byte]): uint16 {.inline.} = cast[ptr uint16](unsafeAddr x[0])[]
+proc toUint32*(x: openArray[byte]): uint32 {.inline.} = cast[ptr uint32](unsafeAddr x[0])[]
+proc toUint64*(x: openArray[byte]): uint64 {.inline.} = cast[ptr uint64](unsafeAddr x[0])[]
 
 proc toBE*(x: var byte, T: typedesc): T {.inline.} = to(x, T)
 proc toUint8BE*(x: var byte): uint8 {.inline.} = x.uint8
@@ -202,25 +202,25 @@ proc toUint16BE*(x: var byte): uint16 {.inline.} = x.toUint16.toBE
 proc toUint32BE*(x: var byte): uint32 {.inline.} = x.toUint32.toBE
 proc toUint64BE*(x: var byte): uint64 {.inline.} = x.toUint64.toBE
 
-proc toBE*(x: openarray[byte], T: typedesc): T {.inline.} = cast[ptr T](unsafeAddr x[0])[]
-proc toUint8BE*(x: openarray[byte]): uint8 {.inline.} = x[0].uint8
-proc toUint16BE*(x: openarray[byte]): uint16 {.inline.} = x.toUint16.toBE
-proc toUint32BE*(x: openarray[byte]): uint32 {.inline.} = x.toUint32.toBE
-proc toUint64BE*(x: openarray[byte]): uint64 {.inline.} = x.toUint64.toBE
+proc toBE*(x: openArray[byte], T: typedesc): T {.inline.} = cast[ptr T](unsafeAddr x[0])[]
+proc toUint8BE*(x: openArray[byte]): uint8 {.inline.} = x[0].uint8
+proc toUint16BE*(x: openArray[byte]): uint16 {.inline.} = x.toUint16.toBE
+proc toUint32BE*(x: openArray[byte]): uint32 {.inline.} = x.toUint32.toBE
+proc toUint64BE*(x: openArray[byte]): uint64 {.inline.} = x.toUint64.toBE
 
 proc toHash*(x: var byte): Hash {.inline.} = Hash((cast[ptr array[32, byte]](addr x)[]).toSeq)
 proc toHash*(x: seq[byte]): Hash {.inline.} = Hash(x)
-proc toHash*(x: openarray[byte]): Hash {.inline.} = Hash(x.toSeq)
+proc toHash*(x: openArray[byte]): Hash {.inline.} = Hash(x.toSeq)
 proc toHash*(x: Hex): Hash {.inline.} = x.toBytes.toReverse.Hash
 
 proc toHash160*(x: var byte): Hash160 {.inline.} = Hash160((cast[ptr array[20, byte]](addr x)[]).toSeq)
 proc toHash160*(x: seq[byte]): Hash160 {.inline.} = Hash160(x)
-proc toHash160*(x: openarray[byte]): Hash160 {.inline.} = Hash160(x.toSeq)
+proc toHash160*(x: openArray[byte]): Hash160 {.inline.} = Hash160(x.toSeq)
 
 when not defined(CSTRING_SAFE):
   proc toString*(s: seq[byte]): string = cast[string](s)
 
-proc toString*(s: openarray[byte]): string =
+proc toString*(s: openArray[byte]): string =
   result = newStringOfCap(len(s))
   for c in s:
     result.add(cast[char](c))
@@ -234,7 +234,7 @@ const TOHEX_COMPACT = false
 when TOHEX_COMPACT:
   const hexChars = "0123456789abcdef"
 
-  proc toHex*(a: openarray[byte]): string =
+  proc toHex*(a: openArray[byte]): string =
     result = newStringOfCap(a.len * 2)
     for i in 0..a.high:
       result.add(hexChars[(a[i] and 0xf0'u8) shr 4])
@@ -275,7 +275,7 @@ else:
                   "f0", "f1", "f2", "f3", "f4", "f5", "f6", "f7",
                   "f8", "f9", "fa", "fb", "fc", "fd", "fe", "ff"]
 
-  proc toHex*(a: openarray[byte]): string =
+  proc toHex*(a: openArray[byte]): string =
     result = newStringOfCap(a.len * 2)
     for i in 0..a.high:
       result.add(hexStr[a[i]])
