@@ -1187,7 +1187,7 @@ var srvCmdList {.compileTime.}: seq[string]
 var srvCmdBody {.compileTime.} = newStmtList()
 
 macro srvcmd*(body: untyped) =
-  var nameNode  = if body[0].kind == nnkPostfix: body[0][1] else: body[0]
+  var nameNode = if body[0].kind == nnkPostfix: body[0][1] else: body[0]
   var name = nameNode.strVal
   block FindCmd:
     for c in srvCmdList:
