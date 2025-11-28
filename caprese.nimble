@@ -66,7 +66,7 @@ task boringssl, "Build BoringSSL":
       exec "cp build/crypto/libcrypto.a ../../src/lib/boringssl/"
 
 task selfcert, "Generate Self-Signed Certificate":
-  exec "nim c -r src/caprese/self_cert.nim"
+  exec "nim c -r --threads:on src/caprese/self_cert.nim"
 
 task zopfli, "Copy zopfli":
   withDir "deps/zopfli":
