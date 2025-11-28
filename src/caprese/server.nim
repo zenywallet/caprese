@@ -5929,12 +5929,12 @@ when defined(SERVER2):
 
 else:
   template serverBase() =
+    commitSrvCmd()
     initCfg()
     serverConfigMacro()
     contentsWithCfg(cfg)
     init()
     initServer()
-    commitSrvCmd()
     template addServer*(bindAddress: string, port: uint16, reuse: bool, unix: bool, ssl: bool, body: untyped) =
       addServer1(bindAddress, port, reuse, unix, ssl, body)
     serverMacro()
