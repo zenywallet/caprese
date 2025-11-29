@@ -43,7 +43,10 @@ task libressl, "Build LibreSSL":
     exec "git checkout master"
     exec "git reset --hard"
     exec "git pull"
-    exec "./autogen.sh"
+    when defined(openbsd):
+      exec "AUTOCONF_VERSION=2.71 AUTOMAKE_VERSION=1.16 ./autogen.sh"
+    else:
+      exec "./autogen.sh"
     exec "./configure"
     exec "make -j$(nproc --all || sysctl -n hw.ncpu || getconf _NPROCESSORS_ONLN || echo 1)"
     exec "mkdir -p ../../src/lib/libressl"
