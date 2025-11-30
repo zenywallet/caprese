@@ -1186,20 +1186,26 @@ macro initServer*(): untyped =
 var srvCmdList {.compileTime.}: seq[string]
 var srvCmdBody {.compileTime.} = newStmtList()
 
-macro srvcmd*(body: untyped) =
-  var nameNode = if body[0].kind == nnkPostfix: body[0][1] else: body[0]
-  var name = nameNode.strVal
+template srvcmd_tmpl(name, body: untyped) =
+  var nameStr = name.strVal
   block FindCmd:
     for c in srvCmdList:
-      if c == name:
+      if c == nameStr:
         break FindCmd
-    srvCmdList.add(name)
+    srvCmdList.add(nameStr)
   if body.kind == nnkMacroDef:
-    body[^1].insert(0, nnkCall.newTree(ident("setSrvCmdUsage"), nameNode))
+    body[^1].insert(0, nnkCall.newTree(ident("setSrvCmdUsage"), name))
   else:
     error("srvcmd only workds with nnkMacroDef, not " & $body.kind)
   srvCmdBody.add(body)
   discard
+
+template getProcNameNode(body: untyped): untyped =
+  if body[0].kind == nnkPostfix: body[0][1] else: body[0]
+
+macro srvcmd*(body: untyped) = srvcmd_tmpl(getProcNameNode(body), body)
+
+macro srvcmd*(name, body: untyped) = srvcmd_tmpl(name, body)
 
 macro srvCmdBodyMacro(): untyped = srvCmdBody
 
