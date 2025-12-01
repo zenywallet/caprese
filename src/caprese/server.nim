@@ -1207,6 +1207,10 @@ macro srvcmd*(body: untyped) = srvcmd_tmpl(getProcNameNode(body), body)
 
 macro srvcmd*(name, body: untyped) = srvcmd_tmpl(name, body)
 
+macro srvcmd_nomap*(body: untyped) =
+  srvCmdBody.add(body)
+  discard
+
 macro srvCmdBodyMacro(): untyped = srvCmdBody
 
 macro genCmdListType(objName: untyped, varType: typedesc): untyped =
