@@ -256,7 +256,7 @@ proc proxyManager*(params: ProxyParams): Thread[ProxyParams] =
   abortSock = createNativeSocket()
   createThread(result, proxyDispatcher, params)
 
-proc QuitProxyManager*(proxyThread: Thread[ProxyParams])=
+proc QuitProxyManager*(proxyThread: Thread[ProxyParams]) =
   active = false
   var ev: EpollEvent
   ev.events = EPOLLRDHUP
