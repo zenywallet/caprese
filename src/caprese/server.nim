@@ -1292,6 +1292,9 @@ template commitSrvCmd() {.dirty.} =
     (flag: srvCmdFlagList[id].getField(staticIdentStr(cmd)),
     count: srvCmdCountList[id].getField(staticIdentStr(cmd)))
 
+  macro showSrvCmdUsage*() =
+    echo getSrvCmdUsage()
+
   srvCmdBodyMacro()
 
 
@@ -5956,6 +5959,7 @@ else:
     template addServer*(bindAddress: string, port: uint16, reuse: bool, unix: bool, ssl: bool, body: untyped) =
       addServer1(bindAddress, port, reuse, unix, ssl, body)
     serverMacro()
+    showSrvCmdUsage()
     when curSrvId == 0:
       {.error: "No server block to start.".}
     httpTargetHeaderDefault()
