@@ -1213,9 +1213,9 @@ macro srvcmd_nomap*(body: untyped) =
   srvCmdBody.add(body)
   discard
 
-macro srvCmdBodyMacro(): untyped = srvCmdBody
+macro srvCmdBodyMacro*(): untyped = srvCmdBody
 
-macro genCmdListType(objName: untyped, varType: typedesc): untyped =
+macro genCmdListType*(objName: untyped, varType: typedesc): untyped =
   result = nnkTypeSection.newTree(
     nnkTypeDef.newTree(
       objName,
@@ -1234,13 +1234,13 @@ macro genCmdListType(objName: untyped, varType: typedesc): untyped =
       newEmptyNode()
     )
 
-macro doMacro(body: untyped): untyped =
+macro doMacro*(body: untyped): untyped =
   var doMacro = genSym(nskMacro, "doMacro")
   quote do:
     macro `doMacro`(): untyped = `body`
     `doMacro`()
 
-template commitSrvCmd() =
+template commitSrvCmd() {.dirty.} =
   genCmdListType(SrvCmdFlag, bool)
   genCmdListType(SrvCmdCount, int)
   var srvCmdFlagList {.compileTime.}: seq[SrvCmdFlag]
