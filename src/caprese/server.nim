@@ -1195,8 +1195,10 @@ template srvcmd_tmpl(name, body: untyped) =
     srvCmdList.add(nameStr)
   if body.kind == nnkMacroDef:
     body[^1].insert(0, nnkCall.newTree(ident("setSrvCmdUsage"), name))
+  elif body.kind == nnkTemplateDef:
+    body[^1].insert(0, nnkCall.newTree(ident("setSrvCmdUsageMacro"), name))
   else:
-    error("srvcmd only workds with nnkMacroDef, not " & $body.kind)
+    error("srvcmd workds with nnkMacroDef or nnkTemplateDef, not " & $body.kind)
   srvCmdBody.add(body)
   discard
 
@@ -1256,6 +1258,12 @@ template commitSrvCmd() =
   template setSrvCmdUsage*(cmd: typed, flag: bool = true) =
     srvCmdFlagList[^1].getField(staticIdentStr(cmd)) = flag
     inc(srvCmdCountList[^1].getField(staticIdentStr(cmd)))
+
+  template setSrvCmdUsageMacro*(cmd: typed, flag: bool = true) =
+    block:
+      macro setSrvCmdUsage2() =
+        setSrvCmdUsage(cmd, flag)
+      setSrvCmdUsage2()
 
   doMacro:
     newSrvCmdUsage()
