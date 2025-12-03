@@ -2,7 +2,7 @@
 
 import os
 
-const bearsslPath = currentSourcePath().parentDir() / "deps/bearssl"
+const bearsslPath = currentSourcePath().parentDir() / "../../deps/bearssl"
 
 {.passC: "-I\"" & bearsslPath / "inc" & "\"".}
 {.passC: "-I\"" & bearsslPath / "src" & "\"".}
