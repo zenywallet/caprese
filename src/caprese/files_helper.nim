@@ -12,18 +12,22 @@ when NimMajor >= 2:
     import checksums/md5
 else:
   import std/md5
-import bearssl/ssl
-import bearssl/hash
 import zopfli
 import brotli
 import queue
 import bytes
 
-proc sha256(data: ptr UncheckedArray[byte], size: uint32): array[br_sha256_SIZE, byte] {.inline.} =
-  var ctx: br_sha256_context
-  br_sha256_init(addr ctx)
-  br_sha256_update(addr ctx, data, size.csize_t)
-  br_sha256_out(addr ctx, addr result)
+when os.getEnv("NOSSL") == "1":
+  import br_hash
+else:
+  import bearssl/ssl
+  import bearssl/hash
+
+  proc sha256(data: ptr UncheckedArray[byte], size: uint32): array[br_sha256_SIZE, byte] {.inline.} =
+    var ctx: br_sha256_context
+    br_sha256_init(addr ctx)
+    br_sha256_update(addr ctx, data, size.csize_t)
+    br_sha256_out(addr ctx, addr result)
 
 template sha256(data: openArray[byte] | string): array[br_sha256_SIZE, byte] =
   if data.len > 0:
