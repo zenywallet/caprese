@@ -32,10 +32,10 @@ type
     val: array[8, uint32_t]
 
 const
-  br_sha256_SIZE = 32
+  br_sha256_SIZE* = 32
 
 type
-  br_sha256_context = br_sha224_context
+  br_sha256_context* = br_sha224_context
 
 proc br_sha224_update(ctx: ptr br_sha224_context; data: pointer; len: csize_t) {.importc, cdecl, gcsafe.}
 proc br_sha256_init(ctx: ptr br_sha256_context) {.importc, cdecl, gcsafe.}
@@ -51,10 +51,10 @@ type
     val: array[8, uint64_t]
 
 const
-  br_sha512_SIZE = 64
+  br_sha512_SIZE* = 64
 
 type
-  br_sha512_context = br_sha384_context
+  br_sha512_context* = br_sha384_context
 
 proc br_sha384_update(ctx: ptr br_sha384_context; data: pointer; len: csize_t) {.importc, cdecl, gcsafe.}
 proc br_sha512_init(ctx: ptr br_sha512_context) {.importc, cdecl, gcsafe.}
