@@ -1820,6 +1820,10 @@ macro content*(content: string): FileContent {.srvcmd.} =
   quote do:
     createStaticFile(`content`, "text/html")
 
+macro reqHost*: string {.srvcmd, used.} =
+  quote do:
+    getHeaderValue(ctx.pRecvBuf, ctx.header, InternalEssentialHeaderHost)
+
 template proxy*(path, host: string, port: uint16) = discard
 
 template proxy*(path, host: string, port: uint16, body: untyped) = discard
@@ -2516,9 +2520,6 @@ template serverLib(cfg: static Config) {.dirty.} =
       originalClientId.send(capbytes.toString(buf, size))
 
   template reqClient: Client {.used.} = ctx.client
-
-  template reqHost: string {.used.} =
-    getHeaderValue(ctx.pRecvBuf, ctx.header, InternalEssentialHeaderHost)
 
   template reqProtocol: string {.used.} =
     getHeaderValue(ctx.pRecvBuf, ctx.header, InternalSecWebSocketProtocol)
