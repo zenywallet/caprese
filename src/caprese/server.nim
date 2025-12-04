@@ -5966,6 +5966,7 @@ else:
     httpTargetHeaderDefault()
     serverType()
     serverLib(cfg)
+    showSrvCmdUsage()
     activeHeaderInit()
 
     template serverStartBody() =
