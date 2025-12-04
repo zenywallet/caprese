@@ -122,7 +122,8 @@ var buildToolFlag {.compileTime.} = false
 macro buildCompressTools() =
   if not buildToolFlag:
     buildToolFlag = true
-    if os.getEnv("NOSSL") == "1":
+    var setNossl = fileExists(srcDir / "../lib/NOSSL.a")
+    if setNossl or os.getEnv("NOSSL") == "1":
       echo staticExec("NOSSL=1 nim c -d:release --threads:on -o:../bin/ " & (srcDir / "files_helper.nim"))
     else:
       echo staticExec("nim c -d:release --threads:on -o:../bin/ " & (srcDir / "files_helper.nim"))
