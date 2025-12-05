@@ -273,7 +273,7 @@ proc proxyManager*(params: ProxyParams): Thread[ProxyParams] =
   abortSock = createNativeSocket()
   createThread(result, proxyDispatcher, params)
 
-proc QuitProxyManager*(proxyThread: Thread[ProxyParams]) =
+proc quitProxyManager*(proxyThread: Thread[ProxyParams]) =
   active = false
   var ev: EpollEvent
   ev.events = EPOLLRDHUP
@@ -326,7 +326,7 @@ when isMainModule:
     let e = getCurrentException()
     echo e.name, ": ", e.msg
 
-  QuitProxyManager()
+  quitProxyManager()
 
   # Some problems with free in case of connection errors
   # Fundamental structural changes may be needed

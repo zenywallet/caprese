@@ -6012,7 +6012,7 @@ else:
       when cfg.sslLib != SslLib.None:
         freeFileWatcher()
         joinThread(fileWatcherThread)
-      proxyThread.QuitProxyManager()
+      proxyThread.quitProxyManager()
       stopTimeStampUpdater(true)
       abortClientPtr.deallocShared()
 
