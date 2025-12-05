@@ -203,6 +203,11 @@ proc proxyDispatcher(params: ProxyParams) {.thread.} =
 
     var buf = newSeq[byte](tcp_rmem)
     var toBeFreed = newArrayOfCap[Proxy](EPOLL_EVENTS_SIZE)
+    var nfd: cint
+    var nfdCond: bool
+    var evIdx: int = 0
+    template nextEv() =
+      inc(evIdx); if evIdx >= nfd: evIdx = 0; break
 
     epfd = epoll_create1(O_CLOEXEC)
     if epfd < 0:
@@ -210,42 +215,54 @@ proc proxyDispatcher(params: ProxyParams) {.thread.} =
 
     var epollEvents: array[EPOLL_EVENTS_SIZE, EpollEvent]
     while true:
-      var nfd = epoll_wait(epfd, cast[ptr EpollEvent](addr epollEvents),
-                          EPOLL_EVENTS_SIZE.cint, -1.cint)
-      if not active:
-        break
+      nfd = epoll_wait(epfd, cast[ptr EpollEvent](addr epollEvents),
+                      EPOLL_EVENTS_SIZE.cint, -1.cint)
+      nfdCond = likely(nfd > 0)
+      if nfdCond:
+        if not active:
+          break
 
-      for i in 0..<nfd:
-        let proxy = cast[Proxy](epollEvents[i].data.u64)
-        if (epollEvents[i].events.int and EPOLLOUT.int) > 0:
-          var retFlush = proxy.sendFlush()
-          if retFlush == SendResult.Pending:
-            continue
-          var ev: EpollEvent
-          ev.events = EPOLLIN or EPOLLRDHUP
-          ev.data.u64 = cast[uint64](proxy)
-          var ret = epoll_ctl(epfd, EPOLL_CTL_MOD, proxy.sock.cint, addr ev)
-          if ret < 0:
-            proxy.recvCallback(proxy.originalClientId, nil, 0)
-            toBeFreed.add(proxy)
-            echo "error: EPOLL_CTL_MOD epfd=", ret, " errno=", errno
-            continue
+        while true:
+          let proxy = cast[Proxy](epollEvents[evIdx].data.u64)
+          if (epollEvents[evIdx].events.int and EPOLLOUT.int) > 0:
+            var retFlush = proxy.sendFlush()
+            if retFlush == SendResult.Pending:
+              nextEv()
+              continue
+            var ev: EpollEvent
+            ev.events = EPOLLIN or EPOLLRDHUP
+            ev.data.u64 = cast[uint64](proxy)
+            var ret = epoll_ctl(epfd, EPOLL_CTL_MOD, proxy.sock.cint, addr ev)
+            if ret < 0:
+              proxy.recvCallback(proxy.originalClientId, nil, 0)
+              toBeFreed.add(proxy)
+              echo "error: EPOLL_CTL_MOD epfd=", ret, " errno=", errno
+              nextEv()
+              continue
 
-        if (epollEvents[i].events.int and EPOLLIN.int) > 0:
-          var retLen = proxy.sock.recv(addr buf[0], buf.len, 0'i32)
-          if retLen > 0:
-            proxy.recvCallback(proxy.originalClientId, buf.at(0), retLen)
-          elif retLen == 0:
-            proxy.recvCallback(proxy.originalClientId, nil, retLen)
-            toBeFreed.add(proxy)
-          else: # retLen < 0
-            if errno != EAGAIN and errno != EWOULDBLOCK and errno != EINTR:
+          if (epollEvents[evIdx].events.int and EPOLLIN.int) > 0:
+            var retLen = proxy.sock.recv(addr buf[0], buf.len, 0'i32)
+            if retLen > 0:
+              proxy.recvCallback(proxy.originalClientId, buf.at(0), retLen)
+            elif retLen == 0:
               proxy.recvCallback(proxy.originalClientId, nil, retLen)
               toBeFreed.add(proxy)
+            else: # retLen < 0
+              if errno != EAGAIN and errno != EWOULDBLOCK and errno != EINTR:
+                proxy.recvCallback(proxy.originalClientId, nil, retLen)
+                toBeFreed.add(proxy)
+          nextEv()
 
-      if toBeFreed.len > 0:
-        for p in toBeFreed: p.free()
-        toBeFreed.clear()
+        if toBeFreed.len > 0:
+          for p in toBeFreed: p.free()
+          toBeFreed.clear()
+
+      else:
+        if (nfd < 0 and errno != EINTR) or nfd == 0:
+          errorException "error: epoll_wait ret=", nfd, " errno=", errno
+        else:
+          echo "info: epoll_wait ret=", nfd, " errno=", errno
+
   except:
     let e = getCurrentException()
     echo e.name, ": ", e.msg
