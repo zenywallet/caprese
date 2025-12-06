@@ -3258,6 +3258,8 @@ template serverLib(cfg: static Config) {.dirty.} =
 
     var sslCtx: SSL_CTX
 
+  var SOCK_NONBLOCK {.importc, header: "<sys/socket.h>".}: cint
+
   proc appListenBase(ctx: ServerThreadCtx, sslFlag: static bool, unixFlag: static bool) {.thread, inline.} =
     template acceptNewClient(clientSock: SocketHandle) =
       when cfg.soKeepalive:
@@ -3315,13 +3317,13 @@ template serverLib(cfg: static Config) {.dirty.} =
 
     when cfg.acceptFirst:
       while true:
-        let clientSock = ctx.client.sock.accept4(cast[ptr SockAddr](addr ctx.sockAddress), addr ctx.addrLen, O_NONBLOCK)
+        let clientSock = ctx.client.sock.accept4(cast[ptr SockAddr](addr ctx.sockAddress), addr ctx.addrLen, SOCK_NONBLOCK)
         if cast[int](clientSock) > 0:
           acceptNewClient(clientSock)
         else:
           break
     else:
-      let clientSock = ctx.client.sock.accept4(cast[ptr SockAddr](addr ctx.sockAddress), addr ctx.addrLen, O_NONBLOCK)
+      let clientSock = ctx.client.sock.accept4(cast[ptr SockAddr](addr ctx.sockAddress), addr ctx.addrLen, SOCK_NONBLOCK)
       if cast[int](clientSock) > 0:
         acceptNewClient(clientSock)
 
