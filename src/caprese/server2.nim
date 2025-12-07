@@ -1389,7 +1389,7 @@ template parseServers*(serverBody: untyped) {.dirty.} =
     appRoutesBase()
 
     template nextEv() =
-      inc(evIdx); if evIdx >= nfd: break
+      inc(evIdx); if evIdx >= nfd: evIdx = 0; break
 
     block WaitLoop:
       while true:
@@ -1400,7 +1400,6 @@ template parseServers*(serverBody: untyped) {.dirty.} =
             client = cast[Client2](pevents[evIdx].data)
             {.computedGoto.}
             appCaseBody(abortBlock = WaitLoop)
-          evIdx = 0
 
   initClient()
   initClientRing()
