@@ -16,7 +16,7 @@ import server_types
 
 const ENABLE_KEEPALIVE = false
 const ENABLE_TCP_NODELAY = true
-const EPOLL_EVENTS_SIZE = 10
+const PROXY_EVENTS_SIZE = 10
 
 type
   RecvCallback* = proc(originalClientId: ClientId, buf: ptr UncheckedArray[byte], size: int) {.gcsafe.}
@@ -205,7 +205,7 @@ proc proxyDispatcher(params: ProxyParams) {.thread.} =
     var tcp_rmem = abortSock.getSockOptInt(SOL_SOCKET, SO_RCVBUF)
 
     var buf = newSeq[byte](tcp_rmem)
-    var toBeFreed = newArrayOfCap[Proxy](EPOLL_EVENTS_SIZE)
+    var toBeFreed = newArrayOfCap[Proxy](PROXY_EVENTS_SIZE)
     var nfd: cint
     var nfdCond: bool
     var evIdx: int = 0
@@ -216,18 +216,18 @@ proc proxyDispatcher(params: ProxyParams) {.thread.} =
     if epfd < 0:
       errorException "error: epfd=", epfd, " errno=", errno
 
-    var epollEvents: array[EPOLL_EVENTS_SIZE, EpollEvent]
+    var proxyEvents: array[PROXY_EVENTS_SIZE, EpollEvent]
     while true:
-      nfd = epoll_wait(epfd, cast[ptr EpollEvent](addr epollEvents),
-                      EPOLL_EVENTS_SIZE.cint, -1.cint)
+      nfd = epoll_wait(epfd, cast[ptr EpollEvent](addr proxyEvents),
+                      PROXY_EVENTS_SIZE.cint, -1.cint)
       nfdCond = likely(nfd > 0)
       if nfdCond:
         if not active:
           break
 
         while true:
-          let proxy = cast[Proxy](epollEvents[evIdx].data.u64)
-          if (epollEvents[evIdx].events.int and EPOLLOUT.int) > 0:
+          let proxy = cast[Proxy](proxyEvents[evIdx].data.u64)
+          if (proxyEvents[evIdx].events.int and EPOLLOUT.int) > 0:
             var retFlush = proxy.sendFlush()
             if retFlush == SendResult.Pending:
               nextEv()
@@ -243,7 +243,7 @@ proc proxyDispatcher(params: ProxyParams) {.thread.} =
               nextEv()
               continue
 
-          if (epollEvents[evIdx].events.int and EPOLLIN.int) > 0:
+          if (proxyEvents[evIdx].events.int and EPOLLIN.int) > 0:
             var retLen = proxy.sock.recv(addr buf[0], buf.len, 0'i32)
             if retLen > 0:
               proxy.recvCallback(proxy.originalClientId, buf.at(0), retLen)
