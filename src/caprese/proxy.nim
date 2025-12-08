@@ -2,7 +2,10 @@
 
 import std/nativesockets
 import std/posix
-import std/epoll
+when defined(linux):
+  import std/epoll
+elif defined(openbsd):
+  import std/kqueue
 import std/strutils
 import std/options
 import bytes

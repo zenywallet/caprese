@@ -8,7 +8,10 @@ import std/cpuinfo
 import std/os
 import std/strutils
 import std/options
-import std/epoll
+when defined(linux):
+  import std/epoll
+elif defined(openbsd):
+  import std/kqueue
 when NimMajor >= 2:
   import checksums/sha1
 else:
@@ -150,7 +153,10 @@ macro clientObjTypeMacro*(cfg: static Config): untyped =
     result[3][2][2].add(n)  # append to ClientObj
 
 template serverInit*() {.dirty.} =
-  import std/epoll
+  when defined(linux):
+    import std/epoll
+  elif defined(openbsd):
+    import std/kqueue
   import std/locks
   import ptlock
   import logs
