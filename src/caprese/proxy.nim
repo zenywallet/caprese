@@ -294,7 +294,9 @@ when isMainModule:
   params.abortCallback = proc() =
     errorException "error: proxy dispatcher"
 
-  proxyManager(params)
+  var proxyThread = proxyManager(params)
+
+  sleep(1000)
 
   try:
     let proxy = newProxy("localhost", 8000.Port)
@@ -329,7 +331,7 @@ when isMainModule:
     let e = getCurrentException()
     echo e.name, ": ", e.msg
 
-  quitProxyManager()
+  quitProxyManager(proxyThread)
 
   # Some problems with free in case of connection errors
   # Fundamental structural changes may be needed
