@@ -227,7 +227,7 @@ proc proxyDispatcher(params: ProxyParams) {.thread.} =
 
         while true:
           let proxy = cast[Proxy](proxyEvents[evIdx].data.u64)
-          if (proxyEvents[evIdx].events.int and EPOLLOUT.int) > 0:
+          if (proxyEvents[evIdx].events.uint32 and EPOLLOUT.uint32) > 0:
             var retFlush = proxy.sendFlush()
             if retFlush == SendResult.Pending:
               nextEv()
@@ -243,7 +243,7 @@ proc proxyDispatcher(params: ProxyParams) {.thread.} =
               nextEv()
               continue
 
-          if (proxyEvents[evIdx].events.int and EPOLLIN.int) > 0:
+          if (proxyEvents[evIdx].events.uint32 and EPOLLIN.uint32) > 0:
             var retLen = proxy.sock.recv(addr buf[0], buf.len, 0'i32)
             if retLen > 0:
               proxy.recvCallback(proxy.originalClientId, buf.at(0), retLen)
