@@ -131,7 +131,7 @@ proc addSendBuf(proxy: Proxy, data: ptr UncheckedArray[byte], size: int) =
   copyMem(addr proxy.sendBuf[proxy.sendBufSize], data, size)
   proxy.sendBufSize = nextSize
 
-proc send*(proxy: Proxy, data: ptr UncheckedArray[byte], size: int, epollMod: static bool = true): SendResult =
+proc send*(proxy: Proxy, data: ptr UncheckedArray[byte], size: int, evMod: static bool = true): SendResult =
   withWriteLock proxy.lock:
     if not proxy.sendBuf.isNil:
       proxy.addSendBuf(data, size)
@@ -152,7 +152,7 @@ proc send*(proxy: Proxy, data: ptr UncheckedArray[byte], size: int, epollMod: st
         if errno == EAGAIN or errno == EWOULDBLOCK:
           if proxy.sendBuf.isNil:
             proxy.addSendBuf(d, left)
-            when epollMod:
+            when evMod:
               var ev: EpollEvent
               ev.events = EPOLLIN or EPOLLRDHUP or EPOLLOUT
               ev.data.u64 = cast[uint64](proxy)
