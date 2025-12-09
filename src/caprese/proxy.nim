@@ -109,11 +109,11 @@ proc shutdown*(proxy: Proxy): bool {.discardable.} =
   else:
     result = true
 
-proc setRecvCallback*(proxy: Proxy, recvCallback: RecvCallback, epollOut: static bool = false) {.inline.} =
+proc setRecvCallback*(proxy: Proxy, recvCallback: RecvCallback, evOut: static bool = false) {.inline.} =
   proxy.recvCallback = recvCallback
 
   var ev: EpollEvent
-  when epollOut:
+  when evOut:
     ev.events = EPOLLIN or EPOLLRDHUP or EPOLLOUT
   else:
     ev.events = EPOLLIN or EPOLLRDHUP
