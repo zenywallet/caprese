@@ -39,7 +39,7 @@ type
   ProxyError* = object of CatchableError
 
 var active = false
-var epfd: cint = -1
+var evfd: cint = -1
 
 template errorException(x: varargs[string, `$`]) =
   var msg = join(x)
@@ -118,7 +118,7 @@ proc setRecvCallback*(proxy: Proxy, recvCallback: RecvCallback, epollOut: static
   else:
     ev.events = EPOLLIN or EPOLLRDHUP
   ev.data.u64 = cast[uint64](proxy)
-  var ret = epoll_ctl(epfd, EPOLL_CTL_ADD, proxy.sock.cint, addr ev)
+  var ret = epoll_ctl(evfd, EPOLL_CTL_ADD, proxy.sock.cint, addr ev)
   if ret < 0:
     errorException "error: EPOLL_CTL_ADD ret=", ret, " errno=", errno
 
@@ -156,7 +156,7 @@ proc send*(proxy: Proxy, data: ptr UncheckedArray[byte], size: int, epollMod: st
               var ev: EpollEvent
               ev.events = EPOLLIN or EPOLLRDHUP or EPOLLOUT
               ev.data.u64 = cast[uint64](proxy)
-              var ret = epoll_ctl(epfd, EPOLL_CTL_MOD, proxy.sock.cint, addr ev)
+              var ret = epoll_ctl(evfd, EPOLL_CTL_MOD, proxy.sock.cint, addr ev)
               if ret < 0:
                 errorException "error: EPOLL_CTL_MOD ret=", ret, " errno=", errno
           else:
@@ -212,13 +212,13 @@ proc proxyDispatcher(params: ProxyParams) {.thread.} =
     template nextEv() =
       inc(evIdx); if evIdx >= nfd: evIdx = 0; break
 
-    epfd = epoll_create1(O_CLOEXEC)
-    if epfd < 0:
-      errorException "error: epfd=", epfd, " errno=", errno
+    evfd = epoll_create1(O_CLOEXEC)
+    if evfd < 0:
+      errorException "error: evfd=", evfd, " errno=", errno
 
     var proxyEvents: array[PROXY_EVENTS_SIZE, EpollEvent]
     while true:
-      nfd = epoll_wait(epfd, cast[ptr EpollEvent](addr proxyEvents),
+      nfd = epoll_wait(evfd, cast[ptr EpollEvent](addr proxyEvents),
                       PROXY_EVENTS_SIZE.cint, -1.cint)
       nfdCond = likely(nfd > 0)
       if nfdCond:
@@ -235,11 +235,11 @@ proc proxyDispatcher(params: ProxyParams) {.thread.} =
             var ev: EpollEvent
             ev.events = EPOLLIN or EPOLLRDHUP
             ev.data.u64 = cast[uint64](proxy)
-            var ret = epoll_ctl(epfd, EPOLL_CTL_MOD, proxy.sock.cint, addr ev)
+            var ret = epoll_ctl(evfd, EPOLL_CTL_MOD, proxy.sock.cint, addr ev)
             if ret < 0:
               proxy.recvCallback(proxy.originalClientId, nil, 0)
               toBeFreed.add(proxy)
-              echo "error: EPOLL_CTL_MOD epfd=", ret, " errno=", errno
+              echo "error: EPOLL_CTL_MOD evfd=", ret, " errno=", errno
               nextEv()
               continue
 
@@ -280,9 +280,9 @@ proc quitProxyManager*(proxyThread: Thread[ProxyParams]) =
   active = false
   var ev: EpollEvent
   ev.events = EPOLLRDHUP
-  var ret = epoll_ctl(epfd, EPOLL_CTL_ADD, abortSock.cint, addr ev)
+  var ret = epoll_ctl(evfd, EPOLL_CTL_ADD, abortSock.cint, addr ev)
   if ret < 0:
-    errorException "error: EPOLL_CTL_ADD epfd=", ret, " errno=", errno
+    errorException "error: EPOLL_CTL_ADD evfd=", ret, " errno=", errno
   proxyThread.joinThread()
   abortSock.close()
 
