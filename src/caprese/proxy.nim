@@ -113,15 +113,27 @@ proc shutdown*(proxy: Proxy): bool {.discardable.} =
 proc setRecvCallback*(proxy: Proxy, recvCallback: RecvCallback, evOut: static bool = false) {.inline.} =
   proxy.recvCallback = recvCallback
 
-  var ev: EpollEvent
-  when evOut:
-    ev.events = EPOLLIN or EPOLLRDHUP or EPOLLOUT
-  else:
-    ev.events = EPOLLIN or EPOLLRDHUP
-  ev.data.u64 = cast[uint64](proxy)
-  var ret = epoll_ctl(evfd, EPOLL_CTL_ADD, proxy.sock.cint, addr ev)
-  if ret < 0:
-    errorException "error: EPOLL_CTL_ADD ret=", ret, " errno=", errno
+  when defined(linux):
+    var ev: EpollEvent
+    when evOut:
+      ev.events = EPOLLIN or EPOLLRDHUP or EPOLLOUT
+    else:
+      ev.events = EPOLLIN or EPOLLRDHUP
+    ev.data.u64 = cast[uint64](proxy)
+    var ret = epoll_ctl(evfd, EPOLL_CTL_ADD, proxy.sock.cint, addr ev)
+    if ret < 0:
+      errorException "error: EPOLL_CTL_ADD ret=", ret, " errno=", errno
+  elif defined(openbsd):
+    var ev: array[2, KEvent]
+    when evOut:
+      EV_SET(addr ev[0], proxy.sock.uint, EVFILT_WRITE, EV_ADD or EV_ENABLE or EV_CLEAR, 0, 0, proxy)
+      EV_SET(addr ev[1], proxy.sock.uint, EVFILT_READ, EV_ADD or EV_ENABLE or EV_CLEAR, 0, 0, proxy)
+    else:
+      EV_SET(addr ev[0], proxy.sock.uint, EVFILT_WRITE, EV_ADD or EV_DISABLE or EV_CLEAR, 0, 0, proxy)
+      EV_SET(addr ev[1], proxy.sock.uint, EVFILT_READ, EV_ADD or EV_ENABLE or EV_CLEAR, 0, 0, proxy)
+    var ret = kevent(evfd, addr ev[0], 2, nil, 0, nil)
+    if ret < 0:
+      errorException "error: kevent ret=", ret, " errno=", errno
 
 proc reallocClientBuf(buf: ptr UncheckedArray[byte], size: int): ptr UncheckedArray[byte] =
   result = cast[ptr UncheckedArray[byte]](reallocShared(buf, size))
@@ -154,12 +166,19 @@ proc send*(proxy: Proxy, data: ptr UncheckedArray[byte], size: int, evMod: stati
           if proxy.sendBuf.isNil:
             proxy.addSendBuf(d, left)
             when evMod:
-              var ev: EpollEvent
-              ev.events = EPOLLIN or EPOLLRDHUP or EPOLLOUT
-              ev.data.u64 = cast[uint64](proxy)
-              var ret = epoll_ctl(evfd, EPOLL_CTL_MOD, proxy.sock.cint, addr ev)
-              if ret < 0:
-                errorException "error: EPOLL_CTL_MOD ret=", ret, " errno=", errno
+              when defined(linux):
+                var ev: EpollEvent
+                ev.events = EPOLLIN or EPOLLRDHUP or EPOLLOUT
+                ev.data.u64 = cast[uint64](proxy)
+                var ret = epoll_ctl(evfd, EPOLL_CTL_MOD, proxy.sock.cint, addr ev)
+                if ret < 0:
+                  errorException "error: EPOLL_CTL_MOD ret=", ret, " errno=", errno
+              elif defined(openbsd):
+                var ev: KEvent
+                EV_SET(addr ev, proxy.sock.uint, EVFILT_WRITE, EV_ADD or EV_ENABLE or EV_CLEAR, 0, 0, proxy)
+                var ret = kevent(evfd, addr ev, 1, nil, 0, nil)
+                if ret < 0:
+                  errorException "error: kevent ret=", ret, " errno=", errno
           else:
             proxy.addSendBuf(d, left)
           return SendResult.Pending
@@ -220,45 +239,84 @@ proc proxyDispatcher(params: ProxyParams) {.thread.} =
     if evfd < 0:
       errorException "error: evfd=", evfd, " errno=", errno
 
-    var proxyEvents: array[PROXY_EVENTS_SIZE, EpollEvent]
+    when defined(linux):
+      var proxyEvents: array[PROXY_EVENTS_SIZE, EpollEvent]
+    elif defined(openbsd):
+      var proxyEvents: array[PROXY_EVENTS_SIZE, KEvent]
     while true:
-      nfd = epoll_wait(evfd, cast[ptr EpollEvent](addr proxyEvents),
-                      PROXY_EVENTS_SIZE.cint, -1.cint)
+      when defined(linux):
+        nfd = epoll_wait(evfd, cast[ptr EpollEvent](addr proxyEvents),
+                        PROXY_EVENTS_SIZE.cint, -1.cint)
+      elif defined(openbsd):
+        nfd = kevent(evfd, nil, 0, cast[ptr KEvent](addr proxyEvents),
+                    PROXY_EVENTS_SIZE.cint, nil)
       nfdCond = likely(nfd > 0)
       if nfdCond:
         if not active:
           break
 
         while true:
-          let proxy = cast[Proxy](proxyEvents[evIdx].data.u64)
-          let eventsU32 = proxyEvents[evIdx].events.uint32
-          if (eventsU32 and EPOLLOUT.uint32) > 0:
-            var retFlush = proxy.sendFlush()
-            if retFlush == SendResult.Pending:
-              nextEv()
-              continue
-            var ev: EpollEvent
-            ev.events = EPOLLIN or EPOLLRDHUP
-            ev.data.u64 = cast[uint64](proxy)
-            var ret = epoll_ctl(evfd, EPOLL_CTL_MOD, proxy.sock.cint, addr ev)
-            if ret < 0:
-              proxy.recvCallback(proxy.originalClientId, nil, 0)
-              toBeFreed.add(proxy)
-              echo "error: EPOLL_CTL_MOD evfd=", ret, " errno=", errno
-              nextEv()
-              continue
+          when defined(linux):
+            let proxy = cast[Proxy](proxyEvents[evIdx].data.u64)
+            let eventsU32 = proxyEvents[evIdx].events.uint32
+            if (eventsU32 and EPOLLOUT.uint32) > 0:
+              var retFlush = proxy.sendFlush()
+              if retFlush == SendResult.Pending:
+                nextEv()
+                continue
+              var ev: EpollEvent
+              ev.events = EPOLLIN or EPOLLRDHUP
+              ev.data.u64 = cast[uint64](proxy)
+              var ret = epoll_ctl(evfd, EPOLL_CTL_MOD, proxy.sock.cint, addr ev)
+              if ret < 0:
+                proxy.recvCallback(proxy.originalClientId, nil, 0)
+                toBeFreed.add(proxy)
+                echo "error: EPOLL_CTL_MOD evfd=", ret, " errno=", errno
+                nextEv()
+                continue
 
-          if (eventsU32 and EPOLLIN.uint32) > 0:
-            var retLen = proxy.sock.recv(addr buf[0], buf.len, 0'i32)
-            if retLen > 0:
-              proxy.recvCallback(proxy.originalClientId, buf.at(0), retLen)
-            elif retLen == 0:
-              proxy.recvCallback(proxy.originalClientId, nil, retLen)
-              toBeFreed.add(proxy)
-            else: # retLen < 0
-              if errno != EAGAIN and errno != EWOULDBLOCK and errno != EINTR:
+            if (eventsU32 and EPOLLIN.uint32) > 0:
+              var retLen = proxy.sock.recv(addr buf[0], buf.len, 0'i32)
+              if retLen > 0:
+                proxy.recvCallback(proxy.originalClientId, buf.at(0), retLen)
+              elif retLen == 0:
                 proxy.recvCallback(proxy.originalClientId, nil, retLen)
                 toBeFreed.add(proxy)
+              else: # retLen < 0
+                if errno != EAGAIN and errno != EWOULDBLOCK and errno != EINTR:
+                  proxy.recvCallback(proxy.originalClientId, nil, retLen)
+                  toBeFreed.add(proxy)
+
+          elif defined(openbsd):
+            let proxy = cast[Proxy](proxyEvents[evIdx].udata)
+            let filter = proxyEvents[evIdx].filter
+            if filter == EVFILT_WRITE:
+              var retFlush = proxy.sendFlush()
+              if retFlush == SendResult.Pending:
+                nextEv()
+                continue
+              var ev: KEvent
+              EV_SET(addr ev, proxy.sock.uint, EVFILT_WRITE, EV_ADD or EV_DISABLE or EV_CLEAR, 0, 0, proxy)
+              var ret = kevent(evfd, addr ev, 1, nil, 0, nil)
+              if ret < 0:
+                proxy.recvCallback(proxy.originalClientId, nil, 0)
+                toBeFreed.add(proxy)
+                echo "error: kevent evfd=", ret, " errno=", errno
+                nextEv()
+                continue
+
+            elif filter == EVFILT_READ:
+              var retLen = proxy.sock.recv(addr buf[0], buf.len, 0'i32)
+              if retLen > 0:
+                proxy.recvCallback(proxy.originalClientId, buf.at(0), retLen)
+              elif retLen == 0:
+                proxy.recvCallback(proxy.originalClientId, nil, retLen)
+                toBeFreed.add(proxy)
+              else: # retLen < 0
+                if errno != EAGAIN and errno != EWOULDBLOCK and errno != EINTR:
+                  proxy.recvCallback(proxy.originalClientId, nil, retLen)
+                  toBeFreed.add(proxy)
+
           nextEv()
 
         if toBeFreed.len > 0:
@@ -283,11 +341,21 @@ proc proxyManager*(params: ProxyParams): Thread[ProxyParams] =
 
 proc quitProxyManager*(proxyThread: Thread[ProxyParams]) =
   active = false
-  var ev: EpollEvent
-  ev.events = EPOLLRDHUP
-  var ret = epoll_ctl(evfd, EPOLL_CTL_ADD, abortSock.cint, addr ev)
-  if ret < 0:
-    errorException "error: EPOLL_CTL_ADD evfd=", ret, " errno=", errno
+  when defined(linux):
+    var ev: EpollEvent
+    ev.events = EPOLLRDHUP
+    var ret = epoll_ctl(evfd, EPOLL_CTL_ADD, abortSock.cint, addr ev)
+    if ret < 0:
+      errorException "error: EPOLL_CTL_ADD evfd=", ret, " errno=", errno
+  elif defined(openbsd):
+    var ev: KEvent
+    EV_SET(addr ev, abortSock.uint, EVFILT_READ, EV_ADD or EV_ENABLE, 0, 0, nil)
+    var ret = kevent(evfd, addr ev, 1, nil, 0, nil)
+    if ret < 0:
+      errorException "error: kevent evfd=", ret, " errno=", errno
+    var retShutdown = abortSock.shutdown(SHUT_RD)
+    if retShutdown != 0:
+      errorException "error: shutdown ret=", retShutdown, " errno=", errno
   proxyThread.joinThread()
   abortSock.close()
 
