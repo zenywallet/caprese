@@ -6,6 +6,7 @@ when defined(linux):
   import std/epoll
 elif defined(openbsd):
   import std/kqueue
+  proc kqueue1(flags: cint): cint {.importc, header: "<sys/event.h>".}
 import std/strutils
 import std/options
 import bytes
@@ -212,7 +213,10 @@ proc proxyDispatcher(params: ProxyParams) {.thread.} =
     template nextEv() =
       inc(evIdx); if evIdx >= nfd: evIdx = 0; break
 
-    evfd = epoll_create1(O_CLOEXEC)
+    when defined(linux):
+      evfd = epoll_create1(O_CLOEXEC)
+    elif defined(openbsd):
+      evfd = kqueue1(O_CLOEXEC)
     if evfd < 0:
       errorException "error: evfd=", evfd, " errno=", errno
 
