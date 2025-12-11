@@ -378,7 +378,7 @@ when isMainModule:
       proc proxyRecvCallback(originalClientId: ClientId, buf: ptr UncheckedArray[byte], size: int) =
         echo "recvCallback originalClientId=", originalClientId, " size=", size
         if size <= 0:
-          proxy.free()
+          echo "close client"
         else:
           echo buf.toString(size)
 
