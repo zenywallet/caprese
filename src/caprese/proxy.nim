@@ -239,10 +239,9 @@ proc proxyDispatcher(params: ProxyParams) {.thread.} =
     if evfd < 0:
       errorException "error: evfd=", evfd, " errno=", errno
 
-    when defined(linux):
-      var proxyEvents: array[PROXY_EVENTS_SIZE, EpollEvent]
-    elif defined(openbsd):
-      var proxyEvents: array[PROXY_EVENTS_SIZE, KEvent]
+    var proxyEvents: array[PROXY_EVENTS_SIZE,
+                          when defined(linux): EpollEvent
+                          elif defined(openbsd): KEvent]
     while true:
       when defined(linux):
         nfd = epoll_wait(evfd, cast[ptr EpollEvent](addr proxyEvents),
