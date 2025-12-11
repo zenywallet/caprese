@@ -387,7 +387,7 @@ when isMainModule:
 
       var getMsg = "GET /test.html HTTP/1.1\c\L" &
                   "Host: localhost:8000\c\L" &
-                  "\c\L\c\L"
+                  "\c\L"
 
       var sendRet = proxy.send(getMsg.at(0), getMsg.len)
       echo "send ret=", sendRet
