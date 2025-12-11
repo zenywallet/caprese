@@ -232,13 +232,6 @@ proc proxyDispatcher(params: ProxyParams) {.thread.} =
     template nextEv() =
       inc(evIdx); if evIdx >= nfd: evIdx = 0; break
 
-    when defined(linux):
-      evfd = epoll_create1(O_CLOEXEC)
-    elif defined(openbsd):
-      evfd = kqueue1(O_CLOEXEC)
-    if evfd < 0:
-      errorException "error: evfd=", evfd, " errno=", errno
-
     var proxyEvents: array[PROXY_EVENTS_SIZE,
                           when defined(linux): EpollEvent
                           elif defined(openbsd): KEvent]
@@ -336,6 +329,12 @@ proc proxyDispatcher(params: ProxyParams) {.thread.} =
 proc proxyManager*(params: ProxyParams): Thread[ProxyParams] =
   active = true
   abortSock = createNativeSocket()
+  when defined(linux):
+    evfd = epoll_create1(O_CLOEXEC)
+  elif defined(openbsd):
+    evfd = kqueue1(O_CLOEXEC)
+  if evfd < 0:
+    errorException "error: evfd=", evfd, " errno=", errno
   createThread(result, proxyDispatcher, params)
 
 proc quitProxyManager*(proxyThread: Thread[ProxyParams]) =
@@ -367,8 +366,6 @@ when isMainModule:
     errorException "error: proxy dispatcher"
 
   var proxyThread = proxyManager(params)
-
-  sleep(1000)
 
   try:
     let proxy = newProxy("localhost", 8000.Port)
