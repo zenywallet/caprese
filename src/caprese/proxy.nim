@@ -244,10 +244,10 @@ proc proxyDispatcher(params: ProxyParams) {.thread.} =
                           elif defined(openbsd): KEvent]
     while true:
       when defined(linux):
-        nfd = epoll_wait(evfd, cast[ptr EpollEvent](addr proxyEvents),
+        nfd = epoll_wait(evfd, addr proxyEvents[0],
                         PROXY_EVENTS_SIZE.cint, -1.cint)
       elif defined(openbsd):
-        nfd = kevent(evfd, nil, 0, cast[ptr KEvent](addr proxyEvents),
+        nfd = kevent(evfd, nil, 0, addr proxyEvents[0],
                     PROXY_EVENTS_SIZE.cint, nil)
       nfdCond = likely(nfd > 0)
       if nfdCond:
