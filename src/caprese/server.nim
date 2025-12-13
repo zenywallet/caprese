@@ -3699,20 +3699,24 @@ template serverLib(cfg: static Config) {.dirty.} =
                         # proxy only
                         when cfg.postRequestMethod:
                           if equalMem(addr client.recvBuf[0], "POST /".cstring, 6):
-                            for i in 6..client.recvCurSize - 4:
-                              if equalMem(addr client.recvBuf[i], "\c\L\c\L".cstring, 4):
-                                var pos = 6
-                                while true:
-                                  if equalMem(addr client.recvBuf[pos], " HTTP/1.".cstring, 8):
-                                    ctx.header.url = capbytes.toString(cast[ptr UncheckedArray[byte]](addr client.recvBuf[5]), pos - 5)
-                                    let retMain = proxyRoutesMain(ctx, client)
-                                    if retMain == SendResult.Pending or retMain == SendResult.Success:
-                                      engine = SendApp
-                                      break
-                                  inc(pos)
-                                  if pos >= client.recvCurSize:
-                                    engine = SendRec
-                                    break
+                            block PostProxyBlock:
+                              for i in 6..client.recvCurSize - 4:
+                                if equalMem(addr client.recvBuf[i], "\c\L\c\L".cstring, 4):
+                                  var pos = 6
+                                  while true:
+                                    if equalMem(addr client.recvBuf[pos], " HTTP/1.".cstring, 8):
+                                      ctx.header.url = capbytes.toString(cast[ptr UncheckedArray[byte]](addr client.recvBuf[5]), pos - 5)
+                                      let retMain = proxyRoutesMain(ctx, client)
+                                      if retMain == SendResult.Pending or retMain == SendResult.Success:
+                                        engine = SendApp
+                                        break PostProxyBlock
+                                    inc(pos)
+                                    if pos >= client.recvCurSize:
+                                      engine = SendRec
+                                      break PostProxyBlock
+                              engine = SendRec
+                          else:
+                            engine = SendRec
                         else:
                           engine = SendRec
                     else:
