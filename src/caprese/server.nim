@@ -257,7 +257,7 @@ template reallocClientBuf*(buf: ptr UncheckedArray[byte], size: int): ptr Unchec
   cast[ptr UncheckedArray[byte]](reallocShared(buf, size))
 
 var active* = false
-var epfd*: cint = -1
+var evfd*: cint = -1
 
 type
   WrapperThreadArg = tuple[threadFunc: proc (arg: ThreadArg) {.thread.}, arg: ThreadArg]
@@ -604,7 +604,7 @@ template serverTagLib*(cfg: static Config) {.dirty.} =
         client.ev.events = EPOLLRDHUP or EPOLLET or EPOLLOUT
         release(client.spinLock)
 
-        var retCtl = epoll_ctl(epfd, EPOLL_CTL_MOD, cast[cint](client.sock), addr client.ev)
+        var retCtl = epoll_ctl(evfd, EPOLL_CTL_MOD, cast[cint](client.sock), addr client.ev)
         if retCtl != 0:
           return false
         return true
@@ -614,7 +614,7 @@ template serverTagLib*(cfg: static Config) {.dirty.} =
         if client.threadId == 0:
           release(client.spinLock)
 
-          var retCtl = epoll_ctl(epfd, EPOLL_CTL_MOD, cast[cint](client.sock), addr client.ev)
+          var retCtl = epoll_ctl(evfd, EPOLL_CTL_MOD, cast[cint](client.sock), addr client.ev)
           if retCtl != 0:
             return false
           return true
@@ -631,7 +631,7 @@ template serverTagLib*(cfg: static Config) {.dirty.} =
       client.ev.events = EPOLLRDHUP or EPOLLET or EPOLLOUT
       release(client.spinLock)
 
-      var retCtl = epoll_ctl(epfd, EPOLL_CTL_MOD, cast[cint](client.sock), addr client.ev)
+      var retCtl = epoll_ctl(evfd, EPOLL_CTL_MOD, cast[cint](client.sock), addr client.ev)
       if retCtl != 0:
         return false
       return true
@@ -1098,7 +1098,7 @@ var releaseOnQuitEpfds: Array[cint]
 
 proc addReleaseOnQuit(sock: SocketHandle) = releaseOnQuitSocks.add(sock)
 
-proc addReleaseOnQuit(epfd: cint) = releaseOnQuitEpfds.add(epfd)
+proc addReleaseOnQuit(evfd: cint) = releaseOnQuitEpfds.add(evfd)
 
 type
   AppType* = enum
@@ -1509,11 +1509,11 @@ macro addServerMacro*(bindAddress: string, port: uint16, reuse: bool, unix: bool
     addReleaseOnQuit(serverSock)
     serverSock.setBlocking(false)
 
-    if epfd < 0:
-      epfd = epoll_create1(O_CLOEXEC)
-      if epfd < 0:
-        errorRaise "error: epfd=", epfd, " errno=", errno
-      addReleaseOnQuit(epfd)
+    if evfd < 0:
+      evfd = epoll_create1(O_CLOEXEC)
+      if evfd < 0:
+        errorRaise "error: evfd=", evfd, " errno=", errno
+      addReleaseOnQuit(evfd)
 
     let newClient = clientFreePool.pop()
     if newClient.isNil:
@@ -1527,7 +1527,7 @@ macro addServerMacro*(bindAddress: string, port: uint16, reuse: bool, unix: bool
       newClient.ev.events = EPOLLIN or EPOLLET
     else:
       newClient.ev.events = EPOLLIN or EPOLLEXCLUSIVE
-    var retCtl = epoll_ctl(epfd, EPOLL_CTL_ADD, serverSock, addr newClient.ev)
+    var retCtl = epoll_ctl(evfd, EPOLL_CTL_ADD, serverSock, addr newClient.ev)
     if retCtl != 0:
       errorRaise "error: addServer epoll_ctl ret=", retCtl, " ", getErrnoStr()
 
@@ -3310,7 +3310,7 @@ template serverLib(cfg: static Config) {.dirty.} =
         newClient.ev.events = EPOLLIN or EPOLLRDHUP or EPOLLET or EPOLLOUT
       else:
         newClient.ev.events = EPOLLIN or EPOLLRDHUP or EPOLLET
-      let retCtl = epoll_ctl(epfd, EPOLL_CTL_ADD, cast[cint](clientSock), addr newClient.ev)
+      let retCtl = epoll_ctl(evfd, EPOLL_CTL_ADD, cast[cint](clientSock), addr newClient.ev)
       if retCtl < 0:
         errorRaise "error: epoll_ctl ret=", retCtl, " errno=", errno
 
@@ -3396,7 +3396,7 @@ template serverLib(cfg: static Config) {.dirty.} =
           client.threadId = 0
           release(client.spinLock)
 
-          var retCtl = epoll_ctl(epfd, EPOLL_CTL_MOD, cast[cint](client.sock), addr client.ev)
+          var retCtl = epoll_ctl(evfd, EPOLL_CTL_MOD, cast[cint](client.sock), addr client.ev)
           if retCtl != 0:
             errorRaise "error: appRoutesSend epoll_ctl ret=", retCtl, " ", getErrnoStr()
           return
@@ -3469,7 +3469,7 @@ template serverLib(cfg: static Config) {.dirty.} =
             client.threadId = 0
             release(client.spinLock)
 
-            var retCtl = epoll_ctl(epfd, EPOLL_CTL_MOD, cast[cint](client.sock), addr client.ev)
+            var retCtl = epoll_ctl(evfd, EPOLL_CTL_MOD, cast[cint](client.sock), addr client.ev)
             if retCtl != 0:
               errorRaise "error: appRoutesSend epoll_ctl ret=", retCtl, " ", getErrnoStr()
             return
@@ -3684,7 +3684,7 @@ template serverLib(cfg: static Config) {.dirty.} =
                             else:
                               when cfg.errorCloseMode == ErrorCloseMode.UntilConnectionTimeout:
                                 if retMain == SendResult.Error:
-                                  var retCtl = epoll_ctl(epfd, EPOLL_CTL_DEL, cast[cint](client.sock), addr client.ev)
+                                  var retCtl = epoll_ctl(evfd, EPOLL_CTL_DEL, cast[cint](client.sock), addr client.ev)
                                   if retCtl != 0:
                                     logs.error "error: epoll_ctl EPOLL_CTL_DEL ret=", retCtl, " errno=", errno
                                 else:
@@ -3750,7 +3750,7 @@ template serverLib(cfg: static Config) {.dirty.} =
                           else:
                             client.threadId = 0
                             release(client.spinLock)
-                            var retCtl = epoll_ctl(epfd, EPOLL_CTL_MOD, cast[cint](client.sock), addr client.ev)
+                            var retCtl = epoll_ctl(evfd, EPOLL_CTL_MOD, cast[cint](client.sock), addr client.ev)
                             if retCtl != 0:
                               logs.error "error: epoll_ctl ret=", retCtl, " errno=", errno
                             break engineBlock
@@ -3801,7 +3801,7 @@ template serverLib(cfg: static Config) {.dirty.} =
                           client.threadId = 0
                           release(client.spinLock)
                           if not bufSendRec.isNil:
-                            var retCtl = epoll_ctl(epfd, EPOLL_CTL_MOD, cast[cint](client.sock), addr client.ev)
+                            var retCtl = epoll_ctl(evfd, EPOLL_CTL_MOD, cast[cint](client.sock), addr client.ev)
                             if retCtl != 0:
                               logs.error "error: epoll_ctl ret=", retCtl, " errno=", errno
                           break
@@ -3864,7 +3864,7 @@ template serverLib(cfg: static Config) {.dirty.} =
                     client.threadId = 0
                     release(client.spinLock)
                     client.ev.events = EPOLLIN or EPOLLRDHUP or EPOLLET
-                    var retCtl = epoll_ctl(epfd, EPOLL_CTL_MOD, cast[cint](client.sock), addr client.ev)
+                    var retCtl = epoll_ctl(evfd, EPOLL_CTL_MOD, cast[cint](client.sock), addr client.ev)
                     if retCtl != 0:
                       logs.error "error: epoll_ctl ret=", retCtl, " errno=", errno
                     break
@@ -3877,7 +3877,7 @@ template serverLib(cfg: static Config) {.dirty.} =
                     client.threadId = 0
                     release(client.spinLock)
                     client.ev.events = EPOLLRDHUP or EPOLLET or EPOLLOUT
-                    var retCtl = epoll_ctl(epfd, EPOLL_CTL_MOD, cast[cint](client.sock), addr client.ev)
+                    var retCtl = epoll_ctl(evfd, EPOLL_CTL_MOD, cast[cint](client.sock), addr client.ev)
                     if retCtl != 0:
                       logs.error "error: epoll_ctl ret=", retCtl, " errno=", errno
                     break
@@ -3898,7 +3898,7 @@ template serverLib(cfg: static Config) {.dirty.} =
                 client.threadId = 0
                 release(client.spinLock)
                 client.ev.events = EPOLLIN or EPOLLRDHUP or EPOLLET or EPOLLOUT
-                var retCtl = epoll_ctl(epfd, EPOLL_CTL_MOD, cast[cint](client.sock), addr client.ev)
+                var retCtl = epoll_ctl(evfd, EPOLL_CTL_MOD, cast[cint](client.sock), addr client.ev)
                 if retCtl != 0:
                   logs.error "error: epoll_ctl ret=", retCtl, " errno=", errno
                 break
@@ -4085,7 +4085,7 @@ template serverLib(cfg: static Config) {.dirty.} =
                       else:
                         when cfg.errorCloseMode == ErrorCloseMode.UntilConnectionTimeout:
                           if retMain == SendResult.Error:
-                            var retCtl = epoll_ctl(epfd, EPOLL_CTL_DEL, cast[cint](client.sock), addr client.ev)
+                            var retCtl = epoll_ctl(evfd, EPOLL_CTL_DEL, cast[cint](client.sock), addr client.ev)
                             if retCtl != 0:
                               logs.error "error: epoll_ctl EPOLL_CTL_DEL ret=", retCtl, " errno=", errno
                           else:
@@ -4244,7 +4244,7 @@ template serverLib(cfg: static Config) {.dirty.} =
                       else:
                         when cfg.errorCloseMode == ErrorCloseMode.UntilConnectionTimeout:
                           if retMain == SendResult.Error:
-                            var retCtl = epoll_ctl(epfd, EPOLL_CTL_DEL, cast[cint](client.sock), addr client.ev)
+                            var retCtl = epoll_ctl(evfd, EPOLL_CTL_DEL, cast[cint](client.sock), addr client.ev)
                             if retCtl != 0:
                               logs.error "error: epoll_ctl EPOLL_CTL_DEL ret=", retCtl, " errno=", errno
                           else:
@@ -4354,7 +4354,7 @@ template serverLib(cfg: static Config) {.dirty.} =
                       else:
                         when cfg.errorCloseMode == ErrorCloseMode.UntilConnectionTimeout:
                           if retMain == SendResult.Error:
-                            var retCtl = epoll_ctl(epfd, EPOLL_CTL_DEL, cast[cint](client.sock), addr client.ev)
+                            var retCtl = epoll_ctl(evfd, EPOLL_CTL_DEL, cast[cint](client.sock), addr client.ev)
                             if retCtl != 0:
                               logs.error "error: epoll_ctl EPOLL_CTL_DEL ret=", retCtl, " errno=", errno
                           else:
@@ -4383,7 +4383,7 @@ template serverLib(cfg: static Config) {.dirty.} =
                     else:
                       client.ev.events = EPOLLIN or EPOLLRDHUP or EPOLLET
                     release(client.spinLock)
-                    var retCtl = epoll_ctl(epfd, EPOLL_CTL_MOD, cast[cint](client.sock), addr client.ev)
+                    var retCtl = epoll_ctl(evfd, EPOLL_CTL_MOD, cast[cint](client.sock), addr client.ev)
                     if retCtl != 0:
                       logs.error "error: epoll_ctl ret=", retCtl, " errno=", errno
                     return
@@ -4396,7 +4396,7 @@ template serverLib(cfg: static Config) {.dirty.} =
                     client.threadId = 0
                     release(client.spinLock)
                     client.ev.events = EPOLLRDHUP or EPOLLET or EPOLLOUT
-                    var retCtl = epoll_ctl(epfd, EPOLL_CTL_MOD, cast[cint](client.sock), addr client.ev)
+                    var retCtl = epoll_ctl(evfd, EPOLL_CTL_MOD, cast[cint](client.sock), addr client.ev)
                     if retCtl != 0:
                       logs.error "error: epoll_ctl ret=", retCtl, " errno=", errno
                     return
@@ -4413,7 +4413,7 @@ template serverLib(cfg: static Config) {.dirty.} =
                       else:
                         client.ev.events = EPOLLIN or EPOLLRDHUP or EPOLLET
                       release(client.spinLock)
-                      var retCtl = epoll_ctl(epfd, EPOLL_CTL_MOD, cast[cint](client.sock), addr client.ev)
+                      var retCtl = epoll_ctl(evfd, EPOLL_CTL_MOD, cast[cint](client.sock), addr client.ev)
                       if retCtl != 0:
                         logs.error "error: epoll_ctl ret=", retCtl, " errno=", errno
                       return
@@ -4464,7 +4464,7 @@ template serverLib(cfg: static Config) {.dirty.} =
                     else:
                       when cfg.errorCloseMode == ErrorCloseMode.UntilConnectionTimeout:
                         if retMain == SendResult.Error:
-                          var retCtl = epoll_ctl(epfd, EPOLL_CTL_DEL, cast[cint](client.sock), addr client.ev)
+                          var retCtl = epoll_ctl(evfd, EPOLL_CTL_DEL, cast[cint](client.sock), addr client.ev)
                           if retCtl != 0:
                             logs.error "error: epoll_ctl EPOLL_CTL_DEL ret=", retCtl, " errno=", errno
                         else:
@@ -4490,7 +4490,7 @@ template serverLib(cfg: static Config) {.dirty.} =
                   else:
                     client.ev.events = EPOLLIN or EPOLLRDHUP or EPOLLET
                   release(client.spinLock)
-                  var retCtl = epoll_ctl(epfd, EPOLL_CTL_MOD, cast[cint](client.sock), addr client.ev)
+                  var retCtl = epoll_ctl(evfd, EPOLL_CTL_MOD, cast[cint](client.sock), addr client.ev)
                   if retCtl != 0:
                     logs.error "error: epoll_ctl ret=", retCtl, " errno=", errno
                   return
@@ -4503,7 +4503,7 @@ template serverLib(cfg: static Config) {.dirty.} =
                   client.threadId = 0
                   release(client.spinLock)
                   client.ev.events = EPOLLRDHUP or EPOLLET or EPOLLOUT
-                  var retCtl = epoll_ctl(epfd, EPOLL_CTL_MOD, cast[cint](client.sock), addr client.ev)
+                  var retCtl = epoll_ctl(evfd, EPOLL_CTL_MOD, cast[cint](client.sock), addr client.ev)
                   if retCtl != 0:
                     logs.error "error: epoll_ctl ret=", retCtl, " errno=", errno
                   return
@@ -4520,7 +4520,7 @@ template serverLib(cfg: static Config) {.dirty.} =
                     else:
                       client.ev.events = EPOLLIN or EPOLLRDHUP or EPOLLET
                     release(client.spinLock)
-                    var retCtl = epoll_ctl(epfd, EPOLL_CTL_MOD, cast[cint](client.sock), addr client.ev)
+                    var retCtl = epoll_ctl(evfd, EPOLL_CTL_MOD, cast[cint](client.sock), addr client.ev)
                     if retCtl != 0:
                       logs.error "error: epoll_ctl ret=", retCtl, " errno=", errno
                     return
@@ -4595,7 +4595,7 @@ template serverLib(cfg: static Config) {.dirty.} =
                 client.threadId = 0
                 release(client.spinLock)
 
-                var retCtl = epoll_ctl(epfd, EPOLL_CTL_MOD, cast[cint](client.sock), addr client.ev)
+                var retCtl = epoll_ctl(evfd, EPOLL_CTL_MOD, cast[cint](client.sock), addr client.ev)
                 if retCtl != 0:
                   errorRaise "error: appRoutesSend epoll_ctl ret=", retCtl, " ", getErrnoStr()
                 return
@@ -4765,7 +4765,7 @@ template serverLib(cfg: static Config) {.dirty.} =
                           else:
                             client.threadId = 0
                             release(client.spinLock)
-                            var retCtl = epoll_ctl(epfd, EPOLL_CTL_MOD, cast[cint](client.sock), addr client.ev)
+                            var retCtl = epoll_ctl(evfd, EPOLL_CTL_MOD, cast[cint](client.sock), addr client.ev)
                             if retCtl != 0:
                               logs.error "error: epoll_ctl ret=", retCtl, " errno=", errno
                             break engineBlock
@@ -4815,7 +4815,7 @@ template serverLib(cfg: static Config) {.dirty.} =
                         if not bufRecvRec.isNil:
                           client.threadId = 0
                           release(client.spinLock)
-                          var retCtl = epoll_ctl(epfd, EPOLL_CTL_MOD, cast[cint](client.sock), addr client.ev)
+                          var retCtl = epoll_ctl(evfd, EPOLL_CTL_MOD, cast[cint](client.sock), addr client.ev)
                           if retCtl != 0:
                             logs.error "error: epoll_ctl ret=", retCtl, " errno=", errno
                           break
@@ -4924,7 +4924,7 @@ template serverLib(cfg: static Config) {.dirty.} =
                     else:
                       client.ev.events = EPOLLIN or EPOLLRDHUP or EPOLLET
                     release(client.spinLock)
-                    var retCtl = epoll_ctl(epfd, EPOLL_CTL_MOD, cast[cint](client.sock), addr client.ev)
+                    var retCtl = epoll_ctl(evfd, EPOLL_CTL_MOD, cast[cint](client.sock), addr client.ev)
                     if retCtl != 0:
                       logs.error "error: epoll_ctl ret=", retCtl, " errno=", errno
                     return
@@ -4943,7 +4943,7 @@ template serverLib(cfg: static Config) {.dirty.} =
                       else:
                         client.ev.events = EPOLLIN or EPOLLRDHUP or EPOLLET
                       release(client.spinLock)
-                      var retCtl = epoll_ctl(epfd, EPOLL_CTL_MOD, cast[cint](client.sock), addr client.ev)
+                      var retCtl = epoll_ctl(evfd, EPOLL_CTL_MOD, cast[cint](client.sock), addr client.ev)
                       if retCtl != 0:
                         logs.error "error: epoll_ctl ret=", retCtl, " errno=", errno
                       return
@@ -4956,7 +4956,7 @@ template serverLib(cfg: static Config) {.dirty.} =
                       client.threadId = 0
                       release(client.spinLock)
                       client.ev.events = EPOLLRDHUP or EPOLLET or EPOLLOUT
-                      var retCtl = epoll_ctl(epfd, EPOLL_CTL_MOD, cast[cint](client.sock), addr client.ev)
+                      var retCtl = epoll_ctl(evfd, EPOLL_CTL_MOD, cast[cint](client.sock), addr client.ev)
                       if retCtl != 0:
                         logs.error "error: epoll_ctl ret=", retCtl, " errno=", errno
                       return
@@ -5017,7 +5017,7 @@ template serverLib(cfg: static Config) {.dirty.} =
                     else:
                       client.ev.events = EPOLLIN or EPOLLRDHUP or EPOLLET
                     release(client.spinLock)
-                    var retCtl = epoll_ctl(epfd, EPOLL_CTL_MOD, cast[cint](client.sock), addr client.ev)
+                    var retCtl = epoll_ctl(evfd, EPOLL_CTL_MOD, cast[cint](client.sock), addr client.ev)
                     if retCtl != 0:
                       logs.error "error: epoll_ctl ret=", retCtl, " errno=", errno
                     return
@@ -5028,7 +5028,7 @@ template serverLib(cfg: static Config) {.dirty.} =
                     client.threadId = 0
                     release(client.spinLock)
                     client.ev.events = EPOLLRDHUP or EPOLLET or EPOLLOUT
-                    var retCtl = epoll_ctl(epfd, EPOLL_CTL_MOD, cast[cint](client.sock), addr client.ev)
+                    var retCtl = epoll_ctl(evfd, EPOLL_CTL_MOD, cast[cint](client.sock), addr client.ev)
                     if retCtl != 0:
                       logs.error "error: epoll_ctl ret=", retCtl, " errno=", errno
                     return
@@ -5163,7 +5163,7 @@ template serverLib(cfg: static Config) {.dirty.} =
                   if client.appShift or client.sendCurSize > 0:
                     client.ev.events = EPOLLRDHUP or EPOLLET or EPOLLOUT
                     release(client.spinLock)
-                    var retCtl = epoll_ctl(epfd, EPOLL_CTL_MOD, cast[cint](client.sock), addr client.ev)
+                    var retCtl = epoll_ctl(evfd, EPOLL_CTL_MOD, cast[cint](client.sock), addr client.ev)
                     if retCtl != 0:
                       logs.error "error: epoll_ctl ret=", retCtl, " errno=", errno
                   else:
@@ -5255,7 +5255,7 @@ template serverLib(cfg: static Config) {.dirty.} =
                           else:
                             client.threadId = 0
                             release(client.spinLock)
-                            var retCtl = epoll_ctl(epfd, EPOLL_CTL_MOD, cast[cint](client.sock), addr client.ev)
+                            var retCtl = epoll_ctl(evfd, EPOLL_CTL_MOD, cast[cint](client.sock), addr client.ev)
                             if retCtl != 0:
                               logs.error "error: epoll_ctl ret=", retCtl, " errno=", errno
                             break engineBlock
@@ -5305,7 +5305,7 @@ template serverLib(cfg: static Config) {.dirty.} =
                         if not bufRecvRec.isNil:
                           client.threadId = 0
                           release(client.spinLock)
-                          var retCtl = epoll_ctl(epfd, EPOLL_CTL_MOD, cast[cint](client.sock), addr client.ev)
+                          var retCtl = epoll_ctl(evfd, EPOLL_CTL_MOD, cast[cint](client.sock), addr client.ev)
                           if retCtl != 0:
                             logs.error "error: epoll_ctl ret=", retCtl, " errno=", errno
                           break
@@ -5375,7 +5375,7 @@ template serverLib(cfg: static Config) {.dirty.} =
                     else:
                       client.ev.events = EPOLLIN or EPOLLRDHUP or EPOLLET
                     release(client.spinLock)
-                    var retCtl = epoll_ctl(epfd, EPOLL_CTL_MOD, cast[cint](client.sock), addr client.ev)
+                    var retCtl = epoll_ctl(evfd, EPOLL_CTL_MOD, cast[cint](client.sock), addr client.ev)
                     if retCtl != 0:
                       logs.error "error: epoll_ctl ret=", retCtl, " errno=", errno
                     return
@@ -5388,7 +5388,7 @@ template serverLib(cfg: static Config) {.dirty.} =
                     client.threadId = 0
                     release(client.spinLock)
                     client.ev.events = EPOLLRDHUP or EPOLLET or EPOLLOUT
-                    var retCtl = epoll_ctl(epfd, EPOLL_CTL_MOD, cast[cint](client.sock), addr client.ev)
+                    var retCtl = epoll_ctl(evfd, EPOLL_CTL_MOD, cast[cint](client.sock), addr client.ev)
                     if retCtl != 0:
                       logs.error "error: epoll_ctl ret=", retCtl, " errno=", errno
                     return
@@ -5767,7 +5767,7 @@ template serverLib(cfg: static Config) {.dirty.} =
     when cfg.sslLib != SslLib.None or cfg.connectionPreferred == ConnectionPreferred.InternalConnection:
       block WaitLoop:
         while true:
-          nfd = epoll_wait(epfd, cast[ptr EpollEvent](addr events),
+          nfd = epoll_wait(evfd, cast[ptr EpollEvent](addr events),
                           cfg.epollEventsSize.cint, -1.cint)
           for i in 0..<nfd:
             try:
@@ -5786,14 +5786,14 @@ template serverLib(cfg: static Config) {.dirty.} =
       block WaitLoop:
         while true:
           if ctx.threadId == 1:
-            nfd = epoll_wait(epfd, cast[ptr EpollEvent](addr events),
+            nfd = epoll_wait(evfd, cast[ptr EpollEvent](addr events),
                             cfg.epollEventsSize.cint, -1.cint)
             if not throttleChanged and nfd >= 7:
               throttleChanged = true
               discard sem_post(addr throttleBody)
           else:
             if skip:
-              nfd = epoll_wait(epfd, cast[ptr EpollEvent](addr events),
+              nfd = epoll_wait(evfd, cast[ptr EpollEvent](addr events),
                               cfg.epollEventsSize.cint, 10.cint)
             else:
               discard sem_wait(addr throttleBody)
@@ -5801,7 +5801,7 @@ template serverLib(cfg: static Config) {.dirty.} =
                 nfd = 0
               else:
                 skip = true
-                nfd = epoll_wait(epfd, cast[ptr EpollEvent](addr events),
+                nfd = epoll_wait(evfd, cast[ptr EpollEvent](addr events),
                                 cfg.epollEventsSize.cint, 0.cint)
                 throttleChanged = false
             if nfd == 0 and not highGear:
@@ -5822,7 +5822,7 @@ template serverLib(cfg: static Config) {.dirty.} =
             var assigned = atomic_fetch_add(addr highGearManagerAssigned, 1, 0)
             if assigned == 0:
               while highGear:
-                var nfd = epoll_wait(epfd, cast[ptr EpollEvent](addr events),
+                var nfd = epoll_wait(evfd, cast[ptr EpollEvent](addr events),
                                     cfg.epollEventsSize.cint, 1000.cint)
                 if nfd > 0:
                   var i = 0
@@ -5946,7 +5946,7 @@ var abortClientEvPtr: ptr EpollEvent
 template serverAbort() =
   active = false
   highGear = false
-  var retCtl = epoll_ctl(epfd, EPOLL_CTL_ADD, sockCtl, abortClientEvPtr)
+  var retCtl = epoll_ctl(evfd, EPOLL_CTL_ADD, sockCtl, abortClientEvPtr)
   if retCtl != 0:
     logs.error "error: abort epoll_ctl ret=", retCtl, " ", getErrnoStr()
 
@@ -6020,7 +6020,7 @@ else:
       for i in countdown(releaseOnQuitEpfds.high, 0):
         let retEpfdClose = releaseOnQuitEpfds[i].close()
         if retEpfdClose != 0:
-          logs.error "error: close epfd=", epfd, " ret=", retEpfdClose, " ", getErrnoStr()
+          logs.error "error: close evfd=", evfd, " ret=", retEpfdClose, " ", getErrnoStr()
       freeClient(cfg.clientMax)
       when cfg.sslLib != SslLib.None:
         freeFileWatcher()
