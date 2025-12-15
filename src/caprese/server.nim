@@ -12,6 +12,7 @@ when defined(linux):
   import std/epoll
 elif defined(openbsd):
   import std/kqueue
+  proc kqueue1(flags: cint): cint {.importc, header: "<sys/event.h>".}
 when NimMajor >= 2:
   import checksums/sha1
 else:
@@ -1510,7 +1511,10 @@ macro addServerMacro*(bindAddress: string, port: uint16, reuse: bool, unix: bool
     serverSock.setBlocking(false)
 
     if evfd < 0:
-      evfd = epoll_create1(O_CLOEXEC)
+      when defined(linux):
+        evfd = epoll_create1(O_CLOEXEC)
+      elif defined(openbsd):
+        evfd = kqueue1(O_CLOEXEC)
       if evfd < 0:
         errorRaise "error: evfd=", evfd, " errno=", errno
       addReleaseOnQuit(evfd)
