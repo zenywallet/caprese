@@ -126,7 +126,10 @@ macro clientObjTypeMacro*(cfg: static Config): untyped =
         spinLock: SpinLock
         whackaMole: bool
         sendProc: ClientSendProc
-        ev: EpollEvent
+        when defined(linux):
+          ev: EpollEvent
+        elif defined(openbsd):
+          ev: KEvent
         clientId*: ClientId
         threadId*: int
         srvId*: int
@@ -5945,14 +5948,25 @@ macro onSigTermQuit(body: untyped) = discard onSigTermQuitBody.add(body)
 template onQuit*(body: untyped) = onSigTermQuit(body)
 
 var abortClientPtr: pointer
-var abortClientEvPtr: ptr EpollEvent
+when defined(linux):
+  var abortClientEvPtr: ptr EpollEvent
+elif defined(openbsd):
+  var abortClientEvPtr: ptr KEvent
 
 template serverAbort() =
   active = false
   highGear = false
-  var retCtl = epoll_ctl(evfd, EPOLL_CTL_ADD, sockCtl, abortClientEvPtr)
-  if retCtl != 0:
-    logs.error "error: abort epoll_ctl ret=", retCtl, " ", getErrnoStr()
+  when defined(linux):
+    var retCtl = epoll_ctl(evfd, EPOLL_CTL_ADD, sockCtl, abortClientEvPtr)
+    if retCtl != 0:
+      logs.error "error: abort epoll_ctl ret=", retCtl, " ", getErrnoStr()
+  elif defined(openbsd):
+    var retEvent = kevent(evfd, abortClientEvPtr, 1, nil, 0, nil)
+    if retEvent != 0:
+      logs.error "error: abort kevent ret=", retEvent, " ", getErrnoStr()
+    var retShutdown = sockCtl.shutdown(SHUT_RD)
+    if retShutdown != 0:
+      logs.error "error: shutdown ret=", retShutdown, getErrnoStr()
 
 var serverWaitThread: Thread[WrapperThreadArg]
 
@@ -5993,8 +6007,11 @@ else:
       var abortClient = cast[ptr ClientObj](abortClientPtr)
       abortClient.sock = sockCtl
       abortClient.appId = 1
-      abortClient.ev.events = EPOLLIN
-      abortClient.ev.data = cast[EpollData](abortClient)
+      when defined(linux):
+        abortClient.ev.events = EPOLLIN
+        abortClient.ev.data = cast[EpollData](abortClient)
+      elif defined(openbsd):
+        EV_SET(addr abortClient.ev, sockCtl.uint, EVFILT_READ, EV_ADD or EV_ENABLE, 0, 0, abortClientPtr)
       abortClientEvPtr = addr abortClient.ev
 
       var params: ProxyParams
