@@ -161,6 +161,7 @@ template serverInit*() {.dirty.} =
     import std/epoll
   elif defined(openbsd):
     import std/kqueue
+    proc kqueue1(flags: cint): cint {.importc, header: "<sys/event.h>".}
   import std/locks
   import ptlock
   import logs
@@ -5512,11 +5513,17 @@ template serverLib(cfg: static Config) {.dirty.} =
     certKeyChainsList.setLen(staticCertsTable.len + 1)
 
   when cfg.sslLib != SslLib.None:
-    import std/inotify
+    when defined(linux):
+      import std/inotify
 
-    var inoty: FileHandle = inotify_init()
-    if inoty == -1:
-      errorQuit "error: inotify_init err=", errno
+      var inoty: FileHandle = inotify_init()
+      if inoty == -1:
+        errorQuit "error: inotify_init err=", errno
+
+    elif defined(openbsd):
+      var fileWatchFd: cint = kqueue1(O_CLOEXEC)
+      if fileWatchFd == -1:
+        errorQuit "error: kqueue1 err=", errno
 
     when cfg.sslLib == BearSSL:
       when defined(BEARSSL_DEFAULT_EC):
@@ -5591,9 +5598,21 @@ template serverLib(cfg: static Config) {.dirty.} =
             if w.path.toString == watchFolder:
               certWatchList[i].idxList.add((idx, ctype.int))
               break SearchPath
-          var wd = inotify_add_watch(inoty, watchFolder.cstring, IN_CLOSE_WRITE or IN_ATTRIB or IN_MOVED_TO)
-          if wd == -1:
-            logs.error "error: inotify_add_watch path=", watchFolder
+          when defined(linux):
+            var wd = inotify_add_watch(inoty, watchFolder.cstring, IN_CLOSE_WRITE or IN_ATTRIB or IN_MOVED_TO)
+            if wd == -1:
+              logs.error "error: inotify_add_watch path=", watchFolder
+          elif defined(openbsd):
+            var wd = open(watchFolder.cstring, O_RDONLY)
+            if wd == -1:
+              logs.error "error: open path=", watchFolder
+            else:
+              var ev: KEvent
+              EV_SET(addr ev, wd.uint, EVFILT_VNODE, EV_ADD or EV_ENABLE or EV_CLEAR,
+                    NOTE_WRITE or NOTE_DELETE or NOTE_REVOKE, 0, nil)
+              var retEvent = kevent(fileWatchFd, addr ev, 1, nil, 0, nil)
+              if retEvent != 0:
+                logs.error "error: kevent ret=", retEvent, " errno=", errno
           var nextPos = certWatchList.len
           certWatchList.setLen(nextPos + 1)
           certWatchList[nextPos].path = watchFolder.toArray
@@ -5602,17 +5621,26 @@ template serverLib(cfg: static Config) {.dirty.} =
       inc(idx)
 
     proc freeFileWatcher() =
-      if inoty != -1:
-        for w in certWatchList:
-          if w.wd >= 0:
-            discard inoty.inotify_rm_watch(w.wd)
-        discard inoty.close()
-        inoty = -1
+      when defined(linux):
+        if inoty != -1:
+          for w in certWatchList:
+            if w.wd >= 0:
+              discard inoty.inotify_rm_watch(w.wd)
+          discard inoty.close()
+          inoty = -1
+      elif defined(openbsd):
+        if fileWatchFd != -1:
+          for w in certWatchList:
+            if w.wd >= 0:
+              discard close(w.wd)
+          discard fileWatchFd.close()
+          fileWatchFd = -1
 
     proc fileWatcher(arg: ThreadArg) {.thread.} =
-      var evs = newSeq[byte](sizeof(InotifyEvent) * 512)
-      var fds: array[1, TPollfd]
-      fds[0].events = posix.POLLIN
+      when defined(linux):
+        var evs = newSeq[byte](sizeof(InotifyEvent) * 512)
+        var fds: array[1, TPollfd]
+        fds[0].events = posix.POLLIN
       var sec = 0
 
       template updateCerts(idx: int) =
@@ -5668,66 +5696,71 @@ template serverLib(cfg: static Config) {.dirty.} =
       while active:
         when cfg.connectionTimeout >= 0:
           clientConnectionWhackAMole()
-        if inoty == -1:
-          sleep(3000)
-        else:
-          fds[0].fd = inoty
-          var pollNum = poll(addr fds[0], 1, 3000)
-          if pollNum <= 0:
-            if errno == EINTR: continue
-            inc(sec, 3)
-            if sec >= 30:
-              sec = 0
-              for idx, flag in certUpdateFlags:
-                if flag.priv or flag.chain:
-                  if certUpdateFlags[idx].checkCount > 0:
-                    updateCerts(idx)
-                  else:
-                    inc(certUpdateFlags[idx].checkCount)
-              for i, w in certWatchList:
-                if w.wd == -1:
-                  let watchFolder = w.path.toString()
-                  certWatchList[i].wd = inotify_add_watch(inoty, watchFolder.cstring, IN_CLOSE_WRITE or IN_ATTRIB or IN_MOVED_TO)
-                  if certWatchList[i].wd >= 0:
-                    logs.debug "certs watch add: ", watchFolder
-                    for d in w.idxList:
-                      var idx = d.idx
-                      updateCerts(idx)
-            continue
-          let n = read(inoty, evs[0].addr, evs.len)
-          if n <= 0: break
-          for e in inotify_events(evs[0].addr, n):
-            if e[].len > 0:
-              for i, w in certWatchList:
-                if w.wd == e[].wd:
-                  var ids = w.idxList
-                  var filename = $cast[cstring](addr e[].name)
-                  logs.debug "certs watch: ", w.path.toString / filename
-                  for d in ids:
-                    case d.ctype
-                    of 0:
-                      if filename == certsFileNameList[d.idx].privFileName:
-                        certUpdateFlags[d.idx].priv = true
-                    of 1:
-                      if filename == certsFileNameList[d.idx].chainFileName:
-                        certUpdateFlags[d.idx].chain = true
-                    else: discard
-                  break
-            else:
-              for i, w in certWatchList:
-                if w.wd == e[].wd:
-                  if (e[].mask and IN_IGNORED) > 0:
-                    if w.wd >= 0:
-                      certWatchList[i].wd = -1
-                      discard inoty.inotify_rm_watch(w.wd)
-                      logs.debug "certs watch remove: ", w.path.toString()
-                      for d in w.idxList:
-                        certUpdateFlags[d.idx].priv = true
-                        certUpdateFlags[d.idx].chain = true
 
-          for idx, flag in certUpdateFlags:
-            if flag.priv and flag.chain:
-              updateCerts(idx)
+        when defined(linux):
+          if inoty == -1:
+            sleep(3000)
+          else:
+            fds[0].fd = inoty
+            var pollNum = poll(addr fds[0], 1, 3000)
+            if pollNum <= 0:
+              if errno == EINTR: continue
+              inc(sec, 3)
+              if sec >= 30:
+                sec = 0
+                for idx, flag in certUpdateFlags:
+                  if flag.priv or flag.chain:
+                    if certUpdateFlags[idx].checkCount > 0:
+                      updateCerts(idx)
+                    else:
+                      inc(certUpdateFlags[idx].checkCount)
+                for i, w in certWatchList:
+                  if w.wd == -1:
+                    let watchFolder = w.path.toString()
+                    certWatchList[i].wd = inotify_add_watch(inoty, watchFolder.cstring, IN_CLOSE_WRITE or IN_ATTRIB or IN_MOVED_TO)
+                    if certWatchList[i].wd >= 0:
+                      logs.debug "certs watch add: ", watchFolder
+                      for d in w.idxList:
+                        var idx = d.idx
+                        updateCerts(idx)
+              continue
+            let n = read(inoty, evs[0].addr, evs.len)
+            if n <= 0: break
+            for e in inotify_events(evs[0].addr, n):
+              if e[].len > 0:
+                for i, w in certWatchList:
+                  if w.wd == e[].wd:
+                    var ids = w.idxList
+                    var filename = $cast[cstring](addr e[].name)
+                    logs.debug "certs watch: ", w.path.toString / filename
+                    for d in ids:
+                      case d.ctype
+                      of 0:
+                        if filename == certsFileNameList[d.idx].privFileName:
+                          certUpdateFlags[d.idx].priv = true
+                      of 1:
+                        if filename == certsFileNameList[d.idx].chainFileName:
+                          certUpdateFlags[d.idx].chain = true
+                      else: discard
+                    break
+              else:
+                for i, w in certWatchList:
+                  if w.wd == e[].wd:
+                    if (e[].mask and IN_IGNORED) > 0:
+                      if w.wd >= 0:
+                        certWatchList[i].wd = -1
+                        discard inoty.inotify_rm_watch(w.wd)
+                        logs.debug "certs watch remove: ", w.path.toString()
+                        for d in w.idxList:
+                          certUpdateFlags[d.idx].priv = true
+                          certUpdateFlags[d.idx].chain = true
+
+            for idx, flag in certUpdateFlags:
+              if flag.priv and flag.chain:
+                updateCerts(idx)
+
+        elif defined(openbsd):
+          sleep(3000)
 
   when cfg.sslLib == OpenSSL or cfg.sslLib == LibreSSL or cfg.sslLib == BoringSSL:
     SSL_load_error_strings()
