@@ -317,9 +317,15 @@ proc proxyDispatcher(params: ProxyParams) {.thread.} =
 
       else:
         if (nfd < 0 and errno != EINTR) or nfd == 0:
-          errorException "error: epoll_wait ret=", nfd, " errno=", errno
+          when defined(linux):
+            errorException "error: epoll_wait ret=", nfd, " errno=", errno
+          elif defined(openbsd):
+            errorException "error: kevent ret=", nfd, " errno=", errno
         else:
-          echo "info: epoll_wait ret=", nfd, " errno=", errno
+          when defined(linux):
+            echo "info: epoll_wait ret=", nfd, " errno=", errno
+          elif defined(openbsd):
+            echo "info: kevent ret=", nfd, " errno=", errno
 
   except:
     let e = getCurrentException()
