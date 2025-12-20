@@ -35,6 +35,20 @@ template sha256(data: openArray[byte] | string): array[br_sha256_SIZE, byte] =
   else:
     sha256(nil, 0)
 
+template sha256(data: static openArray[byte]): array[br_sha256_SIZE, byte] =
+  when data.len > 0:
+    var dataBuf = data
+    sha256(cast[ptr UncheckedArray[byte]](addr dataBuf[0]), dataBuf.len.uint32)
+  else:
+    sha256(nil, 0)
+
+template sha256(data: static string): array[br_sha256_SIZE, byte] =
+  when data.len > 0:
+    var dataBuf = data
+    sha256(cast[ptr UncheckedArray[byte]](addr dataBuf[0]), dataBuf.len.uint32)
+  else:
+    sha256(nil, 0)
+
 if paramCount() == 3:
   if paramStr(1) == "import":
     let importPath = paramStr(2)
