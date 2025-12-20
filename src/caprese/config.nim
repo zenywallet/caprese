@@ -72,7 +72,7 @@ type
     sigPipeIgnore*: bool
     limitOpenFiles*: int
     serverWorkerNum*: int
-    epollEventsSize*: int
+    eventsSize*: int
     soKeepalive*: bool
     tcpNodelay*: bool
     clientMax*: int
@@ -125,7 +125,7 @@ const defaultConfig* = defaultConfigMacro:
   sigPipeIgnore = true
   limitOpenFiles = -1
   serverWorkerNum = -1
-  epollEventsSize = 10
+  eventsSize = 10
   soKeepalive = false
   tcpNodelay = true
   clientMax = 32000

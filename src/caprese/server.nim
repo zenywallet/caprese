@@ -5800,7 +5800,7 @@ template serverLib(cfg: static Config) {.dirty.} =
 
     serverWorkerInit()
 
-    var events: array[cfg.epollEventsSize, EpollEvent]
+    var events: array[cfg.eventsSize, EpollEvent]
     var pevents: ptr UncheckedArray[EpollEvent] = cast[ptr UncheckedArray[EpollEvent]](addr events[0])
     var nfd: cint
 
@@ -5808,7 +5808,7 @@ template serverLib(cfg: static Config) {.dirty.} =
       block WaitLoop:
         while true:
           nfd = epoll_wait(evfd, cast[ptr EpollEvent](addr events),
-                          cfg.epollEventsSize.cint, -1.cint)
+                          cfg.eventsSize.cint, -1.cint)
           for i in 0..<nfd:
             try:
               ctx.events = pevents[i].events
@@ -5827,14 +5827,14 @@ template serverLib(cfg: static Config) {.dirty.} =
         while true:
           if ctx.threadId == 1:
             nfd = epoll_wait(evfd, cast[ptr EpollEvent](addr events),
-                            cfg.epollEventsSize.cint, -1.cint)
+                            cfg.eventsSize.cint, -1.cint)
             if not throttleChanged and nfd >= 7:
               throttleChanged = true
               discard sem_post(addr throttleBody)
           else:
             if skip:
               nfd = epoll_wait(evfd, cast[ptr EpollEvent](addr events),
-                              cfg.epollEventsSize.cint, 10.cint)
+                              cfg.eventsSize.cint, 10.cint)
             else:
               discard sem_wait(addr throttleBody)
               if highGear:
@@ -5842,7 +5842,7 @@ template serverLib(cfg: static Config) {.dirty.} =
               else:
                 skip = true
                 nfd = epoll_wait(evfd, cast[ptr EpollEvent](addr events),
-                                cfg.epollEventsSize.cint, 0.cint)
+                                cfg.eventsSize.cint, 0.cint)
                 throttleChanged = false
             if nfd == 0 and not highGear:
               skip = false
@@ -5863,7 +5863,7 @@ template serverLib(cfg: static Config) {.dirty.} =
             if assigned == 0:
               while highGear:
                 var nfd = epoll_wait(evfd, cast[ptr EpollEvent](addr events),
-                                    cfg.epollEventsSize.cint, 1000.cint)
+                                    cfg.eventsSize.cint, 1000.cint)
                 if nfd > 0:
                   var i = 0
                   while true:
