@@ -606,23 +606,38 @@ template serverTagLib*(cfg: static Config) {.dirty.} =
         if not client.appShift:
           inc(client.appId)
           client.appShift = true
-        client.ev.events = EPOLLRDHUP or EPOLLET or EPOLLOUT
-        release(client.spinLock)
-
-        var retCtl = epoll_ctl(evfd, EPOLL_CTL_MOD, cast[cint](client.sock), addr client.ev)
-        if retCtl != 0:
-          return false
-        return true
-
-      else:
-        acquire(client.spinLock)
-        if client.threadId == 0:
+        when defined(linux):
+          client.ev.events = EPOLLRDHUP or EPOLLET or EPOLLOUT
           release(client.spinLock)
 
           var retCtl = epoll_ctl(evfd, EPOLL_CTL_MOD, cast[cint](client.sock), addr client.ev)
           if retCtl != 0:
             return false
           return true
+        elif defined(openbsd):
+          EV_SET(addr client.ev, client.sock.uint, EVFILT_WRITE, EV_ADD or EV_ENABLE or EV_CLEAR, 0, 0, client.ev.udata)
+          release(client.spinLock)
+
+          var retKevent = kevent(evfd, addr client.ev, 1, nil, 0, nil)
+          if retKevent != 0:
+            return false
+          return true
+
+      else:
+        acquire(client.spinLock)
+        if client.threadId == 0:
+          release(client.spinLock)
+
+          when defined(linux):
+            var retCtl = epoll_ctl(evfd, EPOLL_CTL_MOD, cast[cint](client.sock), addr client.ev)
+            if retCtl != 0:
+              return false
+            return true
+          elif defined(openbsd):
+            var retKevent = kevent(evfd, addr client.ev, 1, nil, 0, nil)
+            if retKevent != 0:
+              return false
+            return true
         else:
           client.dirty = ClientDirtyTrue
           release(client.spinLock)
@@ -957,8 +972,11 @@ template serverInitFreeClient() {.dirty.} =
       initLock(p[i].lock)
       initLock(p[i].spinLock)
       p[i].whackaMole = false
-      p[i].ev.events = EPOLLIN or EPOLLRDHUP or EPOLLET
-      p[i].ev.data = cast[EpollData](addr p[i])
+      when defined(linux):
+        p[i].ev.events = EPOLLIN or EPOLLRDHUP or EPOLLET
+        p[i].ev.data = cast[EpollData](addr p[i])
+      elif defined(openbsd):
+        EV_SET(addr p[i].ev, p[i].sock.uint, EVFILT_READ, EV_ADD or EV_ENABLE or EV_CLEAR, 0, 0, addr p[i])
       when declared(initExClient):
         initExClient(addr p[i])
     clients = p
@@ -1531,13 +1549,19 @@ macro addServerMacro*(bindAddress: string, port: uint16, reuse: bool, unix: bool
     newClient.appId = `appId`
     when cfg.sslLib == SslLib.None:
       newClient.listenFlag = true
-    when cfg.acceptFirst:
-      newClient.ev.events = EPOLLIN or EPOLLET
-    else:
-      newClient.ev.events = EPOLLIN or EPOLLEXCLUSIVE
-    var retCtl = epoll_ctl(evfd, EPOLL_CTL_ADD, serverSock, addr newClient.ev)
-    if retCtl != 0:
-      errorRaise "error: addServer epoll_ctl ret=", retCtl, " ", getErrnoStr()
+    when defined(linux):
+      when cfg.acceptFirst:
+        newClient.ev.events = EPOLLIN or EPOLLET
+      else:
+        newClient.ev.events = EPOLLIN or EPOLLEXCLUSIVE
+      var retCtl = epoll_ctl(evfd, EPOLL_CTL_ADD, serverSock, addr newClient.ev)
+      if retCtl != 0:
+        errorRaise "error: addServer epoll_ctl ret=", retCtl, " ", getErrnoStr()
+    elif defined(openbsd):
+      EV_SET(addr newClient.ev, newClient.sock.uint, EVFILT_READ, EV_ADD or EV_ENABLE or EV_CLEAR, 0, 0, newClient.ev.udata)
+      var retKevent = kevent(evfd, addr newClient.ev, 1, nil, 0, nil)
+      if retKevent != 0:
+        errorRaise "error: addServer kevent ret=", retKevent, " ", getErrnoStr()
 
 template addServer1*(bindAddress: string, port: uint16, reuse: bool, unix: bool, ssl: bool, body: untyped) =
   addServerMacro(bindAddress, port, reuse, unix, ssl, evalSslLib(cfg.sslLib), body)
@@ -3315,12 +3339,30 @@ template serverLib(cfg: static Config) {.dirty.} =
         newClient.sendProc = sendNativeProc
 
       when sslFlag and cfg.sslLib == BearSSL:
-        newClient.ev.events = EPOLLIN or EPOLLRDHUP or EPOLLET or EPOLLOUT
+        when defined(linux):
+          newClient.ev.events = EPOLLIN or EPOLLRDHUP or EPOLLET or EPOLLOUT
+          let retCtl = epoll_ctl(evfd, EPOLL_CTL_ADD, cast[cint](clientSock), addr newClient.ev)
+          if retCtl < 0:
+            errorRaise "error: epoll_ctl ret=", retCtl, " errno=", errno
+        elif defined(openbsd):
+          var ev: array[2, KEvent]
+          EV_SET(addr ev[0], clientSock.uint, EVFILT_READ, EV_ADD or EV_ENABLE or EV_CLEAR, 0, 0, newClient)
+          EV_SET(addr ev[1], clientSock.uint, EVFILT_WRITE, EV_ADD or EV_ENABLE or EV_CLEAR, 0, 0, newClient)
+          copyMem(addr newClient.ev, addr ev[1], sizeof(KEvent))
+          var retKevent = kevent(evfd, addr ev[0], 2, nil, 0, nil)
+          if retKevent < 0:
+            errorRaise "error1: kevent ret=", retKevent, " errno=", errno
       else:
-        newClient.ev.events = EPOLLIN or EPOLLRDHUP or EPOLLET
-      let retCtl = epoll_ctl(evfd, EPOLL_CTL_ADD, cast[cint](clientSock), addr newClient.ev)
-      if retCtl < 0:
-        errorRaise "error: epoll_ctl ret=", retCtl, " errno=", errno
+        when defined(linux):
+          newClient.ev.events = EPOLLIN or EPOLLRDHUP or EPOLLET
+          let retCtl = epoll_ctl(evfd, EPOLL_CTL_ADD, cast[cint](clientSock), addr newClient.ev)
+          if retCtl < 0:
+            errorRaise "error: epoll_ctl ret=", retCtl, " errno=", errno
+        elif defined(openbsd):
+          EV_SET(addr newClient.ev, clientSock.uint, EVFILT_READ, EV_ADD or EV_ENABLE or EV_CLEAR, 0, 0, newClient)
+          var retKevent = kevent(evfd, addr newClient.ev, 1, nil, 0, nil)
+          if retKevent < 0:
+            errorRaise "error2: kevent ret=", retKevent, " errno=", errno
 
       when cfg.sslLib == SslLib.None:
         if (cfg.clientMax - FreePoolServerUsedCount) - clientFreePool.count >= highGearThreshold:
@@ -3400,13 +3442,21 @@ template serverLib(cfg: static Config) {.dirty.} =
           if client.appShift and client.sendCurSize == 0:
             dec(client.appId)
             client.appShift = false
-            client.ev.events = EPOLLIN or EPOLLRDHUP or EPOLLET
+            when defined(linux):
+              client.ev.events = EPOLLIN or EPOLLRDHUP or EPOLLET
+            elif defined(openbsd):
+              EV_SET(addr client.ev, client.sock.uint, EVFILT_WRITE, EV_ADD or EV_DISABLE or EV_CLEAR, 0, 0, client.ev.udata)
           client.threadId = 0
           release(client.spinLock)
 
-          var retCtl = epoll_ctl(evfd, EPOLL_CTL_MOD, cast[cint](client.sock), addr client.ev)
-          if retCtl != 0:
-            errorRaise "error: appRoutesSend epoll_ctl ret=", retCtl, " ", getErrnoStr()
+          when defined(linux):
+            var retCtl = epoll_ctl(evfd, EPOLL_CTL_MOD, cast[cint](client.sock), addr client.ev)
+            if retCtl != 0:
+              errorRaise "error: appRoutesSend epoll_ctl ret=", retCtl, " ", getErrnoStr()
+          elif defined(openbsd):
+            var retKevent = kevent(evfd, addr client.ev, 1, nil, 0, nil)
+            if retKevent != 0:
+              errorRaise "error: appRoutesSend kevent ret=", retKevent, " ", getErrnoStr()
           return
         else:
           release(client.spinLock)
@@ -3758,9 +3808,14 @@ template serverLib(cfg: static Config) {.dirty.} =
                           else:
                             client.threadId = 0
                             release(client.spinLock)
-                            var retCtl = epoll_ctl(evfd, EPOLL_CTL_MOD, cast[cint](client.sock), addr client.ev)
-                            if retCtl != 0:
-                              logs.error "error: epoll_ctl ret=", retCtl, " errno=", errno
+                            when defined(linux):
+                              var retCtl = epoll_ctl(evfd, EPOLL_CTL_MOD, cast[cint](client.sock), addr client.ev)
+                              if retCtl != 0:
+                                logs.error "error: epoll_ctl ret=", retCtl, " errno=", errno
+                            elif defined(openbsd):
+                              var retKevent = kevent(evfd, addr client.ev, 1, nil, 0, nil)
+                              if retKevent != 0:
+                                logs.error "error: kevent ret=", retKevent, " errno=", errno
                             break engineBlock
                         elif errno == EINTR:
                           continue
@@ -3809,9 +3864,14 @@ template serverLib(cfg: static Config) {.dirty.} =
                           client.threadId = 0
                           release(client.spinLock)
                           if not bufSendRec.isNil:
-                            var retCtl = epoll_ctl(evfd, EPOLL_CTL_MOD, cast[cint](client.sock), addr client.ev)
-                            if retCtl != 0:
-                              logs.error "error: epoll_ctl ret=", retCtl, " errno=", errno
+                            when defined(linux):
+                              var retCtl = epoll_ctl(evfd, EPOLL_CTL_MOD, cast[cint](client.sock), addr client.ev)
+                              if retCtl != 0:
+                                logs.error "error: epoll_ctl ret=", retCtl, " errno=", errno
+                            elif defined(openbsd):
+                              var retKevent = kevent(evfd, addr client.ev, 1, nil, 0, nil)
+                              if retKevent != 0:
+                                logs.error "error: kevent ret=", retKevent, " errno=", errno
                           break
                         else:
                           release(client.spinLock)
@@ -5800,19 +5860,30 @@ template serverLib(cfg: static Config) {.dirty.} =
 
     serverWorkerInit()
 
-    var events: array[cfg.eventsSize, EpollEvent]
-    var pevents: ptr UncheckedArray[EpollEvent] = cast[ptr UncheckedArray[EpollEvent]](addr events[0])
+    when defined(linux):
+      var events: array[cfg.eventsSize, EpollEvent]
+      var pevents: ptr UncheckedArray[EpollEvent] = cast[ptr UncheckedArray[EpollEvent]](addr events[0])
+    elif defined(openbsd):
+      var events: array[cfg.eventsSize, KEvent]
+      var pevents: ptr UncheckedArray[KEvent] = cast[ptr UncheckedArray[KEvent]](addr events[0])
     var nfd: cint
 
     when cfg.sslLib != SslLib.None or cfg.connectionPreferred == ConnectionPreferred.InternalConnection:
       block WaitLoop:
         while true:
-          nfd = epoll_wait(evfd, cast[ptr EpollEvent](addr events),
-                          cfg.eventsSize.cint, -1.cint)
+          when defined(linux):
+            nfd = epoll_wait(evfd, cast[ptr EpollEvent](addr events),
+                            cfg.eventsSize.cint, -1.cint)
+          elif defined(openbsd):
+            nfd = kevent(evfd, nil, 0, addr events[0], cfg.eventsSize.cint, nil)
           for i in 0..<nfd:
             try:
-              ctx.events = pevents[i].events
-              ctx.client = cast[Client](pevents[i].data)
+              when defined(linux):
+                ctx.events = pevents[i].events
+                ctx.client = cast[Client](pevents[i].data)
+              elif defined(openbsd):
+                ctx.events = pevents[i].filter.uint32
+                ctx.client = cast[Client](pevents[i].udata)
               cast[ClientHandlerProc](clientHandlerProcs[ctx.client.appId])(ctx)
             except ServerAbortError:
               break WaitLoop
