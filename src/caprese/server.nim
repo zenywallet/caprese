@@ -648,13 +648,22 @@ template serverTagLib*(cfg: static Config) {.dirty.} =
       if not client.appShift:
         inc(client.appId)
         client.appShift = true
-      client.ev.events = EPOLLRDHUP or EPOLLET or EPOLLOUT
-      release(client.spinLock)
+      when defined(linux):
+        client.ev.events = EPOLLRDHUP or EPOLLET or EPOLLOUT
+        release(client.spinLock)
 
-      var retCtl = epoll_ctl(evfd, EPOLL_CTL_MOD, cast[cint](client.sock), addr client.ev)
-      if retCtl != 0:
-        return false
-      return true
+        var retCtl = epoll_ctl(evfd, EPOLL_CTL_MOD, cast[cint](client.sock), addr client.ev)
+        if retCtl != 0:
+          return false
+        return true
+      elif defined(openbsd):
+        EV_SET(addr client.ev, client.sock.uint, EVFILT_WRITE, EV_ADD or EV_ENABLE or EV_CLEAR, 0, 0, client.ev.udata)
+        release(client.spinLock)
+
+        var retKevent = kevent(evfd, addr client.ev, 1, nil, 0, nil)
+        if retKevent != 0:
+          return false
+        return true
 
   proc send*(clientId: ClientId, data: seq[byte] | string | Array[byte]): SendResult {.discardable.} =
     let pair = pendingClients.get(clientId)
@@ -3523,13 +3532,21 @@ template serverLib(cfg: static Config) {.dirty.} =
             if client.appShift and client.sendCurSize == 0:
               dec(client.appId)
               client.appShift = false
-              client.ev.events = EPOLLIN or EPOLLRDHUP or EPOLLET
+              when defined(linux):
+                client.ev.events = EPOLLIN or EPOLLRDHUP or EPOLLET
+              elif defined(openbsd):
+                EV_SET(addr client.ev, client.sock.uint, EVFILT_WRITE, EV_ADD or EV_DISABLE or EV_CLEAR, 0, 0, client.ev.udata)
             client.threadId = 0
             release(client.spinLock)
 
-            var retCtl = epoll_ctl(evfd, EPOLL_CTL_MOD, cast[cint](client.sock), addr client.ev)
-            if retCtl != 0:
-              errorRaise "error: appRoutesSend epoll_ctl ret=", retCtl, " ", getErrnoStr()
+            when defined(linux):
+              var retCtl = epoll_ctl(evfd, EPOLL_CTL_MOD, cast[cint](client.sock), addr client.ev)
+              if retCtl != 0:
+                errorRaise "error: appRoutesSend epoll_ctl ret=", retCtl, " ", getErrnoStr()
+            elif defined(openbsd):
+              var retKevent = kevent(evfd, addr client.ev, 1, nil, 0, nil)
+              if retKevent != 0:
+                errorRaise "error: appRoutesSend kevent ret=", retKevent, " ", getErrnoStr()
             return
           else:
             release(client.spinLock)
@@ -3931,10 +3948,16 @@ template serverLib(cfg: static Config) {.dirty.} =
                   if client.dirty == ClientDirtyNone:
                     client.threadId = 0
                     release(client.spinLock)
-                    client.ev.events = EPOLLIN or EPOLLRDHUP or EPOLLET
-                    var retCtl = epoll_ctl(evfd, EPOLL_CTL_MOD, cast[cint](client.sock), addr client.ev)
-                    if retCtl != 0:
-                      logs.error "error: epoll_ctl ret=", retCtl, " errno=", errno
+                    when defined(linux):
+                      client.ev.events = EPOLLIN or EPOLLRDHUP or EPOLLET
+                      var retCtl = epoll_ctl(evfd, EPOLL_CTL_MOD, cast[cint](client.sock), addr client.ev)
+                      if retCtl != 0:
+                        logs.error "error: epoll_ctl ret=", retCtl, " errno=", errno
+                    elif defined(openbsd):
+                      EV_SET(addr client.ev, client.sock.uint, EVFILT_WRITE, EV_ADD or EV_DISABLE or EV_CLEAR, 0, 0, client.ev.udata)
+                      var retKevent = kevent(evfd, addr client.ev, 1, nil, 0, nil)
+                      if retKevent != 0:
+                        logs.error "error: kevent ret=", retKevent, " errno=", errno
                     break
                   else:
                     client.dirty = ClientDirtyNone
@@ -3944,10 +3967,16 @@ template serverLib(cfg: static Config) {.dirty.} =
                   if client.dirty == ClientDirtyNone:
                     client.threadId = 0
                     release(client.spinLock)
-                    client.ev.events = EPOLLRDHUP or EPOLLET or EPOLLOUT
-                    var retCtl = epoll_ctl(evfd, EPOLL_CTL_MOD, cast[cint](client.sock), addr client.ev)
-                    if retCtl != 0:
-                      logs.error "error: epoll_ctl ret=", retCtl, " errno=", errno
+                    when defined(linux):
+                      client.ev.events = EPOLLRDHUP or EPOLLET or EPOLLOUT
+                      var retCtl = epoll_ctl(evfd, EPOLL_CTL_MOD, cast[cint](client.sock), addr client.ev)
+                      if retCtl != 0:
+                        logs.error "error: epoll_ctl ret=", retCtl, " errno=", errno
+                    elif defined(openbsd):
+                      EV_SET(addr client.ev, client.sock.uint, EVFILT_WRITE, EV_ADD or EV_ENABLE or EV_CLEAR, 0, 0, client.ev.udata)
+                      var retKevent = kevent(evfd, addr client.ev, 1, nil, 0, nil)
+                      if retKevent != 0:
+                        logs.error "error: kevent ret=", retKevent, " errno=", errno
                     break
                   else:
                     client.dirty = ClientDirtyNone
@@ -3965,10 +3994,16 @@ template serverLib(cfg: static Config) {.dirty.} =
                 acquire(client.spinLock)
                 client.threadId = 0
                 release(client.spinLock)
-                client.ev.events = EPOLLIN or EPOLLRDHUP or EPOLLET or EPOLLOUT
-                var retCtl = epoll_ctl(evfd, EPOLL_CTL_MOD, cast[cint](client.sock), addr client.ev)
-                if retCtl != 0:
-                  logs.error "error: epoll_ctl ret=", retCtl, " errno=", errno
+                when defined(linux):
+                  client.ev.events = EPOLLIN or EPOLLRDHUP or EPOLLET or EPOLLOUT
+                  var retCtl = epoll_ctl(evfd, EPOLL_CTL_MOD, cast[cint](client.sock), addr client.ev)
+                  if retCtl != 0:
+                    logs.error "error: epoll_ctl ret=", retCtl, " errno=", errno
+                elif defined(openbsd):
+                  EV_SET(addr client.ev, client.sock.uint, EVFILT_WRITE, EV_ADD or EV_ENABLE or EV_CLEAR, 0, 0, client.ev.udata)
+                  var retKevent = kevent(evfd, addr client.ev, 1, nil, 0, nil)
+                  if retKevent != 0:
+                    logs.error "error: kevent ret=", retKevent, " errno=", errno
                 break
 
         else:
@@ -4446,14 +4481,24 @@ template serverLib(cfg: static Config) {.dirty.} =
                   acquire(client.spinLock)
                   if client.dirty == ClientDirtyNone:
                     client.threadId = 0
-                    if client.appShift or client.sendCurSize > 0:
-                      client.ev.events = EPOLLRDHUP or EPOLLET or EPOLLOUT
-                    else:
-                      client.ev.events = EPOLLIN or EPOLLRDHUP or EPOLLET
-                    release(client.spinLock)
-                    var retCtl = epoll_ctl(evfd, EPOLL_CTL_MOD, cast[cint](client.sock), addr client.ev)
-                    if retCtl != 0:
-                      logs.error "error: epoll_ctl ret=", retCtl, " errno=", errno
+                    when defined(linux):
+                      if client.appShift or client.sendCurSize > 0:
+                        client.ev.events = EPOLLRDHUP or EPOLLET or EPOLLOUT
+                      else:
+                        client.ev.events = EPOLLIN or EPOLLRDHUP or EPOLLET
+                      release(client.spinLock)
+                      var retCtl = epoll_ctl(evfd, EPOLL_CTL_MOD, cast[cint](client.sock), addr client.ev)
+                      if retCtl != 0:
+                        logs.error "error: epoll_ctl ret=", retCtl, " errno=", errno
+                    elif defined(openbsd):
+                      if client.appShift or client.sendCurSize > 0:
+                        EV_SET(addr client.ev, client.sock.uint, EVFILT_WRITE, EV_ADD or EV_ENABLE or EV_CLEAR, 0, 0, client.ev.udata)
+                      else:
+                        EV_SET(addr client.ev, client.sock.uint, EVFILT_WRITE, EV_ADD or EV_DISABLE or EV_CLEAR, 0, 0, client.ev.udata)
+                      release(client.spinLock)
+                      var retKevent = kevent(evfd, addr client.ev, 1, nil, 0, nil)
+                      if retKevent != 0:
+                        logs.error "error: kevent ret=", retKevent, " errno=", errno
                     return
                   else:
                     release(client.spinLock)
@@ -4463,10 +4508,16 @@ template serverLib(cfg: static Config) {.dirty.} =
                   if client.dirty == ClientDirtyNone:
                     client.threadId = 0
                     release(client.spinLock)
-                    client.ev.events = EPOLLRDHUP or EPOLLET or EPOLLOUT
-                    var retCtl = epoll_ctl(evfd, EPOLL_CTL_MOD, cast[cint](client.sock), addr client.ev)
-                    if retCtl != 0:
-                      logs.error "error: epoll_ctl ret=", retCtl, " errno=", errno
+                    when defined(linux):
+                      client.ev.events = EPOLLRDHUP or EPOLLET or EPOLLOUT
+                      var retCtl = epoll_ctl(evfd, EPOLL_CTL_MOD, cast[cint](client.sock), addr client.ev)
+                      if retCtl != 0:
+                        logs.error "error: epoll_ctl ret=", retCtl, " errno=", errno
+                    elif defined(openbsd):
+                      EV_SET(addr client.ev, client.sock.uint, EVFILT_WRITE, EV_ADD or EV_ENABLE or EV_CLEAR, 0, 0, client.ev.udata)
+                      var retKevent = kevent(evfd, addr client.ev, 1, nil, 0, nil)
+                      if retKevent != 0:
+                        logs.error "error: kevent ret=", retKevent, " errno=", errno
                     return
                   else:
                     release(client.spinLock)
@@ -4476,14 +4527,24 @@ template serverLib(cfg: static Config) {.dirty.} =
                     acquire(client.spinLock)
                     if client.dirty == ClientDirtyNone:
                       client.threadId = 0
-                      if client.appShift or client.sendCurSize > 0:
-                        client.ev.events = EPOLLRDHUP or EPOLLET or EPOLLOUT
-                      else:
-                        client.ev.events = EPOLLIN or EPOLLRDHUP or EPOLLET
-                      release(client.spinLock)
-                      var retCtl = epoll_ctl(evfd, EPOLL_CTL_MOD, cast[cint](client.sock), addr client.ev)
-                      if retCtl != 0:
-                        logs.error "error: epoll_ctl ret=", retCtl, " errno=", errno
+                      when defined(linux):
+                        if client.appShift or client.sendCurSize > 0:
+                          client.ev.events = EPOLLRDHUP or EPOLLET or EPOLLOUT
+                        else:
+                          client.ev.events = EPOLLIN or EPOLLRDHUP or EPOLLET
+                        release(client.spinLock)
+                        var retCtl = epoll_ctl(evfd, EPOLL_CTL_MOD, cast[cint](client.sock), addr client.ev)
+                        if retCtl != 0:
+                          logs.error "error: epoll_ctl ret=", retCtl, " errno=", errno
+                      elif defined(openbsd):
+                        if client.appShift or client.sendCurSize > 0:
+                          EV_SET(addr client.ev, client.sock.uint, EVFILT_WRITE, EV_ADD or EV_ENABLE or EV_CLEAR, 0, 0, client.ev.udata)
+                        else:
+                          EV_SET(addr client.ev, client.sock.uint, EVFILT_WRITE, EV_ADD or EV_DISABLE or EV_CLEAR, 0, 0, client.ev.udata)
+                        release(client.spinLock)
+                        var retKevent = kevent(evfd, addr client.ev, 1, nil, 0, nil)
+                        if retKevent != 0:
+                          logs.error "error: kevent ret=", retKevent, " errno=", errno
                       return
                     else:
                       release(client.spinLock)
@@ -4553,14 +4614,24 @@ template serverLib(cfg: static Config) {.dirty.} =
                 acquire(client.spinLock)
                 if client.dirty == ClientDirtyNone:
                   client.threadId = 0
-                  if client.appShift or client.sendCurSize > 0:
-                    client.ev.events = EPOLLRDHUP or EPOLLET or EPOLLOUT
-                  else:
-                    client.ev.events = EPOLLIN or EPOLLRDHUP or EPOLLET
-                  release(client.spinLock)
-                  var retCtl = epoll_ctl(evfd, EPOLL_CTL_MOD, cast[cint](client.sock), addr client.ev)
-                  if retCtl != 0:
-                    logs.error "error: epoll_ctl ret=", retCtl, " errno=", errno
+                  when defined(linux):
+                    if client.appShift or client.sendCurSize > 0:
+                      client.ev.events = EPOLLRDHUP or EPOLLET or EPOLLOUT
+                    else:
+                      client.ev.events = EPOLLIN or EPOLLRDHUP or EPOLLET
+                    release(client.spinLock)
+                    var retCtl = epoll_ctl(evfd, EPOLL_CTL_MOD, cast[cint](client.sock), addr client.ev)
+                    if retCtl != 0:
+                      logs.error "error: epoll_ctl ret=", retCtl, " errno=", errno
+                  elif defined(openbsd):
+                    if client.appShift or client.sendCurSize > 0:
+                      EV_SET(addr client.ev, client.sock.uint, EVFILT_WRITE, EV_ADD or EV_ENABLE or EV_CLEAR, 0, 0, client.ev.udata)
+                    else:
+                      EV_SET(addr client.ev, client.sock.uint, EVFILT_WRITE, EV_ADD or EV_DISABLE or EV_CLEAR, 0, 0, client.ev.udata)
+                    release(client.spinLock)
+                    var retKevent = kevent(evfd, addr client.ev, 1, nil, 0, nil)
+                    if retKevent != 0:
+                      logs.error "error: kevent ret=", retKevent, " errno=", errno
                   return
                 else:
                   release(client.spinLock)
@@ -4570,10 +4641,16 @@ template serverLib(cfg: static Config) {.dirty.} =
                 if client.dirty == ClientDirtyNone:
                   client.threadId = 0
                   release(client.spinLock)
-                  client.ev.events = EPOLLRDHUP or EPOLLET or EPOLLOUT
-                  var retCtl = epoll_ctl(evfd, EPOLL_CTL_MOD, cast[cint](client.sock), addr client.ev)
-                  if retCtl != 0:
-                    logs.error "error: epoll_ctl ret=", retCtl, " errno=", errno
+                  when defined(linux):
+                    client.ev.events = EPOLLRDHUP or EPOLLET or EPOLLOUT
+                    var retCtl = epoll_ctl(evfd, EPOLL_CTL_MOD, cast[cint](client.sock), addr client.ev)
+                    if retCtl != 0:
+                      logs.error "error: epoll_ctl ret=", retCtl, " errno=", errno
+                  elif defined(openbsd):
+                    EV_SET(addr client.ev, client.sock.uint, EVFILT_WRITE, EV_ADD or EV_ENABLE or EV_CLEAR, 0, 0, client.ev.udata)
+                    var retKevent = kevent(evfd, addr client.ev, 1, nil, 0, nil)
+                    if retKevent != 0:
+                      logs.error "error: kevent ret=", retKevent, " errno=", errno
                   return
                 else:
                   release(client.spinLock)
@@ -4583,14 +4660,24 @@ template serverLib(cfg: static Config) {.dirty.} =
                   acquire(client.spinLock)
                   if client.dirty == ClientDirtyNone:
                     client.threadId = 0
-                    if client.appShift or client.sendCurSize > 0:
-                      client.ev.events = EPOLLRDHUP or EPOLLET or EPOLLOUT
-                    else:
-                      client.ev.events = EPOLLIN or EPOLLRDHUP or EPOLLET
-                    release(client.spinLock)
-                    var retCtl = epoll_ctl(evfd, EPOLL_CTL_MOD, cast[cint](client.sock), addr client.ev)
-                    if retCtl != 0:
-                      logs.error "error: epoll_ctl ret=", retCtl, " errno=", errno
+                    when defined(linux):
+                      if client.appShift or client.sendCurSize > 0:
+                        client.ev.events = EPOLLRDHUP or EPOLLET or EPOLLOUT
+                      else:
+                        client.ev.events = EPOLLIN or EPOLLRDHUP or EPOLLET
+                      release(client.spinLock)
+                      var retCtl = epoll_ctl(evfd, EPOLL_CTL_MOD, cast[cint](client.sock), addr client.ev)
+                      if retCtl != 0:
+                        logs.error "error: epoll_ctl ret=", retCtl, " errno=", errno
+                    elif defined(openbsd):
+                      if client.appShift or client.sendCurSize > 0:
+                        EV_SET(addr client.ev, client.sock.uint, EVFILT_WRITE, EV_ADD or EV_ENABLE or EV_CLEAR, 0, 0, client.ev.udata)
+                      else:
+                        EV_SET(addr client.ev, client.sock.uint, EVFILT_WRITE, EV_ADD or EV_DISABLE or EV_CLEAR, 0, 0, client.ev.udata)
+                      release(client.spinLock)
+                      var retKevent = kevent(evfd, addr client.ev, 1, nil, 0, nil)
+                      if retKevent != 0:
+                        logs.error "error: kevent ret=", retKevent, " errno=", errno
                     return
                   else:
                     release(client.spinLock)
@@ -4656,16 +4743,28 @@ template serverLib(cfg: static Config) {.dirty.} =
             if clientId.getAndPurgeTasks(taskCallback):
               acquire(client.spinLock)
               if client.dirty == ClientDirtyNone:
-                if client.appShift and client.sendCurSize == 0:
-                  dec(client.appId)
-                  client.appShift = false
-                  client.ev.events = EPOLLIN or EPOLLRDHUP or EPOLLET
-                client.threadId = 0
-                release(client.spinLock)
+                when defined(linux):
+                  if client.appShift and client.sendCurSize == 0:
+                    dec(client.appId)
+                    client.appShift = false
+                    client.ev.events = EPOLLIN or EPOLLRDHUP or EPOLLET
+                  client.threadId = 0
+                  release(client.spinLock)
 
-                var retCtl = epoll_ctl(evfd, EPOLL_CTL_MOD, cast[cint](client.sock), addr client.ev)
-                if retCtl != 0:
-                  errorRaise "error: appRoutesSend epoll_ctl ret=", retCtl, " ", getErrnoStr()
+                  var retCtl = epoll_ctl(evfd, EPOLL_CTL_MOD, cast[cint](client.sock), addr client.ev)
+                  if retCtl != 0:
+                    errorRaise "error: appRoutesSend epoll_ctl ret=", retCtl, " ", getErrnoStr()
+                elif defined(openbsd):
+                  if client.appShift and client.sendCurSize == 0:
+                    dec(client.appId)
+                    client.appShift = false
+                    EV_SET(addr client.ev, client.sock.uint, EVFILT_WRITE, EV_ADD or EV_DISABLE or EV_CLEAR, 0, 0, client.ev.udata)
+                  client.threadId = 0
+                  release(client.spinLock)
+
+                  var retKevent = kevent(evfd, addr client.ev, 1, nil, 0, nil)
+                  if retKevent != 0:
+                    errorRaise "error: appRoutesSend kevent ret=", retKevent, " ", getErrnoStr()
                 return
               else:
                 release(client.spinLock)
