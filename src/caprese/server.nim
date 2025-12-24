@@ -3368,8 +3368,11 @@ template serverLib(cfg: static Config) {.dirty.} =
           if retCtl < 0:
             errorRaise "error: epoll_ctl ret=", retCtl, " errno=", errno
         elif defined(openbsd):
-          EV_SET(addr newClient.ev, clientSock.uint, EVFILT_READ, EV_ADD or EV_ENABLE or EV_CLEAR, 0, 0, newClient)
-          var retKevent = kevent(evfd, addr newClient.ev, 1, nil, 0, nil)
+          var ev: array[2, KEvent]
+          EV_SET(addr ev[0], clientSock.uint, EVFILT_READ, EV_ADD or EV_ENABLE or EV_CLEAR, 0, 0, newClient)
+          EV_SET(addr ev[1], clientSock.uint, EVFILT_WRITE, EV_ADD or EV_DISABLE or EV_CLEAR, 0, 0, newClient)
+          copyMem(addr newClient.ev, addr ev[0], sizeof(KEvent))
+          var retKevent = kevent(evfd, addr ev[0], 2, nil, 0, nil)
           if retKevent < 0:
             errorRaise "error2: kevent ret=", retKevent, " errno=", errno
 
