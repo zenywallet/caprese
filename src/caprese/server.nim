@@ -3360,7 +3360,7 @@ template serverLib(cfg: static Config) {.dirty.} =
           copyMem(addr newClient.ev, addr ev[1], sizeof(KEvent))
           var retKevent = kevent(evfd, addr ev[0], 2, nil, 0, nil)
           if retKevent < 0:
-            errorRaise "error1: kevent ret=", retKevent, " errno=", errno
+            errorRaise "error: kevent ret=", retKevent, " errno=", errno
       else:
         when defined(linux):
           newClient.ev.events = EPOLLIN or EPOLLRDHUP or EPOLLET
@@ -3374,7 +3374,7 @@ template serverLib(cfg: static Config) {.dirty.} =
           copyMem(addr newClient.ev, addr ev[0], sizeof(KEvent))
           var retKevent = kevent(evfd, addr ev[0], 2, nil, 0, nil)
           if retKevent < 0:
-            errorRaise "error2: kevent ret=", retKevent, " errno=", errno
+            errorRaise "error: kevent ret=", retKevent, " errno=", errno
 
       when cfg.sslLib == SslLib.None:
         if (cfg.clientMax - FreePoolServerUsedCount) - clientFreePool.count >= highGearThreshold:
