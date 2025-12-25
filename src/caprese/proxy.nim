@@ -126,11 +126,11 @@ proc setRecvCallback*(proxy: Proxy, recvCallback: RecvCallback, evOut: static bo
   elif defined(openbsd):
     var ev: array[2, KEvent]
     when evOut:
-      EV_SET(addr ev[0], proxy.sock.uint, EVFILT_WRITE, EV_ADD or EV_ENABLE or EV_CLEAR, 0, 0, proxy)
-      EV_SET(addr ev[1], proxy.sock.uint, EVFILT_READ, EV_ADD or EV_ENABLE or EV_CLEAR, 0, 0, proxy)
+      EV_SET(addr ev[0], proxy.sock.uint, EVFILT_WRITE, EV_ADD or EV_CLEAR, 0, 0, proxy)
+      EV_SET(addr ev[1], proxy.sock.uint, EVFILT_READ, EV_ADD or EV_CLEAR, 0, 0, proxy)
     else:
       EV_SET(addr ev[0], proxy.sock.uint, EVFILT_WRITE, EV_ADD or EV_DISABLE or EV_CLEAR, 0, 0, proxy)
-      EV_SET(addr ev[1], proxy.sock.uint, EVFILT_READ, EV_ADD or EV_ENABLE or EV_CLEAR, 0, 0, proxy)
+      EV_SET(addr ev[1], proxy.sock.uint, EVFILT_READ, EV_ADD or EV_CLEAR, 0, 0, proxy)
     var ret = kevent(evfd, addr ev[0], 2, nil, 0, nil)
     if ret < 0:
       errorException "error: kevent ret=", ret, " errno=", errno
@@ -175,7 +175,7 @@ proc send*(proxy: Proxy, data: ptr UncheckedArray[byte], size: int, evMod: stati
                   errorException "error: EPOLL_CTL_MOD ret=", ret, " errno=", errno
               elif defined(openbsd):
                 var ev: KEvent
-                EV_SET(addr ev, proxy.sock.uint, EVFILT_WRITE, EV_ADD or EV_ENABLE or EV_CLEAR, 0, 0, proxy)
+                EV_SET(addr ev, proxy.sock.uint, EVFILT_WRITE, EV_ENABLE, 0, 0, proxy)
                 var ret = kevent(evfd, addr ev, 1, nil, 0, nil)
                 if ret < 0:
                   errorException "error: kevent ret=", ret, " errno=", errno
@@ -288,7 +288,7 @@ proc proxyDispatcher(params: ProxyParams) {.thread.} =
                 nextEv()
                 continue
               var ev: KEvent
-              EV_SET(addr ev, proxy.sock.uint, EVFILT_WRITE, EV_ADD or EV_DISABLE or EV_CLEAR, 0, 0, proxy)
+              EV_SET(addr ev, proxy.sock.uint, EVFILT_WRITE, EV_DISABLE, 0, 0, proxy)
               var ret = kevent(evfd, addr ev, 1, nil, 0, nil)
               if ret < 0:
                 proxy.recvCallback(proxy.originalClientId, nil, 0)
@@ -353,7 +353,7 @@ proc quitProxyManager*(proxyThread: Thread[ProxyParams]) =
       errorException "error: EPOLL_CTL_ADD evfd=", ret, " errno=", errno
   elif defined(openbsd):
     var ev: KEvent
-    EV_SET(addr ev, abortSock.uint, EVFILT_READ, EV_ADD or EV_ENABLE, 0, 0, nil)
+    EV_SET(addr ev, abortSock.uint, EVFILT_READ, EV_ADD, 0, 0, nil)
     var ret = kevent(evfd, addr ev, 1, nil, 0, nil)
     if ret < 0:
       errorException "error: kevent evfd=", ret, " errno=", errno
