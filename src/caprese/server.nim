@@ -615,7 +615,7 @@ template serverTagLib*(cfg: static Config) {.dirty.} =
             return false
           return true
         elif defined(openbsd):
-          EV_SET(addr client.ev, client.sock.uint, EVFILT_WRITE, EV_ADD or EV_ENABLE or EV_CLEAR, 0, 0, client.ev.udata)
+          EV_SET(addr client.ev, client.sock.uint, EVFILT_WRITE, EV_ENABLE, 0, 0, client.ev.udata)
           release(client.spinLock)
 
           var retKevent = kevent(evfd, addr client.ev, 1, nil, 0, nil)
@@ -657,7 +657,7 @@ template serverTagLib*(cfg: static Config) {.dirty.} =
           return false
         return true
       elif defined(openbsd):
-        EV_SET(addr client.ev, client.sock.uint, EVFILT_WRITE, EV_ADD or EV_ENABLE or EV_CLEAR, 0, 0, client.ev.udata)
+        EV_SET(addr client.ev, client.sock.uint, EVFILT_WRITE, EV_ENABLE, 0, 0, client.ev.udata)
         release(client.spinLock)
 
         var retKevent = kevent(evfd, addr client.ev, 1, nil, 0, nil)
@@ -3457,7 +3457,7 @@ template serverLib(cfg: static Config) {.dirty.} =
             when defined(linux):
               client.ev.events = EPOLLIN or EPOLLRDHUP or EPOLLET
             elif defined(openbsd):
-              EV_SET(addr client.ev, client.sock.uint, EVFILT_WRITE, EV_ADD or EV_DISABLE or EV_CLEAR, 0, 0, client.ev.udata)
+              EV_SET(addr client.ev, client.sock.uint, EVFILT_WRITE, EV_DISABLE, 0, 0, client.ev.udata)
           client.threadId = 0
           release(client.spinLock)
 
@@ -3538,7 +3538,7 @@ template serverLib(cfg: static Config) {.dirty.} =
               when defined(linux):
                 client.ev.events = EPOLLIN or EPOLLRDHUP or EPOLLET
               elif defined(openbsd):
-                EV_SET(addr client.ev, client.sock.uint, EVFILT_WRITE, EV_ADD or EV_DISABLE or EV_CLEAR, 0, 0, client.ev.udata)
+                EV_SET(addr client.ev, client.sock.uint, EVFILT_WRITE, EV_DISABLE, 0, 0, client.ev.udata)
             client.threadId = 0
             release(client.spinLock)
 
@@ -3957,7 +3957,7 @@ template serverLib(cfg: static Config) {.dirty.} =
                       if retCtl != 0:
                         logs.error "error: epoll_ctl ret=", retCtl, " errno=", errno
                     elif defined(openbsd):
-                      EV_SET(addr client.ev, client.sock.uint, EVFILT_WRITE, EV_ADD or EV_DISABLE or EV_CLEAR, 0, 0, client.ev.udata)
+                      EV_SET(addr client.ev, client.sock.uint, EVFILT_WRITE, EV_DISABLE, 0, 0, client.ev.udata)
                       var retKevent = kevent(evfd, addr client.ev, 1, nil, 0, nil)
                       if retKevent != 0:
                         logs.error "error: kevent ret=", retKevent, " errno=", errno
@@ -3976,7 +3976,7 @@ template serverLib(cfg: static Config) {.dirty.} =
                       if retCtl != 0:
                         logs.error "error: epoll_ctl ret=", retCtl, " errno=", errno
                     elif defined(openbsd):
-                      EV_SET(addr client.ev, client.sock.uint, EVFILT_WRITE, EV_ADD or EV_ENABLE or EV_CLEAR, 0, 0, client.ev.udata)
+                      EV_SET(addr client.ev, client.sock.uint, EVFILT_WRITE, EV_ENABLE, 0, 0, client.ev.udata)
                       var retKevent = kevent(evfd, addr client.ev, 1, nil, 0, nil)
                       if retKevent != 0:
                         logs.error "error: kevent ret=", retKevent, " errno=", errno
@@ -4003,7 +4003,7 @@ template serverLib(cfg: static Config) {.dirty.} =
                   if retCtl != 0:
                     logs.error "error: epoll_ctl ret=", retCtl, " errno=", errno
                 elif defined(openbsd):
-                  EV_SET(addr client.ev, client.sock.uint, EVFILT_WRITE, EV_ADD or EV_ENABLE or EV_CLEAR, 0, 0, client.ev.udata)
+                  EV_SET(addr client.ev, client.sock.uint, EVFILT_WRITE, EV_ENABLE, 0, 0, client.ev.udata)
                   var retKevent = kevent(evfd, addr client.ev, 1, nil, 0, nil)
                   if retKevent != 0:
                     logs.error "error: kevent ret=", retKevent, " errno=", errno
@@ -4495,9 +4495,9 @@ template serverLib(cfg: static Config) {.dirty.} =
                         logs.error "error: epoll_ctl ret=", retCtl, " errno=", errno
                     elif defined(openbsd):
                       if client.appShift or client.sendCurSize > 0:
-                        EV_SET(addr client.ev, client.sock.uint, EVFILT_WRITE, EV_ADD or EV_ENABLE or EV_CLEAR, 0, 0, client.ev.udata)
+                        EV_SET(addr client.ev, client.sock.uint, EVFILT_WRITE, EV_ENABLE, 0, 0, client.ev.udata)
                       else:
-                        EV_SET(addr client.ev, client.sock.uint, EVFILT_WRITE, EV_ADD or EV_DISABLE or EV_CLEAR, 0, 0, client.ev.udata)
+                        EV_SET(addr client.ev, client.sock.uint, EVFILT_WRITE, EV_DISABLE, 0, 0, client.ev.udata)
                       release(client.spinLock)
                       var retKevent = kevent(evfd, addr client.ev, 1, nil, 0, nil)
                       if retKevent != 0:
@@ -4517,7 +4517,7 @@ template serverLib(cfg: static Config) {.dirty.} =
                       if retCtl != 0:
                         logs.error "error: epoll_ctl ret=", retCtl, " errno=", errno
                     elif defined(openbsd):
-                      EV_SET(addr client.ev, client.sock.uint, EVFILT_WRITE, EV_ADD or EV_ENABLE or EV_CLEAR, 0, 0, client.ev.udata)
+                      EV_SET(addr client.ev, client.sock.uint, EVFILT_WRITE, EV_ENABLE, 0, 0, client.ev.udata)
                       var retKevent = kevent(evfd, addr client.ev, 1, nil, 0, nil)
                       if retKevent != 0:
                         logs.error "error: kevent ret=", retKevent, " errno=", errno
@@ -4541,9 +4541,9 @@ template serverLib(cfg: static Config) {.dirty.} =
                           logs.error "error: epoll_ctl ret=", retCtl, " errno=", errno
                       elif defined(openbsd):
                         if client.appShift or client.sendCurSize > 0:
-                          EV_SET(addr client.ev, client.sock.uint, EVFILT_WRITE, EV_ADD or EV_ENABLE or EV_CLEAR, 0, 0, client.ev.udata)
+                          EV_SET(addr client.ev, client.sock.uint, EVFILT_WRITE, EV_ENABLE, 0, 0, client.ev.udata)
                         else:
-                          EV_SET(addr client.ev, client.sock.uint, EVFILT_WRITE, EV_ADD or EV_DISABLE or EV_CLEAR, 0, 0, client.ev.udata)
+                          EV_SET(addr client.ev, client.sock.uint, EVFILT_WRITE,  EV_DISABLE, 0, 0, client.ev.udata)
                         release(client.spinLock)
                         var retKevent = kevent(evfd, addr client.ev, 1, nil, 0, nil)
                         if retKevent != 0:
@@ -4628,9 +4628,9 @@ template serverLib(cfg: static Config) {.dirty.} =
                       logs.error "error: epoll_ctl ret=", retCtl, " errno=", errno
                   elif defined(openbsd):
                     if client.appShift or client.sendCurSize > 0:
-                      EV_SET(addr client.ev, client.sock.uint, EVFILT_WRITE, EV_ADD or EV_ENABLE or EV_CLEAR, 0, 0, client.ev.udata)
+                      EV_SET(addr client.ev, client.sock.uint, EVFILT_WRITE, EV_ENABLE, 0, 0, client.ev.udata)
                     else:
-                      EV_SET(addr client.ev, client.sock.uint, EVFILT_WRITE, EV_ADD or EV_DISABLE or EV_CLEAR, 0, 0, client.ev.udata)
+                      EV_SET(addr client.ev, client.sock.uint, EVFILT_WRITE, EV_DISABLE, 0, 0, client.ev.udata)
                     release(client.spinLock)
                     var retKevent = kevent(evfd, addr client.ev, 1, nil, 0, nil)
                     if retKevent != 0:
@@ -4650,7 +4650,7 @@ template serverLib(cfg: static Config) {.dirty.} =
                     if retCtl != 0:
                       logs.error "error: epoll_ctl ret=", retCtl, " errno=", errno
                   elif defined(openbsd):
-                    EV_SET(addr client.ev, client.sock.uint, EVFILT_WRITE, EV_ADD or EV_ENABLE or EV_CLEAR, 0, 0, client.ev.udata)
+                    EV_SET(addr client.ev, client.sock.uint, EVFILT_WRITE, EV_ENABLE, 0, 0, client.ev.udata)
                     var retKevent = kevent(evfd, addr client.ev, 1, nil, 0, nil)
                     if retKevent != 0:
                       logs.error "error: kevent ret=", retKevent, " errno=", errno
@@ -4674,9 +4674,9 @@ template serverLib(cfg: static Config) {.dirty.} =
                         logs.error "error: epoll_ctl ret=", retCtl, " errno=", errno
                     elif defined(openbsd):
                       if client.appShift or client.sendCurSize > 0:
-                        EV_SET(addr client.ev, client.sock.uint, EVFILT_WRITE, EV_ADD or EV_ENABLE or EV_CLEAR, 0, 0, client.ev.udata)
+                        EV_SET(addr client.ev, client.sock.uint, EVFILT_WRITE, EV_ENABLE, 0, 0, client.ev.udata)
                       else:
-                        EV_SET(addr client.ev, client.sock.uint, EVFILT_WRITE, EV_ADD or EV_DISABLE or EV_CLEAR, 0, 0, client.ev.udata)
+                        EV_SET(addr client.ev, client.sock.uint, EVFILT_WRITE, EV_DISABLE, 0, 0, client.ev.udata)
                       release(client.spinLock)
                       var retKevent = kevent(evfd, addr client.ev, 1, nil, 0, nil)
                       if retKevent != 0:
@@ -4761,7 +4761,7 @@ template serverLib(cfg: static Config) {.dirty.} =
                   if client.appShift and client.sendCurSize == 0:
                     dec(client.appId)
                     client.appShift = false
-                    EV_SET(addr client.ev, client.sock.uint, EVFILT_WRITE, EV_ADD or EV_DISABLE or EV_CLEAR, 0, 0, client.ev.udata)
+                    EV_SET(addr client.ev, client.sock.uint, EVFILT_WRITE, EV_DISABLE, 0, 0, client.ev.udata)
                   client.threadId = 0
                   release(client.spinLock)
 
