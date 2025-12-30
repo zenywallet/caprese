@@ -30,14 +30,14 @@ type
     DynamicAssign
     FixedAssign
 
-type Config = object
+type Config* = object
 
 var configParams {.compileTime.}: Table[string, Table[string, NimNode]]
 
 macro init() =
   configParams = initTable[string, Table[string, NimNode]]()
 
-macro initConfig(cfg: untyped) =
+macro initConfig*(cfg: untyped) =
   configParams[cfg.strVal] = initTable[string, NimNode]()
 
 macro getConfig(cfg, name: untyped): untyped =
