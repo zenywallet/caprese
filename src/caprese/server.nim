@@ -3762,9 +3762,17 @@ template serverLib(cfg: static Config) {.dirty.} =
                             else:
                               when cfg.errorCloseMode == ErrorCloseMode.UntilConnectionTimeout:
                                 if retMain == SendResult.Error:
-                                  var retCtl = epoll_ctl(evfd, EPOLL_CTL_DEL, cast[cint](client.sock), addr client.ev)
-                                  if retCtl != 0:
-                                    logs.error "error: epoll_ctl EPOLL_CTL_DEL ret=", retCtl, " errno=", errno
+                                  when defined(linux):
+                                    var retCtl = epoll_ctl(evfd, EPOLL_CTL_DEL, cast[cint](client.sock), addr client.ev)
+                                    if retCtl != 0:
+                                      logs.error "error: epoll_ctl EPOLL_CTL_DEL ret=", retCtl, " errno=", errno
+                                  elif defined(openbsd):
+                                    var ev: array[2, KEvent]
+                                    EV_SET(addr ev[0], client.sock.uint, EVFILT_READ, EV_DELETE, 0, 0, client)
+                                    EV_SET(addr ev[1], client.sock.uint, EVFILT_WRITE, EV_DELETE, 0, 0, client)
+                                    var retKevent = kevent(evfd, addr ev[0], 2, nil, 0, nil)
+                                    if retKevent < 0:
+                                      logs.error "error: kevent EV_DELETE ret=", retKevent, " errno=", errno
                                 else:
                                   client.close()
                               else:
@@ -4191,9 +4199,17 @@ template serverLib(cfg: static Config) {.dirty.} =
                       else:
                         when cfg.errorCloseMode == ErrorCloseMode.UntilConnectionTimeout:
                           if retMain == SendResult.Error:
-                            var retCtl = epoll_ctl(evfd, EPOLL_CTL_DEL, cast[cint](client.sock), addr client.ev)
-                            if retCtl != 0:
-                              logs.error "error: epoll_ctl EPOLL_CTL_DEL ret=", retCtl, " errno=", errno
+                            when defined(linux):
+                              var retCtl = epoll_ctl(evfd, EPOLL_CTL_DEL, cast[cint](client.sock), addr client.ev)
+                              if retCtl != 0:
+                                logs.error "error: epoll_ctl EPOLL_CTL_DEL ret=", retCtl, " errno=", errno
+                            elif defined(openbsd):
+                              var ev: array[2, KEvent]
+                              EV_SET(addr ev[0], client.sock.uint, EVFILT_READ, EV_DELETE, 0, 0, client)
+                              EV_SET(addr ev[1], client.sock.uint, EVFILT_WRITE, EV_DELETE, 0, 0, client)
+                              var retKevent = kevent(evfd, addr ev[0], 2, nil, 0, nil)
+                              if retKevent < 0:
+                                logs.error "error: kevent EV_DELETE ret=", retKevent, " errno=", errno
                           else:
                             client.close()
                         else:
@@ -4350,9 +4366,17 @@ template serverLib(cfg: static Config) {.dirty.} =
                       else:
                         when cfg.errorCloseMode == ErrorCloseMode.UntilConnectionTimeout:
                           if retMain == SendResult.Error:
-                            var retCtl = epoll_ctl(evfd, EPOLL_CTL_DEL, cast[cint](client.sock), addr client.ev)
-                            if retCtl != 0:
-                              logs.error "error: epoll_ctl EPOLL_CTL_DEL ret=", retCtl, " errno=", errno
+                            when defined(linux):
+                              var retCtl = epoll_ctl(evfd, EPOLL_CTL_DEL, cast[cint](client.sock), addr client.ev)
+                              if retCtl != 0:
+                                logs.error "error: epoll_ctl EPOLL_CTL_DEL ret=", retCtl, " errno=", errno
+                            elif defined(openbsd):
+                              var ev: array[2, KEvent]
+                              EV_SET(addr ev[0], client.sock.uint, EVFILT_READ, EV_DELETE, 0, 0, client)
+                              EV_SET(addr ev[1], client.sock.uint, EVFILT_WRITE, EV_DELETE, 0, 0, client)
+                              var retKevent = kevent(evfd, addr ev[0], 2, nil, 0, nil)
+                              if retKevent < 0:
+                                logs.error "error: kevent EV_DELETE ret=", retKevent, " errno=", errno
                           else:
                             client.close()
                         else:
@@ -4460,9 +4484,17 @@ template serverLib(cfg: static Config) {.dirty.} =
                       else:
                         when cfg.errorCloseMode == ErrorCloseMode.UntilConnectionTimeout:
                           if retMain == SendResult.Error:
-                            var retCtl = epoll_ctl(evfd, EPOLL_CTL_DEL, cast[cint](client.sock), addr client.ev)
-                            if retCtl != 0:
-                              logs.error "error: epoll_ctl EPOLL_CTL_DEL ret=", retCtl, " errno=", errno
+                            when defined(linux):
+                              var retCtl = epoll_ctl(evfd, EPOLL_CTL_DEL, cast[cint](client.sock), addr client.ev)
+                              if retCtl != 0:
+                                logs.error "error: epoll_ctl EPOLL_CTL_DEL ret=", retCtl, " errno=", errno
+                            elif defined(openbsd):
+                              var ev: array[2, KEvent]
+                              EV_SET(addr ev[0], client.sock.uint, EVFILT_READ, EV_DELETE, 0, 0, client)
+                              EV_SET(addr ev[1], client.sock.uint, EVFILT_WRITE, EV_DELETE, 0, 0, client)
+                              var retKevent = kevent(evfd, addr ev[0], 2, nil, 0, nil)
+                              if retKevent < 0:
+                                logs.error "error: kevent EV_DELETE ret=", retKevent, " errno=", errno
                           else:
                             client.close(ssl = true)
                         else:
@@ -4596,9 +4628,17 @@ template serverLib(cfg: static Config) {.dirty.} =
                     else:
                       when cfg.errorCloseMode == ErrorCloseMode.UntilConnectionTimeout:
                         if retMain == SendResult.Error:
-                          var retCtl = epoll_ctl(evfd, EPOLL_CTL_DEL, cast[cint](client.sock), addr client.ev)
-                          if retCtl != 0:
-                            logs.error "error: epoll_ctl EPOLL_CTL_DEL ret=", retCtl, " errno=", errno
+                          when defined(linux):
+                            var retCtl = epoll_ctl(evfd, EPOLL_CTL_DEL, cast[cint](client.sock), addr client.ev)
+                            if retCtl != 0:
+                              logs.error "error: epoll_ctl EPOLL_CTL_DEL ret=", retCtl, " errno=", errno
+                          elif defined(openbsd):
+                            var ev: array[2, KEvent]
+                            EV_SET(addr ev[0], client.sock.uint, EVFILT_READ, EV_DELETE, 0, 0, client)
+                            EV_SET(addr ev[1], client.sock.uint, EVFILT_WRITE, EV_DELETE, 0, 0, client)
+                            var retKevent = kevent(evfd, addr ev[0], 2, nil, 0, nil)
+                            if retKevent < 0:
+                              logs.error "error: kevent EV_DELETE ret=", retKevent, " errno=", errno
                         else:
                           client.close(ssl = true)
                       else:
