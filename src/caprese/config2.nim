@@ -38,7 +38,11 @@ macro init() =
   configParams = initTable[string, Table[string, NimNode]]()
 
 macro initConfig*(cfg: untyped) =
-  configParams[cfg.strVal] = initTable[string, NimNode]()
+  var cfgStr = cfg.strVal
+  if not configParams.hasKey(cfgStr):
+    configParams[cfgStr] = initTable[string, NimNode]()
+  else:
+    error "config: " & cfgStr & " already exists"
 
 macro getConfig(cfg, name: untyped): untyped =
   try:
