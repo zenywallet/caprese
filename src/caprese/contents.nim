@@ -65,7 +65,7 @@ proc timeStampUpdater2() {.thread.} =
     updateTimeStamp2()
     sleep(1000)
 
-proc startTimeStampUpdater*(cfg: static Config) =
+proc startTimeStampUpdater*(cfg: Config) =
   when cfg.headerDate:
     active = true
     if activeHeaderDatePos.len > 0:
@@ -110,7 +110,7 @@ type
   RawMimeType* = distinct string
   ContentType* = distinct string
 
-template contentsWithCfg*(cfg: static Config) {.dirty.} =
+template contentsWithCfg*(cfg: Config) {.dirty.} =
   import arraylib
 
   const HTTP_VERSION* = $cfg.httpVersion

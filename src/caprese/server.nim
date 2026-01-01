@@ -100,7 +100,7 @@ macro clientExt*(body: untyped): untyped =
   body[0][1].add(ident("used"))
   body
 
-macro clientObjTypeMacro*(cfg: static Config): untyped =
+macro clientObjTypeMacro*(cfg: Config): untyped =
   result = quote do:
     type
       ClientSendProc {.inject.} = proc (client: Client, data: ptr UncheckedArray[byte], size: int): SendResult {.thread.}
@@ -277,7 +277,7 @@ proc getErrnoStr*(): string =
   if errno == EADDRINUSE: "errno=EADDRINUSE(" & $errno & ")"
   else: "errno=" & $errno
 
-template serverTagLib*(cfg: static Config) {.dirty.} =
+template serverTagLib*(cfg: Config) {.dirty.} =
   import std/posix
   from bytes as capbytes import nil
   import hashtable
@@ -1976,7 +1976,7 @@ macro serverThreadCtxExt*(body: untyped): untyped =
   body[0][1].add(ident("used"))
   body
 
-macro serverThreadCtxObjTypeMacro*(cfg: static Config): untyped =
+macro serverThreadCtxObjTypeMacro*(cfg: Config): untyped =
   result = quote do:
     type
       ServerThreadCtxObj {.inject.} = object
@@ -2001,7 +2001,7 @@ macro serverThreadCtxObjTypeMacro*(cfg: static Config): untyped =
   for n in serverThreadCtxExtRec:
     result[0][2][2].add(n)  # append to ServerThreadCtxObj
 
-template serverLib(cfg: static Config) {.dirty.} =
+template serverLib(cfg: Config) {.dirty.} =
   import std/strutils
   import std/sequtils
   when NimMajor >= 2:

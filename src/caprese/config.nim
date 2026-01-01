@@ -1,42 +1,7 @@
 # Copyright (c) 2023 zenywallet
 
 import std/macros
-import std/os
-
-var paramNamesStmt {.compileTime.} = newStmtList()
-
-proc findNodeKind(n: NimNode; nodeKind: NimNodeKind): NimNode {.compileTime.} =
-  var res: NimNode
-  for c in n.children:
-    var ret = findNodeKind(c, nodeKind)
-    if ret.kind != nnkNilLit:
-      return ret
-    if c.kind == nodeKind:
-      res = c
-      break
-  res
-
-macro paramNames*(constName: string; body: untyped): untyped =
-  var param = ident($constName)
-  var recList = findNodeKind(body, nnkRecList)
-  var bracket = nnkBracket.newTree()
-  for d in recList:
-    if d.kind == nnkIdentDefs:
-      var n = d[0]
-      if n.len > 0:
-        n = n[n.len - 1]
-      bracket.add(newLit($n))
-  paramNamesStmt.add quote do:
-    const `param` = `bracket`
-  body
-
-macro paramNamesConst*(): untyped = paramNamesStmt
-
-macro paramNamesConst*(paramName: string): untyped =
-  result = newStmtList()
-  for n in paramNamesStmt:
-    if $n[0][0] == $paramName:
-      result.add(n)
+import std/tables
 
 type
   SslLib* = enum
@@ -65,162 +30,103 @@ type
     DynamicAssign
     FixedAssign
 
-  Config* {.paramNames: "configNames".} = object
-    sslLib*: SslLib
-    debugLog*: bool
-    sigTermQuit*: bool
-    sigPipeIgnore*: bool
-    limitOpenFiles*: int
-    serverWorkerNum*: int
-    eventsSize*: int
-    soKeepalive*: bool
-    tcpNodelay*: bool
-    clientMax*: int
-    connectionTimeout*: int
-    recvBufExpand*: bool
-    recvBufExpandBreakSize*: int
-    sendBufExpand*: bool
-    sendBufExpandBreakSize*: int
-    maxFrameSize*: int
-    certsPath*: string
-    privKeyFile*: string
-    fullChainFile*: string
-    httpVersion*: float64
-    serverName*: string
-    headerServer*: bool
-    headerDate*: bool
-    headerContentType*: bool
-    activeHeader*: bool
-    errorCloseMode*: ErrorCloseMode
-    connectionPreferred*: ConnectionPreferred
-    urlRootSafe*: bool
-    postRequestMethod*: bool
-    sslRoutesHost*: SslRoutesHost
-    acceptFirst*: bool
-    reusePort*: bool
-    multiProcess*: bool
-    multiProcessThreadNum*: int
-    clientThreadAssign*: ClientThreadAssign
-    clientLock*: bool
-    reqHeaderConnection*: bool
+type Config* = object
 
-paramNamesConst("configNames")
+var configParams {.compileTime.}: Table[string, Table[string, NimNode]]
 
-var cfgNode {.compileTime.}: NimNode
+macro init() =
+  configParams = initTable[string, Table[string, NimNode]]()
 
-var defaultConfigStmt* {.compileTime.}: NimNode
+macro initConfig*(cfg: untyped) =
+  var cfgStr = cfg.strVal
+  if not configParams.hasKey(cfgStr):
+    configParams[cfgStr] = initTable[string, NimNode]()
+  else:
+    error "config: " & cfgStr & " already exists"
 
-macro defaultConfigMacro(body: untyped): untyped =
-  defaultConfigStmt = body
-  result = nnkObjConstr.newTree(newIdentNode("Config"))
-  for n in body:
-    if n.kind == nnkAsgn:
-      result.add(nnkExprColonExpr.newTree(n[0], n[1]))
-  cfgNode = result
+macro getConfig(cfg, name: untyped): untyped =
+  try:
+    configParams[cfg.strVal][name.strVal]
+  except:
+    error "config: unknown " & name.strVal
 
-const defaultConfig* = defaultConfigMacro:
-  sslLib = BearSSL
-  debugLog = false
-  sigTermQuit = true
-  sigPipeIgnore = true
-  limitOpenFiles = -1
-  serverWorkerNum = -1
-  eventsSize = 10
-  soKeepalive = false
-  tcpNodelay = true
-  clientMax = 32000
-  connectionTimeout = 120
-  recvBufExpand = true
-  recvBufExpandBreakSize = 131072 * 5
-  sendBufExpand = true
-  sendBufExpandBreakSize = -1
-  maxFrameSize = 131072 * 5
-  certsPath = "./certs"
-  privKeyFile = "privkey.pem"
-  fullChainFile = "fullchain.pem"
-  httpVersion = 1.1
-  serverName = "Caprese"
-  headerServer = false
-  headerDate = false
-  headerContentType = true
-  activeHeader = false
-  errorCloseMode = CloseImmediately
-  connectionPreferred = ExternalConnection
-  urlRootSafe = true
-  postRequestMethod = false
-  sslRoutesHost = SniAndHeaderHost
-  acceptFirst = false
-  reusePort = false
-  multiProcess = false
-  multiProcessThreadNum = 1
-  clientThreadAssign = AutoAssign
-  clientLock = true
-  reqHeaderConnection = false
+template `.`*(cfg: Config, field: untyped): auto = cfg.getConfig(field)
 
 var configStmt* {.compileTime.} = newStmtList()
 
-macro httpHeader*(body: untyped): untyped = quote do: discard
+template setConfigBody(cfgStr: string, body: untyped) =
+  configStmt.add(body[0])
+  for a in body:
+    if a.kind == nnkAsgn:
+      configParams[cfgStr][a[0].strVal] = a[1]
 
-macro updateCfgNode(cfg: static Config) =
-  var cfgNodeTmp = nnkObjConstr.newTree(newIdentNode("Config"))
-  var p = parseExpr($cfg)
-  for expr in p:
-    cfgNodeTmp.add(expr)
-  cfgNode = cfgNodeTmp
+macro config*(body: untyped) = setConfigBody("cfg", body)
 
-macro getConfig*(): untyped = cfgNode
+macro config*(cfg, body: untyped) = setConfigBody(cfg.strVal, body)
 
-template cfg*: Config = getConfig()
+macro setDefault(cfg: untyped) =
+  var body = quote do:
+    sslLib = BearSSL
+    debugLog = false
+    sigTermQuit = true
+    sigPipeIgnore = true
+    limitOpenFiles = -1
+    serverWorkerNum = -1
+    eventsSize = 10
+    soKeepalive = false
+    tcpNodelay = true
+    clientMax = 32000
+    connectionTimeout = 120
+    recvBufExpand = true
+    recvBufExpandBreakSize = 131072 * 5
+    sendBufExpand = true
+    sendBufExpandBreakSize = -1
+    maxFrameSize = 131072 * 5
+    certsPath = "./certs"
+    privKeyFile = "privkey.pem"
+    fullChainFile = "fullchain.pem"
+    httpVersion = 1.1
+    serverName = "Caprese"
+    headerServer = false
+    headerDate = false
+    headerContentType = true
+    activeHeader = false
+    errorCloseMode = CloseImmediately
+    connectionPreferred = ExternalConnection
+    urlRootSafe = true
+    postRequestMethod = false
+    sslRoutesHost = SniAndHeaderHost
+    acceptFirst = false
+    reusePort = false
+    multiProcess = false
+    multiProcessThreadNum = 1
+    clientThreadAssign = AutoAssign
+    clientLock = true
+    reqHeaderConnection = false
 
-macro config*(body: untyped): untyped =
-  for n in body:
-    configStmt.add(n)
-  var cfgTmp = genSym(nskVar, "cfg")
-  var bodyTmp = body
-  proc parseChange(n: NimNode) =
-    for i in 0..<n.len:
-      parseChange(n[i])
-      if n.kind == nnkStmtList and n[i].kind == nnkAsgn:
-        var n0 = n[i][0]
-        if $n0 in configNames:
-          var n1 = n[i][1]
-          n[i] = nnkAsgn.newTree(nnkDotExpr.newTree(cfgTmp, n0), n1)
-  parseChange(bodyTmp)
-  var cfgNodeTmp = quote do:
-    block:
-      var `cfgTmp` = `cfgNode`
-      `bodyTmp`
-      `cfgTmp`
-  var retConfig = genSym(nskProc, "retConfig")
-  quote do:
-    updateCfgNode(`cfgNodeTmp`)
-    proc `retConfig`(): Config {.discardable.} = getConfig()
-    `retConfig`()
+  setConfigBody(cfg.strVal, body)
+
+template defaultConfig*(cfg: Config) = setDefault(cfg)
+
+init()
+
+var cfg*: Config
+initConfig(cfg)
+defaultConfig(cfg)
+
+
+import std/os
 
 macro noSslForceSet*(): untyped =
   var setNossl = fileExists(currentSourcePath.parentDir() / "../lib/NOSSL.a")
   if setNossl:
-    var cfgNodeTmp = cfgNode.copy()
-    for i in 0..<cfgNodeTmp.len:
-      if cfgNodeTmp[i].kind == nnkExprColonExpr:
-        if $cfgNodeTmp[i][0] == "sslLib" and $cfgNodeTmp[i][1] != "None":
-          cfgNodeTmp[i][1] = newIdentNode("None")
-          hint("NOSSL mode is set")
-    quote do:
-      updateCfgNode(`cfgNodeTmp`)
-  else:
-    newEmptyNode()
+    configParams["cfg"]["sslLib"] = newIdentNode("None")
+  newEmptyNode()
 
 macro staticBool*(b: static bool): untyped = newLit(b)
 macro staticInt*(a: static int): untyped = newLit(a)
 macro staticFloat64*(a: static float64): untyped = newLit(a)
 macro staticString*(s: static string): untyped = newLit(s)
-macro staticConfig*(cfg: static Config): untyped =
-  result = nnkObjConstr.newTree(newIdentNode("Config"))
-  var p = parseExpr($cfg)
-  for expr in p:
-    result.add(expr)
-
 macro evalSslLib*(val: SslLib): SslLib =
   quote do:
     when `val` == BearSSL: BearSSL
