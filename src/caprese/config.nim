@@ -127,10 +127,3 @@ macro staticBool*(b: static bool): untyped = newLit(b)
 macro staticInt*(a: static int): untyped = newLit(a)
 macro staticFloat64*(a: static float64): untyped = newLit(a)
 macro staticString*(s: static string): untyped = newLit(s)
-macro evalSslLib*(val: SslLib): SslLib =
-  quote do:
-    when `val` == BearSSL: BearSSL
-    elif `val` == OpenSSL: OpenSSL
-    elif `val` == LibreSSL: LibreSSL
-    elif `val` == BoringSSL: BoringSSL
-    else: None

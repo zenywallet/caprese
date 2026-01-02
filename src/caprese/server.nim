@@ -1573,7 +1573,7 @@ macro addServerMacro*(bindAddress: string, port: uint16, reuse: bool, unix: bool
         errorRaise "error: addServer kevent ret=", retKevent, " ", getErrnoStr()
 
 template addServer1*(bindAddress: string, port: uint16, reuse: bool, unix: bool, ssl: bool, body: untyped) =
-  addServerMacro(bindAddress, port, reuse, unix, ssl, evalSslLib(cfg.sslLib), body)
+  addServerMacro(bindAddress, port, reuse, unix, ssl, cfg.sslLib, body)
 
 macro serverConfigMacro*(): untyped = serverConfigStmt
 
