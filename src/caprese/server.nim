@@ -1631,6 +1631,8 @@ template routes*(host: string, body: untyped) =
   if reqHost() == host:
     when returnRequired(body): return body else: body
 
+macro staticString(s: static string): untyped = newLit(s)
+
 macro routes*(port: int, host: string, body: untyped): untyped =
   var portInt = intVal(port)
   var site = quote do: getSite(`host`)

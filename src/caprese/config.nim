@@ -126,4 +126,3 @@ macro noSslForceSet*(): untyped =
 macro staticBool*(b: static bool): untyped = newLit(b)
 macro staticInt*(a: static int): untyped = newLit(a)
 macro staticFloat64*(a: static float64): untyped = newLit(a)
-macro staticString*(s: static string): untyped = newLit(s)
