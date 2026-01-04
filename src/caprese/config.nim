@@ -122,7 +122,3 @@ macro noSslForceSet*(): untyped =
   if setNossl:
     configParams["cfg"]["sslLib"] = newIdentNode("None")
   newEmptyNode()
-
-macro staticBool*(b: static bool): untyped = newLit(b)
-macro staticInt*(a: static int): untyped = newLit(a)
-macro staticFloat64*(a: static float64): untyped = newLit(a)
