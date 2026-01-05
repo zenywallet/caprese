@@ -6154,7 +6154,7 @@ template serverLib(cfg: Config) {.dirty.} =
 template httpTargetHeaderDefault() {.dirty.} =
   when not declared(TargetHeaderParams):
     HttpTargetHeader:
-      HeaderHost: "Host"
+      HeaderConnection: "Connection"
 
 macro searchServerNode*() =
   proc search(searchNode: NimNode) =
