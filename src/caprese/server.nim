@@ -1624,7 +1624,10 @@ macro returnRequired*(body: untyped): bool =
       return false
     return newLit(not searchReturn(n))
   else:
-    return newLit(false)
+    if body.kind == nnkStmtList:
+      return newLit(false)
+    else:
+      return newLit(true)
 
 
 template routes*(host: string, body: untyped) =
