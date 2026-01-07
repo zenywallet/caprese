@@ -85,7 +85,7 @@ task depsAll, "Build deps":
   if getEnv("NOREMOTEUPDATE") == "1":
     exec "git submodule update --init"
   else:
-    exec "git submodule update --init --remote"
+    exec "git submodule update --init --remote --force"
   bearsslTask()
   opensslTask()
   libresslTask()
@@ -120,7 +120,7 @@ before build:
     if getEnv("NOREMOTEUPDATE") == "1":
       exec "git submodule update --init"
     else:
-      exec "git submodule update --init --remote"
+      exec "git submodule update --init --remote --force"
     if not fileExists("src/lib/bearssl/libbearssl.a"):
       bearsslTask()
     if not fileExists("src/lib/openssl/libssl.a") or not fileExists("src/lib/openssl/libcrypto.a"):
