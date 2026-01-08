@@ -44,7 +44,7 @@ macro initConfig*(cfg: untyped) =
   else:
     error "config: " & cfgStr & " already exists"
 
-macro getConfig(cfg, name: untyped): untyped =
+macro getConfig*(cfg, name: untyped): untyped =
   try:
     configParams[cfg.strVal][name.strVal]
   except:
