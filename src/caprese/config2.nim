@@ -37,17 +37,17 @@ var configParams {.compileTime.}: Table[string, Table[string, NimNode]]
 macro init() =
   configParams = initTable[string, Table[string, NimNode]]()
 
-macro initConfig*(cfg: untyped) =
+macro initConfig*(cfg: Config) =
   var cfgStr = cfg.strVal
   if not configParams.hasKey(cfgStr):
     configParams[cfgStr] = initTable[string, NimNode]()
   else:
     error "config: " & cfgStr & " already exists"
 
-macro setConfig*(cfg, name, val: untyped): untyped =
+macro setConfig*(cfg: Config, name, val: untyped): untyped =
   configParams[cfg.strVal][name.strVal] = val
 
-macro getConfig*(cfg, name: untyped): untyped =
+macro getConfig*(cfg: Config, name: untyped): untyped =
   try:
     configParams[cfg.strVal][name.strVal]
   except:
@@ -64,7 +64,7 @@ macro config*(body: untyped) = setConfigBody("cfg", body)
 
 macro config*(cfg, body: untyped) = setConfigBody(cfg.strVal, body)
 
-macro setDefault(cfg: untyped) =
+macro setDefault(cfg: Config) =
   var body = quote do:
     sslLib = BearSSL
     debugLog = false
