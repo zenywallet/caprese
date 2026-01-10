@@ -48,23 +48,37 @@ template joli_workerTmpl(num: typed, body: untyped) {.dirty.} =
 macro base*(body: untyped): untyped =
   discard serverStmt.add body
 
+var serverTmplId {.compileTime.}: int = 0
+
 macro server*(ssl: bool, ip: string, port: uint16, body: untyped): untyped =
   joli_serverTmpl(ip, port, false, false, ssl, body)
-  discard serverStmt.add quote do:
-    echo "server: ", `ip`, ":", `port`, (if `ssl`: " SSL" else: "")
-    addServer(`ip`, `port`, false, false, `ssl`, `body`)
+  inc(serverTmplId)
+  var serverTmpl = ident("joli2_server_" & $serverTmplId)
+  serverStmt.add quote do: `serverTmpl`()
+  quote do:
+    template `serverTmpl`*() =
+      echo "server: ", `ip`, ":", `port`, (if `ssl`: " SSL" else: "")
+      addServer(`ip`, `port`, false, false, `ssl`, `body`)
 
 macro server*(ip: string, port: uint16, body: untyped): untyped =
   joli_serverTmpl(ip, port, false, false, false, body)
-  discard serverStmt.add quote do:
-    echo "server: ", `ip`, ":", `port`
-    addServer(`ip`, `port`, false, false, false, `body`)
+  inc(serverTmplId)
+  var serverTmpl = ident("joli2_server_" & $serverTmplId)
+  serverStmt.add quote do: `serverTmpl`()
+  quote do:
+    template `serverTmpl`*() =
+      echo "server: ", `ip`, ":", `port`
+      addServer(`ip`, `port`, false, false, false, `body`)
 
 macro server*(unix: string, body: untyped): untyped =
   joli_serverTmpl(unix, 0, false, true, false, body)
-  discard serverStmt.add quote do:
-    echo "server: unix:", `unix`
-    addServer(`unix`, 0, false, true, false, `body`)
+  inc(serverTmplId)
+  var serverTmpl = ident("joli2_server_" & $serverTmplId)
+  serverStmt.add quote do: `serverTmpl`()
+  quote do:
+    template `serverTmpl`*() =
+      echo "server: unix:", `unix`
+      addServer(`unix`, 0, false, true, false, `body`)
 
 template serverHttp*(ip: string, body: untyped) =
   server(false, ip, 80, body)
