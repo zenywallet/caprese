@@ -52,6 +52,7 @@ var serverTmplId {.compileTime.}: int = 0
 
 macro server*(ssl: bool, ip: string, port: uint16, body: untyped): untyped =
   joli_serverTmpl(ip, port, false, false, ssl, body)
+  searchServerNode(body)
   inc(serverTmplId)
   var serverTmpl = ident("joli2_server_" & $serverTmplId)
   serverStmt.add quote do: `serverTmpl`()
@@ -62,6 +63,7 @@ macro server*(ssl: bool, ip: string, port: uint16, body: untyped): untyped =
 
 macro server*(ip: string, port: uint16, body: untyped): untyped =
   joli_serverTmpl(ip, port, false, false, false, body)
+  searchServerNode(body)
   inc(serverTmplId)
   var serverTmpl = ident("joli2_server_" & $serverTmplId)
   serverStmt.add quote do: `serverTmpl`()
@@ -72,6 +74,7 @@ macro server*(ip: string, port: uint16, body: untyped): untyped =
 
 macro server*(unix: string, body: untyped): untyped =
   joli_serverTmpl(unix, 0, false, true, false, body)
+  searchServerNode(body)
   inc(serverTmplId)
   var serverTmpl = ident("joli2_server_" & $serverTmplId)
   serverStmt.add quote do: `serverTmpl`()
