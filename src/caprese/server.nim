@@ -1410,7 +1410,8 @@ macro addServerMacro*(bindAddress: string, port: uint16, reuse: bool, unix: bool
           hostname = $s[1][1]
           if portInt > 0 and portInt != 80 and portInt != 443 and not findColonNum(hostname):
             s[1][1] = newLit(hostname & ":" & $portInt)
-        elif s[1][1].kind == nnkIdent or s[1][1].kind == nnkDotExpr or s[1][1].kind == nnkCall:
+        elif s[1][1].kind == nnkIdent or s[1][1].kind == nnkSym or
+            s[1][1].kind == nnkDotExpr or s[1][1].kind == nnkCall:
           hostnameNode = s[1][1]
           s.insert(1, nnkExprEqExpr.newTree(
             newIdentNode("port"),
