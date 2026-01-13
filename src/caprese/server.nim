@@ -6233,6 +6233,9 @@ when defined(SERVER2):
     parseServers(serverStmt)
 
 else:
+  template addServer*(bindAddress: string, port: uint16, reuse: bool, unix: bool, ssl: bool, body: untyped) =
+    addServer1(bindAddress, port, reuse, unix, ssl, body)
+
   template serverBase() =
     commitSrvCmd()
     initCfg()
@@ -6240,8 +6243,6 @@ else:
     contentsWithCfg(cfg)
     init()
     initServer()
-    template addServer*(bindAddress: string, port: uint16, reuse: bool, unix: bool, ssl: bool, body: untyped) =
-      addServer1(bindAddress, port, reuse, unix, ssl, body)
     serverMacro()
     showSrvCmdUsage()
     when curSrvId == 0:
