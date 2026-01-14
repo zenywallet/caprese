@@ -55,7 +55,7 @@ template `.`*(cfg: Config, field: untyped): auto = cfg.getConfig(field)
 var configStmt* {.compileTime.} = newStmtList()
 
 template setConfigBody(cfgStr: string, body: untyped) =
-  configStmt.add(body[0])
+  configStmt.add(body)
   for a in body:
     if a.kind == nnkAsgn:
       configParams[cfgStr][a[0].strVal] = a[1]
