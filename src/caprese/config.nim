@@ -53,12 +53,19 @@ macro getConfig(cfg, name: untyped): untyped =
 template `.`*(cfg: Config, field: untyped): auto = cfg.getConfig(field)
 
 var configStmt* {.compileTime.} = newStmtList()
+var configHttpHeaderStmt {.compileTime.} = newEmptyNode()
+
+macro configHttpHeader*() = configHttpHeaderStmt
 
 template setConfigBody(cfgStr: string, body: untyped) =
   configStmt.add(body)
   for a in body:
     if a.kind == nnkAsgn:
       configParams[cfgStr][a[0].strVal] = a[1]
+    elif a.kind == nnkCall:
+      if a[0].strVal == "httpHeader":
+        a[0] = newIdentNode("HttpTargetHeader")
+        configHttpHeaderStmt = a
 
 macro config*(body: untyped) = setConfigBody("cfg", body)
 

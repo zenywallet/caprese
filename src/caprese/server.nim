@@ -1203,6 +1203,7 @@ macro initCfg*(): untyped =
       postExistsFlagOverride(true)
     configCalls(`configStmt`)
     configCallsMacro()
+    configHttpHeader()
     noSslForceSet()
     when cfg.debugLog: {.define: DEBUG_LOG.}
 
