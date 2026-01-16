@@ -1180,17 +1180,6 @@ addReleaseOnQuit(sockCtl)
 var serverWorkerNum*: int
 var highGear* = false
 
-var configCallsStmt {.compileTime.} = newStmtList()
-
-macro configCallsMacro(): untyped = configCallsStmt
-
-macro configCalls*(body: untyped): untyped =
-  for i in 0..<body.len:
-    if body[i].kind == nnkCall:
-      if $body[i][0] == "httpHeader":
-        body[i][0] = newIdentNode("HttpTargetHeader")
-      configCallsStmt.add(body[i])
-
 var initCfgFlag {.compileTime.}: bool
 macro initCfg*(): untyped =
   if initCfgFlag: return
@@ -1201,8 +1190,6 @@ macro initCfg*(): untyped =
     when cfg.postRequestMethod:
       macro postExistsFlagOverride(flag: static bool) = postExists = flag
       postExistsFlagOverride(true)
-    configCalls(`configStmt`)
-    configCallsMacro()
     configHttpHeader()
     noSslForceSet()
     when cfg.debugLog: {.define: DEBUG_LOG.}
