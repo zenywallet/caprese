@@ -1589,8 +1589,11 @@ macro returnExists*(body: untyped): bool =
 
 macro returnRequired*(body: untyped): bool =
   if body.len > 0:
-    if body.len == 1 and body.kind == nnkReturnStmt:
-      return newLit(false)
+    if body.len == 1:
+      if body.kind == nnkReturnStmt:
+        return newLit(false)
+      elif body.kind == nnkStmtListExpr:
+        return newLit(true)
     var n = body[^1]
     while n.kind == nnkStmtList:
       if n.len > 0:
