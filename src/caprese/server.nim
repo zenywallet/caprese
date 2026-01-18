@@ -1384,6 +1384,14 @@ macro addServerMacro*(bindAddress: string, port: uint16, reuse: bool, unix: bool
     appIdTypeList.add(AppRoutesSend)
   var serverResources = newStmtList()
   var routesList = newStmtList()
+
+  var body = body
+  while body.len == 1 and (body.kind == nnkStmtList or body.kind == nnkStmtListExpr):
+    if body[0].kind == nnkStmtList or body[0].kind == nnkStmtListExpr:
+      body = body[0]
+    else:
+      break
+
   for s in body:
     if s.len > 1 and eqIdent(s[0], "routes"):
       var hostname = ""
