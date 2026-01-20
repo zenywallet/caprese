@@ -1746,6 +1746,14 @@ macro createCertsTable*(): untyped =
     )
   )
 
+macro createCertsServerList*(): untyped =
+  var bracket = nnkBracket.newTree()
+  for i, d in certsTableData:
+    bracket.add(newLit(d.key))
+  var certsServerList = ident("certsServerList")
+  quote do:
+    const `certsServerList`* = `bracket`
+
 macro createCertsFileNameList*(): untyped =
   var certsFileNameList: seq[tuple[privFileName, chainFileName: string]]
   certsFileNameList.add(("", ""))
@@ -5721,6 +5729,7 @@ template serverLib(cfg: Config) {.dirty.} =
           clientConnectionCheckPos = 0
 
   createCertsTable()
+  createCertsServerList()
   certsTable = unsafeAddr staticCertsTable
   certsIdxTable = unsafeAddr staticCertsIdxTable
   for c in certsTable[].pairs:
