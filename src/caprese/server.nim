@@ -5652,7 +5652,19 @@ template serverLib(cfg: Config) {.dirty.} =
       else:
         clientHandlerProcs.add appRoutesSend
 
+  proc symToIdent(node: NimNode, targets: seq[string]) {.compileTime.} =
+    for i in 0..<node.len:
+      let n = node[i]
+      if n.kind == nnkSym:
+        for target in targets:
+          if $n == target:
+            node[i] = newIdentNode(target)
+            break
+      else:
+        symToIdent(n, targets)
+
   proc addHandlerProc(appId: NimNode, name: string, ssl: NimNode, unix: NimNode, body: NimNode): NimNode {.compileTime.} =
+    symToIdent(body, @["get", "data"])
     if name == "appListen":
       newCall(name & "Macro", ssl, unix, body)
     elif name == "appRoutes":
