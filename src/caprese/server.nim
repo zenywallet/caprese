@@ -3294,17 +3294,17 @@ template serverLib(cfg: Config) {.dirty.} =
       var ctx = SSL_CTX_new(TLS_server_method())
       try:
         if not certsTable.isNil and site.len > 0:
-          let certs = certsTable[][site]
-          var retPriv = SSL_CTX_use_PrivateKey_file(ctx, cstring(certs.privPath), SSL_FILETYPE_PEM)
+          let cert = certsTable[][site]
+          var retPriv = SSL_CTX_use_PrivateKey_file(ctx, cstring(cert.privPath), SSL_FILETYPE_PEM)
           if retPriv != 1:
             logs.error "error: private key file"
             raise newException(ServerSslCertError, "private key file")
-          var retChain = SSL_CTX_use_certificate_chain_file(ctx, cstring(certs.chainPath))
+          var retChain = SSL_CTX_use_certificate_chain_file(ctx, cstring(cert.chainPath))
           if retChain != 1:
             logs.error "error: chain file"
             raise newException(ServerSslCertError, "chain file")
         else:
-          raise newException(ServerSslCertError, "no certs")
+          raise newException(ServerSslCertError, "no cert")
       except:
         if not selfSignedCertFallback:
           ctx.SSL_CTX_free()
@@ -5767,20 +5767,20 @@ template serverLib(cfg: Config) {.dirty.} =
         certLen: CHAIN_LEN.csize_t)
       for serverName, val in certsTable[].pairs:
         let certKeyChains = addr certKeyChainsList[val.idx]
-        let certsPath = certsTable[][serverName]
+        let cert = certsTable[][serverName]
         var noFile = false
-        if not fileExists(certsPath.privPath):
-          logs.error "not found ", certsPath.privPath
+        if not fileExists(cert.privPath):
+          logs.error "not found ", cert.privPath
           noFile = true
-        if not fileExists(certsPath.chainPath):
-          logs.error "not found ", certsPath.chainPath
+        if not fileExists(cert.chainPath):
+          logs.error "not found ", cert.chainPath
           noFile = true
         if noFile:
           continue
         try:
-          certKeyChains[].chains = createChains(readFile(certsPath.chainPath))
+          certKeyChains[].chains = createChains(readFile(cert.chainPath))
           try:
-            var certDatas = decodePem(readFile(certsPath.privPath))
+            var certDatas = decodePem(readFile(cert.privPath))
             let certData = certDatas[0]
             certKeyChains[].key = decodeCertPrivateKey(certData.data)
             clearPemObjs(certDatas)
@@ -6001,14 +6001,14 @@ template serverLib(cfg: Config) {.dirty.} =
       try:
         let sitename = $SSL_get_servername(ssl, TLSEXT_NAMETYPE_host_name)
         debug "sitename=", sitename
-        let certs = certsTable[][sitename]
-        if certs.srvId != serverThreadCtx.client.srvId:
+        let cert = certsTable[][sitename]
+        if cert.srvId != serverThreadCtx.client.srvId:
           return SSL_TLSEXT_ERR_NOACK
-        let ctx = siteCtxs[certs.idx].ctx
+        let ctx = siteCtxs[cert.idx].ctx
         if SSL_set_SSL_CTX(ssl, ctx).isNil:
           logs.error "error: SSL_set_SSL_CTX site=", sitename
           return SSL_TLSEXT_ERR_NOACK
-        serverThreadCtx.client.sslIdx = certs.idx
+        serverThreadCtx.client.sslIdx = cert.idx
         return SSL_TLSEXT_ERR_OK
       except:
         return SSL_TLSEXT_ERR_OK
