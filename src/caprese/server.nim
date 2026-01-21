@@ -5947,7 +5947,7 @@ template serverLib(cfg: Config) {.dirty.} =
                     let watchFolder = w.path.toString()
                     certWatchList[i].wd = inotify_add_watch(inoty, watchFolder.cstring, IN_CLOSE_WRITE or IN_ATTRIB or IN_MOVED_TO)
                     if certWatchList[i].wd >= 0:
-                      logs.debug "certs watch add: ", watchFolder
+                      logs.debug "cert watch add: ", watchFolder
                       for d in w.idxList:
                         var idx = d.idx
                         updateCerts(idx)
@@ -5960,7 +5960,7 @@ template serverLib(cfg: Config) {.dirty.} =
                   if w.wd == e[].wd:
                     var ids = w.idxList
                     var filename = $cast[cstring](addr e[].name)
-                    logs.debug "certs watch: ", w.path.toString / filename
+                    logs.debug "cert watch: ", w.path.toString / filename
                     for d in ids:
                       case d.ctype
                       of 0:
@@ -5978,7 +5978,7 @@ template serverLib(cfg: Config) {.dirty.} =
                       if w.wd >= 0:
                         certWatchList[i].wd = -1
                         discard inoty.inotify_rm_watch(w.wd)
-                        logs.debug "certs watch remove: ", w.path.toString()
+                        logs.debug "cert watch remove: ", w.path.toString()
                         for d in w.idxList:
                           certUpdateFlags[d.idx].priv = true
                           certUpdateFlags[d.idx].chain = true
