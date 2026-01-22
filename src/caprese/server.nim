@@ -5780,20 +5780,19 @@ template serverLib(cfg: Config) {.dirty.} =
         certLen: CHAIN_LEN.csize_t)
       for serverName, val in certsTable[].pairs:
         let certKeyChains = addr certKeyChainsList[val.idx]
-        let cert = certsTable[][serverName]
         var noFile = false
-        if not fileExists(cert.privPath):
-          logs.error "not found ", cert.privPath
+        if not fileExists(val.privPath):
+          logs.error "not found ", val.privPath
           noFile = true
-        if not fileExists(cert.chainPath):
-          logs.error "not found ", cert.chainPath
+        if not fileExists(val.chainPath):
+          logs.error "not found ", val.chainPath
           noFile = true
         if noFile:
           continue
         try:
-          certKeyChains[].chains = createChains(readFile(cert.chainPath))
+          certKeyChains[].chains = createChains(readFile(val.chainPath))
           try:
-            var certDatas = decodePem(readFile(cert.privPath))
+            var certDatas = decodePem(readFile(val.privPath))
             let certData = certDatas[0]
             certKeyChains[].key = decodeCertPrivateKey(certData.data)
             clearPemObjs(certDatas)
