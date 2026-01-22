@@ -1608,6 +1608,19 @@ macro returnRequired*(body: untyped): bool =
         n = n[^1]
       else:
         return newLit(false)
+
+    while n.kind == nnkCall and n[0].kind == nnkSym:
+      n = getImpl(n[0])
+      if not n.isNil and n.len > 0:
+        n = n[^1]
+        while n.kind == nnkStmtList:
+          if n.len > 0:
+            n = n[^1]
+          else:
+            return newLit(false)
+      else:
+        return newLit(false)
+
     if (n.kind == nnkCall or n.kind == nnkCommand) and
       $n[0] in ["get", "stream", "public", "certificates", "acme", "post",
                 "proxy", "head", "put", "delete", "connect", "options", "trace"]:
