@@ -5778,7 +5778,7 @@ template serverLib(cfg: Config) {.dirty.} =
       certKeyChainsList[0].chains = X509CertificateChains(
         cert: cast[ptr UncheckedArray[br_x509_certificate]](unsafeAddr CHAIN[0]),
         certLen: CHAIN_LEN.csize_t)
-      for serverName, val in certsTable[].pairs:
+      for val in certsTable[].values:
         let certKeyChains = addr certKeyChainsList[val.idx]
         var noFile = false
         if not fileExists(val.privPath):
