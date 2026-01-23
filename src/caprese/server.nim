@@ -1690,6 +1690,7 @@ macro routes*(internalSslIdx: int, port: int, host: string, body: untyped): unty
   var findColon = quote do: findColonNumMacro(`hostNode`)
   var portStr = $portInt
   var hostPort = quote do: `site` & ":" & `portStr`
+
   quote do:
     when `portInt` > 0 and `portInt` != 80 and `portInt ` != 443 and not `findColon`:
       when cfg.sslRoutesHost == SniAndHeaderHost:
@@ -5745,8 +5746,9 @@ template serverLib(cfg: Config) {.dirty.} =
   createCertsServerList()
   certsTable = unsafeAddr staticCertsTable
   certsIdxTable = unsafeAddr staticCertsIdxTable
-  for c in certsTable[].pairs:
-    addCertsList(c[0], c[1].idx)
+  for site in certsServerList:
+    let val = certsTable[][site]
+    addCertsList(site, val.idx)
 
   createCertsFileNameList()
 
@@ -5778,7 +5780,8 @@ template serverLib(cfg: Config) {.dirty.} =
       certKeyChainsList[0].chains = X509CertificateChains(
         cert: cast[ptr UncheckedArray[br_x509_certificate]](unsafeAddr CHAIN[0]),
         certLen: CHAIN_LEN.csize_t)
-      for val in certsTable[].values:
+      for site in certsServerList:
+        let val = certsTable[][site]
         let certKeyChains = addr certKeyChainsList[val.idx]
         var noFile = false
         if not fileExists(val.privPath):
@@ -5810,8 +5813,8 @@ template serverLib(cfg: Config) {.dirty.} =
           ctx: SSL_CTX
 
       var siteCtxs: array[staticCertsTable.len + 1, SiteCtx]
-      for site in certsTable[].keys:
-        var val = certsTable[][site]
+      for site in certsServerList:
+        let val = certsTable[][site]
         siteCtxs[val.idx].ctx = newSslCtx(site, selfSignedCertFallback = true)
 
     var certUpdateFlags: array[staticCertsTable.len + 1, tuple[priv, chain: bool, checkCount: int]]
@@ -5819,8 +5822,9 @@ template serverLib(cfg: Config) {.dirty.} =
       certUpdateFlags[i] = (false, false, 0)
 
     var checkFolders: seq[string]
-    for c in certsTable[].values:
-      for _, path in [c.privPath, c.chainPath]:
+    for site in certsServerList:
+      let val = certsTable[][site]
+      for _, path in [val.privPath, val.chainPath]:
         let folder = splitPath(path).head
         if not (folder in checkFolders):
           checkFolders.add(folder)
@@ -5830,8 +5834,9 @@ template serverLib(cfg: Config) {.dirty.} =
 
     var certWatchList: Array[tuple[path: Array[char], wd: cint, idxList: Array[tuple[idx: int, ctype: int]]]]
     var idx = 1
-    for c in certsTable[].values:
-      for ctype, path in [c.privPath, c.chainPath]:
+    for site in certsServerList:
+      let val = certsTable[][site]
+      for ctype, path in [val.privPath, val.chainPath]:
         block SearchPath:
           let watchFolder = splitPath(path).head
           for i, w in certWatchList:
@@ -5887,7 +5892,8 @@ template serverLib(cfg: Config) {.dirty.} =
         certUpdateFlags[idx] = (false, false, 0)
 
         when cfg.sslLib == BearSSL:
-          for site, val in certsTable[].pairs:
+          for site in certsServerList:
+            let val = certsTable[][site]
             if val.idx == idx:
               var noFile = false
               if not fileExists(val.privPath):
@@ -5926,7 +5932,8 @@ template serverLib(cfg: Config) {.dirty.} =
               break
 
         when cfg.sslLib == OpenSSL or cfg.sslLib == LibreSSL or cfg.sslLib == BoringSSL:
-          for site, val in certsTable[].pairs:
+          for site in certsServerList:
+            let val = certsTable[][site]
             if val.idx == idx:
               var oldCtx = siteCtxs[idx].ctx
               siteCtxs[idx].ctx = newSslCtx(site, selfSignedCertFallback = true)
