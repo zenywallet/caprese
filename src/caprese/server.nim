@@ -1778,22 +1778,6 @@ macro createCertsFileNameList*(): untyped =
     newLit(certsFileNameList)
   )
 
-var certsList: Array[tuple[site: Array[byte], idx: int]]
-
-proc addCertsList*(site: string, idx: int) =
-  var a = cast[seq[byte]](site).toArray
-  certsList.add((a, idx))
-
-proc getCertsList*(): Array[tuple[site: Array[byte], idx: int]] = certsList
-
-proc getCertIdx*(site: string): int =
-  for a in certsList:
-    if cast[seq[byte]](site) == a.site:
-      return a.idx
-  return -1
-
-proc clearCertsList*() = certsList.empty()
-
 template certificates*(path: string, body: untyped) = discard # code is added by macro
 
 template certificates*(body: untyped) = discard # code is added by macro
@@ -5746,9 +5730,6 @@ template serverLib(cfg: Config) {.dirty.} =
   createCertsServerList()
   certsTable = unsafeAddr staticCertsTable
   certsIdxTable = unsafeAddr staticCertsIdxTable
-  for site in certsServerList:
-    let val = certsTable[][site]
-    addCertsList(site, val.idx)
 
   createCertsFileNameList()
 
