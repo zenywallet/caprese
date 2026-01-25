@@ -1765,8 +1765,11 @@ macro createCertsServerList*(): untyped =
   for i, d in certsTableData:
     bracket.add(newLit(d.key))
   var certsServerList = ident("certsServerList")
-  quote do:
-    const `certsServerList`* = `bracket`
+  if bracket.len > 0:
+    quote do:
+      const `certsServerList`* = `bracket`
+  else:
+    newEmptyNode()
 
 macro createCertsFileNameList*(): untyped =
   var certsFileNameList: seq[tuple[privFileName, chainFileName: string]]
@@ -5761,32 +5764,33 @@ template serverLib(cfg: Config) {.dirty.} =
       certKeyChainsList[0].chains = X509CertificateChains(
         cert: cast[ptr UncheckedArray[br_x509_certificate]](unsafeAddr CHAIN[0]),
         certLen: CHAIN_LEN.csize_t)
-      for site in certsServerList:
-        let val = certsTable[][site]
-        let certKeyChains = addr certKeyChainsList[val.idx]
-        var noFile = false
-        if not fileExists(val.privPath):
-          logs.error "not found ", val.privPath
-          noFile = true
-        if not fileExists(val.chainPath):
-          logs.error "not found ", val.chainPath
-          noFile = true
-        if noFile:
-          continue
-        try:
-          certKeyChains[].chains = createChains(readFile(val.chainPath))
+      when defined(certsServerList):
+        for site in certsServerList:
+          let val = certsTable[][site]
+          let certKeyChains = addr certKeyChainsList[val.idx]
+          var noFile = false
+          if not fileExists(val.privPath):
+            logs.error "not found ", val.privPath
+            noFile = true
+          if not fileExists(val.chainPath):
+            logs.error "not found ", val.chainPath
+            noFile = true
+          if noFile:
+            continue
           try:
-            var certDatas = decodePem(readFile(val.privPath))
-            let certData = certDatas[0]
-            certKeyChains[].key = decodeCertPrivateKey(certData.data)
-            clearPemObjs(certDatas)
+            certKeyChains[].chains = createChains(readFile(val.chainPath))
+            try:
+              var certDatas = decodePem(readFile(val.privPath))
+              let certData = certDatas[0]
+              certKeyChains[].key = decodeCertPrivateKey(certData.data)
+              clearPemObjs(certDatas)
+            except:
+              freeChains(certKeyChainsList[val.idx].chains)
+              let e = getCurrentException()
+              logs.error e.name, ": ", e.msg
           except:
-            freeChains(certKeyChainsList[val.idx].chains)
             let e = getCurrentException()
             logs.error e.name, ": ", e.msg
-        except:
-          let e = getCurrentException()
-          logs.error e.name, ": ", e.msg
 
     when cfg.sslLib == OpenSSL or cfg.sslLib == LibreSSL or cfg.sslLib == BoringSSL:
       type
@@ -5794,57 +5798,60 @@ template serverLib(cfg: Config) {.dirty.} =
           ctx: SSL_CTX
 
       var siteCtxs: array[staticCertsTable.len + 1, SiteCtx]
-      for site in certsServerList:
-        let val = certsTable[][site]
-        siteCtxs[val.idx].ctx = newSslCtx(site, selfSignedCertFallback = true)
+      when defined(certsServerList):
+        for site in certsServerList:
+          let val = certsTable[][site]
+          siteCtxs[val.idx].ctx = newSslCtx(site, selfSignedCertFallback = true)
 
     var certUpdateFlags: array[staticCertsTable.len + 1, tuple[priv, chain: bool, checkCount: int]]
     for i in 0..<certUpdateFlags.len:
       certUpdateFlags[i] = (false, false, 0)
 
     var checkFolders: seq[string]
-    for site in certsServerList:
-      let val = certsTable[][site]
-      for _, path in [val.privPath, val.chainPath]:
-        let folder = splitPath(path).head
-        if not (folder in checkFolders):
-          checkFolders.add(folder)
-    for folder in checkFolders:
-      if not dirExists(folder):
-        logs.error "error: certificates path does not exists path=", folder
+    when defined(certsServerList):
+      for site in certsServerList:
+        let val = certsTable[][site]
+        for _, path in [val.privPath, val.chainPath]:
+          let folder = splitPath(path).head
+          if not (folder in checkFolders):
+            checkFolders.add(folder)
+      for folder in checkFolders:
+        if not dirExists(folder):
+          logs.error "error: certificates path does not exists path=", folder
 
     var certWatchList: Array[tuple[path: Array[char], wd: cint, idxList: Array[tuple[idx: int, ctype: int]]]]
     var idx = 1
-    for site in certsServerList:
-      let val = certsTable[][site]
-      for ctype, path in [val.privPath, val.chainPath]:
-        block SearchPath:
-          let watchFolder = splitPath(path).head
-          for i, w in certWatchList:
-            if w.path.toString == watchFolder:
-              certWatchList[i].idxList.add((idx, ctype.int))
-              break SearchPath
-          when defined(linux):
-            var wd = inotify_add_watch(inoty, watchFolder.cstring, IN_CLOSE_WRITE or IN_ATTRIB or IN_MOVED_TO)
-            if wd == -1:
-              logs.error "error: inotify_add_watch path=", watchFolder
-          elif defined(openbsd):
-            var wd = open(watchFolder.cstring, O_RDONLY)
-            if wd == -1:
-              logs.error "error: open path=", watchFolder
-            else:
-              var ev: KEvent
-              EV_SET(addr ev, wd.uint, EVFILT_VNODE, EV_ADD or EV_ENABLE or EV_CLEAR,
-                    NOTE_WRITE or NOTE_DELETE or NOTE_REVOKE, 0, nil)
-              var retEvent = kevent(fileWatchFd, addr ev, 1, nil, 0, nil)
-              if retEvent != 0:
-                logs.error "error: kevent ret=", retEvent, " errno=", errno
-          var nextPos = certWatchList.len
-          certWatchList.setLen(nextPos + 1)
-          certWatchList[nextPos].path = watchFolder.toArray
-          certWatchList[nextPos].wd = wd
-          certWatchList[nextPos].idxList.add((idx, ctype.int))
-      inc(idx)
+    when defined(certsServerList):
+      for site in certsServerList:
+        let val = certsTable[][site]
+        for ctype, path in [val.privPath, val.chainPath]:
+          block SearchPath:
+            let watchFolder = splitPath(path).head
+            for i, w in certWatchList:
+              if w.path.toString == watchFolder:
+                certWatchList[i].idxList.add((idx, ctype.int))
+                break SearchPath
+            when defined(linux):
+              var wd = inotify_add_watch(inoty, watchFolder.cstring, IN_CLOSE_WRITE or IN_ATTRIB or IN_MOVED_TO)
+              if wd == -1:
+                logs.error "error: inotify_add_watch path=", watchFolder
+            elif defined(openbsd):
+              var wd = open(watchFolder.cstring, O_RDONLY)
+              if wd == -1:
+                logs.error "error: open path=", watchFolder
+              else:
+                var ev: KEvent
+                EV_SET(addr ev, wd.uint, EVFILT_VNODE, EV_ADD or EV_ENABLE or EV_CLEAR,
+                      NOTE_WRITE or NOTE_DELETE or NOTE_REVOKE, 0, nil)
+                var retEvent = kevent(fileWatchFd, addr ev, 1, nil, 0, nil)
+                if retEvent != 0:
+                  logs.error "error: kevent ret=", retEvent, " errno=", errno
+            var nextPos = certWatchList.len
+            certWatchList.setLen(nextPos + 1)
+            certWatchList[nextPos].path = watchFolder.toArray
+            certWatchList[nextPos].wd = wd
+            certWatchList[nextPos].idxList.add((idx, ctype.int))
+        inc(idx)
 
     proc freeFileWatcher() =
       when defined(linux):
@@ -5873,53 +5880,55 @@ template serverLib(cfg: Config) {.dirty.} =
         certUpdateFlags[idx] = (false, false, 0)
 
         when cfg.sslLib == BearSSL:
-          for site in certsServerList:
-            let val = certsTable[][site]
-            if val.idx == idx:
-              var noFile = false
-              if not fileExists(val.privPath):
-                logs.debug "not found ", val.privPath
-                noFile = true
-              if not fileExists(val.chainPath):
-                logs.debug "not found ", val.chainPath
-                noFile = true
-              let certKeyChains = addr certKeyChainsList[idx]
-              if certKeyChains[].key.keyType != CertPrivateKeyType.None:
-                acquire(certKeyChainsListLock)
-                freeCertPrivateKey(certKeyChainsList[idx].key)
-                freeChains(certKeyChainsList[idx].chains)
-              else:
-                acquire(certKeyChainsListLock)
-              if noFile:
-                release(certKeyChainsListLock)
-                break
-              try:
-                certKeyChains[].chains = createChains(readFile(val.chainPath))
-                try:
-                  var certDatas = decodePem(readFile(val.privPath))
-                  let certData = certDatas[0]
-                  certKeyChains[].key = decodeCertPrivateKey(certData.data)
-                  clearPemObjs(certDatas)
-                  release(certKeyChainsListLock)
-                except:
+          when defined(certsServerList):
+            for site in certsServerList:
+              let val = certsTable[][site]
+              if val.idx == idx:
+                var noFile = false
+                if not fileExists(val.privPath):
+                  logs.debug "not found ", val.privPath
+                  noFile = true
+                if not fileExists(val.chainPath):
+                  logs.debug "not found ", val.chainPath
+                  noFile = true
+                let certKeyChains = addr certKeyChainsList[idx]
+                if certKeyChains[].key.keyType != CertPrivateKeyType.None:
+                  acquire(certKeyChainsListLock)
+                  freeCertPrivateKey(certKeyChainsList[idx].key)
                   freeChains(certKeyChainsList[idx].chains)
+                else:
+                  acquire(certKeyChainsListLock)
+                if noFile:
+                  release(certKeyChainsListLock)
+                  break
+                try:
+                  certKeyChains[].chains = createChains(readFile(val.chainPath))
+                  try:
+                    var certDatas = decodePem(readFile(val.privPath))
+                    let certData = certDatas[0]
+                    certKeyChains[].key = decodeCertPrivateKey(certData.data)
+                    clearPemObjs(certDatas)
+                    release(certKeyChainsListLock)
+                  except:
+                    freeChains(certKeyChainsList[idx].chains)
+                    release(certKeyChainsListLock)
+                    let e = getCurrentException()
+                    logs.error e.name, ": ", e.msg
+                except:
                   release(certKeyChainsListLock)
                   let e = getCurrentException()
                   logs.error e.name, ": ", e.msg
-              except:
-                release(certKeyChainsListLock)
-                let e = getCurrentException()
-                logs.error e.name, ": ", e.msg
-              break
+                break
 
         when cfg.sslLib == OpenSSL or cfg.sslLib == LibreSSL or cfg.sslLib == BoringSSL:
-          for site in certsServerList:
-            let val = certsTable[][site]
-            if val.idx == idx:
-              var oldCtx = siteCtxs[idx].ctx
-              siteCtxs[idx].ctx = newSslCtx(site, selfSignedCertFallback = true)
-              oldCtx.SSL_CTX_free()
-              break
+          when defined(certsServerList):
+            for site in certsServerList:
+              let val = certsTable[][site]
+              if val.idx == idx:
+                var oldCtx = siteCtxs[idx].ctx
+                siteCtxs[idx].ctx = newSslCtx(site, selfSignedCertFallback = true)
+                oldCtx.SSL_CTX_free()
+                break
 
       while active:
         when cfg.connectionTimeout >= 0:
