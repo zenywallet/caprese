@@ -5764,7 +5764,7 @@ template serverLib(cfg: Config) {.dirty.} =
       certKeyChainsList[0].chains = X509CertificateChains(
         cert: cast[ptr UncheckedArray[br_x509_certificate]](unsafeAddr CHAIN[0]),
         certLen: CHAIN_LEN.csize_t)
-      when defined(certsServerList):
+      when declared(certsServerList):
         for site in certsServerList:
           let val = certsTable[][site]
           let certKeyChains = addr certKeyChainsList[val.idx]
@@ -5798,7 +5798,7 @@ template serverLib(cfg: Config) {.dirty.} =
           ctx: SSL_CTX
 
       var siteCtxs: array[staticCertsTable.len + 1, SiteCtx]
-      when defined(certsServerList):
+      when declared(certsServerList):
         for site in certsServerList:
           let val = certsTable[][site]
           siteCtxs[val.idx].ctx = newSslCtx(site, selfSignedCertFallback = true)
@@ -5808,7 +5808,7 @@ template serverLib(cfg: Config) {.dirty.} =
       certUpdateFlags[i] = (false, false, 0)
 
     var checkFolders: seq[string]
-    when defined(certsServerList):
+    when declared(certsServerList):
       for site in certsServerList:
         let val = certsTable[][site]
         for _, path in [val.privPath, val.chainPath]:
@@ -5821,7 +5821,7 @@ template serverLib(cfg: Config) {.dirty.} =
 
     var certWatchList: Array[tuple[path: Array[char], wd: cint, idxList: Array[tuple[idx: int, ctype: int]]]]
     var idx = 1
-    when defined(certsServerList):
+    when declared(certsServerList):
       for site in certsServerList:
         let val = certsTable[][site]
         for ctype, path in [val.privPath, val.chainPath]:
@@ -5880,7 +5880,7 @@ template serverLib(cfg: Config) {.dirty.} =
         certUpdateFlags[idx] = (false, false, 0)
 
         when cfg.sslLib == BearSSL:
-          when defined(certsServerList):
+          when declared(certsServerList):
             for site in certsServerList:
               let val = certsTable[][site]
               if val.idx == idx:
@@ -5921,7 +5921,7 @@ template serverLib(cfg: Config) {.dirty.} =
                 break
 
         when cfg.sslLib == OpenSSL or cfg.sslLib == LibreSSL or cfg.sslLib == BoringSSL:
-          when defined(certsServerList):
+          when declared(certsServerList):
             for site in certsServerList:
               let val = certsTable[][site]
               if val.idx == idx:
