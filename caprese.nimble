@@ -27,8 +27,8 @@ task bearssl, "Build BearSSL":
 
 task openssl, "Build OpenSSL":
   withDir "deps/openssl":
-    if fileExists("libssl.so"):
-      exec "make clean"
+    exec "make clean"
+    exec "git checkout openssl-3.6.0"
     exec "./Configure no-shared"
     exec "make -j$(nproc --all || sysctl -n hw.ncpu || getconf _NPROCESSORS_ONLN || echo 1)"
     exec "mkdir -p ../../src/lib/openssl"
