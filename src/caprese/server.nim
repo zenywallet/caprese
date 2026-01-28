@@ -5985,8 +5985,9 @@ template serverLib(cfg: Config) {.dirty.} =
                   if w.wd == e[].wd:
                     if (e[].mask and IN_IGNORED) > 0:
                       if w.wd >= 0:
+                        var wdtmp = w.wd
                         certWatchList[i].wd = -1
-                        discard inoty.inotify_rm_watch(w.wd)
+                        discard inoty.inotify_rm_watch(wdtmp)
                         logs.debug "cert watch remove: ", w.path.toString()
                         for d in w.idxList:
                           certUpdateFlags[d.idx].priv = true
