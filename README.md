@@ -923,6 +923,69 @@ serverStart()
 
 **Note:** Since `proxy:` block is Nim's *template*, `getProxyHost()` function is called after the `proxy:` `path` is matched.
 
+### Modularization
+In some cases, when you want to pack various server functions into a single binary, you may need to modularize them into multiple files rather than a single file to avoid library conflicts.
+
+*config.nim*
+```nim
+import caprese
+
+config:
+  serverPort1 = 8009
+  serverPort2 = 8089
+  serverHost1 = "server1"
+  serverHost2 = "server2"
+  serverHost3 = "server3"
+```
+
+*routes1.nim*
+```nim
+import caprese
+
+template tmpl*(): untyped =
+  get "/":
+    cfg.serverHost1.addHeader.send
+```
+
+*routes2.nim*
+```nim
+import caprese
+
+template tmpl*(): untyped =
+  get "/":
+    cfg.serverHost2.addHeader.send
+```
+
+*server1.nim*
+```nim
+import caprese
+import routes1, routes2
+
+server(ssl = true, ip = "0.0.0.0", port = cfg.serverPort1):
+  routes(host = cfg.serverHost1):
+    routes1.tmpl()
+  routes(host = cfg.serverHost2):
+    routes2.tmpl()
+```
+
+*server2.nim*
+```nim
+import caprese
+
+server(ssl = false, ip = "0.0.0.0", port = cfg.serverPort2):
+  routes(host = cfg.serverHost3):
+    cfg.serverHost3.addHeader.send
+```
+
+*main.nim*
+```nim
+import caprese
+import config
+import server1, server2
+
+serverStart()
+```
+
 ### Tag-based Message Exchange
 Let me explain one of the unique features of the Caprese that is not implemented in common web servers. Tags can be attached to client connections. It is possible to send some data to the tag. That data will be sent to all tagged clients. The tag value must be a number or at least 8 bytes of data. It could be a string or something else, but it is better to use hashed data. It is assumed that the data is hashed originally, and no internal hashing of tags is performed. Hashing would be easy with Nim's `converter`. To control the tags, you need the *ClientId*, which you can get with `markPending()`.
 
