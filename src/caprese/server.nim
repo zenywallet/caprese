@@ -5842,7 +5842,8 @@ template serverLib(cfg: Config) {.dirty.} =
               else:
                 var ev: KEvent
                 EV_SET(addr ev, wd.uint, EVFILT_VNODE, EV_ADD or EV_ENABLE or EV_CLEAR,
-                      NOTE_WRITE or NOTE_DELETE or NOTE_REVOKE, 0, nil)
+                      NOTE_WRITE or NOTE_DELETE or NOTE_RENAME or NOTE_REVOKE,
+                      0, cast[pointer](wd.uint))
                 var retEvent = kevent(fileWatchFd, addr ev, 1, nil, 0, nil)
                 if retEvent != 0:
                   logs.error "error: kevent ret=", retEvent, " errno=", errno
@@ -5874,6 +5875,11 @@ template serverLib(cfg: Config) {.dirty.} =
         var evs = newSeq[byte](sizeof(InotifyEvent) * 512)
         var fds: array[1, TPollfd]
         fds[0].events = posix.POLLIN
+      elif defined(openbsd):
+        var evs: array[5, KEvent]
+        var ts: Timespec
+        ts.tv_sec = 3.Time
+        var certUpdateDelay = false
       var sec = 0
 
       template updateCerts(idx: int) =
@@ -5998,7 +6004,75 @@ template serverLib(cfg: Config) {.dirty.} =
                 updateCerts(idx)
 
         elif defined(openbsd):
-          sleep(3000)
+          if fileWatchFd == -1:
+            sleep(3000)
+          else:
+            let n = kevent(fileWatchFd, nil, 0, addr evs[0], sizeof(evs).cint, addr ts)
+            if n <= 0:
+              if errno == EINTR: continue
+              if certUpdateDelay:
+                certUpdateDelay = false
+                for idx, flag in certUpdateFlags:
+                  if flag.priv or flag.chain:
+                    updateCerts(idx)
+                continue
+              inc(sec, 3)
+              if sec >= 30:
+                sec = 0
+                for idx, flag in certUpdateFlags:
+                  if flag.priv or flag.chain:
+                    if certUpdateFlags[idx].checkCount > 0:
+                      updateCerts(idx)
+                    else:
+                      inc(certUpdateFlags[idx].checkCount)
+                for i, w in certWatchList:
+                  if w.wd == -1:
+                    let watchFolder = w.path.toString()
+                    let wd = open(watchFolder.cstring, O_RDONLY)
+                    certWatchList[i].wd = wd
+                    if wd >= 0:
+                      var ev: KEvent
+                      EV_SET(addr ev, wd.uint, EVFILT_VNODE, EV_ADD or EV_ENABLE or EV_CLEAR,
+                            NOTE_WRITE or NOTE_DELETE or NOTE_RENAME or NOTE_REVOKE,
+                            0, cast[pointer](wd.uint))
+                      var retEvent = kevent(fileWatchFd, addr ev, 1, nil, 0, nil)
+                      if retEvent != 0:
+                        logs.error "error: kevent ret=", retEvent, " errno=", errno
+                      logs.debug "cert watch add: ", watchFolder
+                      for d in w.idxList:
+                        var idx = d.idx
+                        updateCerts(idx)
+              continue
+            for i in 0..<n:
+              let ev = evs[i]
+              let wd = cast[cint](ev.udata)
+              for i, w in certWatchList:
+                if w.wd == wd:
+                  for d in w.idxList:
+                    certUpdateFlags[d.idx].priv = true
+                    certUpdateFlags[d.idx].chain = true
+                  certUpdateDelay = true
+                  if (ev.fflags.uint32 and (NOTE_DELETE.uint32 or
+                      NOTE_RENAME.uint32 or NOTE_REVOKE.uint32)) > 0:
+                    certWatchList[i].wd = -1
+                    discard close(wd)
+                    logs.debug "cert watch remove: ", w.path.toString()
+
+              if (ev.fflags.uint32 and NOTE_RENAME.uint32) > 0:
+                for i, w in certWatchList:
+                  if w.wd == -1:
+                    let watchFolder = w.path.toString()
+                    let wd = open(watchFolder.cstring, O_RDONLY)
+                    if wd >= 0:
+                      certWatchList[i].wd = wd
+                      var ev: KEvent
+                      EV_SET(addr ev, wd.uint, EVFILT_VNODE, EV_ADD or EV_ENABLE or EV_CLEAR,
+                            NOTE_WRITE or NOTE_DELETE or NOTE_RENAME or NOTE_REVOKE,
+                            0, cast[pointer](wd.uint))
+                      var retEvent = kevent(fileWatchFd, addr ev, 1, nil, 0, nil)
+                      if retEvent != 0:
+                        logs.error "error: kevent ret=", retEvent, " errno=", errno
+                      logs.debug "cert watch add: ", watchFolder
 
   when cfg.sslLib == OpenSSL or cfg.sslLib == LibreSSL or cfg.sslLib == BoringSSL:
     SSL_load_error_strings()
