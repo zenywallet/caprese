@@ -79,7 +79,7 @@ task zopfli, "Copy zopfli":
 task brotli, "Copy brotli":
   withDir "deps/brotli":
     exec "mkdir -p ../../src/brotli"
-    exec "cp -r c ../../src/brotli/"
+    exec "cp -a c ../../src/brotli/"
 
 task depsAll, "Build deps":
   if getEnv("NOREMOTEUPDATE") == "1":
