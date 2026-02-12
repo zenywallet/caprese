@@ -432,7 +432,7 @@ when isMainModule:
         sslLib = None
 
     server(ssl = sslFlag, ip = "127.0.0.1", port = (when sslFlag: 8009 else: 8089)):
-      routes(host = "localhost"):
+      routes:
         var fileContentResult = getDynamicFile(reqUrl())
         if fileContentResult.err == FileContentSuccess:
           var fileContent = fileContentResult.data
