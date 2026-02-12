@@ -27,7 +27,7 @@ task bearssl, "Build BearSSL":
 
 task openssl, "Build OpenSSL":
   withDir "deps/openssl":
-    exec "make clean"
+    exec "[ -f Makefile ] && make clean || true"
     exec "git checkout $(git tag --sort=-v:refname | grep 'openssl-[0-9.]*$' | head -n 1)"
     exec "./Configure no-shared"
     exec "make -j$(nproc --all || sysctl -n hw.ncpu || getconf _NPROCESSORS_ONLN || echo 1)"
