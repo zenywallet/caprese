@@ -294,7 +294,7 @@ template convertHtmlDocument*(srcFileDir, code: string): string =
   echo ret
   ret
 
-proc keepIndent*(code: string): string = ("\n" & code).indent(4)
+proc keepIndent*(code: string): string = "\n" & code.indent(4)
 
 when NimVersion == "2.0.4": # workaround modulepaths.nim/getModuleName degrade
   import karax.karaxdsl
