@@ -293,7 +293,6 @@ template convertHtmlDocument*(srcFileDir, code: string): string =
   var ret = codeOutput.unindent(if spaceCount > 4: spaceCount else: 4)
   if not ret.endsWith("\n"):
     ret.add("\n")
-  echo ret
   ret
 
 proc keepIndent*(code: string): string = "\n" & code.indent(4)
