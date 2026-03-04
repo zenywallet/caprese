@@ -290,7 +290,9 @@ template convertHtmlDocument*(srcFileDir, code: string): string =
       break
     if s.strip.startsWith("<body>"):
       findBody = true
-  let ret = codeOutput.unindent(if spaceCount > 4: spaceCount else: 4)
+  var ret = codeOutput.unindent(if spaceCount > 4: spaceCount else: 4)
+  if not ret.endsWith("\n"):
+    ret.add("\n")
   echo ret
   ret
 
