@@ -1873,11 +1873,11 @@ template stream*(streamAppId: int, path: string, protocol: string, body: untyped
 
 template public*(importPath: string, body: untyped) = body
 
-macro content*(content, mime: string): FileContent {.srvcmd.} =
+macro content*(content, mime: static string): FileContent {.srvcmd.} =
   quote do:
     createStaticFile(`content`, `mime`)
 
-macro content*(content: string): FileContent {.srvcmd.} =
+macro content*(content: static string): FileContent {.srvcmd.} =
   quote do:
     createStaticFile(`content`, "text/html")
 
