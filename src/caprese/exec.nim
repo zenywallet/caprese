@@ -131,6 +131,7 @@ proc minifyJsCode*(srcFileDir: string, code: string, extern: string, rstr: strin
   let tmpSrcFile = tmpNameFile & ".js"
   let tmpExtFile = tmpNameFile & "_extern.js"
   let tmpDstFile = tmpNameFile & "_min.js"
+  var code = removeThreadVarPatch(code)
   writeFile(tmpSrcFile, code)
   writeFile(tmpExtFile, extern & basicExtern(tmpSrcFile))
   let downloadClosureCompiler = staticExec """
