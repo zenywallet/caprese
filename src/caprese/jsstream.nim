@@ -66,6 +66,10 @@ proc connect0*(stream: Stream; url: cstring; protocols: JsObject; onOpen: proc(e
     var data = newUint8Array(evt.data)
     onMessage(evt, data)
 
+template connect*(stream: Stream; url: cstring; protocols: JsObject;
+                  onOpen, onReady, onMessage, onClose, onError: untyped) =
+  connect0(stream, url, protocols, onOpen, onReady, onMessage, onClose, onError)
+
 macro connect*(stream: Stream; url: cstring; protocols: JsObject; body: untyped): untyped =
   var onOpen = newStmtList()
   var onReady = newStmtList()
