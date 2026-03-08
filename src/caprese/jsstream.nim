@@ -77,7 +77,7 @@ macro connect*(stream: Stream; url: cstring; protocols: JsObject; body: untyped)
       onOpen.add(b[1])
     elif b[0].eqIdent("onReady"):
       onReady.add(b[1])
-    elif b[0].eqIdent("onMessage"):
+    elif b[0].eqIdent("onMessage") or b[0].eqIdent("onRecv"):
       onMessage.add(b[1])
     elif b[0].eqIdent("onClose"):
       onClose.add(b[1])
