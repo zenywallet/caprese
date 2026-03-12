@@ -12,17 +12,24 @@ type
   JsonObj* = JsObject
   ArgumentsObj* = JsObject
   MathObj* = JsObject
+  ObjectObj* = JsObject
+  ThisObj* = JsObject
+  CryptoObj* = JsObject
   WebSocketObj*  = JsObject
   Uint8ArrayObj* = JsObject
   Uint32ArrayObj* = JsObject
   NumberObj* = JsObject
+  StringObj* = JsObject
   ArrayObj* = JsObject
+  DataViewObj* = JsObject
 
   WebSocket* = ref object of WebSocketObj
   Uint8Array* = ref object of Uint8ArrayObj
   Uint32Array* = ref object of Uint32ArrayObj
   Number* = ref object of NumberObj
+  String* = ref object of StringObj
   Array* = ref object of ArrayObj
+  DataView* = ref object of DataViewObj
 
   JslibError* = object of CatchableError
 
@@ -33,6 +40,9 @@ var navigator* {.importc, nodecl.}: NavigatorObj
 var JSON* {.importc, nodecl.}: JsonObj
 var arguments* {.importc, nodecl.}: ArgumentsObj
 var Math* {.importc, nodecl.}: MathObj
+var Object* {.importc, nodecl.}: ObjectObj
+var this* {.importc, nodecl.}: ThisObj
+var crypto* {.importc, nodecl.}: CryptoObj
 
 {.experimental: "dotOperators".}
 macro `.`*(typ: typedesc, field: untyped): JsObject =
