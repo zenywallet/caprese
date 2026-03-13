@@ -83,6 +83,7 @@ proc newUint32Array*(buffer: JsObject, byteOffset: int, length: int): Uint32Arra
 proc newTextEncoder*(): JsObject {.importcpp: "new TextEncoder()".}
 proc newTextDecoder*(): JsObject {.importcpp: "new TextDecoder()".}
 proc newNumber*(val: JsObject): Number {.importcpp: "new Number(#)".}
+proc newString*(val: JsObject): String {.importcpp: "new String(#)".}
 proc newWorker*(url: cstring): JsObject {.importcpp: "new Worker(#)".}
 proc newWorker*(url: cstring, options: JsObject): JsObject {.importcpp: "new Worker(#, #)".}
 
