@@ -86,6 +86,9 @@ proc newNumber*(val: JsObject): Number {.importcpp: "new Number(#)".}
 proc newString*(val: JsObject): String {.importcpp: "new String(#)".}
 proc newWorker*(url: cstring): JsObject {.importcpp: "new Worker(#)".}
 proc newWorker*(url: cstring, options: JsObject): JsObject {.importcpp: "new Worker(#, #)".}
+proc newDataView*(buffer: JsObject): DataView {.importcpp: "new DataView(#)".}
+proc newDataView*(buffer: JsObject, byteOffset: int): DataView {.importcpp: "new DataView(#, #)".}
+proc newDataView*(buffer: JsObject, byteOffset: int, byteLength: int): DataView {.importcpp: "new DataView(#, #, #)".}
 
 proc modCall*(module: JsObject, name: cstring, para1: JsObject): JsObject {.importcpp: "#[#](#)", discardable.}
 
