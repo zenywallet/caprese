@@ -108,7 +108,7 @@ proc uint8ArrayToStr*(uint8Array: JsObject): cstring =
   let textdec = newTextDecoder()
   result = textdec.decode(uint8Array).to(cstring)
 
-proc match_regexp2(s: cstring): JsObject {.importcpp: "#.match(/.{2}/g)".}
+proc match_regexp2(s: cstring or JsObject): JsObject {.importcpp: "#.match(/.{2}/g)".}
 
 proc hexToUint8Array*(str: cstring or JsObject): Uint8Array =
   if str.toJs.length % 2.toJs != 0.toJs:
