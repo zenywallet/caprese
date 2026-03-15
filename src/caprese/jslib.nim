@@ -139,6 +139,8 @@ proc sleep_async*(ms: int): Future[void] {.discardable.} =
 
 template sleep*(ms: int) = await sleep_async(ms)
 
+proc isDefined*[T](x: T): bool {.noSideEffect, importjs: "(typeof # !== 'undefined')".}
+
 template withStack*(body: untyped) =
   block stackBlock:
     var stack = Module.stackSave()
