@@ -246,6 +246,40 @@ template contentsWithCfg*(cfg: Config) {.dirty.} =
   template addHeader*(body: string): string | Array[byte] =
     addHeader_b_selector(body)
 
+
+  macro addHeader*(body: static string, code: StatusCode, mimetype: string): string | Array[byte] =
+    quote do:
+      addHeader_bcm_selector(`body`, `code`, `mimetype`)
+
+  macro addHeader*(body: static string, code: StatusCode, mimetype: RawMimeType): string =
+    quote do:
+      addHeaderBase(`body`, `code`, `mimetype`.ContentType)
+
+  macro addHeader*(body: static string, code: StatusCode, mimetype: string, charset: string): string =
+    quote do:
+      addHeaderBase(`body`, `code`, (getMime(`mimetype`) & "; charset=" & `charset`).ContentType)
+
+  macro addHeader*(body: static string, code: StatusCode, mimetype: RawMimeType, charset: string): string =
+    quote do:
+      addHeaderBase(`body`, `code`, (`mimetype`.string & "; charset=" & `charset`).ContentType)
+
+  macro addHeader*(body: static string, code: StatusCode): string =
+    quote do:
+      addHeaderBase(`body`, `code`, "text/html".ContentType)
+
+  macro addHeader*(body: static string, mimetype: string | RawMimeType): string | Array[byte] =
+    quote do:
+      addHeader(`body`, Status200, `mimetype`)
+
+  macro addHeader*(body: static string, mimetype: string | RawMimeType, charset: string): string =
+    quote do:
+      addHeader(`body`, Status200, `mimetype`, `charset`)
+
+  macro addHeader*(body: static string): string | Array[byte] =
+    quote do:
+      addHeader_b_selector(`body`)
+
+
   template resHeader*(code: StatusCode): string =
     "HTTP/" & HTTP_VERSION & " " & $code & "\c\L\c\L"
 
