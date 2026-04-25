@@ -31,7 +31,7 @@ else:
 
 template sha256(data: openArray[byte] | string): array[br_sha256_SIZE, byte] =
   if data.len > 0:
-    sha256(cast[ptr UncheckedArray[byte]](addr data[0]), data.len.uint32)
+    sha256(cast[ptr UncheckedArray[byte]](unsafeAddr data[0]), data.len.uint32)
   else:
     sha256(nil, 0)
 
