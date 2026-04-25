@@ -1198,7 +1198,8 @@ macro initServer*(): untyped =
   if not initServerFlag:
     initServerFlag = true
     quote do:
-      when NimVersion == "2.0.4": # workaround modulepaths.nim/getModuleName degrade
+      when NimVersion == "2.0.4" or
+          NimVersion == "1.6.20": # workaround modulepaths.nim/getModuleName degrade
         import std.tables
       else:
         import std/tables
