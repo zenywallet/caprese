@@ -1214,6 +1214,12 @@ var srvCmdBody {.compileTime.} = newStmtList()
 
 template srvcmd_tmpl(name, body: untyped) =
   var nameStr = name.strVal
+
+  when NimMajor < 2:
+    if nameStr == "reqHost":
+      routesHostParamExists = true
+      return
+
   block FindCmd:
     for c in srvCmdList:
       if c == nameStr:
