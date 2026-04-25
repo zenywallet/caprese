@@ -46,7 +46,7 @@ macro initConfig*(cfg: untyped) =
 
 macro getConfig(cfg, name: untyped): untyped =
   try:
-    configParams[cfg.strVal][name.strVal]
+    result = configParams[cfg.strVal][name.strVal]
   except:
     error "config: unknown " & name.strVal
 
