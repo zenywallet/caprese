@@ -108,6 +108,7 @@ macro setDefault(cfg: untyped) =
     clientThreadAssign = AutoAssign
     clientLock = true
     reqHeaderConnection = false
+    acceptIp = []
 
   setConfigBody(cfg.strVal, body)
 

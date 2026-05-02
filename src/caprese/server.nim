@@ -2025,6 +2025,7 @@ macro serverThreadCtxObjTypeMacro*(cfg: Config): untyped =
 template serverLib(cfg: Config) {.dirty.} =
   import std/strutils
   import std/sequtils
+  import std/bitops
   when NimMajor >= 2:
     import checksums/sha1
   else:
@@ -3328,6 +3329,8 @@ template serverLib(cfg: Config) {.dirty.} =
 
   var SOCK_NONBLOCK {.importc, header: "<sys/socket.h>".}: cint
 
+  var linger: TLinger = TLinger(l_onoff: 1, l_linger: 0)
+
   proc appListenBase(ctx: ServerThreadCtx, sslFlag: static bool, unixFlag: static bool) {.thread, inline.} =
     template acceptNewClient(clientSock: SocketHandle) =
       when cfg.soKeepalive:
@@ -3404,17 +3407,111 @@ template serverLib(cfg: Config) {.dirty.} =
             for i in 0..<serverWorkerNum:
               discard sem_post(addr throttleBody)
 
+    macro acceptIpMacro(clientSock: SocketHandle, cont: bool = false): untyped =
+      result = newStmtList()
+      when cfg.acceptIp.len > 0:
+        for acceptIp in cfg.acceptIp:
+          let parts = acceptIp.split('/')
+          if parts.len == 2:
+            let parts1 = parts[0].split('.')
+            var targetIp = when system.cpuEndian == bigEndian:
+              parseUint(parts1[0]).uint32 shl 24 or
+              parseUint(parts1[1]).uint32 shl 16 or
+              parseUint(parts1[2]).uint32 shl 8 or
+              parseUint(parts1[3]).uint32
+            else:
+              parseUint(parts1[3]).uint32 shl 24 or
+              parseUint(parts1[2]).uint32 shl 16 or
+              parseUint(parts1[1]).uint32 shl 8 or
+              parseUint(parts1[0]).uint32
+            let bit = try:
+              parseUint(parts[1]).int
+            except:
+              let parts2 = parts[1].split('.')
+              var n: uint32 = parseUint(parts2[0]).uint32 shl 24 or
+                              parseUint(parts2[1]).uint32 shl 16 or
+                              parseUint(parts2[2]).uint32 shl 8 or
+                              parseUint(parts2[3]).uint32
+              if n == 0: 0 else: 32 - countTrailingZeroBits(n)
+            var mask0: uint32 = 0xFFFFFFFF'u32 shl (32 - bit)
+            var mask: uint32 = when system.cpuEndian == bigEndian:
+              mask0
+            else:
+              (mask0 and 0xff000000'u32) shr 24 or
+              (mask0 and 0x00ff0000'u32) shr 8 or
+              (mask0 and 0x0000ff00'u32) shl 8 or
+              (mask0 and 0x000000ff'u32) shl 24
+            targetIp = targetIp and mask
+            result.add quote do:
+              block:
+                let ip = ctx.sockAddress.sin_addr.s_addr and `mask`
+                if ip == `targetIp`:
+                  acceptNewClient(`clientSock`)
+                  when `cont`: continue else: return
+          elif parts.len == 1:
+            var parts1 = parts[0].split('.')
+            while parts1.len < 4:
+              parts1.add("*")
+            var maskFlag = false
+            var mask: uint32 = 0xffffffff'u32
+            for i in 0..<parts1.len:
+              if parts1[i] == "*":
+                maskFlag = true
+                if i == 0:
+                  mask = mask and (when system.cpuEndian == bigEndian: 0x00ffffff'u32 else: 0xffffff00'u32)
+                elif i == 1:
+                  mask = mask and (when system.cpuEndian == bigEndian: 0xff00ffff'u32 else: 0xffff00ff'u32)
+                elif i == 2:
+                  mask = mask and (when system.cpuEndian == bigEndian: 0xffff00ff'u32 else: 0xff00ffff'u32)
+                elif i == 3:
+                  mask = mask and (when system.cpuEndian == bigEndian: 0xffffff00'u32 else: 0x00ffffff'u32)
+                parts1[i] = "0"
+            var targetIp = when system.cpuEndian == bigEndian:
+              parseUint(parts1[0]).uint32 shl 24 or
+              parseUint(parts1[1]).uint32 shl 16 or
+              parseUint(parts1[2]).uint32 shl 8 or
+              parseUint(parts1[3]).uint32
+            else:
+              parseUint(parts1[3]).uint32 shl 24 or
+              parseUint(parts1[2]).uint32 shl 16 or
+              parseUint(parts1[1]).uint32 shl 8 or
+              parseUint(parts1[0]).uint32
+            if maskFlag:
+              targetIp = targetIp and mask
+              result.add quote do:
+                block:
+                  let ip = ctx.sockAddress.sin_addr.s_addr and `mask`
+                  if ip == `targetIp`:
+                    acceptNewClient(`clientSock`)
+                    when `cont`: continue else: return
+            else:
+              result.add quote do:
+                block:
+                  let ip = ctx.sockAddress.sin_addr.s_addr
+                  if ip == `targetIp`:
+                    acceptNewClient(`clientSock`)
+                    when `cont`: continue else: return
+      result.add quote do:
+        discard setsockopt(`clientSock`, SOL_SOCKET, SO_LINGER, addr linger, sizeof(linger).SockLen)
+        `clientSock`.close()
+
     when cfg.acceptFirst:
       while true:
         let clientSock = ctx.client.sock.accept4(cast[ptr SockAddr](addr ctx.sockAddress), addr ctx.addrLen, SOCK_NONBLOCK)
         if cast[int](clientSock) > 0:
-          acceptNewClient(clientSock)
+          when cfg.acceptIp.len > 0:
+            acceptIpMacro(clientSock, true)
+          else:
+            acceptNewClient(clientSock)
         else:
           break
     else:
       let clientSock = ctx.client.sock.accept4(cast[ptr SockAddr](addr ctx.sockAddress), addr ctx.addrLen, SOCK_NONBLOCK)
       if cast[int](clientSock) > 0:
-        acceptNewClient(clientSock)
+        when cfg.acceptIp.len > 0:
+          acceptIpMacro(clientSock, false)
+        else:
+          acceptNewClient(clientSock)
 
   proc appListen(ctx: ServerThreadCtx) {.thread.} = appListenBase(ctx, false, false)
 
