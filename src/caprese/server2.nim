@@ -1348,7 +1348,7 @@ template parseServers*(serverBody: untyped) {.dirty.} =
 
   proc serverWorker(arg: ThreadArg) {.thread.} =
     echo "serverWorker ", arg.threadId
-    var events: array[cfg.epollEventsSize, EpollEvent]
+    var events: array[cfg.eventsSize, EpollEvent]
     template pevents: ptr UncheckedArray[EpollEvent] = cast[ptr UncheckedArray[EpollEvent]](addr events)
     var nfd: cint
     var nfdCond: bool
@@ -1393,7 +1393,7 @@ template parseServers*(serverBody: untyped) {.dirty.} =
 
     block WaitLoop:
       while true:
-        nfd = epoll_wait(epfd, cast[ptr EpollEvent](addr events), cfg.epollEventsSize.cint, -1.cint)
+        nfd = epoll_wait(epfd, cast[ptr EpollEvent](addr events), cfg.eventsSize.cint, -1.cint)
         nfdCond = likely(nfd > 0)
         if nfdCond:
           while true:
