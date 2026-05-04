@@ -327,3 +327,6 @@ else:
     let xlen = len(x)
     result = newString(xlen)
     copyMem(addr result[0], x.data, xlen)
+
+  template toOpenArray*[T](x: Array[T]): openArray[T] =
+    x.data.toOpenArray(0, x.high)
