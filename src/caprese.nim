@@ -17,12 +17,14 @@ import caprese/contents
 import caprese/files
 import caprese/statuscode
 import caprese/queue
+import caprese/ipfilter
 import caprese/config
 export serverlib
 export contents
 export files
 export statuscode
 export queue
+export ipfilter
 export config
 
 var workerNum = 0

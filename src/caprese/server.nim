@@ -3333,6 +3333,13 @@ template serverLib(cfg: Config) {.dirty.} =
 
   proc appListenBase(ctx: ServerThreadCtx, sslFlag: static bool, unixFlag: static bool) {.thread, inline.} =
     template acceptNewClient(clientSock: SocketHandle) =
+      when ipFilterEnable and not unixFlag:
+        let ip = posix.ntohl(ctx.sockAddress.sin_addr.s_addr)
+        if not ipfilter.checkIp(ip):
+          discard setsockopt(clientSock, SOL_SOCKET, SO_LINGER, addr linger, sizeof(linger).SockLen)
+          clientSock.close()
+          return
+
       when cfg.soKeepalive:
         clientSock.setSockOptInt(SOL_SOCKET, SO_KEEPALIVE, 1)
       when cfg.tcpNodelay and not unixFlag:
