@@ -12,7 +12,7 @@ A front-end web server specialized for real-time message exchange
 
 ### Quick Trial
 #### Install Nim
-I heard you like Ubuntu, so the following are required to install [Nim](https://nim-lang.org/).
+I heard you like Ubuntu, so the following packages are required to install [Nim](https://nim-lang.org/).
 
     sudo apt install build-essential curl
 
@@ -84,6 +84,7 @@ Open [https://localhost:8009/](https://localhost:8009/) in your browser. You'll 
 - Web pages are in-memory static files at compile time, dynamic file loading is also available for development
 - Reverse proxy for backend and internal services, server load balancing is available
 - Messaging functionality to send data from the server to clients individually or in groups
+- IP filter using binary search and a simple range table with optimized filter rules
 - Dependency-free executable for easy server deployment
 - Build on your device from source code, this repository does not include binary modules such as SSL libraries
 - Languages - Nim 100.0%
@@ -1102,6 +1103,34 @@ First copy of certificate files, also for testing.
 Now open [http://YOUR_DOMAIN/](http://YOUR_DOMAIN/) in your browser. If the URL http redirects to https and there is no certificate warning, it is successful.
 
 If you have just created the directory */path/to/certs/YOUR_DOMAIN*, wait about 30 seconds before opening the URL. This is because if the directory does not exist yet, real-time file monitoring to update the certificates is deactivated. Once the Caprese has detected the directory, monitoring is activated, the certificates will be updated instantly after the certificate files have been changed.
+
+### IP Filter
+It's a smart kid that optimizes even when there are overlaps or duplicates in IP address ranges. To use it, you must choose either *pass* or *drop* as the default filter action. If you select *pass* as the default action, you will generally define *drop IP* rules, but you can also define *pass IP* rules, in which case the *pass IP* rules take precedence. If you select *drop* as the default action, the opposite applies: *drop IP* rules take precedence over *pass IP* rules. Please note that filter rules are not evaluated in the order in which they are written.
+
+Since this is not a static IP filter, you can modify the settings while the system is running. However, since rule updates are slow, please use a different method if you need to change the rules frequently. At this stage, this IP filter applies to all clients connecting to the server. I might implement per-server IP filters in the future.
+
+```nim
+ipFilter:
+  default pass
+  drop "100.0.0.0/16"
+  drop "192.168.0.0/24"
+  pass "192.168.0.3"
+```
+
+```nim
+ipFilter:
+  default drop
+  pass "127.0.0.1"
+```
+
+```nim
+ipFilter:
+  default drop
+  for line in lines("./delegated-apnic-latest"):
+    let d = line.split('|')
+    if d.len == 7 and d[1] == "JP" and d[2] == "ipv4":
+      pass d[3] & "/" & $(32 - countTrailingZeroBits(d[4].parseUint().uint32))
+```
 
 ### Leftover Desserts
 - POST
