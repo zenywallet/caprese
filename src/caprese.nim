@@ -52,8 +52,19 @@ macro base*(body: untyped): untyped =
 
 var serverTmplId {.compileTime.}: int = 0
 
-macro server*(ssl: bool, ip: string, port: uint16, body: untyped): untyped =
-  joli_serverTmpl(ip, port, false, false, ssl, body)
+#macro server*(ssl: bool, ip: string, port: uint16, body: untyped): untyped =
+#macro server*(ssl: bool, ip: string, port: uint16, reuse: bool, body: untyped): untyped =
+macro server*(ssl: bool, ip: string, port: uint16, args: varargs[untyped]): untyped =
+  var reuse, body: NimNode
+  if args.len == 1:
+    reuse = quote do: cfg.reusePort
+    body = args[0]
+  elif args.len == 2:
+    reuse = args[0]
+    body = args[1]
+  else:
+    macros.error("server parameters", args)
+  joli_serverTmpl(ip, port, reuse, false, ssl, body)
   searchServerNode(body)
   inc(serverTmplId)
   var serverTmpl = ident("joli2_server_" & $serverTmplId)
@@ -61,10 +72,11 @@ macro server*(ssl: bool, ip: string, port: uint16, body: untyped): untyped =
   quote do:
     template `serverTmpl`*() =
       echo "server: ", `ip`, ":", `port`, (if `ssl`: " SSL" else: "")
-      addServer(`ip`, `port`, false, false, `ssl`, `body`)
+      addServer(`ip`, `port`, `reuse`, false, `ssl`, `body`)
 
 macro server*(ip: string, port: uint16, body: untyped): untyped =
-  joli_serverTmpl(ip, port, false, false, false, body)
+  var reuse = quote do: cfg.reusePort
+  joli_serverTmpl(ip, port, reuse, false, false, body)
   searchServerNode(body)
   inc(serverTmplId)
   var serverTmpl = ident("joli2_server_" & $serverTmplId)
@@ -72,10 +84,11 @@ macro server*(ip: string, port: uint16, body: untyped): untyped =
   quote do:
     template `serverTmpl`*() =
       echo "server: ", `ip`, ":", `port`
-      addServer(`ip`, `port`, false, false, false, `body`)
+      addServer(`ip`, `port`, `reuse`, false, false, `body`)
 
 macro server*(unix: string, body: untyped): untyped =
-  joli_serverTmpl(unix, 0, false, true, false, body)
+  var reuse = quote do: cfg.reusePort
+  joli_serverTmpl(unix, 0, reuse, true, false, body)
   searchServerNode(body)
   inc(serverTmplId)
   var serverTmpl = ident("joli2_server_" & $serverTmplId)
@@ -83,7 +96,29 @@ macro server*(unix: string, body: untyped): untyped =
   quote do:
     template `serverTmpl`*() =
       echo "server: unix:", `unix`
-      addServer(`unix`, 0, false, true, false, `body`)
+      addServer(`unix`, 0, `reuse`, true, false, `body`)
+
+macro server*(ip: string, port: uint16, reuse: bool, body: untyped): untyped =
+  joli_serverTmpl(ip, port, reuse, false, false, body)
+  searchServerNode(body)
+  inc(serverTmplId)
+  var serverTmpl = ident("joli2_server_" & $serverTmplId)
+  serverStmt.add quote do: `serverTmpl`()
+  quote do:
+    template `serverTmpl`*() =
+      echo "server: ", `ip`, ":", `port`
+      addServer(`ip`, `port`, `reuse`, false, false, `body`)
+
+macro server*(unix: string, reuse: bool, body: untyped): untyped =
+  joli_serverTmpl(unix, 0, reuse, true, false, body)
+  searchServerNode(body)
+  inc(serverTmplId)
+  var serverTmpl = ident("joli2_server_" & $serverTmplId)
+  serverStmt.add quote do: `serverTmpl`()
+  quote do:
+    template `serverTmpl`*() =
+      echo "server: unix:", `unix`
+      addServer(`unix`, 0, `reuse`, true, false, `body`)
 
 template serverHttp*(ip: string, body: untyped) =
   server(false, ip, 80, body)
