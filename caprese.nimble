@@ -13,8 +13,10 @@ bin           = @["caprese"]
 # Dependencies
 
 requires "nim >= 1.6.4"
-when NimMajor >= 2:
-  requires "checksums"
+#when NimMajor >= 2:
+#  requires "checksums"
+# Nim version 2.2.10: 'requires' cannot be nested inside control flow statements
+requires "checksums" # when NimMajor < 2: comment out this line
 requires "karax >= 1.2.3"
 requires "regex"
 
