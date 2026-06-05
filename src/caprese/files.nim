@@ -124,7 +124,8 @@ macro buildCompressTools() =
     buildToolFlag = true
     var setNossl = fileExists(srcDir / "../lib/NOSSL.a")
     if setNossl or os.getEnv("NOSSL") == "1":
-      echo staticExec("NOSSL=1 nim c -d:release --threads:on -o:../bin/ " & (srcDir / "files_helper.nim"))
+      #echo staticExec("NOSSL=1 nim c -d:release --threads:on -o:../bin/ " & (srcDir / "files_helper.nim"))
+      echo "skip files_helper"
     else:
       echo staticExec("nim c -d:release --threads:on -o:../bin/ " & (srcDir / "files_helper.nim"))
 
