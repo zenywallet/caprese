@@ -65,7 +65,7 @@ proc timeStampUpdater2() {.thread.} =
     updateTimeStamp2()
     sleep(1000)
 
-proc startTimeStampUpdater*(cfg: Config) =
+template startTimeStampUpdater*(cfg: Config) =
   when cfg.headerDate:
     active = true
     if activeHeaderDatePos.len > 0:
