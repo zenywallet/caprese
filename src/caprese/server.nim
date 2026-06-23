@@ -4162,16 +4162,8 @@ template serverLib(cfg: Config) {.dirty.} =
                   if equalMem(cast[pointer](pos), ".1\c\L".cstring, 4):
                     ctx.header.minorVer = 1
                     inc(pos, 2)
-                    if equalMem(cast[pointer](pos), "\c\L\c\L".cstring, 4):
-                      nextParse = (pos + 4.uint - cur0).int
-                      break
-                    inc(pos, 2)
                   elif equalMem(cast[pointer](pos), ".0\c\L".cstring, 4):
                     ctx.header.minorVer = 0
-                    inc(pos, 2)
-                    if equalMem(cast[pointer](pos), "\c\L\c\L".cstring, 4):
-                      nextParse = (pos + 4.uint - cur0).int
-                      break
                     inc(pos, 2)
                   else:
                     inc(pos)
@@ -4184,10 +4176,10 @@ template serverLib(cfg: Config) {.dirty.} =
                       nextParse = -1
                       break
                     ctx.header.minorVer = minorVer
-                    if equalMem(cast[pointer](pos), "\c\L\c\L".cstring, 4):
-                      nextParse = (pos + 4.uint - cur0).int
-                      break
-                    inc(pos, 2)
+                  if equalMem(cast[pointer](pos), "\c\L\c\L".cstring, 4):
+                    nextParse = (pos + 4.uint - cur0).int
+                    break
+                  inc(pos, 2)
 
                   var incompleteIdx = 0
                   while true:
