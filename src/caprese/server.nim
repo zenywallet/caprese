@@ -4185,13 +4185,13 @@ template serverLib(cfg: Config) {.dirty.} =
                   while true:
                     block paramsLoop:
                       for i in incompleteIdx..<ctx.targetHeaders.len:
-                        let (headerId, targetParam) = ctx.targetHeaders[i][]
-                        if equalMem(cast[pointer](pos), targetParam.cstring, targetParam.len):
-                          inc(pos, targetParam.len)
+                        template target: untyped = ctx.targetHeaders[i][]
+                        if equalMem(cast[pointer](pos), target.val.cstring, target.val.len):
+                          inc(pos, target.val.len)
                           cur = pos
                           while not equalMem(cast[pointer](pos), "\c\L".cstring, 2):
                             inc(pos)
-                          ctx.header.params[headerId.int] = ((cur - cur0).int, (pos - cur).int)
+                          ctx.header.params[target.id.int] = ((cur - cur0).int, (pos - cur).int)
                           inc(pos, 2)
                           if equalMem(cast[pointer](pos), "\c\L".cstring, 2):
                             nextParse = (pos + 2.uint - cur0).int
