@@ -4183,11 +4183,11 @@ template serverLib(cfg: Config) {.dirty.} =
                     if not equalMem(cast[pointer](pos), "\c\L".cstring, 2):
                       nextParse = -1
                       break
-                    inc(pos, 2)
                     ctx.header.minorVer = minorVer
-                    if equalMem(cast[pointer](pos), "\c\L".cstring, 2):
-                      nextParse = (pos + 2.uint - cur0).int
+                    if equalMem(cast[pointer](pos), "\c\L\c\L".cstring, 4):
+                      nextParse = (pos + 4.uint - cur0).int
                       break
+                    inc(pos, 2)
 
                   var incompleteIdx = 0
                   while true:
