@@ -4165,12 +4165,14 @@ template serverLib(cfg: Config) {.dirty.} =
                     if equalMem(cast[pointer](pos), "\c\L\c\L".cstring, 4):
                       nextParse = (pos + 4.uint - cur0).int
                       break
+                    inc(pos, 2)
                   elif equalMem(cast[pointer](pos), ".0\c\L".cstring, 4):
                     ctx.header.minorVer = 0
                     inc(pos, 2)
                     if equalMem(cast[pointer](pos), "\c\L\c\L".cstring, 4):
                       nextParse = (pos + 4.uint - cur0).int
                       break
+                    inc(pos, 2)
                   else:
                     inc(pos)
                     let minorVer = int(cast[ptr char](cast[pointer](pos))[]) - int('0')
