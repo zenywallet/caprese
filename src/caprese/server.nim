@@ -2133,14 +2133,15 @@ template serverLib(cfg: Config) {.dirty.} =
       while true:
         if equalMem(addr buf[pos], " HTTP/1.".cstring, 8):
           header.url = capbytes.toString(cast[ptr UncheckedArray[byte]](addr buf[cur]), pos - cur)
-          inc(pos, 8)
-          if equalMem(addr buf[pos], "1\c\L".cstring, 3):
+          inc(pos, 7)
+          if equalMem(addr buf[pos], ".1\c\L".cstring, 4):
             header.minorVer = 1
-            inc(pos, 3)
-          elif equalMem(addr buf[pos], "0\c\L".cstring, 3):
+            inc(pos, 2)
+          elif equalMem(addr buf[pos], ".0\c\L".cstring, 4):
             header.minorVer = 0
-            inc(pos, 3)
+            inc(pos, 2)
           else:
+            inc(pos)
             let minorVer = int(buf[pos]) - int('0')
             if minorVer < 0 or minorVer > 9:
               result.err = 4
@@ -2151,11 +2152,11 @@ template serverLib(cfg: Config) {.dirty.} =
               result.err = 5
               result.next = -1
               return
-            inc(pos, 2)
             header.minorVer = minorVer
-          if equalMem(addr buf[pos], "\c\L".cstring, 2):
-            result.next = pos + 2
+          if equalMem(addr buf[pos], "\c\L\c\L".cstring, 4):
+            result.next = pos + 4
             return
+          inc(pos, 2)
 
           var incompleteIdx = 0
           while true:
@@ -2184,12 +2185,12 @@ template serverLib(cfg: Config) {.dirty.} =
                   break paramsLoop
               while not equalMem(addr buf[pos], "\c\L".cstring, 2):
                 inc(pos)
-              inc(pos, 2)
-              if equalMem(addr buf[pos], "\c\L".cstring, 2):
-                result.next = pos + 2
+              if equalMem(addr buf[pos], "\c\L\c\L".cstring, 4):
+                result.next = pos + 4
                 return
+              inc(pos, 2)
 
-        elif equalMem(addr buf[pos], "\c\L".cstring, 2):
+        elif equalMem(addr buf[pos], "\c\L\c\L".cstring, 4):
           result.err = 3
           result.next = -1
           return
@@ -4134,12 +4135,12 @@ template serverLib(cfg: Config) {.dirty.} =
                           break paramsLoop
                       while not equalMem(cast[pointer](pos), "\c\L".cstring, 2):
                         inc(pos)
-                      inc(pos, 2)
-                      if equalMem(cast[pointer](pos), "\c\L".cstring, 2):
-                        nextParse = (pos + 2.uint - cur0).int
+                      if equalMem(cast[pointer](pos), "\c\L\c\L".cstring, 4):
+                        nextParse = (pos + 4.uint - cur0).int
                         break parseMain
+                      inc(pos, 2)
 
-                elif equalMem(cast[pointer](pos), "\c\L".cstring, 2):
+                elif equalMem(cast[pointer](pos), "\c\L\c\L".cstring, 4):
                   nextParse = -1
                   break
                 inc(pos)
