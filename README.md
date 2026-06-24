@@ -177,6 +177,7 @@ config:
   urlRootSafe = true
   postRequestMethod = false
   sslRoutesHost = SniAndHeaderHost
+  reusePort = false
 ```
 
 * **sslLib:** *None*, *BearSSL*(default), *OpenSSL*, *LibreSSL*, *BoringSSL*  
@@ -1112,7 +1113,7 @@ Since this is not a static IP filter, you can modify the settings while the syst
 ```nim
 ipFilter:
   default pass
-  drop "100.0.0.0/16"
+  drop "10.0.0.0/8"
   drop "192.168.0.0/24"
   pass "192.168.0.3"
 ```
@@ -1129,7 +1130,9 @@ ipFilter:
   for line in lines("./delegated-apnic-latest"):
     let d = line.split('|')
     if d.len == 7 and d[1] == "JP" and d[2] == "ipv4":
-      pass d[3] & "/" & $(32 - countTrailingZeroBits(d[4].parseUint().uint32))
+      let ip = d[3]
+      let prefix = 32 - countTrailingZeroBits(d[4].parseUint().uint32)
+      pass ip & "/" & $prefix
 ```
 
 ### Leftover Desserts
