@@ -479,3 +479,9 @@ template mimeType*(mime: string): string =
         newLit(mstr)
       )
     mimeTypeMacro()
+
+type
+  String* = distinct Array[char]
+
+converter toString*(s: string): String = cast[String](s.toArray)
+converter toString*(s: String): string = cast[Array[char]](s).toString
