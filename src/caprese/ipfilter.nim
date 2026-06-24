@@ -201,10 +201,10 @@ when isMainModule:
   ipFilter:
     default pass
     drop "192.168.0.0/24"
-    drop "100.0.0.0/16"
-    drop "100.0.1.0/255.255.255.0"
+    drop "10.100.0.0/16"
+    drop "10.100.1.0/255.255.255.0"
     drop "10.0.0.1"
-    pass "100.0.2.0/24"
+    pass "10.100.2.0/24"
 
   echo $allowIpTable[].table
 
@@ -219,7 +219,7 @@ when isMainModule:
   checkIpTest("10.0.0.0")
   checkIpTest("10.0.0.1")
   checkIpTest("10.0.0.2")
-  checkIpTest("100.0.0.1")
-  checkIpTest("100.0.1.1")
-  checkIpTest("100.0.2.1")
-  checkIpTest("100.0.3.1")
+  checkIpTest("10.100.0.1")
+  checkIpTest("10.100.1.1")
+  checkIpTest("10.100.2.1")
+  checkIpTest("10.100.3.1")
