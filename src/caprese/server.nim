@@ -1989,6 +1989,8 @@ template serverType() {.dirty.} =
       params: array[TargetHeaderParams.len, tuple[cur: int, size: int]]
       minorVer: int
 
+  const ReqHeaderParamSize = sizeof(tuple[cur: int, size: int])
+
 var serverThreadCtxExtRec {.compileTime.} = nnkRecList.newTree()
 
 macro serverThreadCtxExt*(body: untyped): untyped =
@@ -3936,6 +3938,9 @@ template serverLib(cfg: Config) {.dirty.} =
                           inc(pos, 2)
                           if equalMem(cast[pointer](pos), "\c\L".cstring, 2):
                             nextParse = (pos + 2.uint - cur0).int
+                            if incompleteIdx < ctx.targetHeaders.len:
+                              zeroMem(addr ctx.header.params[incompleteIdx],
+                                ReqHeaderParamSize * (ctx.targetHeaders.len - incompleteIdx))
                             break parseMain
                           if i != incompleteIdx:
                             swap(ctx.targetHeaders[incompleteIdx], ctx.targetHeaders[i])
@@ -3951,6 +3956,9 @@ template serverLib(cfg: Config) {.dirty.} =
                         inc(pos)
                       if equalMem(cast[pointer](pos), "\c\L\c\L".cstring, 4):
                         nextParse = (pos + 4.uint - cur0).int
+                        if incompleteIdx < ctx.targetHeaders.len:
+                          zeroMem(addr ctx.header.params[incompleteIdx],
+                            ReqHeaderParamSize * (ctx.targetHeaders.len - incompleteIdx))
                         break parseMain
                       inc(pos, 2)
 
