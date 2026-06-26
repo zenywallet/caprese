@@ -3148,7 +3148,7 @@ template serverLib(cfg: Config) {.dirty.} =
           if retKevent < 0:
             errorRaise "error: kevent ret=", retKevent, " errno=", errno
 
-      when cfg.sslLib == SslLib.None:
+      when cfg.sslLib == SslLib.None and cfg.connectionPreferred != ConnectionPreferred.InternalConnection:
         if (cfg.clientMax - FreePoolServerUsedCount) - clientFreePool.count >= highGearThreshold:
           if highGearManagerAssigned == 0:
             highGear = true
