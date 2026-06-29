@@ -56,10 +56,11 @@ macro HttpTargetHeader(idEnumName, valListName, targetHeaders, body: untyped): u
   for a in body:
     var a0 = a[0]
     var paramLit = newLit($a[1][0] & ": ")
+    var paramLit2 = newLit(($a[1][0]).toLowerAscii() & ": ")
     enumParams.add(a0)
     targetParams.add(paramLit)
     addHeadersStmt.add quote do:
-      `targetHeaders`.add((id: `a0`, val: `paramLit`))
+      `targetHeaders`.add((id: `a0`, val: `paramLit`, val2: `paramLit2`))
 
   for a in body:
     for i, b in internalEssentialHeaders:
@@ -74,17 +75,18 @@ macro HttpTargetHeader(idEnumName, valListName, targetHeaders, body: untyped): u
   for b in internalEssentialHeaders:
     var b0 = newIdentNode(b[0])
     var compareVal = newLit(b[1] & ": ")
+    var compareVal2 = newLit(b[1].toLowerAscii() & ": ")
     enumParams.add(b0)
     targetParams.add(compareVal)
     addHeadersStmt.add quote do:
-      `targetHeaders`.add((id: `b0`, val: `compareVal`))
+      `targetHeaders`.add((id: `b0`, val: `compareVal`, val2: `compareVal2`))
 
   var addHeadersStmtLen = newLit(addHeadersStmt.len)
   quote do:
     type `idEnumName` = `enumParams`
     `internalEssentialConst`
     const `valListName` = `targetParams`
-    var `targetHeaders`: Array[tuple[id: HeaderParams, val: string]]
+    var `targetHeaders`: Array[tuple[id: HeaderParams, val, val2: string]]
     `targetHeaders`.newArrayOfCap(`addHeadersStmtLen`)
     `addHeadersStmt`
 
@@ -2010,7 +2012,7 @@ macro serverThreadCtxObjTypeMacro*(cfg: Config): untyped =
         client: Client
         pRecvBuf: ptr UncheckedArray[byte]
         header: ReqHeader
-        targetHeaders: Array[ptr tuple[id: HeaderParams, val: string]]
+        targetHeaders: Array[ptr tuple[id: HeaderParams, val, val2: string]]
         pRecvBuf0: ptr UncheckedArray[byte]
         recvDataSize: int
         threadId: int
@@ -2126,7 +2128,7 @@ template serverLib(cfg: Config) {.dirty.} =
       TRACE
 
   proc parseHeader(buf: ptr UncheckedArray[byte], size: int,
-                  targetHeaders: var Array[ptr tuple[id: HeaderParams, val: string]],
+                  targetHeaders: var Array[ptr tuple[id: HeaderParams, val, val2: string]],
                   header: var ReqHeader
                   ): tuple[err: int, next: int] =
     if (when cfg.urlRootSafe: equalMem(addr buf[0], "GET /".cstring, 5) else: equalMem(addr buf[0], "GET ".cstring, 4)):
@@ -2164,8 +2166,8 @@ template serverLib(cfg: Config) {.dirty.} =
           while true:
             block paramsLoop:
               for i in incompleteIdx..<targetHeaders.len:
-                let (headerId, targetParam) = targetHeaders[i][]
-                if equalMem(addr buf[pos], targetParam.cstring, targetParam.len):
+                let (headerId, targetParam, _) = targetHeaders[i][]
+                if equalmem(addr buf[pos], targetParam.cstring, targetParam.len):
                   inc(pos, targetParam.len)
                   cur = pos
                   while not equalMem(addr buf[pos], "\c\L".cstring, 2):
@@ -3925,42 +3927,47 @@ template serverLib(cfg: Config) {.dirty.} =
                   inc(pos, 2)
 
                   var incompleteIdx = 0
-                  while true:
-                    block paramsLoop:
-                      for i in incompleteIdx..<ctx.targetHeaders.len:
-                        template target: untyped = ctx.targetHeaders[i][]
-                        if equalMem(cast[pointer](pos), target.val.cstring, target.val.len):
-                          inc(pos, target.val.len)
-                          cur = pos
-                          while not equalMem(cast[pointer](pos), "\c\L".cstring, 2):
-                            inc(pos)
-                          ctx.header.params[target.id.int] = ((cur - cur0).int, (pos - cur).int)
-                          inc(pos, 2)
-                          if equalMem(cast[pointer](pos), "\c\L".cstring, 2):
-                            nextParse = (pos + 2.uint - cur0).int
-                            if incompleteIdx < ctx.targetHeaders.len:
-                              zeroMem(addr ctx.header.params[incompleteIdx],
-                                ReqHeaderParamSize * (ctx.targetHeaders.len - incompleteIdx))
-                            break parseMain
-                          if i != incompleteIdx:
-                            swap(ctx.targetHeaders[incompleteIdx], ctx.targetHeaders[i])
-                          inc(incompleteIdx)
-                          if incompleteIdx >= ctx.targetHeaders.len:
-                            inc(pos)
-                            while(not equalMem(cast[pointer](pos), "\c\L\c\L".cstring, 4)):
+                  template paramsLoopTemplate(fieldId: int) =
+                    while true:
+                      block paramsLoop:
+                        for i in incompleteIdx..<ctx.targetHeaders.len:
+                          template target: untyped = ctx.targetHeaders[i][]
+                          if equalMem(cast[pointer](pos), target[fieldId].cstring, target[fieldId].len):
+                            inc(pos, target[fieldId].len)
+                            cur = pos
+                            while not equalMem(cast[pointer](pos), "\c\L".cstring, 2):
                               inc(pos)
-                            nextParse = (pos + 4.uint - cur0).int
-                            break parseMain
-                          break paramsLoop
-                      while not equalMem(cast[pointer](pos), "\c\L".cstring, 2):
-                        inc(pos)
-                      if equalMem(cast[pointer](pos), "\c\L\c\L".cstring, 4):
-                        nextParse = (pos + 4.uint - cur0).int
-                        if incompleteIdx < ctx.targetHeaders.len:
-                          zeroMem(addr ctx.header.params[incompleteIdx],
-                            ReqHeaderParamSize * (ctx.targetHeaders.len - incompleteIdx))
-                        break parseMain
-                      inc(pos, 2)
+                            ctx.header.params[target.id.int] = ((cur - cur0).int, (pos - cur).int)
+                            inc(pos, 2)
+                            if equalMem(cast[pointer](pos), "\c\L".cstring, 2):
+                              nextParse = (pos + 2.uint - cur0).int
+                              if incompleteIdx < ctx.targetHeaders.len:
+                                zeroMem(addr ctx.header.params[incompleteIdx],
+                                  ReqHeaderParamSize * (ctx.targetHeaders.len - incompleteIdx))
+                              break parseMain
+                            if i != incompleteIdx:
+                              swap(ctx.targetHeaders[incompleteIdx], ctx.targetHeaders[i])
+                            inc(incompleteIdx)
+                            if incompleteIdx >= ctx.targetHeaders.len:
+                              inc(pos)
+                              while(not equalMem(cast[pointer](pos), "\c\L\c\L".cstring, 4)):
+                                inc(pos)
+                              nextParse = (pos + 4.uint - cur0).int
+                              break parseMain
+                            break paramsLoop
+                        while not equalMem(cast[pointer](pos), "\c\L".cstring, 2):
+                          inc(pos)
+                        if equalMem(cast[pointer](pos), "\c\L\c\L".cstring, 4):
+                          nextParse = (pos + 4.uint - cur0).int
+                          if incompleteIdx < ctx.targetHeaders.len:
+                            zeroMem(addr ctx.header.params[incompleteIdx],
+                              ReqHeaderParamSize * (ctx.targetHeaders.len - incompleteIdx))
+                          break parseMain
+                        inc(pos, 2)
+                  if (cast[ptr uint8](pos)[] and 0x5.uint8) > 0.uint8:
+                    paramsLoopTemplate(2)
+                  else:
+                    paramsLoopTemplate(1)
 
                 elif equalMem(cast[pointer](pos), "\c\L\c\L".cstring, 4):
                   nextParse = -1
