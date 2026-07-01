@@ -701,7 +701,7 @@ template serverTagLib*(cfg: Config) {.dirty.} =
 
   proc reserveRecvBuf(client: Client, size: int) =
     if client.recvBuf.isNil:
-      client.recvBuf = cast[ptr UncheckedArray[byte]](allocShared0(sizeof(byte) * (size + workerRecvBufSize)))
+      client.recvBuf = cast[ptr UncheckedArray[byte]](allocShared0(sizeof(byte) * (size + workerRecvBufSize + ReservedRecvPad)))
       client.recvBufSize = size + workerRecvBufSize
     else:
       var left = client.recvBufSize - client.recvCurSize
@@ -709,7 +709,7 @@ template serverTagLib*(cfg: Config) {.dirty.} =
         var nextSize = client.recvCurSize + size + workerRecvBufSize
         if nextSize > cfg.recvBufExpandBreakSize:
           raise newException(ServerError, "client request too large")
-        client.recvBuf = reallocClientBuf(client.recvBuf, nextSize)
+        client.recvBuf = reallocClientBuf(client.recvBuf, nextSize + ReservedRecvPad)
         client.recvBufSize = nextSize
 
   proc addRecvBuf(client: Client, data: ptr UncheckedArray[byte], size: int) =
@@ -1178,6 +1178,7 @@ var freePoolServerUsedCount* {.compileTime.} = 0
 var sockCtl* = createNativeSocket()
 if sockCtl == osInvalidSocket: raise
 var workerRecvBufSize*: int = sockCtl.getSockOptInt(SOL_SOCKET, SO_RCVBUF)
+const ReservedRecvPad* = 15
 addReleaseOnQuit(sockCtl)
 var serverWorkerNum*: int
 var highGear* = false
