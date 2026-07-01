@@ -58,7 +58,7 @@ macro HttpTargetHeader(idEnumName, valListName, targetHeaders, body: untyped): u
     var paramLit = newLit($a[1][0] & ": ")
     var paramLit2 = newLit(($a[1][0]).toLowerAscii() & ": ")
     enumParams.add(a0)
-    targetParams.add(paramLit)
+    targetParams.add(paramLit2)
     addHeadersStmt.add quote do:
       `targetHeaders`.add((id: `a0`, val: `paramLit`, val2: `paramLit2`))
 
@@ -77,7 +77,7 @@ macro HttpTargetHeader(idEnumName, valListName, targetHeaders, body: untyped): u
     var compareVal = newLit(b[1] & ": ")
     var compareVal2 = newLit(b[1].toLowerAscii() & ": ")
     enumParams.add(b0)
-    targetParams.add(compareVal)
+    targetParams.add(compareVal2)
     addHeadersStmt.add quote do:
       `targetHeaders`.add((id: `b0`, val: `compareVal`, val2: `compareVal2`))
 
@@ -2014,6 +2014,7 @@ macro serverThreadCtxObjTypeMacro*(cfg: Config): untyped =
         pRecvBuf: ptr UncheckedArray[byte]
         header: ReqHeader
         targetHeaders: Array[ptr tuple[id: HeaderParams, val, val2: string]]
+        targetHeaders2: array[TargetHeaderParams.len, HeaderParams]
         pRecvBuf0: ptr UncheckedArray[byte]
         recvDataSize: int
         threadId: int
@@ -2026,6 +2027,100 @@ macro serverThreadCtxObjTypeMacro*(cfg: Config): untyped =
 
   for n in serverThreadCtxExtRec:
     result[0][2][2].add(n)  # append to ServerThreadCtxObj
+
+proc mask64(b: byte, len: int): uint64 {.compileTime.} =
+  if len > 0:
+    result = b
+    for i in 1..<len:
+      result = result shl 8
+      result = result or b
+  else:
+    result = 0
+
+proc mask32(b: byte, len: int): uint32 {.compileTime.} =
+  if len > 0:
+    result = b
+    for i in 1..<len:
+      result = result shl 8
+      result = result or b
+  else:
+    result = 0
+
+macro cmpHeaderParam*(p1: ptr UncheckedArray[byte], p2: static string): bool =
+  var p2lower = newString(((p2.len + 7) div 8) * 8)
+  for i in 0..<p2.len - 2:
+    p2lower[i] = (p2[i].uint8 or 0x20.uint8).char
+  for i in p2.len - 2..<p2.len:
+    p2lower[i] = p2[i]
+
+  var s = nnkIfStmt.newTree()
+  var left = p2.len
+  var pos = 0
+
+  while left >= 8:
+    var lowerMask = if left == 9: mask64(0x20.byte, 7)
+    elif left == 8: mask64(0x20.byte, 6)
+    else: mask64(0x20.byte, 8)
+    var val = cast[ptr uint](addr p2lower[pos])[]
+    var cond = quote do: (cast[ptr uint](addr `p1`[`pos`])[] or `lowerMask`) != `val`
+    s.add nnkElifBranch.newTree(
+      cond,
+      nnkStmtList.newTree(
+        newIdentNode("false")
+      )
+    )
+    dec(left, 8)
+    inc(pos, 8)
+
+  if left == 7 or left == 6 or left == 5:
+    var mask = mask64(0xff.byte, left)
+    var lowerMask = mask64(0x20.byte, left - 2)
+    var val = cast[ptr uint](addr p2lower[pos])[] and mask
+    var cond = quote do: ((cast[ptr uint](addr `p1`[`pos`])[] and `mask`) or `lowerMask`) != `val`
+    s.add nnkElifBranch.newTree(
+      cond,
+      nnkStmtList.newTree(
+        newIdentNode("false")
+      )
+    )
+  elif left == 4:
+    var lowerMask = mask32(0x20.byte, 2)
+    var val = cast[ptr uint32](addr p2lower[pos])[]
+    var cond = quote do: (cast[ptr uint32](addr `p1`[`pos`])[] or `lowerMask`) != `val`
+    s.add nnkElifBranch.newTree(
+      cond,
+      nnkStmtList.newTree(
+        newIdentNode("false")
+      )
+    )
+  elif left == 3:
+    var mask = mask32(0xff.byte, 3)
+    var lowerMask = mask32(0x20.byte, 1)
+    var val = cast[ptr uint32](addr p2lower[pos])[] and mask
+    var cond = quote do: ((cast[ptr uint32](addr `p1`[`pos`])[] and `mask`) or `lowerMask`) != `val`
+    s.add nnkElifBranch.newTree(
+      cond,
+      nnkStmtList.newTree(
+        newIdentNode("false")
+      )
+    )
+  elif left == 2 or left == 1:
+    var mask = mask32(0xff.byte, left)
+    var val = cast[ptr uint32](addr p2lower[pos])[] and mask
+    var cond = quote do: (cast[ptr uint32](addr `p1`[`pos`])[] and `mask`) != `val`
+    s.add nnkElifBranch.newTree(
+      cond,
+      nnkStmtList.newTree(
+        newIdentNode("false")
+      )
+    )
+
+  s.add nnkElse.newTree(
+    nnkStmtList.newTree(
+      newIdentNode("true")
+    )
+  )
+  s
 
 template serverLib(cfg: Config) {.dirty.} =
   import std/strutils
@@ -3928,45 +4023,80 @@ template serverLib(cfg: Config) {.dirty.} =
                   inc(pos, 2)
 
                   var incompleteIdx = 0
-                  template paramsLoopTemplate(fieldId: int) =
+                  var i = 0
+                  var cmdRet {.noInit.}: bool
+                  macro targetHeaderParamsCaseBody(targetId: HeaderParams, pos: uint, cmdRet: bool): untyped =
+                    result = nnkCaseStmt.newTree(
+                      targetId
+                    )
+                    var i = 0
+                    for param in HeaderParams:
+                      result.add nnkOfBranch.newTree(
+                        newIdentNode($param),
+                        nnkStmtList.newTree(
+                          nnkAsgn.newTree(
+                            cmdRet,
+                            nnkCall.newTree(
+                              newIdentNode("cmpHeaderParam"),
+                              nnkCast.newTree(
+                                nnkPtrTy.newTree(
+                                  nnkBracketExpr.newTree(
+                                    newIdentNode("UncheckedArray"),
+                                    newIdentNode("byte")
+                                  )
+                                ),
+                                pos
+                              ),
+                              nnkBracketExpr.newTree(
+                                newIdentNode("TargetHeaderParams"),
+                                newLit(i)
+                              )
+                            )
+                          )
+                        )
+                      )
+                      inc(i)
+
+                  while true:
+                    var targetId = ctx.targetHeaders2[i]
                     while true:
-                      block paramsLoop:
-                        for i in incompleteIdx..<ctx.targetHeaders.len:
-                          template target: untyped = ctx.targetHeaders[i][]
-                          if equalMem(cast[pointer](pos), target[fieldId].cstring, target[fieldId].len):
-                            inc(pos, target[fieldId].len)
-                            cur = pos
-                            while not equalMem(cast[pointer](pos), "\c\L".cstring, 2):
-                              inc(pos)
-                            ctx.header.params[target.id.int] = ((cur - cur0).int, (pos - cur).int)
-                            inc(pos, 2)
-                            if equalMem(cast[pointer](pos), "\c\L".cstring, 2):
-                              nextParse = (pos + 2.uint - cur0).int
-                              for j in incompleteIdx+1..<ctx.targetHeaders.len:
-                                zeroMem(addr ctx.header.params[j], ReqHeaderParamSize)
-                              break parseMain
-                            if i != incompleteIdx:
-                              swap(ctx.targetHeaders[incompleteIdx], ctx.targetHeaders[i])
-                            inc(incompleteIdx)
-                            if incompleteIdx >= ctx.targetHeaders.len:
-                              inc(pos)
-                              while(not equalMem(cast[pointer](pos), "\c\L\c\L".cstring, 4)):
-                                inc(pos)
-                              nextParse = (pos + 4.uint - cur0).int
-                              break parseMain
-                            break paramsLoop
+                      {.computedGoto.}
+                      targetHeaderParamsCaseBody(targetId, pos, cmdRet)
+                      break
+                    if cmdRet:
+                      inc(pos, TargetHeaderParams[targetId.int].len)
+                      cur = pos
+                      while not equalMem(cast[pointer](pos), "\c\L".cstring, 2):
+                        inc(pos)
+                      ctx.header.params[targetId.int] = ((cur - cur0).int, (pos - cur).int)
+                      inc(pos, 2)
+                      if equalMem(cast[pointer](pos), "\c\L".cstring, 2):
+                        nextParse = (pos + 2.uint - cur0).int
+                        for j in incompleteIdx+1..<ctx.targetHeaders2.len:
+                          zeroMem(addr ctx.header.params[j], ReqHeaderParamSize)
+                        break parseMain
+                      if i != incompleteIdx:
+                        swap(ctx.targetHeaders2[incompleteIdx], ctx.targetHeaders2[i])
+                      inc(incompleteIdx)
+                      if incompleteIdx >= ctx.targetHeaders2.len:
+                        inc(pos)
+                        while(not equalMem(cast[pointer](pos), "\c\L\c\L".cstring, 4)):
+                          inc(pos)
+                        nextParse = (pos + 4.uint - cur0).int
+                        break parseMain
+                      i = incompleteIdx
+                    else:
+                      inc(i)
+                      if i >= ctx.targetHeaders2.len:
                         while not equalMem(cast[pointer](pos), "\c\L".cstring, 2):
                           inc(pos)
                         if equalMem(cast[pointer](pos), "\c\L\c\L".cstring, 4):
                           nextParse = (pos + 4.uint - cur0).int
-                          for j in incompleteIdx..<ctx.targetHeaders.len:
+                          for j in incompleteIdx..<ctx.targetHeaders2.len:
                             zeroMem(addr ctx.header.params[j], ReqHeaderParamSize)
                           break parseMain
                         inc(pos, 2)
-                  if (cast[ptr uint8](pos)[] and 0x5.uint8) > 0.uint8:
-                    paramsLoopTemplate(2)
-                  else:
-                    paramsLoopTemplate(1)
+                        i = incompleteIdx
 
                 elif equalMem(cast[pointer](pos), "\c\L\c\L".cstring, 4):
                   nextParse = -1
@@ -5967,6 +6097,8 @@ template serverLib(cfg: Config) {.dirty.} =
     ctx.recvBuf = newArray[byte](workerRecvBufSize)
     for i in 0..<TargetHeaders.len:
       ctx.targetHeaders.add(addr TargetHeaders[i])
+    for i in 0..<TargetHeaderParams.len:
+      ctx.targetHeaders2[i] = i.HeaderParams
     ctx.threadId = arg.workerParams.threadId
     ctx.pRecvBuf0 = cast[ptr UncheckedArray[byte]](addr ctx.recvBuf[0])
 
