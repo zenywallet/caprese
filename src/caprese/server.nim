@@ -2046,6 +2046,66 @@ proc mask32(b: byte, len: int): uint32 {.compileTime.} =
   else:
     result = 0
 
+converter toUncheckedArrayByte*(p: pointer): ptr UncheckedArray[byte] =
+  cast[ptr UncheckedArray[byte]](p)
+
+converter toUncheckedArrayByte*(p: ptr byte): ptr UncheckedArray[byte] =
+  cast[ptr UncheckedArray[byte]](p)
+
+macro cmpString*(p1: ptr UncheckedArray[byte], p2: static string): bool =
+  var s = nnkIfStmt.newTree()
+  var left = p2.len
+  var pos = 0
+
+  while left >= 8:
+    var val = cast[ptr uint](addr p2[pos])[]
+    var cond = quote do: cast[ptr uint](addr `p1`[`pos`])[] != `val`
+    s.add nnkElifBranch.newTree(
+      cond,
+      nnkStmtList.newTree(
+        newIdentNode("false")
+      )
+    )
+    dec(left, 8)
+    inc(pos, 8)
+
+  if left > 4:
+    var mask = mask64(0xff.byte, left)
+    var val = cast[ptr uint](addr p2[pos])[] and mask
+    var cond = quote do: (cast[ptr uint](addr `p1`[`pos`])[] and `mask`) != `val`
+    s.add nnkElifBranch.newTree(
+      cond,
+      nnkStmtList.newTree(
+        newIdentNode("false")
+      )
+    )
+  elif left == 4:
+    var val = cast[ptr uint32](addr p2[pos])[]
+    var cond = quote do: cast[ptr uint32](addr `p1`[`pos`])[] != `val`
+    s.add nnkElifBranch.newTree(
+      cond,
+      nnkStmtList.newTree(
+        newIdentNode("false")
+      )
+    )
+  elif left > 0:
+    var mask = mask32(0xff.byte, left)
+    var val = cast[ptr uint32](addr p2[pos])[] and mask
+    var cond = quote do: (cast[ptr uint32](addr `p1`[`pos`])[] and `mask`) != `val`
+    s.add nnkElifBranch.newTree(
+      cond,
+      nnkStmtList.newTree(
+        newIdentNode("false")
+      )
+    )
+
+  s.add nnkElse.newTree(
+    nnkStmtList.newTree(
+      newIdentNode("true")
+    )
+  )
+  s
+
 macro cmpHeaderParam*(p1: ptr UncheckedArray[byte], p2: static string): bool =
   var p2lower = newString(((p2.len + 7) div 8) * 8)
   for i in 0..<p2.len - 2:
@@ -3993,17 +4053,17 @@ template serverLib(cfg: Config) {.dirty.} =
             var pos = cur + 1
             block parseMain:
               while true:
-                if equalMem(cast[pointer](pos), " HTTP/1.".cstring, 8):
+                if cmpString(cast[pointer](pos), " HTTP/1."):
                   when cfg.urlRootSafe:
                     if cast[ptr char](cast[pointer](cur))[] != '/':
                       nextParse = -1
                       break
                   ctx.header.url = capbytes.toString(cast[ptr UncheckedArray[byte]](cast[pointer](cur)), pos - cur)
                   inc(pos, 7)
-                  if equalMem(cast[pointer](pos), ".1\c\L".cstring, 4):
+                  if cmpString(cast[pointer](pos), ".1\c\L"):
                     ctx.header.minorVer = 1
                     inc(pos, 2)
-                  elif equalMem(cast[pointer](pos), ".0\c\L".cstring, 4):
+                  elif cmpString(cast[pointer](pos), ".0\c\L"):
                     ctx.header.minorVer = 0
                     inc(pos, 2)
                   else:
@@ -4013,11 +4073,11 @@ template serverLib(cfg: Config) {.dirty.} =
                       nextParse = -1
                       break
                     inc(pos)
-                    if not equalMem(cast[pointer](pos), "\c\L".cstring, 2):
+                    if not cmpString(cast[pointer](pos), "\c\L"):
                       nextParse = -1
                       break
                     ctx.header.minorVer = minorVer
-                  if equalMem(cast[pointer](pos), "\c\L\c\L".cstring, 4):
+                  if cmpString(cast[pointer](pos), "\c\L\c\L"):
                     nextParse = (pos + 4.uint - cur0).int
                     break
                   inc(pos, 2)
@@ -4066,11 +4126,11 @@ template serverLib(cfg: Config) {.dirty.} =
                     if cmdRet:
                       inc(pos, TargetHeaderParams[targetId.int].len)
                       cur = pos
-                      while not equalMem(cast[pointer](pos), "\c\L".cstring, 2):
+                      while not cmpString(cast[pointer](pos), "\c\L"):
                         inc(pos)
                       ctx.header.params[targetId.int] = ((cur - cur0).int, (pos - cur).int)
                       inc(pos, 2)
-                      if equalMem(cast[pointer](pos), "\c\L".cstring, 2):
+                      if cmpString(cast[pointer](pos), "\c\L"):
                         nextParse = (pos + 2.uint - cur0).int
                         for j in incompleteIdx+1..<ctx.targetHeaders2.len:
                           zeroMem(addr ctx.header.params[j], ReqHeaderParamSize)
@@ -4080,7 +4140,7 @@ template serverLib(cfg: Config) {.dirty.} =
                       inc(incompleteIdx)
                       if incompleteIdx >= ctx.targetHeaders2.len:
                         inc(pos)
-                        while(not equalMem(cast[pointer](pos), "\c\L\c\L".cstring, 4)):
+                        while(not cmpString(cast[pointer](pos), "\c\L\c\L")):
                           inc(pos)
                         nextParse = (pos + 4.uint - cur0).int
                         break parseMain
@@ -4088,9 +4148,9 @@ template serverLib(cfg: Config) {.dirty.} =
                     else:
                       inc(i)
                       if i >= ctx.targetHeaders2.len:
-                        while not equalMem(cast[pointer](pos), "\c\L".cstring, 2):
+                        while not cmpString(cast[pointer](pos), "\c\L"):
                           inc(pos)
-                        if equalMem(cast[pointer](pos), "\c\L\c\L".cstring, 4):
+                        if cmpString(cast[pointer](pos), "\c\L\c\L"):
                           nextParse = (pos + 4.uint - cur0).int
                           for j in incompleteIdx..<ctx.targetHeaders2.len:
                             zeroMem(addr ctx.header.params[j], ReqHeaderParamSize)
@@ -4098,7 +4158,7 @@ template serverLib(cfg: Config) {.dirty.} =
                         inc(pos, 2)
                         i = incompleteIdx
 
-                elif equalMem(cast[pointer](pos), "\c\L\c\L".cstring, 4):
+                elif cmpString(cast[pointer](pos), "\c\L\c\L"):
                   nextParse = -1
                   break
                 inc(pos)
@@ -4116,7 +4176,7 @@ template serverLib(cfg: Config) {.dirty.} =
                   template routesCrLfCheck() {.dirty.} =
                     block findBlock:
                       for i in 0..ctx.parseSize - 4:
-                        if equalMem(addr ctx.pRecvBuf[i], "\c\L\c\L".cstring, 4):
+                        if cmpString(addr ctx.pRecvBuf[i], "\c\L\c\L"):
                           break findBlock
                       client.addRecvBuf(ctx.pRecvBuf, ctx.parseSize)
                       return
@@ -4224,13 +4284,13 @@ template serverLib(cfg: Config) {.dirty.} =
                       client.close()
                       return
 
-                  if equalMem(addr ctx.pRecvBuf0[ctx.recvDataSize - 4], "\c\L\c\L".cstring, 4):
+                  if cmpString(addr ctx.pRecvBuf0[ctx.recvDataSize - 4], "\c\L\c\L"):
                     while true:
                       ctx.pRecvBuf = cast[ptr UncheckedArray[byte]](addr ctx.recvBuf[ctx.nextPos])
-                      if equalMem(ctx.pRecvBuf, "GET ".cstring, 4):
+                      if cmpString(ctx.pRecvBuf, "GET "):
                         routesMethodBase(RequestMethod.GET)
 
-                      elif equalMem(ctx.pRecvBuf, "POST".cstring, 4):
+                      elif cmpString(ctx.pRecvBuf, "POST"):
                         when cfg.postRequestMethod:
                           routesMethodBase(RequestMethod.POST)
                         else:
@@ -4241,11 +4301,11 @@ template serverLib(cfg: Config) {.dirty.} =
                   else:
                     while true:
                       ctx.pRecvBuf = cast[ptr UncheckedArray[byte]](addr ctx.recvBuf[ctx.nextPos])
-                      if equalMem(ctx.pRecvBuf, "GET ".cstring, 4):
+                      if cmpString(ctx.pRecvBuf, "GET "):
                         routesCrLfCheck()
                         routesMethodBase(RequestMethod.GET)
 
-                      elif equalMem(ctx.pRecvBuf, "POST".cstring, 4):
+                      elif cmpString(ctx.pRecvBuf, "POST"):
                         when cfg.postRequestMethod:
                           routesCrLfCheck()
                           routesMethodBase(RequestMethod.POST)
@@ -4284,7 +4344,7 @@ template serverLib(cfg: Config) {.dirty.} =
                   template routesCrLfCheck() {.dirty.} =
                     block findBlock:
                       for i in 0..ctx.parseSize - 4:
-                        if equalMem(addr ctx.pRecvBuf[i], "\c\L\c\L".cstring, 4):
+                        if cmpString(addr ctx.pRecvBuf[i], "\c\L\c\L"):
                           break findBlock
                       return
 
@@ -4391,13 +4451,13 @@ template serverLib(cfg: Config) {.dirty.} =
                       client.close()
                       return
 
-                  if equalMem(addr client.recvBuf[client.recvCurSize - 4], "\c\L\c\L".cstring, 4):
+                  if cmpString(addr client.recvBuf[client.recvCurSize - 4], "\c\L\c\L"):
                     while true:
                       ctx.pRecvBuf = cast[ptr UncheckedArray[byte]](addr client.recvBuf[ctx.nextPos])
-                      if equalMem(ctx.pRecvBuf, "GET ".cstring, 4):
+                      if cmpString(ctx.pRecvBuf, "GET "):
                         routesMethodBase(RequestMethod.GET)
 
-                      elif equalMem(ctx.pRecvBuf, "POST".cstring, 4):
+                      elif cmpString(ctx.pRecvBuf, "POST"):
                         when cfg.postRequestMethod:
                           routesMethodBase(RequestMethod.POST)
                         else:
@@ -4408,11 +4468,11 @@ template serverLib(cfg: Config) {.dirty.} =
                   else:
                     while true:
                       ctx.pRecvBuf = cast[ptr UncheckedArray[byte]](addr client.recvBuf[ctx.nextPos])
-                      if equalMem(ctx.pRecvBuf, "GET ".cstring, 4):
+                      if cmpString(ctx.pRecvBuf, "GET "):
                         routesCrLfCheck()
                         routesMethodBase(RequestMethod.GET)
 
-                      elif equalMem(ctx.pRecvBuf, "POST".cstring, 4):
+                      elif cmpString(ctx.pRecvBuf, "POST"):
                         when cfg.postRequestMethod:
                           routesCrLfCheck()
                           routesMethodBase(RequestMethod.POST)
