@@ -783,13 +783,14 @@ template parseServers*(serverBody: untyped) {.dirty.} =
         template sendProc3(nextAppOffset: cuint): SendResult =
           sendProc2(sendProc3Tmpl(nextAppOffset))
 
-        {.computedGoto.}
-        case curSendProcType
-        of SendProc1_Prev2: sendProc1(2)
-        of SendProc1_Prev1: sendProc1(1)
-        of SendProc2: sendProc2(SendResult.Pending)
-        of SendProc3_Prev2: sendProc3(2)
-        of SendProc3_Prev1: sendProc3(1)
+        while true:
+          {.computedGoto.}
+          case curSendProcType
+          of SendProc1_Prev2: return sendProc1(2)
+          of SendProc1_Prev1: return sendProc1(1)
+          of SendProc2: return sendProc2(SendResult.Pending)
+          of SendProc3_Prev2: return sendProc3(2)
+          of SendProc3_Prev1: return sendProc3(1)
 
       template parseHeaderUrl(pos, endPos: uint, RecvLoop: typed) =
         reqHeaderUrlPos = pos
