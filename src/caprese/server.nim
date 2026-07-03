@@ -4133,7 +4133,8 @@ template serverLib(cfg: Config) {.dirty.} =
                       if cmpString(cast[pointer](pos), "\c\L"):
                         nextParse = (pos + 2.uint - cur0).int
                         for j in incompleteIdx+1..<ctx.targetHeaders2.len:
-                          zeroMem(addr ctx.header.params[j], ReqHeaderParamSize)
+                          let tid = ctx.targetHeaders2[j]
+                          zeroMem(addr ctx.header.params[tid.int], ReqHeaderParamSize)
                         break parseMain
                       if i != incompleteIdx:
                         swap(ctx.targetHeaders2[incompleteIdx], ctx.targetHeaders2[i])
@@ -4153,7 +4154,8 @@ template serverLib(cfg: Config) {.dirty.} =
                         if cmpString(cast[pointer](pos), "\c\L\c\L"):
                           nextParse = (pos + 4.uint - cur0).int
                           for j in incompleteIdx..<ctx.targetHeaders2.len:
-                            zeroMem(addr ctx.header.params[j], ReqHeaderParamSize)
+                            let tid = ctx.targetHeaders2[j]
+                            zeroMem(addr ctx.header.params[tid.int], ReqHeaderParamSize)
                           break parseMain
                         inc(pos, 2)
                         i = incompleteIdx
