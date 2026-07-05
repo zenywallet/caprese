@@ -56,11 +56,10 @@ macro HttpTargetHeader(idEnumName, valListName, targetHeaders, body: untyped): u
   for a in body:
     var a0 = a[0]
     var paramLit = newLit($a[1][0] & ": ")
-    var paramLit2 = newLit(($a[1][0]).toLowerAscii() & ": ")
     enumParams.add(a0)
-    targetParams.add(paramLit2)
+    targetParams.add(paramLit)
     addHeadersStmt.add quote do:
-      `targetHeaders`.add((id: `a0`, val: `paramLit`, val2: `paramLit2`))
+      `targetHeaders`.add((id: `a0`, val: `paramLit`))
 
   for a in body:
     for i, b in internalEssentialHeaders:
@@ -75,18 +74,17 @@ macro HttpTargetHeader(idEnumName, valListName, targetHeaders, body: untyped): u
   for b in internalEssentialHeaders:
     var b0 = newIdentNode(b[0])
     var compareVal = newLit(b[1] & ": ")
-    var compareVal2 = newLit(b[1].toLowerAscii() & ": ")
     enumParams.add(b0)
-    targetParams.add(compareVal2)
+    targetParams.add(compareVal)
     addHeadersStmt.add quote do:
-      `targetHeaders`.add((id: `b0`, val: `compareVal`, val2: `compareVal2`))
+      `targetHeaders`.add((id: `b0`, val: `compareVal`))
 
   var addHeadersStmtLen = newLit(addHeadersStmt.len)
   quote do:
     type `idEnumName` = `enumParams`
     `internalEssentialConst`
     const `valListName` = `targetParams`
-    var `targetHeaders`: Array[tuple[id: HeaderParams, val, val2: string]]
+    var `targetHeaders`: Array[tuple[id: HeaderParams, val: string]]
     `targetHeaders`.newArrayOfCap(`addHeadersStmtLen`)
     `addHeadersStmt`
 
@@ -2167,7 +2165,7 @@ macro serverThreadCtxObjTypeMacro*(cfg: Config): untyped =
         client: Client
         pRecvBuf: ptr UncheckedArray[byte]
         header: ReqHeader
-        targetHeaders: Array[ptr tuple[id: HeaderParams, val, val2: string]]
+        targetHeaders: Array[ptr tuple[id: HeaderParams, val: string]]
         targetHeaders2: array[TargetHeaderParams.len, HeaderParams]
         pRecvBuf0: ptr UncheckedArray[byte]
         recvDataSize: int
@@ -2284,7 +2282,7 @@ template serverLib(cfg: Config) {.dirty.} =
       TRACE
 
   proc parseHeader(buf: ptr UncheckedArray[byte], size: int,
-                  targetHeaders: var Array[ptr tuple[id: HeaderParams, val, val2: string]],
+                  targetHeaders: var Array[ptr tuple[id: HeaderParams, val: string]],
                   header: var ReqHeader
                   ): tuple[err: int, next: int] =
     if (when cfg.urlRootSafe: equalMem(addr buf[0], "GET /".cstring, 5) else: equalMem(addr buf[0], "GET ".cstring, 4)):
@@ -2322,7 +2320,7 @@ template serverLib(cfg: Config) {.dirty.} =
           while true:
             block paramsLoop:
               for i in incompleteIdx..<targetHeaders.len:
-                let (headerId, targetParam, _) = targetHeaders[i][]
+                let (headerId, targetParam) = targetHeaders[i][]
                 if equalmem(addr buf[pos], targetParam.cstring, targetParam.len):
                   inc(pos, targetParam.len)
                   cur = pos
