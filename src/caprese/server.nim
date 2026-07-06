@@ -1040,7 +1040,7 @@ template serverTagLib*(cfg: Config) {.dirty.} =
       capbytes.BytesBE (finOp, 126.byte, dataLen.uint16, data)
     else:
       capbytes.BytesBE (finOp, 127.byte, dataLen.uint64, data)
-    result = clientId.send(frame.toString())
+    result = clientId.send(capbytes.toString(frame))
 
   when not defined(SERVER2):
     template send(data: seq[byte] | string | Array[byte]): SendResult {.dirty, used.} = ctx.client.send(data)
@@ -2496,7 +2496,7 @@ template serverLib(cfg: Config) {.dirty.} =
     getHeaderValue(ctx.pRecvBuf, ctx.header, paramId)
 
   template reqMethod(): string {.used.} =
-    cast[ptr UncheckedArray[byte]](addr ctx.pRecvBuf[ctx.reqMethodPos]).toString(ctx.reqMethodLen)
+    capbytes.toString(cast[ptr UncheckedArray[byte]](addr ctx.pRecvBuf[ctx.reqMethodPos]), ctx.reqMethodLen)
 
   template head(path: string, body: untyped) {.used.} =
     if reqUrl() == path and reqMethod() == $RequestMethod.HEAD:
