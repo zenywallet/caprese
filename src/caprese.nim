@@ -51,6 +51,10 @@ macro base*(body: untyped): untyped =
   discard serverStmt.add body
 
 var serverTmplId {.compileTime.}: int = 0
+var countServerModule* {.compileTime.}: int = 0
+var countMainServerModule* {.compileTime.}: int = 0
+var countTotalServerModule* {.compileTime.}: int = 0
+var serverStartExist* {.compileTime.}: bool = false
 
 #macro server*(ssl: bool, ip: string, port: uint16, body: untyped): untyped =
 #macro server*(ssl: bool, ip: string, port: uint16, reuse: bool, body: untyped): untyped =
@@ -69,10 +73,33 @@ macro server*(ssl: bool, ip: string, port: uint16, args: varargs[untyped]): unty
   inc(serverTmplId)
   var serverTmpl = ident("joli2_server_" & $serverTmplId)
   serverStmt.add quote do: `serverTmpl`()
+  var lastServerModuleMacro = genSym(nskMacro, "lastServerModuleMacro")
   quote do:
     template `serverTmpl`*() =
       echo "server: ", `ip`, ":", `port`, (if `ssl`: " SSL" else: "")
       addServer(`ip`, `port`, `reuse`, false, `ssl`, `body`)
+
+    when not declared(parseServerModuleMacro):
+      macro parseServerModuleMacro() =
+        const info = instantiationInfo(fullPaths = true)
+        const src = staticRead(info.filename)
+        let n = parseStmt(src)
+        for i in 0..<n.len:
+          if n[i].kind in {nnkCall, nnkCommand}:
+            if $n[i][0] == "server" or $n[i][0] == "serverHttp" or $n[i][0] == "serverHttps":
+              inc(countTotalServerModule)
+              when isMainModule:
+                inc(countMainServerModule)
+            elif $n[i][0] == "serverStart":
+              serverStartExist = true
+      parseServerModuleMacro()
+    when isMainModule:
+      macro `lastServerModuleMacro`(): untyped =
+        inc(countServerModule)
+        if not serverStartExist and countServerModule == countMainServerModule:
+          result = quote do:
+            serverStart()
+      `lastServerModuleMacro`()
 
 #macro server*(ip: string, port: uint16, body: untyped): untyped =
 #macro server*(ip: string, port: uint16, reuse: bool, body: untyped): untyped =
@@ -91,10 +118,33 @@ macro server*(ip: string, port: uint16, args: varargs[untyped]): untyped =
   inc(serverTmplId)
   var serverTmpl = ident("joli2_server_" & $serverTmplId)
   serverStmt.add quote do: `serverTmpl`()
+  var lastServerModuleMacro = genSym(nskMacro, "lastServerModuleMacro")
   quote do:
     template `serverTmpl`*() =
       echo "server: ", `ip`, ":", `port`
       addServer(`ip`, `port`, `reuse`, false, false, `body`)
+
+    when not declared(parseServerModuleMacro):
+      macro parseServerModuleMacro() =
+        const info = instantiationInfo(fullPaths = true)
+        const src = staticRead(info.filename)
+        let n = parseStmt(src)
+        for i in 0..<n.len:
+          if n[i].kind in {nnkCall, nnkCommand}:
+            if $n[i][0] == "server" or $n[i][0] == "serverHttp" or $n[i][0] == "serverHttps":
+              inc(countTotalServerModule)
+              when isMainModule:
+                inc(countMainServerModule)
+            elif $n[i][0] == "serverStart":
+              serverStartExist = true
+      parseServerModuleMacro()
+    when isMainModule:
+      macro `lastServerModuleMacro`(): untyped =
+        inc(countServerModule)
+        if not serverStartExist and countServerModule == countMainServerModule:
+          result = quote do:
+            serverStart()
+      `lastServerModuleMacro`()
 
 macro server*(unix: string, body: untyped): untyped =
   var reuse = quote do: cfg.reusePort
@@ -103,10 +153,33 @@ macro server*(unix: string, body: untyped): untyped =
   inc(serverTmplId)
   var serverTmpl = ident("joli2_server_" & $serverTmplId)
   serverStmt.add quote do: `serverTmpl`()
+  var lastServerModuleMacro = genSym(nskMacro, "lastServerModuleMacro")
   quote do:
     template `serverTmpl`*() =
       echo "server: unix:", `unix`
       addServer(`unix`, 0, `reuse`, true, false, `body`)
+
+    when not declared(parseServerModuleMacro):
+      macro parseServerModuleMacro() =
+        const info = instantiationInfo(fullPaths = true)
+        const src = staticRead(info.filename)
+        let n = parseStmt(src)
+        for i in 0..<n.len:
+          if n[i].kind in {nnkCall, nnkCommand}:
+            if $n[i][0] == "server" or $n[i][0] == "serverHttp" or $n[i][0] == "serverHttps":
+              inc(countTotalServerModule)
+              when isMainModule:
+                inc(countMainServerModule)
+            elif $n[i][0] == "serverStart":
+              serverStartExist = true
+      parseServerModuleMacro()
+    when isMainModule:
+      macro `lastServerModuleMacro`(): untyped =
+        inc(countServerModule)
+        if not serverStartExist and countServerModule == countMainServerModule:
+          result = quote do:
+            serverStart()
+      `lastServerModuleMacro`()
 
 macro server*(unix: string, reuse: bool, body: untyped): untyped =
   joli_serverTmpl(unix, 0, reuse, true, false, body)
@@ -114,10 +187,33 @@ macro server*(unix: string, reuse: bool, body: untyped): untyped =
   inc(serverTmplId)
   var serverTmpl = ident("joli2_server_" & $serverTmplId)
   serverStmt.add quote do: `serverTmpl`()
+  var lastServerModuleMacro = genSym(nskMacro, "lastServerModuleMacro")
   quote do:
     template `serverTmpl`*() =
       echo "server: unix:", `unix`
       addServer(`unix`, 0, `reuse`, true, false, `body`)
+
+    when not declared(parseServerModuleMacro):
+      macro parseServerModuleMacro() =
+        const info = instantiationInfo(fullPaths = true)
+        const src = staticRead(info.filename)
+        let n = parseStmt(src)
+        for i in 0..<n.len:
+          if n[i].kind in {nnkCall, nnkCommand}:
+            if $n[i][0] == "server" or $n[i][0] == "serverHttp" or $n[i][0] == "serverHttps":
+              inc(countTotalServerModule)
+              when isMainModule:
+                inc(countMainServerModule)
+            elif $n[i][0] == "serverStart":
+              serverStartExist = true
+      parseServerModuleMacro()
+    when isMainModule:
+      macro `lastServerModuleMacro`(): untyped =
+        inc(countServerModule)
+        if not serverStartExist and countServerModule == countMainServerModule:
+          result = quote do:
+            serverStart()
+      `lastServerModuleMacro`()
 
 template serverHttp*(ip: string, body: untyped) =
   server(false, ip, 80, body)
