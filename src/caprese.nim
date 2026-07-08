@@ -86,11 +86,15 @@ macro server*(ssl: bool, ip: string, port: uint16, args: varargs[untyped]): unty
         let n = parseStmt(src)
         for i in 0..<n.len:
           if n[i].kind in {nnkCall, nnkCommand}:
-            if $n[i][0] == "server" or $n[i][0] == "serverHttp" or $n[i][0] == "serverHttps":
+            let s = if n[i][0].kind == nnkDotExpr:
+              n[i][0][1].repr
+            else:
+              n[i][0].repr
+            if s == "server" or s == "serverHttp" or s == "serverHttps":
               inc(countTotalServerModule)
               when isMainModule:
                 inc(countMainServerModule)
-            elif $n[i][0] == "serverStart":
+            elif s == "serverStart":
               serverStartExist = true
       parseServerModuleMacro()
     when isMainModule:
@@ -131,11 +135,15 @@ macro server*(ip: string, port: uint16, args: varargs[untyped]): untyped =
         let n = parseStmt(src)
         for i in 0..<n.len:
           if n[i].kind in {nnkCall, nnkCommand}:
-            if $n[i][0] == "server" or $n[i][0] == "serverHttp" or $n[i][0] == "serverHttps":
+            let s = if n[i][0].kind == nnkDotExpr:
+              n[i][0][1].repr
+            else:
+              n[i][0].repr
+            if s == "server" or s == "serverHttp" or s == "serverHttps":
               inc(countTotalServerModule)
               when isMainModule:
                 inc(countMainServerModule)
-            elif $n[i][0] == "serverStart":
+            elif s == "serverStart":
               serverStartExist = true
       parseServerModuleMacro()
     when isMainModule:
@@ -166,11 +174,15 @@ macro server*(unix: string, body: untyped): untyped =
         let n = parseStmt(src)
         for i in 0..<n.len:
           if n[i].kind in {nnkCall, nnkCommand}:
-            if $n[i][0] == "server" or $n[i][0] == "serverHttp" or $n[i][0] == "serverHttps":
+            let s = if n[i][0].kind == nnkDotExpr:
+              n[i][0][1].repr
+            else:
+              n[i][0].repr
+            if s == "server" or s == "serverHttp" or s == "serverHttps":
               inc(countTotalServerModule)
               when isMainModule:
                 inc(countMainServerModule)
-            elif $n[i][0] == "serverStart":
+            elif s == "serverStart":
               serverStartExist = true
       parseServerModuleMacro()
     when isMainModule:
@@ -200,11 +212,15 @@ macro server*(unix: string, reuse: bool, body: untyped): untyped =
         let n = parseStmt(src)
         for i in 0..<n.len:
           if n[i].kind in {nnkCall, nnkCommand}:
-            if $n[i][0] == "server" or $n[i][0] == "serverHttp" or $n[i][0] == "serverHttps":
+            let s = if n[i][0].kind == nnkDotExpr:
+              n[i][0][1].repr
+            else:
+              n[i][0].repr
+            if s == "server" or s == "serverHttp" or s == "serverHttps":
               inc(countTotalServerModule)
               when isMainModule:
                 inc(countMainServerModule)
-            elif $n[i][0] == "serverStart":
+            elif s == "serverStart":
               serverStartExist = true
       parseServerModuleMacro()
     when isMainModule:
