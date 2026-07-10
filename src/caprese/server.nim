@@ -2176,12 +2176,15 @@ template serverLib(cfg: Config) {.dirty.} =
                     inc(pos)
                   header.params[headerId.int] = (cur, pos - cur)
                   inc(pos, 2)
-                  if equalMem(addr buf[pos], "\c\L".cstring, 2):
-                    result.next = pos + 2
-                    return
                   if i != incompleteIdx:
                     swap(targetHeaders[incompleteIdx], targetHeaders[i])
                   inc(incompleteIdx)
+                  if equalMem(addr buf[pos], "\c\L".cstring, 2):
+                    result.next = pos + 2
+                    for j in incompleteIdx..<targetHeaders.len:
+                      let (tid, _) = targetHeaders[j][]
+                      zeroMem(addr header.params[tid.int], ReqHeaderParamSize)
+                    return
                   if incompleteIdx >= targetHeaders.len:
                     inc(pos)
                     while(not equalMem(addr buf[pos], "\c\L\c\L".cstring, 4)):
@@ -2193,6 +2196,9 @@ template serverLib(cfg: Config) {.dirty.} =
                 inc(pos)
               if equalMem(addr buf[pos], "\c\L\c\L".cstring, 4):
                 result.next = pos + 4
+                for j in incompleteIdx..<targetHeaders.len:
+                  let (tid, _) = targetHeaders[j][]
+                  zeroMem(addr header.params[tid.int], ReqHeaderParamSize)
                 return
               inc(pos, 2)
 
