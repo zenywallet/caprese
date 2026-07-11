@@ -276,11 +276,9 @@ server(ip = "0.0.0.0", port = 8089):
   routes(host = "website1"):
     get "/":
       send(WebSite1Html.addHeader())
-
-serverStart()
 ```
 
- The `server:` block can have more than one before `serverStart()`. The `host` value of the `routes:` block actually sets your domain name. The path of `certificates:` block is not the compile-time path, but the run-time path. If the certificate files are updated while the Caprese is running, the new certificates are automatically loaded.
+ The `server:` block can have more than one. The `host` value of the `routes:` block actually sets your domain name. The path of `certificates:` block is not the compile-time path, but the run-time path. If the certificate files are updated while the Caprese is running, the new certificates are automatically loaded.
 
 #### Set the certificate path for each
 
@@ -348,8 +346,6 @@ server(ssl = true, ip = "0.0.0.0", port = 8009):
 
     get "/":
       send(WebSite2Html.addHeader())
-
-serverStart()
 ```
 
 I hope you get the idea... This is SNI. There are multiple `routes:` blocks in a `server:` block. You can have as many `server:` and `routes:` blocks as you want.
@@ -365,8 +361,6 @@ server(ssl = true, ip = "0.0.0.0", port = 8009):
   routes(host = "website2"):
     get "/":
       send(WebSite2Html.addHeader())
-
-serverStart()
 ```
 
 #### Pending and workers
@@ -393,8 +387,6 @@ server(ip = "0.0.0.0", port = 8089):
 
     let urlText = sanitizeHtml(reqUrl)
     send(fmt"Not Found: {urlText}".addDocType().addHeader(Status404))
-
-serverStart()
 ```
 
 The send commands executed by another worker thread invoke a server dispatch-level thread to execute the sending process. The number of threads in the `server:` block is the number of *serverWorkerNum* in the `config:` block. The same worker threads are used even in a multi-port configuration with multiple `server:` blocks, and the number of threads remains the same.
@@ -415,8 +407,6 @@ server(ip = "0.0.0.0", port = 8089):
         return "OK".addHeader(Status200).send
 
     return "Bad Request".addHeader(Status400).send
-
-serverStart()
 ```
 
 #### Server thread context variables
@@ -569,8 +559,6 @@ server(ssl = true, ip = "127.0.0.1", port = 8009):
       onMessage: wsReqs.pending(PendingData(msg: content))
     get "/": IndexHtml.content("html").response
     get "/js/app.js": AppMinJs.content("js").response
-
-serverStart()
 ```
 
 If you need the *ClientId* in other ways, you can also get it with the following function in the `server:` blocks.
@@ -696,8 +684,6 @@ server(ssl = true, ip = "0.0.0.0", port = 8009):
       """<script>new WebSocket("wss://localhost:8009")</script>""".addHeader.send
 
     "Not Found".addHeader(Status404).send
-
-serverStart()
 ```
 
 One more thing... The following function may be used to access the client extension object from workers that only know the client ID. However, some methods of *Client* are only intended to be called from the dispatch-level in `server:` blocks and should not be called from another thread worker. To use it well, resource management such as locking may be necessary. Also *Client* from *ClientId* are temporarily associated and not permanently accessible. The association is removed when the client is disconnected. This trick will not cause the problem of sending data to the wrong clients as compared to the method using socket numbers or pointers.
@@ -732,8 +718,6 @@ server(ip = "0.0.0.0", port = 8089):
       br_sha256_update(addr ctx.sha256Context, data, size.csize_t)
       br_sha256_out(addr ctx.sha256Context, addr ctx.sha256Buf)
       ctx.sha256Buf.toHex.addHeader.send
-
-serverStart()
 ```
 
 ### Http Headers
@@ -834,8 +818,6 @@ server(ip = "127.0.0.1", port = 8089):
       response(content("Hello!", "text/html"))
 
     send("Not Found".addHeader(Status404))
-
-serverStart()
 ```
 
 It might be better not to check the hostname and port.
@@ -898,8 +880,6 @@ server(unix = "/tmp/caprese1.sock"):
       response(content("Hello!", "text/html"))
 
     send("Not Found".addHeader(Status404))
-
-serverStart()
 ```
 
 #### Server load balancing
@@ -919,8 +899,6 @@ proc getProxyHost(): string =
 server(ssl = true, ip = "0.0.0.0", port = 8009):
   routes(host = "localhost"):
     proxy(path = "/", host = getProxyHost(), port = 8089)
-
-serverStart()
 ```
 
 **Note:** Since `proxy:` block is Nim's *template*, `getProxyHost()` function is called after the `proxy:` `path` is matched.
