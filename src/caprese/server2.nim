@@ -632,7 +632,8 @@ template parseServers*(serverBody: untyped) {.dirty.} =
       type `idEnumName` = `enumParams`
       const `strListName` = `targetParams`
 
-  genHeaderParams(HeaderParams, TargetHeaderParams)
+  when not declared(HeaderParams):
+    genHeaderParams(HeaderParams, TargetHeaderParams)
 
   for a in HeaderParams:
     echo $a, "[", ord(a), "]=\"", TargetHeaderParams[ord(a)], "\""
@@ -667,7 +668,8 @@ template parseServers*(serverBody: untyped) {.dirty.} =
       for a in `StaticTargetHeaders`:
         `TargetHeaders`.add(a)
 
-  genTargetHeaders(TargetHeaders)
+  when not declared(TargetHeaders):
+    genTargetHeaders(TargetHeaders)
 
   macro appRoutesBase(): untyped =
     result = quote do:
@@ -1378,14 +1380,15 @@ template parseServers*(serverBody: untyped) {.dirty.} =
     var targetHeaders: Array[ptr tuple[id: HeaderParams, str: string]]
     var targetHeadersForGet: Array[ptr tuple[id: HeaderParams, str: string]]
     for i in 0..<TargetHeaders.len:
-      if TargetHeaders[i].id == InternalEssentialHeaderHost and not routesHostFlagTrueExists():
-        continue
+      when declared(InternalEssentialHeaderHost):
+        if TargetHeaders[i].id ==  InternalEssentialHeaderHost and not routesHostFlagTrueExists():
+          continue
       when not cfg.reqHeaderConnection:
         if TargetHeaders[i].id == InternalEssentialHeaderConnection:
           continue
-      targetHeaders.add(addr TargetHeaders[i])
+      targetHeaders.add(cast[ptr tuple[id: HeaderParams, str: string]](addr TargetHeaders[i]))
       if TargetHeaders[i].id != InternalContentLength:
-        targetHeadersForGet.add(addr TargetHeaders[i])
+        targetHeadersForGet.add(cast[ptr tuple[id: HeaderParams, str: string]](addr TargetHeaders[i]))
 
     appRoutesBase()
 
