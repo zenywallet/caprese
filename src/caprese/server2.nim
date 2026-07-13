@@ -646,6 +646,8 @@ template parseServers*(serverBody: untyped) {.dirty.} =
       minorVer: int
       params: array[TargetHeaderParams.len, tuple[cur: uint, size: uint]]
 
+  const ReqHeaderParamSize = sizeof(tuple[cur: int, size: int])
+
   macro genTargetHeaders(TargetHeaders: untyped): untyped =
     var bracket = nnkBracket.newTree()
     var identId = ident("id")
@@ -858,6 +860,9 @@ template parseServers*(serverBody: untyped) {.dirty.} =
                   if pos >= endPos: break RecvLoop
                   inc(pos)
                 if equalMem(cast[pointer](pos), "\c\L\c\L".cstring, 4):
+                  for j in incompleteIdx..<targetHeadersForGet.len:
+                    let (tid, _) = targetHeadersForGet[j][]
+                    zeroMem(addr ctxReqHeader.params[tid.int], ReqHeaderParamSize)
                   break parseHeaderBlock
                 inc(pos, 2)
 
