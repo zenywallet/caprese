@@ -3969,6 +3969,8 @@ template serverLib(cfg: Config) {.dirty.} =
                       )
                       inc(i)
 
+                  when TargetHeaderParams.len < 1:
+                    {.error: "TargetHeaderParams.len < 1".}
                   while true:
                     var targetId = ctx.targetHeaders2[i]
                     while true:
