@@ -1,6 +1,7 @@
 # Copyright (c) 2025 zenywallet
 
 import std/macros
+import utils
 
 var srvCmdList {.compileTime.}: seq[string]
 var srvCmdBody {.compileTime.} = newStmtList()
@@ -56,12 +57,6 @@ macro genCmdListType(objName: untyped, varType: typedesc): untyped =
       varType,
       newEmptyNode()
     )
-
-macro doMacro*(body: untyped): untyped =
-  var doMacro = genSym(nskMacro, "doMacro")
-  quote do:
-    macro `doMacro`(): untyped = `body`
-    `doMacro`()
 
 template commitSrvCmd*() =
   genCmdListType(SrvCmdFlag, bool)

@@ -2,6 +2,7 @@
 
 import std/macros
 import srvcmd
+import utils
 
 echo "welcome server3!"
 
