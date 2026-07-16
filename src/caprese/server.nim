@@ -2013,7 +2013,6 @@ macro serverThreadCtxObjTypeMacro*(cfg: Config): untyped =
         client: Client
         pRecvBuf: ptr UncheckedArray[byte]
         header: ReqHeader
-        targetHeaders: Array[ptr tuple[id: HeaderParams, val: string]]
         targetHeaders2: array[TargetHeaderParams.len, HeaderParams]
         pRecvBuf0: ptr UncheckedArray[byte]
         recvDataSize: int
@@ -6053,8 +6052,6 @@ template serverLib(cfg: Config) {.dirty.} =
     var ctx = cast[ServerThreadCtx](addr ctxObj)
     ctx.addrLen = sizeof(ctx.sockAddress).SockLen
     ctx.recvBuf = newArray[byte](workerRecvBufSize)
-    for i in 0..<TargetHeaders.len:
-      ctx.targetHeaders.add(addr TargetHeaders[i])
     for i in 0..<TargetHeaderParams.len:
       ctx.targetHeaders2[i] = i.HeaderParams
     ctx.threadId = arg.workerParams.threadId
