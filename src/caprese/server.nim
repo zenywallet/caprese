@@ -2013,7 +2013,7 @@ macro serverThreadCtxObjTypeMacro*(cfg: Config): untyped =
         client: Client
         pRecvBuf: ptr UncheckedArray[byte]
         header: ReqHeader
-        targetHeaders2: array[TargetHeaderParams.len, HeaderParams]
+        targetHeaders: array[TargetHeaderParams.len, HeaderParams]
         pRecvBuf0: ptr UncheckedArray[byte]
         recvDataSize: int
         threadId: int
@@ -2129,7 +2129,7 @@ template serverLib(cfg: Config) {.dirty.} =
       TRACE
 
   proc parseHeader(buf: ptr UncheckedArray[byte], size: int,
-                  targetHeaders2: var array[TargetHeaderParams.len, HeaderParams],
+                  targetHeaders: var array[TargetHeaderParams.len, HeaderParams],
                   header: var ReqHeader
                   ): tuple[err: int, next: int] =
     if (when cfg.urlRootSafe: equalMem(addr buf[0], "GET /".cstring, 5) else: equalMem(addr buf[0], "GET ".cstring, 4)):
@@ -2201,7 +2201,7 @@ template serverLib(cfg: Config) {.dirty.} =
           when TargetHeaderParams.len < 1:
             {.error: "TargetHeaderParams.len < 1".}
           while true:
-            let targetId = targetHeaders2[i]
+            let targetId = targetHeaders[i]
             while true:
               {.computedGoto.}
               targetHeaderParamsCaseBody(targetId, cast[uint](addr buf[pos]), cmdRet)
@@ -2214,15 +2214,15 @@ template serverLib(cfg: Config) {.dirty.} =
               header.params[targetId.int] = (cur, pos - cur)
               inc(pos, 2)
               if i != incompleteIdx:
-                swap(targetHeaders2[incompleteIdx], targetHeaders2[i])
+                swap(targetHeaders[incompleteIdx], targetHeaders[i])
               inc(incompleteIdx)
               if equalMem(addr buf[pos], "\c\L".cstring, 2):
                 result.next = pos + 2
-                for j in incompleteIdx..<targetHeaders2.len:
-                  let tid = targetHeaders2[j]
+                for j in incompleteIdx..<targetHeaders.len:
+                  let tid = targetHeaders[j]
                   zeroMem(addr header.params[tid.int], ReqHeaderParamSize)
                 return
-              if incompleteIdx >= targetHeaders2.len:
+              if incompleteIdx >= targetHeaders.len:
                 inc(pos)
                 while(not equalMem(addr buf[pos], "\c\L\c\L".cstring, 4)):
                   inc(pos)
@@ -2231,13 +2231,13 @@ template serverLib(cfg: Config) {.dirty.} =
               i = incompleteIdx
             else:
               inc(i)
-              if i >= targetHeaders2.len:
+              if i >= targetHeaders.len:
                 while not equalMem(addr buf[pos], "\c\L".cstring, 2):
                   inc(pos)
                 if equalMem(addr buf[pos], "\c\L\c\L".cstring, 4):
                   result.next = pos + 4
-                  for j in incompleteIdx..<targetHeaders2.len:
-                    let tid = targetHeaders2[j]
+                  for j in incompleteIdx..<targetHeaders.len:
+                    let tid = targetHeaders[j]
                     zeroMem(addr header.params[tid.int], ReqHeaderParamSize)
                   return
                 inc(pos, 2)
@@ -3661,7 +3661,7 @@ template serverLib(cfg: Config) {.dirty.} =
                         var parseSize = client.recvCurSize
                         while true:
                           ctx.pRecvBuf = cast[ptr UncheckedArray[byte]](addr client.recvBuf[nextPos])
-                          (headerErr, headerNext) = parseHeader(ctx.pRecvBuf, parseSize, ctx.targetHeaders2, ctx.header)
+                          (headerErr, headerNext) = parseHeader(ctx.pRecvBuf, parseSize, ctx.targetHeaders, ctx.header)
                           if headerErr == 0:
                             let retMain = routesMain(ctx, client)
                             if client.keepAlive2 == KeepAliveStatus.Unknown:
@@ -4013,7 +4013,7 @@ template serverLib(cfg: Config) {.dirty.} =
                   when TargetHeaderParams.len < 1:
                     {.error: "TargetHeaderParams.len < 1".}
                   while true:
-                    let targetId = ctx.targetHeaders2[i]
+                    let targetId = ctx.targetHeaders[i]
                     while true:
                       {.computedGoto.}
                       targetHeaderParamsCaseBody(targetId, pos, cmdRet)
@@ -4026,15 +4026,15 @@ template serverLib(cfg: Config) {.dirty.} =
                       ctx.header.params[targetId.int] = ((cur - cur0).int, (pos - cur).int)
                       inc(pos, 2)
                       if i != incompleteIdx:
-                        swap(ctx.targetHeaders2[incompleteIdx], ctx.targetHeaders2[i])
+                        swap(ctx.targetHeaders[incompleteIdx], ctx.targetHeaders[i])
                       inc(incompleteIdx)
                       if cmpString(cast[pointer](pos), "\c\L"):
                         nextParse = (pos + 2.uint - cur0).int
-                        for j in incompleteIdx..<ctx.targetHeaders2.len:
-                          let tid = ctx.targetHeaders2[j]
+                        for j in incompleteIdx..<ctx.targetHeaders.len:
+                          let tid = ctx.targetHeaders[j]
                           zeroMem(addr ctx.header.params[tid.int], ReqHeaderParamSize)
                         break parseMain
-                      if incompleteIdx >= ctx.targetHeaders2.len:
+                      if incompleteIdx >= ctx.targetHeaders.len:
                         inc(pos)
                         while(not cmpString(cast[pointer](pos), "\c\L\c\L")):
                           inc(pos)
@@ -4043,13 +4043,13 @@ template serverLib(cfg: Config) {.dirty.} =
                       i = incompleteIdx
                     else:
                       inc(i)
-                      if i >= ctx.targetHeaders2.len:
+                      if i >= ctx.targetHeaders.len:
                         while not cmpString(cast[pointer](pos), "\c\L"):
                           inc(pos)
                         if cmpString(cast[pointer](pos), "\c\L\c\L"):
                           nextParse = (pos + 4.uint - cur0).int
-                          for j in incompleteIdx..<ctx.targetHeaders2.len:
-                            let tid = ctx.targetHeaders2[j]
+                          for j in incompleteIdx..<ctx.targetHeaders.len:
+                            let tid = ctx.targetHeaders[j]
                             zeroMem(addr ctx.header.params[tid.int], ReqHeaderParamSize)
                           break parseMain
                         inc(pos, 2)
@@ -4423,7 +4423,7 @@ template serverLib(cfg: Config) {.dirty.} =
                   var parseSize = ctx.recvDataSize
                   while true:
                     ctx.pRecvBuf = cast[ptr UncheckedArray[byte]](addr ctx.recvBuf[nextPos])
-                    let retHeader = parseHeader(ctx.pRecvBuf, parseSize, ctx.targetHeaders2, ctx.header)
+                    let retHeader = parseHeader(ctx.pRecvBuf, parseSize, ctx.targetHeaders, ctx.header)
                     if retHeader.err == 0:
                       let retMain = routesMain(ctx, client)
                       if retMain == SendResult.Success:
@@ -4560,7 +4560,7 @@ template serverLib(cfg: Config) {.dirty.} =
                 var parseSize = client.recvCurSize
                 while true:
                   ctx.pRecvBuf = cast[ptr UncheckedArray[byte]](addr client.recvBuf[nextPos])
-                  let retHeader = parseHeader(ctx.pRecvBuf, parseSize, ctx.targetHeaders2, ctx.header)
+                  let retHeader = parseHeader(ctx.pRecvBuf, parseSize, ctx.targetHeaders, ctx.header)
                   if retHeader.err == 0:
                     let retMain = routesMain(ctx, client)
                     if retMain == SendResult.Success:
@@ -6053,7 +6053,7 @@ template serverLib(cfg: Config) {.dirty.} =
     ctx.addrLen = sizeof(ctx.sockAddress).SockLen
     ctx.recvBuf = newArray[byte](workerRecvBufSize)
     for i in 0..<TargetHeaderParams.len:
-      ctx.targetHeaders2[i] = i.HeaderParams
+      ctx.targetHeaders[i] = i.HeaderParams
     ctx.threadId = arg.workerParams.threadId
     ctx.pRecvBuf0 = cast[ptr UncheckedArray[byte]](addr ctx.recvBuf[0])
 
