@@ -3972,7 +3972,7 @@ template serverLib(cfg: Config) {.dirty.} =
                   when TargetHeaderParams.len < 1:
                     {.error: "TargetHeaderParams.len < 1".}
                   while true:
-                    var targetId = ctx.targetHeaders2[i]
+                    let targetId = ctx.targetHeaders2[i]
                     while true:
                       {.computedGoto.}
                       targetHeaderParamsCaseBody(targetId, pos, cmdRet)
