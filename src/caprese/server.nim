@@ -1979,7 +1979,7 @@ template proxyInsertHeader*(insHeaderData: string) =
       let splitPos = i + 2
       client.reserveRecvBuf(reqData.len + insHeaderData.len)
       copyMem(client.recvBuf, addr reqData[0], splitPos)
-      copyMem(addr client.recvBuf[splitPos], addr insHeaderData[0], insHeaderData.len)
+      copyMem(addr client.recvBuf[splitPos], insHeaderData.cstring, insHeaderData.len)
       copyMem(addr client.recvBuf[splitPos + insHeaderData.len], addr reqData[splitPos], reqData.len - splitPos)
       client.recvCurSize = reqData.len + insHeaderData.len
       ctx.data = cast[ptr UncheckedArray[byte]](addr client.recvBuf[splitPos + 2])
