@@ -42,7 +42,10 @@ macro srvCmdBodyMacro(): untyped = srvCmdBody
 macro genCmdListType(objName: untyped, varType: typedesc): untyped =
   result = nnkTypeSection.newTree(
     nnkTypeDef.newTree(
-      objName,
+      nnkPostfix.newTree(
+        newIdentNode("*"),
+        objName
+      ),
       newEmptyNode(),
       nnkObjectTy.newTree(
         newEmptyNode(),
@@ -53,7 +56,10 @@ macro genCmdListType(objName: untyped, varType: typedesc): untyped =
   )
   for cmd in srvCmdList:
     result[0][2][2].add nnkIdentDefs.newTree(
-      newIdentNode(cmd),
+      nnkPostfix.newTree(
+        newIdentNode("*"),
+        newIdentNode(cmd)
+      ),
       varType,
       newEmptyNode()
     )
