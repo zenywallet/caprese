@@ -4073,7 +4073,7 @@ template serverLib(cfg: Config) {.dirty.} =
                   template routesCrLfCheck() {.dirty.} =
                     block findBlock:
                       for i in 0..ctx.parseSize - 4:
-                        if cmpString(addr ctx.pRecvBuf[i], "\c\L\c\L"):
+                        if cmpString(cast[ptr UncheckedArray[byte]](addr ctx.pRecvBuf[i]), "\c\L\c\L"):
                           break findBlock
                       client.addRecvBuf(ctx.pRecvBuf, ctx.parseSize)
                       return
@@ -4181,7 +4181,7 @@ template serverLib(cfg: Config) {.dirty.} =
                       client.close()
                       return
 
-                  if cmpString(addr ctx.pRecvBuf0[ctx.recvDataSize - 4], "\c\L\c\L"):
+                  if cmpString(cast[ptr UncheckedArray[byte]](addr ctx.pRecvBuf0[ctx.recvDataSize - 4]), "\c\L\c\L"):
                     while true:
                       ctx.pRecvBuf = cast[ptr UncheckedArray[byte]](addr ctx.recvBuf[ctx.nextPos])
                       if cmpString(ctx.pRecvBuf, "GET "):
@@ -4241,7 +4241,7 @@ template serverLib(cfg: Config) {.dirty.} =
                   template routesCrLfCheck() {.dirty.} =
                     block findBlock:
                       for i in 0..ctx.parseSize - 4:
-                        if cmpString(addr ctx.pRecvBuf[i], "\c\L\c\L"):
+                        if cmpString(cast[ptr UncheckedArray[byte]](addr ctx.pRecvBuf[i]), "\c\L\c\L"):
                           break findBlock
                       return
 
@@ -4348,7 +4348,7 @@ template serverLib(cfg: Config) {.dirty.} =
                       client.close()
                       return
 
-                  if cmpString(addr client.recvBuf[client.recvCurSize - 4], "\c\L\c\L"):
+                  if cmpString(cast[ptr UncheckedArray[byte]](addr client.recvBuf[client.recvCurSize - 4]), "\c\L\c\L"):
                     while true:
                       ctx.pRecvBuf = cast[ptr UncheckedArray[byte]](addr client.recvBuf[ctx.nextPos])
                       if cmpString(ctx.pRecvBuf, "GET "):
