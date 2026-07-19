@@ -1975,7 +1975,7 @@ template proxyInsertHeader*(insHeaderData: string) =
   else:
     cast[ptr UncheckedArray[byte]](ctx.pRecvBuf0).toString(ctx.recvDataSize)
   for i in 0..<reqData.len - 3:
-    if equalMem(addr reqData[i], "\c\L\c\L".cstring, 4):
+    if cmpString(cast[ptr UncheckedArray[byte]](addr reqData[i]), "\c\L\c\L"):
       let splitPos = i + 2
       client.reserveRecvBuf(reqData.len + insHeaderData.len)
       copyMem(client.recvBuf, addr reqData[0], splitPos)
@@ -2132,17 +2132,18 @@ template serverLib(cfg: Config) {.dirty.} =
                   targetHeaders: var array[TargetHeaderParams.len, HeaderParams],
                   header: var ReqHeader
                   ): tuple[err: int, next: int] =
-    if (when cfg.urlRootSafe: equalMem(addr buf[0], "GET /".cstring, 5) else: equalMem(addr buf[0], "GET ".cstring, 4)):
+    if (when cfg.urlRootSafe: cmpString(cast[ptr UncheckedArray[byte]](addr buf[0]), "GET /")
+        else: cmpString(cast[ptr UncheckedArray[byte]](addr buf[0]), "GET ")):
       var cur = 4
       var pos = 5
       while true:
-        if equalMem(addr buf[pos], " HTTP/1.".cstring, 8):
+        if cmpString(cast[ptr UncheckedArray[byte]](addr buf[pos]), " HTTP/1."):
           header.url = capbytes.toString(cast[ptr UncheckedArray[byte]](addr buf[cur]), pos - cur)
           inc(pos, 7)
-          if equalMem(addr buf[pos], ".1\c\L".cstring, 4):
+          if cmpString(cast[ptr UncheckedArray[byte]](addr buf[pos]), ".1\c\L"):
             header.minorVer = 1
             inc(pos, 2)
-          elif equalMem(addr buf[pos], ".0\c\L".cstring, 4):
+          elif cmpString(cast[ptr UncheckedArray[byte]](addr buf[pos]), ".0\c\L"):
             header.minorVer = 0
             inc(pos, 2)
           else:
@@ -2153,12 +2154,12 @@ template serverLib(cfg: Config) {.dirty.} =
               result.next = -1
               return
             inc(pos)
-            if not equalMem(addr buf[pos], "\c\L".cstring, 2):
+            if not cmpString(cast[ptr UncheckedArray[byte]](addr buf[pos]), "\c\L"):
               result.err = 5
               result.next = -1
               return
             header.minorVer = minorVer
-          if equalMem(addr buf[pos], "\c\L\c\L".cstring, 4):
+          if cmpString(cast[ptr UncheckedArray[byte]](addr buf[pos]), "\c\L\c\L"):
             result.next = pos + 4
             return
           inc(pos, 2)
@@ -2209,14 +2210,14 @@ template serverLib(cfg: Config) {.dirty.} =
             if cmdRet:
               inc(pos, TargetHeaderParams[targetId.int].len)
               cur = pos
-              while not equalMem(addr buf[pos], "\c\L".cstring, 2):
+              while not cmpString(cast[ptr UncheckedArray[byte]](addr buf[pos]), "\c\L"):
                 inc(pos)
               header.params[targetId.int] = (cur, pos - cur)
               inc(pos, 2)
               if i != incompleteIdx:
                 swap(targetHeaders[incompleteIdx], targetHeaders[i])
               inc(incompleteIdx)
-              if equalMem(addr buf[pos], "\c\L".cstring, 2):
+              if cmpString(cast[ptr UncheckedArray[byte]](addr buf[pos]), "\c\L"):
                 result.next = pos + 2
                 for j in incompleteIdx..<targetHeaders.len:
                   let tid = targetHeaders[j]
@@ -2224,7 +2225,7 @@ template serverLib(cfg: Config) {.dirty.} =
                 return
               if incompleteIdx >= targetHeaders.len:
                 inc(pos)
-                while(not equalMem(addr buf[pos], "\c\L\c\L".cstring, 4)):
+                while(not cmpString(cast[ptr UncheckedArray[byte]](addr buf[pos]), "\c\L\c\L")):
                   inc(pos)
                 result.next = pos + 4
                 return
@@ -2232,9 +2233,9 @@ template serverLib(cfg: Config) {.dirty.} =
             else:
               inc(i)
               if i >= targetHeaders.len:
-                while not equalMem(addr buf[pos], "\c\L".cstring, 2):
+                while not cmpString(cast[ptr UncheckedArray[byte]](addr buf[pos]), "\c\L"):
                   inc(pos)
-                if equalMem(addr buf[pos], "\c\L\c\L".cstring, 4):
+                if cmpString(cast[ptr UncheckedArray[byte]](addr buf[pos]), "\c\L\c\L"):
                   result.next = pos + 4
                   for j in incompleteIdx..<targetHeaders.len:
                     let tid = targetHeaders[j]
@@ -2243,7 +2244,7 @@ template serverLib(cfg: Config) {.dirty.} =
                 inc(pos, 2)
                 i = incompleteIdx
 
-        elif equalMem(addr buf[pos], "\c\L\c\L".cstring, 4):
+        elif cmpString(cast[ptr UncheckedArray[byte]](addr buf[pos]), "\c\L\c\L"):
           result.err = 3
           result.next = -1
           return
@@ -3656,7 +3657,7 @@ template serverLib(cfg: Config) {.dirty.} =
                     br_ssl_engine_recvapp_ack(ec, bufLen.csize_t)
 
                     if client.recvCurSize >= 17:
-                      if equalMem(addr client.recvBuf[client.recvCurSize - 4], "\c\L\c\L".cstring, 4):
+                      if cmpString(cast[ptr UncheckedArray[byte]](addr client.recvBuf[client.recvCurSize - 4]), "\c\L\c\L"):
                         var nextPos = 0
                         var parseSize = client.recvCurSize
                         while true:
@@ -3703,13 +3704,13 @@ template serverLib(cfg: Config) {.dirty.} =
                       else:
                         # proxy only
                         when cfg.postRequestMethod:
-                          if equalMem(addr client.recvBuf[0], "POST /".cstring, 6):
+                          if cmpString(cast[ptr UncheckedArray[byte]](addr client.recvBuf[0]), "POST /"):
                             block PostProxyBlock:
                               for i in 6..client.recvCurSize - 4:
-                                if equalMem(addr client.recvBuf[i], "\c\L\c\L".cstring, 4):
+                                if cmpString(cast[ptr UncheckedArray[byte]](addr client.recvBuf[i]), "\c\L\c\L"):
                                   var pos = 6
                                   while true:
-                                    if equalMem(addr client.recvBuf[pos], " HTTP/1.".cstring, 8):
+                                    if cmpString(cast[ptr UncheckedArray[byte]](addr client.recvBuf[pos]), " HTTP/1."):
                                       ctx.header.url = capbytes.toString(cast[ptr UncheckedArray[byte]](addr client.recvBuf[5]), pos - 5)
                                       let retMain = proxyRoutesMain(ctx, client)
                                       if retMain == SendResult.Pending or retMain == SendResult.Success:
@@ -4418,7 +4419,7 @@ template serverLib(cfg: Config) {.dirty.} =
               client.dirty = ClientDirtyNone
               ctx.recvDataSize = client.ssl.SSL_read(cast[pointer](ctx.pRecvBuf0), workerRecvBufSize.cint).int
               if ctx.recvDataSize > 0:
-                if ctx.recvDataSize >= 17 and equalMem(addr ctx.pRecvBuf0[ctx.recvDataSize - 4], "\c\L\c\L".cstring, 4):
+                if ctx.recvDataSize >= 17 and cmpString(cast[ptr UncheckedArray[byte]](addr ctx.pRecvBuf0[ctx.recvDataSize - 4]), "\c\L\c\L"):
                   var nextPos = 0
                   var parseSize = ctx.recvDataSize
                   while true:
@@ -4555,7 +4556,7 @@ template serverLib(cfg: Config) {.dirty.} =
             let recvlen = client.ssl.SSL_read(cast[pointer](addr client.recvBuf[client.recvCurSize]), workerRecvBufSize.cint).int
             if recvlen > 0:
               client.recvCurSize = client.recvCurSize + recvlen
-              if client.recvCurSize >= 17 and equalMem(addr client.recvBuf[client.recvCurSize - 4], "\c\L\c\L".cstring, 4):
+              if client.recvCurSize >= 17 and cmpString(cast[ptr UncheckedArray[byte]](addr client.recvBuf[client.recvCurSize - 4]), "\c\L\c\L"):
                 var nextPos = 0
                 var parseSize = client.recvCurSize
                 while true:
