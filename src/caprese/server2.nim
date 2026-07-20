@@ -377,6 +377,7 @@ template parseServers*(serverBody: untyped) {.dirty.} =
   if retGetSockOpt < 0: raise
   var workerRecvBufSize = rcvBufRes.int
   echo "workerRecvBufSize=", workerRecvBufSize
+  const ReservedRecvPad = 15
   var workerSendBufSize = workerRecvBufSize
 
   var abortClient: ClientObj2
@@ -823,7 +824,7 @@ template parseServers*(serverBody: untyped) {.dirty.} =
             client.recvBuf = recvBuf
             client.recvPos = recvPos
             client.recvLen = retRecv
-            recvBuf = cast[ptr UncheckedArray[byte]](allocShared0(workerRecvBufSize))
+            recvBuf = cast[ptr UncheckedArray[byte]](allocShared0(workerRecvBufSize + ReservedRecvPad))
             recvPos = recvBuf
             client.appId = (client.appId.cuint + 1).AppId # AppRoutesRecv
             break RecvLoop
@@ -1203,7 +1204,7 @@ template parseServers*(serverBody: untyped) {.dirty.} =
             client.recvBuf = recvBuf
             client.recvPos = recvPos
             client.recvLen = retRecv
-            recvBuf = cast[ptr UncheckedArray[byte]](allocShared0(workerRecvBufSize))
+            recvBuf = cast[ptr UncheckedArray[byte]](allocShared0(workerRecvBufSize + ReservedRecvPad))
             recvPos = recvBuf
             client.appId = (client.appId.cuint + 1).AppId # AppRoutesRecv
             break
@@ -1365,7 +1366,7 @@ template parseServers*(serverBody: untyped) {.dirty.} =
     var sockAddress: Sockaddr_in
     var addrLen: SockLen = sizeof(sockAddress).SockLen
     var retRecv: int
-    var recvBuf = cast[ptr UncheckedArray[byte]](allocShared0(workerRecvBufSize))
+    var recvBuf = cast[ptr UncheckedArray[byte]](allocShared0(workerRecvBufSize + ReservedRecvPad))
     var recvPos = recvBuf
     var recvBufSize = workerRecvBufSize
     var sendBuf = cast[ptr UncheckedArray[byte]](allocShared0(workerSendBufSize))
