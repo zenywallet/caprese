@@ -1,6 +1,7 @@
 # Copyright (c) 2024 zenywallet
 
 import std/macros
+import cmp
 
 echo "welcome server2!"
 
@@ -535,14 +536,14 @@ template parseServers*(serverBody: untyped) {.dirty.} =
           var reqUrlLast = quote do:
             capbytes.toString(cast[ptr UncheckedArray[byte]](reqHeaderUrlPos + `i`.uint), reqHeaderUrlSize - `i`.uint)
           result.add quote do:
-            if `cmpPath`.len <= reqHeaderUrlSize and equalMem(cast[pointer](reqHeaderUrlPos), `cmpPath`.cstring, `cmpPath`.len):
+            if `cmpPath`.len <= reqHeaderUrlSize and cmpString(cast[pointer](reqHeaderUrlPos), `cmpPath`):
               var `idVar` = `reqUrlLast`
               `body`
           return
         break
     if result.len == 0:
       result.add quote do:
-        if `path`.len == reqHeaderUrlSize and equalMem(cast[pointer](reqHeaderUrlPos), `path`.cstring, `path`.len):
+        if `path`.len == reqHeaderUrlSize and cmpString(cast[pointer](reqHeaderUrlPos), `path`):
           `body`
 
   macro get(url: string, getBody: untyped): untyped =
@@ -800,14 +801,14 @@ template parseServers*(serverBody: untyped) {.dirty.} =
       template parseHeaderUrl(pos, endPos: uint, RecvLoop: typed) =
         reqHeaderUrlPos = pos
         while true:
-          if equalMem(cast[pointer](pos), " HTTP/1.".cstring, 8):
+          if cmpString(cast[pointer](pos), " HTTP/1."):
             reqHeaderUrlSize = pos - reqHeaderUrlPos
             inc(pos, 7)
-            if equalMem(cast[pointer](pos), ".1\c\L".cstring, 4):
+            if cmpString(cast[pointer](pos), ".1\c\L"):
               reqHeaderMinorVer = 1
               inc(pos, 2)
               break
-            elif equalMem(cast[pointer](pos), ".0\c\L".cstring, 4):
+            elif cmpString(cast[pointer](pos), ".0\c\L"):
               reqHeaderMinorVer = 0
               inc(pos, 2)
               break
@@ -815,7 +816,7 @@ template parseServers*(serverBody: untyped) {.dirty.} =
               inc(pos)
               reqHeaderMinorVer = int(cast[ptr char](cast[pointer](pos))[]) - int('0')
               inc(pos)
-              if reqHeaderMinorVer < 0 or reqHeaderMinorVer > 9 or not equalMem(cast[pointer](pos), "\c\L".cstring, 2):
+              if reqHeaderMinorVer < 0 or reqHeaderMinorVer > 9 or not cmpString(cast[pointer](pos), "\c\L"):
                 client.close(false)
                 break RecvLoop
               break
@@ -830,7 +831,7 @@ template parseServers*(serverBody: untyped) {.dirty.} =
             break RecvLoop
 
       template parseHeaderGet(pos, endPos: uint, RecvLoop: typed) =
-        if not equalMem(cast[pointer](pos), "\c\L\c\L".cstring, 4):
+        if not cmpString(cast[pointer](pos), "\c\L\c\L"):
           inc(pos, 2)
           if pos >= endPos: break RecvLoop
 
@@ -843,7 +844,7 @@ template parseServers*(serverBody: untyped) {.dirty.} =
                   if equalMem(cast[pointer](pos), targetParam.cstring, targetParam.len):
                     inc(pos, targetParam.len)
                     var cur = pos
-                    while not equalMem(cast[pointer](pos), "\c\L".cstring, 2):
+                    while not cmpString(cast[pointer](pos), "\c\L"):
                       if pos >= endPos: break RecvLoop
                       inc(pos)
                     ctxReqHeader.params[headerId.int] = (cur, pos - cur)
@@ -857,22 +858,22 @@ template parseServers*(serverBody: untyped) {.dirty.} =
                       inc(pos, 2)
                       break paramsLoop
 
-                while not equalMem(cast[pointer](pos), "\c\L".cstring, 2):
+                while not cmpString(cast[pointer](pos), "\c\L"):
                   if pos >= endPos: break RecvLoop
                   inc(pos)
-                if equalMem(cast[pointer](pos), "\c\L\c\L".cstring, 4):
+                if cmpString(cast[pointer](pos), "\c\L\c\L"):
                   for j in incompleteIdx..<targetHeadersForGet.len:
                     let (tid, _) = targetHeadersForGet[j][]
                     zeroMem(addr ctxReqHeader.params[tid.int], ReqHeaderParamSize)
                   break parseHeaderBlock
                 inc(pos, 2)
 
-          while not equalMem(cast[pointer](pos), "\c\L\c\L".cstring, 4):
+          while not cmpString(cast[pointer](pos), "\c\L\c\L"):
             if pos >= endPos: break RecvLoop
             inc(pos)
 
       template parseHeader(pos, endPos: uint, RecvLoop: typed) =
-        if not equalMem(cast[pointer](pos), "\c\L\c\L".cstring, 4):
+        if not cmpString(cast[pointer](pos), "\c\L\c\L"):
           inc(pos, 2)
           if pos >= endPos: break RecvLoop
 
@@ -885,7 +886,7 @@ template parseServers*(serverBody: untyped) {.dirty.} =
                   if equalMem(cast[pointer](pos), targetParam.cstring, targetParam.len):
                     inc(pos, targetParam.len)
                     var cur = pos
-                    while not equalMem(cast[pointer](pos), "\c\L".cstring, 2):
+                    while not cmpString(cast[pointer](pos), "\c\L"):
                       if pos >= endPos: break RecvLoop
                       inc(pos)
                     ctxReqHeader.params[headerId.int] = (cur, pos - cur)
@@ -899,14 +900,14 @@ template parseServers*(serverBody: untyped) {.dirty.} =
                       inc(pos, 2)
                       break paramsLoop
 
-                while not equalMem(cast[pointer](pos), "\c\L".cstring, 2):
+                while not cmpString(cast[pointer](pos), "\c\L"):
                   if pos >= endPos: break RecvLoop
                   inc(pos)
-                if equalMem(cast[pointer](pos), "\c\L\c\L".cstring, 4):
+                if cmpString(cast[pointer](pos), "\c\L\c\L"):
                   break parseHeaderBlock
                 inc(pos, 2)
 
-          while not equalMem(cast[pointer](pos), "\c\L\c\L".cstring, 4):
+          while not cmpString(cast[pointer](pos), "\c\L\c\L"):
             if pos >= endPos: break RecvLoop
             inc(pos)
 
@@ -1012,7 +1013,7 @@ template parseServers*(serverBody: untyped) {.dirty.} =
           retRecv = client.sock.recv(recvBuf, workerRecvBufSize, 0.cint)
           if retRecv >= 17:
             var endPos = cast[uint](recvBuf) + cast[uint](retRecv) - 4
-            if equalMem(recvBuf, "GET ".cstring, 4):
+            if cmpString(recvBuf, "GET "):
               var pos = cast[uint](recvBuf) + 4
               parseHeaderUrl(pos, endPos, RecvLoop)
               parseHeaderGet(pos, endPos + 4, RecvLoop)
@@ -1035,7 +1036,7 @@ template parseServers*(serverBody: untyped) {.dirty.} =
 
                 recvPos = cast[ptr UncheckedArray[byte]](pos)
                 while true:
-                  if equalMem(cast[pointer](pos), "GET ".cstring, 4):
+                  if cmpString(cast[pointer](pos), "GET "):
                     inc(pos, 4)
                     parseHeaderUrl(pos, endPos, RecvLoop)
                     parseHeaderGet(pos, endPos + 4, RecvLoop)
@@ -1055,7 +1056,7 @@ template parseServers*(serverBody: untyped) {.dirty.} =
                         inc(pos, 4)
                     recvPos = cast[ptr UncheckedArray[byte]](pos)
 
-                  elif equalMem(cast[pointer](pos), "POST".cstring, 4):
+                  elif cmpString(cast[pointer](pos), "POST"):
                     inc(pos, 5)
                     parseHeaderUrl(pos, endPos, RecvLoop)
                     parseHeader(pos, endPos + 4, RecvLoop)
@@ -1076,7 +1077,7 @@ template parseServers*(serverBody: untyped) {.dirty.} =
                         inc(pos, 4 + contentLength)
                     recvPos = cast[ptr UncheckedArray[byte]](pos)
 
-                    while equalMem(cast[pointer](pos), "POST".cstring, 4):
+                    while cmpString(cast[pointer](pos), "POST"):
                       inc(pos, 5)
                       parseHeaderUrl(pos, endPos, RecvLoop)
                       parseHeader(pos, endPos + 4, RecvLoop)
@@ -1097,7 +1098,7 @@ template parseServers*(serverBody: untyped) {.dirty.} =
                           inc(pos, 4 + contentLength)
                       recvPos = cast[ptr UncheckedArray[byte]](pos)
 
-                      if equalMem(cast[pointer](pos), "GET ".cstring, 4):
+                      if cmpString(cast[pointer](pos), "GET "):
                         inc(pos, 4)
                         parseHeaderUrl(pos, endPos, RecvLoop)
                         parseHeaderGet(pos, endPos + 4, RecvLoop)
@@ -1125,7 +1126,7 @@ template parseServers*(serverBody: untyped) {.dirty.} =
                     client.close(false)
                     break RecvLoop
 
-            elif equalMem(recvBuf, "POST".cstring, 4):
+            elif cmpString(recvBuf, "POST"):
               var pos = cast[uint](recvBuf) + 5
               parseHeaderUrl(pos, endPos, RecvLoop)
               parseHeader(pos, endPos + 4, RecvLoop)
@@ -1148,7 +1149,7 @@ template parseServers*(serverBody: untyped) {.dirty.} =
 
                 while true:
                   recvPos = cast[ptr UncheckedArray[byte]](pos)
-                  if equalMem(cast[pointer](pos), "GET ".cstring, 4):
+                  if cmpString(cast[pointer](pos), "GET "):
                     inc(pos, 4)
                     parseHeaderUrl(pos, endPos, RecvLoop)
                     parseHeaderGet(pos, endPos + 4, RecvLoop)
@@ -1168,7 +1169,7 @@ template parseServers*(serverBody: untyped) {.dirty.} =
                       else:
                         inc(pos, 4)
 
-                  elif equalMem(cast[pointer](pos), "POST".cstring, 4):
+                  elif cmpString(cast[pointer](pos), "POST"):
                     inc(pos, 5)
                     parseHeaderUrl(pos, endPos, RecvLoop)
                     parseHeader(pos, endPos + 4, RecvLoop)
@@ -1238,13 +1239,13 @@ template parseServers*(serverBody: untyped) {.dirty.} =
           while true:
             if client.recvLen >= 17:
               var endPos = cast[uint](client.recvBuf) + cast[uint](client.recvLen) - 4
-              if equalMem(client.recvBuf, "GET ".cstring, 4):
+              if cmpString(client.recvBuf, "GET "):
                 var pos = cast[uint](client.recvBuf) + 4
                 parseHeaderUrl(pos, endPos, RecvLoop)
 
                 curSendSize = 0
                 while true:
-                  if equalMem(cast[pointer](pos), "\c\L\c\L".cstring, 4):
+                  if cmpString(cast[pointer](pos), "\c\L\c\L"):
                     if pos == endPos:
                       var retRoutes = `routesProcGet`(SendProc1_Prev1)
                       if retRoutes <= SendResult.None:
@@ -1261,12 +1262,12 @@ template parseServers*(serverBody: untyped) {.dirty.} =
                       else:
                         inc(pos, 4)
 
-                      if equalMem(cast[pointer](pos), "GET ".cstring, 4):
+                      if cmpString(cast[pointer](pos), "GET "):
                         inc(pos, 4)
                         parseHeaderUrl(pos, endPos, RecvLoop)
 
                         while true:
-                          if equalMem(cast[pointer](pos), "\c\L\c\L".cstring, 4):
+                          if cmpString(cast[pointer](pos), "\c\L\c\L"):
                             if pos == endPos:
                               var retRoutes = `routesProcGet`(SendProc3_Prev1)
                               if retRoutes <= SendResult.None:
@@ -1283,7 +1284,7 @@ template parseServers*(serverBody: untyped) {.dirty.} =
                               else:
                                 inc(pos, 4)
 
-                            if equalMem(cast[pointer](pos), "GET ".cstring, 4):
+                            if cmpString(cast[pointer](pos), "GET "):
                               inc(pos, 4)
                               parseHeaderUrl(pos, endPos, RecvLoop)
 
