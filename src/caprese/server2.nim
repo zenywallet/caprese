@@ -840,14 +840,14 @@ template parseServers*(serverBody: untyped) {.dirty.} =
             while true:
               block paramsLoop:
                 for i in incompleteIdx..<targetHeadersForGet.len:
-                  let (headerId, targetParam) = targetHeadersForGet[i][]
+                  let (targetId, targetParam) = targetHeadersForGet[i][]
                   if equalMem(cast[pointer](pos), targetParam.cstring, targetParam.len):
                     inc(pos, targetParam.len)
                     var cur = pos
                     while not cmpString(cast[pointer](pos), "\c\L"):
                       if pos >= endPos: break RecvLoop
                       inc(pos)
-                    ctxReqHeader.params[headerId.int] = (cur, pos - cur)
+                    ctxReqHeader.params[targetId.int] = (cur, pos - cur)
                     if i != incompleteIdx:
                       swap(targetHeadersForGet[incompleteIdx], targetHeadersForGet[i])
                     if pos >= endPos: break RecvLoop
@@ -882,14 +882,14 @@ template parseServers*(serverBody: untyped) {.dirty.} =
             while true:
               block paramsLoop:
                 for i in incompleteIdx..<targetHeaders.len:
-                  let (headerId, targetParam) = targetHeaders[i][]
+                  let (targetId, targetParam) = targetHeaders[i][]
                   if equalMem(cast[pointer](pos), targetParam.cstring, targetParam.len):
                     inc(pos, targetParam.len)
                     var cur = pos
                     while not cmpString(cast[pointer](pos), "\c\L"):
                       if pos >= endPos: break RecvLoop
                       inc(pos)
-                    ctxReqHeader.params[headerId.int] = (cur, pos - cur)
+                    ctxReqHeader.params[targetId.int] = (cur, pos - cur)
                     if i != incompleteIdx:
                       swap(targetHeaders[incompleteIdx], targetHeaders[i])
                     if pos >= endPos: break RecvLoop
