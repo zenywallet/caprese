@@ -852,6 +852,11 @@ template parseServers*(serverBody: untyped) {.dirty.} =
                       swap(targetHeadersForGet[incompleteIdx], targetHeadersForGet[i])
                     if pos >= endPos: break RecvLoop
                     inc(incompleteIdx)
+                    if cmpString(cast[pointer](pos), "\c\L\c\L"):
+                      for j in incompleteIdx..<targetHeadersForGet.len:
+                        let (tid, _) = targetHeadersForGet[j][]
+                        zeroMem(addr ctxReqHeader.params[tid.int], ReqHeaderParamSize)
+                      break parseHeaderBlock
                     if incompleteIdx >= targetHeadersForGet.len:
                       break parseHeaderBlock
                     else:
