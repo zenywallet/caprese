@@ -899,6 +899,11 @@ template parseServers*(serverBody: untyped) {.dirty.} =
                       swap(targetHeaders[incompleteIdx], targetHeaders[i])
                     if pos >= endPos: break RecvLoop
                     inc(incompleteIdx)
+                    if cmpString(cast[pointer](pos), "\c\L\c\L"):
+                      for j in incompleteIdx..<targetHeaders.len:
+                        let (tid, _) = targetHeaders[j][]
+                        zeroMem(addr ctxReqHeader.params[tid.int], ReqHeaderParamSize)
+                      break parseHeaderBlock
                     if incompleteIdx >= targetHeaders.len:
                       break parseHeaderBlock
                     else:
@@ -909,6 +914,9 @@ template parseServers*(serverBody: untyped) {.dirty.} =
                   if pos >= endPos: break RecvLoop
                   inc(pos)
                 if cmpString(cast[pointer](pos), "\c\L\c\L"):
+                  for j in incompleteIdx..<targetHeaders.len:
+                    let (tid, _) = targetHeaders[j][]
+                    zeroMem(addr ctxReqHeader.params[tid.int], ReqHeaderParamSize)
                   break parseHeaderBlock
                 inc(pos, 2)
 
