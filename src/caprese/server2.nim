@@ -920,28 +920,33 @@ template parseServers*(serverBody: untyped) {.dirty.} =
           if pos >= endPos: break RecvLoop
 
           var incompleteIdx = 0
+          var cmdRet {.noInit.}: bool
           block parseHeaderBlock:
             while true:
               block paramsLoop:
-                for i in incompleteIdx..<targetHeaders.len:
-                  let (targetId, targetParam) = targetHeaders[i][]
-                  if equalMem(cast[pointer](pos), targetParam.cstring, targetParam.len):
-                    inc(pos, targetParam.len)
+                for i in incompleteIdx..<targetHeaders2.len:
+                  let targetId = targetHeaders2[i]
+                  while true:
+                    {.computedGoto.}
+                    targetHeaderParamsCaseBody(targetId, pos, cmdRet)
+                    break
+                  if cmdRet:
+                    inc(pos, TargetHeaderParams[targetId.int].len)
                     var cur = pos
                     while not cmpString(cast[pointer](pos), "\c\L"):
                       if pos >= endPos: break RecvLoop
                       inc(pos)
                     ctxReqHeader.params[targetId.int] = (cur, pos - cur)
                     if i != incompleteIdx:
-                      swap(targetHeaders[incompleteIdx], targetHeaders[i])
+                      swap(targetHeaders2[incompleteIdx], targetHeaders2[i])
                     if pos >= endPos: break RecvLoop
                     inc(incompleteIdx)
                     if cmpString(cast[pointer](pos), "\c\L\c\L"):
-                      for j in incompleteIdx..<targetHeaders.len:
-                        let (tid, _) = targetHeaders[j][]
+                      for j in incompleteIdx..<targetHeaders2.len:
+                        let tid = targetHeaders2[j]
                         zeroMem(addr ctxReqHeader.params[tid.int], ReqHeaderParamSize)
                       break parseHeaderBlock
-                    if incompleteIdx >= targetHeaders.len:
+                    if incompleteIdx >= targetHeaders2.len:
                       break parseHeaderBlock
                     else:
                       inc(pos, 2)
@@ -951,8 +956,8 @@ template parseServers*(serverBody: untyped) {.dirty.} =
                   if pos >= endPos: break RecvLoop
                   inc(pos)
                 if cmpString(cast[pointer](pos), "\c\L\c\L"):
-                  for j in incompleteIdx..<targetHeaders.len:
-                    let (tid, _) = targetHeaders[j][]
+                  for j in incompleteIdx..<targetHeaders2.len:
+                    let tid = targetHeaders2[j]
                     zeroMem(addr ctxReqHeader.params[tid.int], ReqHeaderParamSize)
                   break parseHeaderBlock
                 inc(pos, 2)
@@ -1436,6 +1441,7 @@ template parseServers*(serverBody: untyped) {.dirty.} =
     var ctxReqHeader: ReqHeader
     var targetHeaders: Array[ptr tuple[id: HeaderParams, str: string]]
     var targetHeadersForGet: Array[ptr tuple[id: HeaderParams, str: string]]
+    var targetHeaders2: Array[HeaderParams]
     var targetHeadersForGet2: Array[HeaderParams]
     for i in 0..<TargetHeaders.len:
       when declared(InternalEssentialHeaderHost):
@@ -1445,6 +1451,7 @@ template parseServers*(serverBody: untyped) {.dirty.} =
         if TargetHeaders[i].id == InternalEssentialHeaderConnection:
           continue
       targetHeaders.add(cast[ptr tuple[id: HeaderParams, str: string]](addr TargetHeaders[i]))
+      targetHeaders2.add(i.HeaderParams)
       if TargetHeaders[i].id != InternalContentLength:
         targetHeadersForGet.add(cast[ptr tuple[id: HeaderParams, str: string]](addr TargetHeaders[i]))
         targetHeadersForGet2.add(i.HeaderParams)
