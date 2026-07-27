@@ -312,8 +312,8 @@ template parseServers*(serverBody: untyped) {.dirty.} =
         when cfg.sendBufExpand: client.sendBufSize = 0
         client.sendPos = nil
         client.sendLen = 0
-      when cfg.clientLock and lockFlag: release(client.lock)
       #client.whackaMole = false
+      when cfg.clientLock and lockFlag: release(client.lock)
       delClientRing(client)
       clientFreePool2.addSafe(client)
 
