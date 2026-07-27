@@ -681,7 +681,7 @@ template parseServers*(serverBody: untyped) {.dirty.} =
 
       proc send(data: seq[byte] | string | Array[byte]): SendResult {.discardable.} =
         template sendProc1(nextAppOffset: cuint): SendResult =
-          let sendlen = client.sock.send(addr data[0], data.len.cint,  MSG_NOSIGNAL)
+          let sendlen = client.sock.send(addr data[0], data.len.cint, MSG_NOSIGNAL)
           if sendlen == data.len: SendResult.Success
           elif sendlen == 0: SendResult.None
           elif sendlen > 0:
@@ -764,8 +764,8 @@ template parseServers*(serverBody: untyped) {.dirty.} =
               SendResult.Error
 
         template sendProc3Tmpl(nextAppOffset: cuint): SendResult {.dirty.} =
-          let sendlen = client.sock.send(sendBuf, curSendSize.cint,  MSG_NOSIGNAL)
-          if sendlen  == curSendSize: SendResult.Success
+          let sendlen = client.sock.send(sendBuf, curSendSize.cint, MSG_NOSIGNAL)
+          if sendlen == curSendSize: SendResult.Success
           elif sendlen == 0: SendResult.None
           elif sendlen > 0:
             var left = curSendSize - sendlen
@@ -1368,7 +1368,7 @@ template parseServers*(serverBody: untyped) {.dirty.} =
     quote do:
       when cfg.clientLock: acquire(client.lock)
       while true:
-        let sendlen = client.sock.send(client.sendPos, client.sendLen.cint,  MSG_NOSIGNAL)
+        let sendlen = client.sock.send(client.sendPos, client.sendLen.cint, MSG_NOSIGNAL)
         if sendlen == client.sendLen:
           if client.recvLen > 0:
             client.appId = (client.appId.cuint - 1).AppId
@@ -1445,7 +1445,7 @@ template parseServers*(serverBody: untyped) {.dirty.} =
     var targetHeadersForGet2: Array[HeaderParams]
     for i in 0..<TargetHeaders.len:
       when declared(InternalEssentialHeaderHost):
-        if TargetHeaders[i].id ==  InternalEssentialHeaderHost and not routesHostFlagTrueExists():
+        if TargetHeaders[i].id == InternalEssentialHeaderHost and not routesHostFlagTrueExists():
           continue
       when not cfg.reqHeaderConnection:
         if TargetHeaders[i].id == InternalEssentialHeaderConnection:
