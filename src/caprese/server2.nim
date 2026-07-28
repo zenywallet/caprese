@@ -862,6 +862,10 @@ template parseServers*(serverBody: untyped) {.dirty.} =
           )
           inc(i)
 
+      template reqHeader(paramId: HeaderParams): string =
+        let param = ctxReqHeader.params[paramId.int]
+        capbytes.toString(cast[ptr UncheckedArray[byte]](param.cur), param.size)
+
       template parseHeaderGet(pos, endPos: uint, RecvLoop: typed) =
         if not cmpString(cast[pointer](pos), "\c\L\c\L"):
           inc(pos, 2)
@@ -965,10 +969,6 @@ template parseServers*(serverBody: untyped) {.dirty.} =
           while not cmpString(cast[pointer](pos), "\c\L\c\L"):
             if pos >= endPos: break RecvLoop
             inc(pos)
-
-      template reqHeader(paramId: HeaderParams): string =
-        let param = ctxReqHeader.params[paramId.int]
-        capbytes.toString(cast[ptr UncheckedArray[byte]](param.cur), param.size)
 
     for i in 0..<routesBodyList.len:
       var routesBody = routesBodyList[i]
