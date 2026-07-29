@@ -192,6 +192,7 @@ template parseServers*(serverBody: untyped) {.dirty.} =
       sendLen: int
       threadId: int
       whackaMole: bool
+      when cfg.reqHeaderConnection: connectionClose: bool
       prev: ptr ClientObj2
       next: ptr ClientObj2
       when cfg.clientLock: lock: Lock
@@ -240,6 +241,7 @@ template parseServers*(serverBody: untyped) {.dirty.} =
       client.sendLen = 0
       client.threadId = -1
       client.whackaMole = false
+      when cfg.reqHeaderConnection: client.connectionClose = false
       client.prev = nil
       client.next = nil
       when cfg.clientLock: initLock(client.lock)
@@ -313,6 +315,7 @@ template parseServers*(serverBody: untyped) {.dirty.} =
         client.sendPos = nil
         client.sendLen = 0
       #client.whackaMole = false
+      when cfg.reqHeaderConnection: client.connectionClose = false
       when cfg.clientLock and lockFlag: release(client.lock)
       delClientRing(client)
       clientFreePool2.addSafe(client)
@@ -682,7 +685,14 @@ template parseServers*(serverBody: untyped) {.dirty.} =
       proc send(data: seq[byte] | string | Array[byte]): SendResult {.discardable.} =
         template sendProc1(nextAppOffset: cuint): SendResult =
           let sendlen = client.sock.send(addr data[0], data.len.cint, MSG_NOSIGNAL)
-          if sendlen == data.len: SendResult.Success
+          if sendlen == data.len:
+            when cfg.reqHeaderConnection:
+              if client.connectionClose:
+                SendResult.None
+              else:
+                SendResult.Success
+            else:
+              SendResult.Success
           elif sendlen == 0: SendResult.None
           elif sendlen > 0:
             var left = data.len - sendlen
@@ -765,7 +775,14 @@ template parseServers*(serverBody: untyped) {.dirty.} =
 
         template sendProc3Tmpl(nextAppOffset: cuint): SendResult {.dirty.} =
           let sendlen = client.sock.send(sendBuf, curSendSize.cint, MSG_NOSIGNAL)
-          if sendlen == curSendSize: SendResult.Success
+          if sendlen == curSendSize:
+            when cfg.reqHeaderConnection:
+              if client.connectionClose:
+                SendResult.None
+              else:
+                SendResult.Success
+            else:
+              SendResult.Success
           elif sendlen == 0: SendResult.None
           elif sendlen > 0:
             var left = curSendSize - sendlen
@@ -918,6 +935,10 @@ template parseServers*(serverBody: untyped) {.dirty.} =
             if pos >= endPos: break RecvLoop
             inc(pos)
 
+        when cfg.reqHeaderConnection:
+          if reqHeader(InternalEssentialHeaderConnection) == "close":
+            client.connectionClose = true
+
       template parseHeader(pos, endPos: uint, RecvLoop: typed) =
         if not cmpString(cast[pointer](pos), "\c\L\c\L"):
           inc(pos, 2)
@@ -969,6 +990,10 @@ template parseServers*(serverBody: untyped) {.dirty.} =
           while not cmpString(cast[pointer](pos), "\c\L\c\L"):
             if pos >= endPos: break RecvLoop
             inc(pos)
+
+        when cfg.reqHeaderConnection:
+          if reqHeader(InternalEssentialHeaderConnection) == "close":
+            client.connectionClose = true
 
     for i in 0..<routesBodyList.len:
       var routesBody = routesBodyList[i]
@@ -1370,6 +1395,10 @@ template parseServers*(serverBody: untyped) {.dirty.} =
       while true:
         let sendlen = client.sock.send(client.sendPos, client.sendLen.cint, MSG_NOSIGNAL)
         if sendlen == client.sendLen:
+          when cfg.reqHeaderConnection:
+            if client.connectionClose:
+              client.close(false)
+              break
           if client.recvLen > 0:
             client.appId = (client.appId.cuint - 1).AppId
           else:
