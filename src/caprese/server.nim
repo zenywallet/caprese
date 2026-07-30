@@ -6410,6 +6410,6 @@ macro init*(): untyped =
         abort()
         `onSigTermQuitBody`
 
-{.passC: "-flto".}
-{.passL: "-flto".}
+{.passC: "-flto=auto".}
+{.passL: "-flto=auto".}
 {.passL: "-Wno-stringop-overflow".}
