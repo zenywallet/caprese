@@ -685,14 +685,7 @@ template parseServers*(serverBody: untyped) {.dirty.} =
       proc send(data: seq[byte] | string | Array[byte]): SendResult {.discardable.} =
         template sendProc1(nextAppOffset: cuint): SendResult =
           let sendlen = client.sock.send(addr data[0], data.len.cint, MSG_NOSIGNAL)
-          if sendlen == data.len:
-            when cfg.reqHeaderConnection:
-              if client.connectionClose:
-                SendResult.None
-              else:
-                SendResult.Success
-            else:
-              SendResult.Success
+          if sendlen == data.len: SendResult.Success
           elif sendlen == 0: SendResult.None
           elif sendlen > 0:
             var left = data.len - sendlen
@@ -775,14 +768,7 @@ template parseServers*(serverBody: untyped) {.dirty.} =
 
         template sendProc3Tmpl(nextAppOffset: cuint): SendResult {.dirty.} =
           let sendlen = client.sock.send(sendBuf, curSendSize.cint, MSG_NOSIGNAL)
-          if sendlen == curSendSize:
-            when cfg.reqHeaderConnection:
-              if client.connectionClose:
-                SendResult.None
-              else:
-                SendResult.Success
-            else:
-              SendResult.Success
+          if sendlen == curSendSize: SendResult.Success
           elif sendlen == 0: SendResult.None
           elif sendlen > 0:
             var left = curSendSize - sendlen
@@ -1104,7 +1090,13 @@ template parseServers*(serverBody: untyped) {.dirty.} =
                 if retRoutes <= SendResult.None:
                   client.close(false)
                 else:
-                  client.whackaMole = false
+                  when cfg.reqHeaderConnection:
+                    if client.connectionClose:
+                      client.close(false)
+                    else:
+                      client.whackaMole = false
+                  else:
+                    client.whackaMole = false
                 break RecvLoop
               else:
                 var retRoutes = `routesProcGet`(SendProc2)
@@ -1125,7 +1117,13 @@ template parseServers*(serverBody: untyped) {.dirty.} =
                       if retRoutes <= SendResult.None:
                         client.close(false)
                       else:
-                        client.whackaMole = false
+                        when cfg.reqHeaderConnection:
+                          if client.connectionClose:
+                            client.close(false)
+                          else:
+                            client.whackaMole = false
+                        else:
+                          client.whackaMole = false
                       break RecvLoop
                     else:
                       var retRoutes = `routesProcGet`(SendProc2)
@@ -1146,7 +1144,13 @@ template parseServers*(serverBody: untyped) {.dirty.} =
                       if retRoutes <= SendResult.None:
                         client.close(false)
                       else:
-                        client.whackaMole = false
+                        when cfg.reqHeaderConnection:
+                          if client.connectionClose:
+                            client.close(false)
+                          else:
+                            client.whackaMole = false
+                        else:
+                          client.whackaMole = false
                       break RecvLoop
                     elif pos + contentLength.uint < endPos:
                       var retRoutes = `routesProcPost`(SendProc2)
@@ -1167,7 +1171,13 @@ template parseServers*(serverBody: untyped) {.dirty.} =
                         if retRoutes <= SendResult.None:
                           client.close(false)
                         else:
-                          client.whackaMole = false
+                          when cfg.reqHeaderConnection:
+                            if client.connectionClose:
+                              client.close(false)
+                            else:
+                              client.whackaMole = false
+                          else:
+                            client.whackaMole = false
                         break RecvLoop
                       elif pos + contentLength.uint < endPos:
                         var retRoutes = `routesProcPost`(SendProc2)
@@ -1187,7 +1197,13 @@ template parseServers*(serverBody: untyped) {.dirty.} =
                           if retRoutes <= SendResult.None:
                             client.close(false)
                           else:
-                            client.whackaMole = false
+                            when cfg.reqHeaderConnection:
+                              if client.connectionClose:
+                                client.close(false)
+                              else:
+                                client.whackaMole = false
+                            else:
+                              client.whackaMole = false
                           break RecvLoop
                         else:
                           var retRoutes = `routesProcGet`(SendProc2)
@@ -1217,7 +1233,13 @@ template parseServers*(serverBody: untyped) {.dirty.} =
                 if retRoutes <= SendResult.None:
                   client.close(false)
                 else:
-                  client.whackaMole = false
+                  when cfg.reqHeaderConnection:
+                    if client.connectionClose:
+                      client.close(false)
+                    else:
+                      client.whackaMole = false
+                  else:
+                    client.whackaMole = false
                 break RecvLoop
               elif pos + contentLength.uint < endPos:
                 var retRoutes = `routesProcPost`(SendProc2)
@@ -1239,7 +1261,13 @@ template parseServers*(serverBody: untyped) {.dirty.} =
                       if retRoutes <= SendResult.None:
                         client.close(false)
                       else:
-                        client.whackaMole = false
+                        when cfg.reqHeaderConnection:
+                          if client.connectionClose:
+                            client.close(false)
+                          else:
+                            client.whackaMole = false
+                        else:
+                          client.whackaMole = false
                       break RecvLoop
                     else:
                       var retRoutes = `routesProcGet`(SendProc2)
@@ -1259,7 +1287,13 @@ template parseServers*(serverBody: untyped) {.dirty.} =
                       if retRoutes <= SendResult.None:
                         client.close(false)
                       else:
-                        client.whackaMole = false
+                        when cfg.reqHeaderConnection:
+                          if client.connectionClose:
+                            client.close(false)
+                          else:
+                            client.whackaMole = false
+                        else:
+                          client.whackaMole = false
                       break RecvLoop
                     elif pos + contentLength.uint < endPos:
                       var retRoutes = `routesProcPost`(SendProc2)
@@ -1331,8 +1365,15 @@ template parseServers*(serverBody: untyped) {.dirty.} =
                       if retRoutes <= SendResult.None:
                         client.close()
                       else:
-                        client.whackaMole = false
-                        client.recvLen = 0
+                        when cfg.reqHeaderConnection:
+                          if client.connectionClose:
+                            client.close()
+                          else:
+                            client.whackaMole = false
+                            client.recvLen = 0
+                        else:
+                          client.whackaMole = false
+                          client.recvLen = 0
                       break RecvLoop
                     else:
                       var retRoutes = `routesProcGet`(SendProc2)
@@ -1353,8 +1394,15 @@ template parseServers*(serverBody: untyped) {.dirty.} =
                               if retRoutes <= SendResult.None:
                                 client.close()
                               else:
-                                client.whackaMole = false
-                                client.recvLen = 0
+                                when cfg.reqHeaderConnection:
+                                  if client.connectionClose:
+                                    client.close()
+                                  else:
+                                    client.whackaMole = false
+                                    client.recvLen = 0
+                                else:
+                                  client.whackaMole = false
+                                  client.recvLen = 0
                               break RecvLoop
                             else:
                               var retRoutes = `routesProcGet`(SendProc2)
