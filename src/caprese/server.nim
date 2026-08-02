@@ -3128,8 +3128,9 @@ template serverLib(cfg: Config) {.dirty.} =
 
   proc appListenBase(ctx: ServerThreadCtx, sslFlag: static bool, unixFlag: static bool) {.thread, inline.} =
     template acceptNewClient(clientSock: SocketHandle) =
-      when ipFilterEnable and not unixFlag:
+      when (ipFilterEnable or cfg.clientIp) and not unixFlag:
         let ip = posix.ntohl(ctx.sockAddress.sin_addr.s_addr)
+      when ipFilterEnable and not unixFlag:
         if not ipfilter.checkIp(ip):
           discard setsockopt(clientSock, SOL_SOCKET, SO_LINGER, addr linger, sizeof(linger).SockLen)
           clientSock.close()
@@ -3149,6 +3150,8 @@ template serverLib(cfg: Config) {.dirty.} =
       newClient.sock = clientSock
       newClient.srvId = ctx.client.srvId
       newClient.appId = ctx.client.appId + 1
+      when cfg.clientIp and not unixFlag:
+        newClient.ip = ip
 
       when sslFlag and cfg.sslLib == BearSSL:
         if newClient.sc.isNil:

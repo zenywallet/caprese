@@ -107,6 +107,7 @@ macro setDefault(cfg: untyped) =
     multiProcessThreadNum = 1
     clientThreadAssign = AutoAssign
     clientLock = true
+    clientIp = false
     reqHeaderConnection = false
     acceptIp = []
 
