@@ -65,8 +65,6 @@ server(ssl = true, ip = "0.0.0.0", port = 8009):
       send("Hello!".addHeader())
 
     send("Not Found".addHeader(Status404))
-
-serverStart()
 ```
 
 Build and launch.
@@ -204,8 +202,6 @@ server(ip = "0.0.0.0", port = 8089):
   routes:
     get "/":
       send(IndexHtml.addHeader())
-
-serverStart()
 ```
 
 #### Multiple URL paths
@@ -1033,8 +1029,6 @@ server(ssl = true, ip = "0.0.0.0", port = 443):
 server(ip = "0.0.0.0", port = 80):
   routes(host = "YOUR_DOMAIN"):
     send(redirect301("https://YOUR_DOMAIN" & reqUrl))
-
-serverStart()
 ```
 
 Create a *server.nim* file with the above code and launch *server* as a non-root user. Open ports 80 and 443 to allow connections from external clients.
@@ -1111,6 +1105,33 @@ ipFilter:
       let ip = d[3]
       let prefix = 32 - countTrailingZeroBits(d[4].parseUint().uint32)
       pass ip & "/" & $prefix
+```
+
+### Custom IP Table
+
+```nim
+import caprese
+import caprese/iptable
+
+config:
+  clientIp = true
+
+type
+  IpInfo = object
+    countryCode: String
+    connLimit: int
+    rateLimit: int
+
+var ipInfoTable = newIpTable[IpInfo]()
+ipInfoTable.setDefaultData(IpInfo(countryCode: "", connLimit: 10, rateLimit: 5))
+ipInfoTable.resetIpTable()
+ipInfoTable.addIpData("127.0.0.0/8", IpInfo(countryCode: "JP", connLimit: 100, rateLimit: 60))
+ipInfoTable.commitIpData()
+
+server(ssl = true, ip = "0.0.0.0", port = 8009):
+  routes:
+    if ipInfoTable.getIpData(client.ip).countryCode == "JP":
+      return send("hello".addHeader)
 ```
 
 ### Leftover Desserts
