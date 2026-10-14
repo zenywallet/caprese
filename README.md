@@ -252,9 +252,11 @@ import regex
     get "/":
       ...
 
-    let urlText = sanitizeHtml(reqUrl)
+    let urlText {.inject.} = sanitizeHtml(reqUrl)
     send(fmt"Not Found: {urlText}".addDocType().addHeader(Status404))
 ```
+
+It seems better if it works without *inject*, but it became necessary for modularization.
 
 #### Multiple ports for SSL website and no SSL website
 
@@ -372,7 +374,7 @@ reqs.newPending(limit = 100)
 
 worker(num = 2):
   reqs.recvLoop(req):
-    let urlText = sanitizeHtml(req.data.url)
+    let urlText {.inject.} = sanitizeHtml(req.data.url)
     let clientId = req.cid
     clientId.send(fmt("worker {urlText}").addHeader())
 
@@ -381,7 +383,7 @@ server(ip = "0.0.0.0", port = 8089):
     get "/test":
       reqs.pending(PendingData(url: reqUrl))
 
-    let urlText = sanitizeHtml(reqUrl)
+    let urlText {.inject.} = sanitizeHtml(reqUrl)
     send(fmt"Not Found: {urlText}".addDocType().addHeader(Status404))
 ```
 
