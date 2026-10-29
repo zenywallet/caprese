@@ -341,7 +341,9 @@ proc proxyManager*(params: ProxyParams): Thread[ProxyParams] =
     evfd = kqueue1(O_CLOEXEC)
   if evfd < 0:
     errorException "error: evfd=", evfd, " errno=", errno
-  createThread(result, proxyDispatcher, params)
+  var proxyThread: Thread[ProxyParams]
+  createThread(proxyThread, proxyDispatcher, params)
+  proxyThread
 
 proc quitProxyManager*(proxyThread: Thread[ProxyParams]) =
   active = false
