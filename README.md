@@ -46,6 +46,7 @@ Open [https://localhost:8009/](https://localhost:8009/) in your browser. You'll 
 #### Build Your Custom Web Server
 Install Caprese package.
 
+    rm -rf ~/.nimble/pkgcache/githubcom_zenywalletcaprese*
     nimble install https://github.com/zenywallet/caprese
 
 It will take quite a while, so make some coffee. The Caprese body is located *~/.nimble/pkgs/caprese-0.1.0/* when installed. The version number may change, though. If you can't find it, try looking for *~/.nimble/pkgs2*.
