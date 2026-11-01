@@ -332,7 +332,7 @@ proc proxyDispatcher(params: ProxyParams) {.thread.} =
     echo e.name, ": ", e.msg
     params.abortCallback()
 
-proc proxyManager*(params: ProxyParams): Thread[ProxyParams] =
+proc proxyManager*(proxyThread: var Thread[ProxyParams], params: ProxyParams) =
   active = true
   abortSock = createNativeSocket()
   when defined(linux):
@@ -341,11 +341,9 @@ proc proxyManager*(params: ProxyParams): Thread[ProxyParams] =
     evfd = kqueue1(O_CLOEXEC)
   if evfd < 0:
     errorException "error: evfd=", evfd, " errno=", errno
-  var proxyThread: Thread[ProxyParams]
   createThread(proxyThread, proxyDispatcher, params)
-  proxyThread
 
-proc quitProxyManager*(proxyThread: Thread[ProxyParams]) =
+proc quitProxyManager*(proxyThread: var Thread[ProxyParams]) =
   active = false
   when defined(linux):
     var ev: EpollEvent

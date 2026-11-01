@@ -6322,10 +6322,11 @@ else:
         EV_SET(addr abortClient.ev, sockCtl.uint, EVFILT_READ, EV_ADD or EV_ENABLE, 0, 0, abortClientPtr)
       abortClientEvPtr = addr abortClient.ev
 
+      var proxyThread: Thread[ProxyParams]
       var params: ProxyParams
       params.abortCallback = proc() =
         errorQuit "error: proxy dispatcher"
-      var proxyThread = proxyManager(params)
+      proxyManager(proxyThread, params)
 
       when cfg.sslLib != SslLib.None:
         var fileWatcherThread: Thread[WrapperThreadArg]
